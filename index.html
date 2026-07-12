@@ -262,6 +262,7 @@ textarea{resize:vertical;min-height:60px;}
 .cartrow .del{
   background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer;padding:4px 6px;
 }
+.cartrow .del.edit{color:var(--navy);font-size:15px;}
 .cartempty{color:var(--muted);font-size:13px;text-align:center;padding:14px 0;}
 .linetotal{font-size:10.5px;color:var(--gold);font-weight:700;}
 .autotag{font-size:10px;color:var(--navy);background:#EAF0F8;padding:1px 6px;border-radius:6px;font-weight:700;}
@@ -758,11 +759,24 @@ function normalizeProductName(s){
 }
 function findCatalogItem(main, product, color){
   const np = normalizeProductName(product), nc = normalizeProductName(color);
-  return CATALOG.find(d=>d.main===main && normalizeProductName(d.product)===np && normalizeProductName(d.color)===nc);
+  let item = CATALOG.find(d=>d.main===main && normalizeProductName(d.product)===np && normalizeProductName(d.color)===nc);
+  if(!item && nc===''){
+    // الصنف متوقع من غير لون، لكن ممكن خلية "اللون" في الشيت فيها نص غلط
+    // (زي اسم مجموعة فرعية) بدل ما تكون فاضية — لو في صنف واحد بس بنفس
+    // الاسم والقطاع، نرجّعه بدل ما نسيب السعر مفقود
+    const candidates = CATALOG.filter(d=>d.main===main && normalizeProductName(d.product)===np);
+    if(candidates.length===1) item = candidates[0];
+  }
+  return item;
 }
 function findCatalogItemAnyMain(product, color){
   const np = normalizeProductName(product), nc = normalizeProductName(color);
-  return CATALOG.find(d=>normalizeProductName(d.product)===np && normalizeProductName(d.color)===nc);
+  let item = CATALOG.find(d=>normalizeProductName(d.product)===np && normalizeProductName(d.color)===nc);
+  if(!item && nc===''){
+    const candidates = CATALOG.filter(d=>normalizeProductName(d.product)===np);
+    if(candidates.length===1) item = candidates[0];
+  }
+  return item;
 }
 function getDiscount(main){
   const v = DISCOUNTS[main];
@@ -1228,7 +1242,6 @@ function resetOrderForm(){
   state.quotePdfDiscounted = null;
   state.quotePdfPlain = null;
   state.purchaseOrderPdf = null;
-  state.distributorUnlocked = false;
   render();
 }
 
@@ -1446,6 +1459,9 @@ function downloadBlob(blob, filename){
 function isDistributorUnlocked(){
   return state.distributorUnlocked;
 }
+function loadDistributorUnlock(){
+  try{ if(localStorage.getItem(LS_DIST_UNLOCK_KEY)==='1') state.distributorUnlocked = true; }catch(e){}
+}
 
 function requestDistributorAction(actionName){
   if(isDistributorUnlocked()){
@@ -1474,6 +1490,7 @@ function previewPdfBlob(q){
 function submitDistPin(){
   if(state.distPinInput === DISTRIBUTOR_PIN){
     state.distributorUnlocked = true;
+    try{ localStorage.setItem(LS_DIST_UNLOCK_KEY, '1'); }catch(e){}
     state.showDistPinModal = false;
     const action = state.pendingDistAction;
     state.pendingDistAction = null;
@@ -1622,7 +1639,7 @@ async function buildQuotePDF(order, withDiscount){
             <th style="padding:9px 5px;text-align:center;">الكمية</th>
             ${withDiscount ? `
             <th style="padding:9px 5px;text-align:center;">السعر قبل الخصم</th>
-            <th style="padding:9px 5px;text-align:center;">الخصم</th>
+            <th style="padding:9px 5px;text-align:center;">نسبة الخصم</th>
             <th style="padding:9px 5px;text-align:center;">السعر بعد الخصم</th>
             ` : `
             <th style="padding:9px 5px;text-align:center;">سعر الوحدة</th>
@@ -1663,7 +1680,7 @@ async function buildQuotePDF(order, withDiscount){
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
                     ${withDiscount ? `
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;color:#B3261E;">${discAmt===0?'—':'-'+Math.round(discAmt).toLocaleString('en-US')}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;color:#B3261E;">${discAmt===0?'—':Math.round(pct*100)+'%'}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${unitAfter==null?'—':Math.round(unitAfter).toLocaleString('en-US')}</td>
                     ` : `
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
@@ -2083,6 +2100,7 @@ function renderOrderView(){
                 <div class="pmeta">${it.color ? esc(it.color) : ''}${it.note ? (it.color?' · ':'') + esc(it.note) : ''}${it.autoBundled ? ' <span class="autotag">🔗 مضاف تلقائيًا مع الباب</span>' : ''}</div>
               </div>
               <div class="qty">×${it.qty} ${esc(it.unitType||'')}<br><span class="linetotal">${it.lineTotal==null?'بدون سعر':Math.round(it.lineTotal).toLocaleString('en-US')+' ج.م'}</span></div>
+              ${it.autoBundled ? '' : `<button class="del edit" data-act="edit-cart-item" data-main="${esc(it.main)}" data-product="${esc(it.product)}">✏️</button>`}
               <button class="del" data-act="del-cart" data-idx="${it._idx}">✕</button>
             </div>
           `).join('')}
@@ -2524,6 +2542,13 @@ async function onAction(act, el){
     case 'confirm-staged': confirmStaged(el.getAttribute('data-key')); break;
     case 'cancel-staged': cancelStaged(el.getAttribute('data-key')); break;
     case 'del-cart': removeFromCart(parseInt(el.getAttribute('data-idx'))); break;
+    case 'edit-cart-item':{
+      const main = el.getAttribute('data-main'), product = el.getAttribute('data-product');
+      toggleStagedProduct(main, product);
+      const scrollTarget = document.querySelector('.stagedblock');
+      if(scrollTarget) scrollTarget.scrollIntoView({behavior:'smooth', block:'center'});
+      break;
+    }
 
     case 'set-otherunit': state.otherUnit = el.getAttribute('data-val'); render(); break;
     case 'other-qty-dec': state.otherQty = Math.max(1, state.otherQty-1); render(); break;
@@ -2657,21 +2682,33 @@ function dismissInstallBanner(){
 }
 
 if('serviceWorker' in navigator){
+  let swReg = null;
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').then(reg=>{
+    // updateViaCache:'none' يضمن إن ملف sw.js نفسه يتفحص من السيرفر
+    // كل مرة، بدل ما يفضل المتصفح محتفظ بنسخة قديمة منه لحد 24 ساعة
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg=>{
+      swReg = reg;
       reg.update().catch(()=>{});
     }).catch(()=>{});
   });
+  // فحص وجود تحديث كل مرة التطبيق يرجع للواجهة (بعد ما كان في الخلفية) أو كل دقيقة
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState==='visible' && swReg) swReg.update().catch(()=>{});
+  });
+  setInterval(()=>{ if(swReg) swReg.update().catch(()=>{}); }, 60000);
+
   let reloadedOnce = false;
   navigator.serviceWorker.addEventListener('controllerchange', ()=>{
     if(reloadedOnce) return;
     reloadedOnce = true;
-    window.location.reload();
+    showToast('🔄 في تحديث جديد للتطبيق، جارٍ التحديث...');
+    setTimeout(()=>window.location.reload(), 700);
   });
 }
 
 // ===== init =====
 loadProfile();
+loadDistributorUnlock();
 loadCatalog().then(()=>{ checkForResumableDraft(); render(); });
 render();
 
