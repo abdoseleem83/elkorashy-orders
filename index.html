@@ -345,6 +345,18 @@ textarea{resize:vertical;min-height:60px;}
   background:var(--navy);color:#fff;font-size:11px;font-weight:700;
   text-align:center;padding:6px;
 }
+.docsection{
+  border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;
+  background:#FCFBF8;text-align:right;
+}
+.docsectiontitle{font-size:12.5px;font-weight:800;color:var(--navy);margin-bottom:10px;}
+.iconbtnrow{display:flex;gap:8px;}
+.iconbtn{
+  flex:1;background:#fff;border:1.5px solid var(--line);border-radius:10px;
+  padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;
+  font-size:10.5px;font-weight:700;color:var(--ink);cursor:pointer;font-family:'Cairo',sans-serif;
+}
+.iconbtn:active{background:#F0EDE4;}
 .receiptbtns{display:flex;flex-direction:column;gap:8px;max-width:280px;margin:0 auto;}
 .receiptbtns .newbtn{margin-top:8px;width:100%;}
 
@@ -492,6 +504,10 @@ textarea{resize:vertical;min-height:60px;}
 }
 .stagedhead{margin-bottom:10px;}
 .stagedname{font-weight:800;font-size:14px;color:var(--navy);}
+.edittag{
+  display:inline-block;background:#FBEBD1;color:#8A5A00;font-size:10px;font-weight:800;
+  padding:2px 8px;border-radius:6px;margin-right:6px;vertical-align:middle;
+}
 .stagedmain{font-size:11.5px;color:var(--muted);margin-top:1px;}
 .colorqtytable{margin-top:6px;margin-bottom:8px;}
 .cqheader{
@@ -596,6 +612,7 @@ const LS_ORDERS_KEY = 'qurashi_my_orders';
 const LS_LAST_DATE_KEY = 'qurashi_last_order_date';
 const LS_LAST_ID_KEY = 'qurashi_last_order_id';
 const LS_DRAFT_KEY = 'qurashi_draft';
+const LS_PROFILE_KEY = 'qurashi_profile';
 
 // ===== state =====
 const state = {
@@ -621,6 +638,7 @@ const state = {
   lastOrder:null,
   quotePdfDiscounted:null,
   quotePdfPlain:null,
+  purchaseOrderPdf:null,
   quotePdfGenerating:false,
   distributorUnlocked:false,
   showDistPinModal:false,
@@ -633,6 +651,7 @@ const state = {
   showResumeModal:false,
   pendingDraft:null,
   draftJustSaved:false,
+  previewGenerating:false,
 
   editingOrderId:null,
 
@@ -788,11 +807,16 @@ function chambersHtml(n=4){
 // ===== storage (Google Sheet via Apps Script) =====
 async function saveOrderRemote(order, isUpdate){
   const payload = Object.assign({}, order, { action: isUpdate ? 'update' : 'create' });
-  await fetch(APPS_SCRIPT_URL, {
+  const res = await fetch(APPS_SCRIPT_URL, {
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify(payload)
   });
+  if(!res.ok) throw new Error('server responded with status ' + res.status);
+  let data;
+  try{ data = await res.json(); }catch(e){ throw new Error('invalid server response'); }
+  if(!data || data.ok !== true) throw new Error('server did not confirm save');
+  return data;
 }
 
 async function loadOrders(){
@@ -880,6 +904,50 @@ async function deleteDeliveredOrders(){
 function getSavedOrderRefs(){
   try{ return JSON.parse(localStorage.getItem(LS_ORDERS_KEY) || '[]'); }catch(e){ return []; }
 }
+function saveProfile(){
+  try{
+    localStorage.setItem(LS_PROFILE_KEY, JSON.stringify({
+      distName: state.distName, distRegion: state.distRegion, distPhone: state.distPhone
+    }));
+  }catch(e){}
+}
+function loadProfile(){
+  try{
+    const raw = localStorage.getItem(LS_PROFILE_KEY);
+    if(!raw) return;
+    const p = JSON.parse(raw);
+    if(!state.distName) state.distName = p.distName || '';
+    if(!state.distRegion) state.distRegion = p.distRegion || '';
+    if(!state.distPhone) state.distPhone = p.distPhone || '';
+  }catch(e){}
+}
+
+async function previewCartInvoice(){
+  if(state.cart.length===0){ showToast('لسه محضتش أي صنف تقدر تعاينه'); return; }
+  state.previewGenerating = true; render();
+  const tempOrder = {
+    id: 'PREVIEW', ts: Date.now(),
+    distName: state.distName.trim() || 'معاينة',
+    distRegion: state.distRegion.trim(),
+    distPhone: state.distPhone.trim(),
+    note: state.note.trim(),
+    items: state.cart
+  };
+  try{
+    const result = await buildQuotePDF(tempOrder, false);
+    if(result && result.blob){
+      const url = URL.createObjectURL(result.blob);
+      window.open(url, '_blank');
+    } else {
+      showToast('حصل خطأ في تجهيز المعاينة، حاول تاني');
+    }
+  }catch(e){
+    showToast('حصل خطأ في تجهيز المعاينة، حاول تاني');
+  }
+  state.previewGenerating = false;
+  render();
+}
+
 function saveOrderRef(id, distName){
   const list = getSavedOrderRefs();
   list.unshift({id, distName, ts:Date.now()});
@@ -954,19 +1022,38 @@ function toggleStagedProduct(main, product){
   const key = stagedKey(main, product);
   const idx = state.staged.findIndex(s=>s.key===key);
   if(idx>=0){
+    const s = state.staged[idx];
+    if(s.extractedCartItems && s.extractedCartItems.length){
+      state.cart.push(...s.extractedCartItems);
+    }
     state.staged.splice(idx,1);
   }else{
     const colorRequired = hasRealColors(main, product);
     const units = unitOptionsForGroup(main);
     const defaultUnit = units[0];
+
+    // لو الصنف ده موجود بالفعل في السلة، نسحبه للتعديل بدل ما نضيف نسخة جديدة
+    const existing = [];
+    state.cart = state.cart.filter(it=>{
+      if(it.main===main && it.product===product && !it.autoBundled){ existing.push(it); return false; }
+      return true;
+    });
+
+    const selectedColors = existing.length ? existing.map(it=>it.color) : (colorRequired ? [] : ['']);
+    const qtys = {}, unitsMap = {};
+    existing.forEach(it=>{ qtys[it.color] = it.qty; unitsMap[it.color] = it.unitType; });
+    if(!colorRequired && existing.length===0){ qtys[''] = 1; unitsMap[''] = defaultUnit; }
+
     state.staged.push({
       key, main, product, colorRequired,
       availableColors: colorsForProduct(main, product).map(c=>c.color),
-      selectedColors: colorRequired ? [] : [''],
-      qtys: colorRequired ? {} : {'':1},
-      units: colorRequired ? {} : {'':defaultUnit},
+      selectedColors,
+      qtys,
+      units: unitsMap,
       unitOptions: units,
-      cancelling:false
+      cancelling:false,
+      isEditingExisting: existing.length>0,
+      extractedCartItems: existing
     });
   }
   render();
@@ -1043,7 +1130,11 @@ function cancelStaged(key){
   s.cancelling = true;
   render();
   setTimeout(()=>{
+    if(s.extractedCartItems && s.extractedCartItems.length){
+      state.cart.push(...s.extractedCartItems);
+    }
     state.staged = state.staged.filter(x=>x.key!==key);
+    autoSaveDraft();
     render();
   }, 320);
 }
@@ -1119,9 +1210,10 @@ async function actuallySubmit(){
       localStorage.setItem(LS_LAST_ID_KEY, id.toUpperCase());
     }
     state.cart=[]; state.staged=[]; state.distName=''; state.distRegion=''; state.distPhone=''; state.note=''; state.editingOrderId=null;
+    loadProfile();
     clearDraft();
   }catch(e){
-    showToast('حصل خطأ في إرسال الطلب، حاول تاني');
+    showToast('⚠️ حصل خطأ ومتحفظش الطلب. تأكد إن النت شغال وحاول تاني — لو المشكلة استمرت، الطلب لسه محفوظ عندك في الشاشة ومتضاعش');
   }
   state.submitting = false;
   render();
@@ -1135,6 +1227,8 @@ function resetOrderForm(){
   state.lastOrder = null;
   state.quotePdfDiscounted = null;
   state.quotePdfPlain = null;
+  state.purchaseOrderPdf = null;
+  state.distributorUnlocked = false;
   render();
 }
 
@@ -1177,7 +1271,7 @@ function rawPriceForItem(it){
 }
 
 async function handleOrderPDF(id, mode){
-  const order = state.orders.find(o=>o.id===id);
+  const order = state.orders.find(o=>o.id===id) || state.myOrders.find(o=>o.id===id);
   if(!order) return;
   state.adminPdfGeneratingId = id;
   render();
@@ -1200,6 +1294,26 @@ async function handleOrderPDF(id, mode){
   render();
 }
 
+async function previewMyOrderPDF(id){
+  const order = state.myOrders.find(o=>o.id===id);
+  if(!order) return;
+  state.adminPdfGeneratingId = id;
+  render();
+  try{
+    const result = await buildQuotePDF(order, false);
+    if(result && result.blob){
+      const url = URL.createObjectURL(result.blob);
+      window.open(url, '_blank');
+    } else {
+      showToast('حصل خطأ في تجهيز الملف، حاول تاني');
+    }
+  }catch(e){
+    showToast('حصل خطأ في تجهيز الملف، حاول تاني');
+  }
+  state.adminPdfGeneratingId = null;
+  render();
+}
+
 async function generateBothQuotes(order){
   state.quotePdfGenerating = true; render();
   try{
@@ -1208,8 +1322,117 @@ async function generateBothQuotes(order){
   try{
     state.quotePdfPlain = await buildQuotePDF(order, false);
   }catch(e){ state.quotePdfPlain = null; }
+  try{
+    state.purchaseOrderPdf = await buildPurchaseOrderPDF(order);
+  }catch(e){ state.purchaseOrderPdf = null; }
   state.quotePdfGenerating = false;
   render();
+}
+
+async function buildPurchaseOrderPDF(order){
+  if(typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') return null;
+
+  const wrap = document.createElement('div');
+  wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
+  wrap.style.width='700px';
+  wrap.style.fontFamily = "'Cairo', sans-serif";
+  wrap.style.direction='rtl';
+  wrap.style.background='#FFFFFF';
+
+  const date = new Date(order.ts);
+  const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  const rows = order.items.map(it=>{
+    const norm = normalizeItemToSmallUnit(it);
+    return Object.assign({}, it, { normQty: norm.qty, normUnit: norm.unitLabel });
+  });
+  const groupsMap = new Map();
+  rows.forEach(r=>{ if(!groupsMap.has(r.main)) groupsMap.set(r.main, []); groupsMap.get(r.main).push(r); });
+  const orderedMains = SECTOR_CHIPS.filter(g=>groupsMap.has(g));
+
+  let tableHtml = '';
+  let poSerial = 0;
+  orderedMains.forEach(main=>{
+    tableHtml += `<tr><td colspan="3" style="padding:7px 6px;background:#E4C766;color:#1F3050;font-weight:800;font-size:11px;">${esc(main)}</td></tr>`;
+    groupsMap.get(main).forEach((it,i)=>{
+      poSerial++;
+      tableHtml += `
+        <tr style="background:${i%2===0?'#FFFFFF':'#F5F3EE'};">
+          <td style="padding:9px 6px;border-bottom:1px solid #E4E0D6;text-align:center;color:#8A8470;font-size:12px;">${poSerial}</td>
+          <td style="padding:9px 6px;border-bottom:1px solid #E4E0D6;font-size:12.5px;">${esc(it.name||it.product)}</td>
+          <td style="padding:9px 6px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">${it.normQty} ${esc(it.normUnit||'')}</td>
+        </tr>`;
+    });
+  });
+
+  wrap.innerHTML = `
+    <div style="padding:30px 36px;">
+      <div style="display:flex;justify-content:center;margin-bottom:14px;">
+        <div id="qr-holder-po" style="text-align:center;"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #C9A227;padding-bottom:18px;margin-bottom:20px;">
+        <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:60px;height:60px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
+        <div style="flex:1;">
+          <div style="font-size:20px;font-weight:800;color:#1F3050;">القرشي لأبواب وشبابيك الـ UPVC</div>
+          <div style="font-size:12px;color:#6E7480;margin-top:2px;">وكيل AXA مصر</div>
+        </div>
+        <div style="text-align:left;">
+          <div style="font-size:15px;font-weight:800;color:#C9A227;">طلب شراء</div>
+          <div style="font-size:11px;color:#6E7480;">#${esc(order.id.toUpperCase())}</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:12.5px;">
+        <div><div style="color:#6E7480;">الموزع</div><div style="font-weight:800;color:#1F3050;">${esc(order.distName)}</div></div>
+        <div><div style="color:#6E7480;">المنطقة</div><div style="font-weight:800;color:#1F3050;">${esc(order.distRegion||'')}</div></div>
+        <div><div style="color:#6E7480;">التاريخ</div><div style="font-weight:800;color:#1F3050;">${esc(dateStr)}</div></div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#1F3050;color:#fff;">
+            <th style="padding:9px 6px;text-align:center;width:26px;">م</th>
+            <th style="padding:9px 6px;text-align:right;">اسم الصنف</th>
+            <th style="padding:9px 6px;text-align:center;">الكمية</th>
+          </tr>
+        </thead>
+        <tbody>${tableHtml}</tbody>
+      </table>
+      ${order.note ? `<div style="margin-top:18px;padding-top:12px;border-top:1px dashed #E4E0D6;font-size:11.5px;color:#6E7480;">ملاحظات: ${esc(order.note)}</div>` : ''}
+      <div style="margin-top:26px;padding-top:14px;border-top:1px solid #E4E0D6;text-align:center;font-size:10px;color:#6E7480;">
+        طلب شراء تم إنشاؤه تلقائيًا — القرشي لأبواب وشبابيك الـ UPVC
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  try{
+    const qrHolder = wrap.querySelector('#qr-holder-po');
+    if(qrHolder && typeof QRCode !== 'undefined'){
+      new QRCode(qrHolder, { text: APP_URL, width:64, height:64, correctLevel: QRCode.CorrectLevel.M });
+    }
+  }catch(e){}
+
+  let result = null;
+  try{
+    const canvas = await html2canvas(wrap, {scale:2, backgroundColor:'#ffffff'});
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','mm','a4');
+    const imgData = canvas.toDataURL('image/png');
+    const imgWidth = 210;
+    const pageHeight = 297;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+    let heightLeft = imgHeight;
+    let position = 0;
+    doc.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
+    heightLeft -= pageHeight;
+    while(heightLeft > 0){
+      position = heightLeft - imgHeight;
+      doc.addPage();
+      doc.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
+      heightLeft -= pageHeight;
+    }
+    result = { blob: doc.output('blob'), previewUrl: imgData };
+  }catch(e){ result = null; }
+  document.body.removeChild(wrap);
+  return result;
 }
 
 function downloadBlob(blob, filename){
@@ -1221,8 +1444,7 @@ function downloadBlob(blob, filename){
 }
 
 function isDistributorUnlocked(){
-  if(state.distributorUnlocked) return true;
-  try{ return sessionStorage.getItem(LS_DIST_UNLOCK_KEY)==='1'; }catch(e){ return false; }
+  return state.distributorUnlocked;
 }
 
 function requestDistributorAction(actionName){
@@ -1240,12 +1462,18 @@ function requestDistributorAction(actionName){
 function runDistributorAction(actionName){
   if(actionName==='download-disc') downloadQuote(true);
   if(actionName==='share-disc') shareQuotePDF(true);
+  if(actionName==='preview-disc') previewPdfBlob(state.quotePdfDiscounted);
+}
+
+function previewPdfBlob(q){
+  if(!q || !q.blob) { showToast('الملف لسه بيتجهز، حاول تاني بعد لحظة'); return; }
+  const url = URL.createObjectURL(q.blob);
+  window.open(url, '_blank');
 }
 
 function submitDistPin(){
   if(state.distPinInput === DISTRIBUTOR_PIN){
     state.distributorUnlocked = true;
-    try{ sessionStorage.setItem(LS_DIST_UNLOCK_KEY, '1'); }catch(e){}
     state.showDistPinModal = false;
     const action = state.pendingDistAction;
     state.pendingDistAction = null;
@@ -1305,16 +1533,34 @@ async function buildQuotePDF(order, withDiscount){
     const lineRaw = raw==null ? null : raw*norm.qty;
 
     let discountEligibleAmount = lineRaw;
+    let wholeRollQty = norm.qty;
+    let remainderQty = 0;
     if(raw!=null && ROLL_BASED_SECTORS.includes(it.main)){
       const catItem = findCatalogItem(it.main, it.product, it.color);
       const content = catItem ? (catItem.unit || 1) : 1;
-      const wholeRollQty = Math.floor(norm.qty / content) * content;
+      wholeRollQty = Math.floor(norm.qty / content) * content;
+      remainderQty = norm.qty - wholeRollQty;
       discountEligibleAmount = raw * wholeRollQty; // كسر اللفة (الباقي) مايدخلش في الخصم
     }
 
-    return Object.assign({}, it, { normQty: norm.qty, normUnit: norm.unitLabel, rawPrice: raw, lineRaw, discountEligibleAmount });
+    return Object.assign({}, it, { normQty: norm.qty, normUnit: norm.unitLabel, rawPrice: raw, lineRaw, discountEligibleAmount, wholeRollQty, remainderQty });
   });
   const subtotal = rows.reduce((s,r)=> s + (r.lineRaw||0), 0);
+
+  // ملخص عدد اللفات لكل قطاع (كومبن / كرافت لاين / نيو لاين / شاتر)
+  const ROLL_SUMMARY_SECTORS = ['قطاعات PVC كومبن', 'قطاعات كرافت لاين', 'نيو لاين', 'شاتر'];
+  const rollSummary = [];
+  ROLL_SUMMARY_SECTORS.forEach(sector=>{
+    const items = rows.filter(r=>r.main===sector);
+    if(!items.length) return;
+    let totalRolls = 0;
+    items.forEach(it=>{
+      const catItem = findCatalogItem(it.main, it.product, it.color);
+      const content = catItem ? (catItem.unit || 1) : 1;
+      totalRolls += it.normQty / content;
+    });
+    if(totalRolls>0) rollSummary.push({ sector, rolls: totalRolls });
+  });
   const hasMissing = rows.some(r=>r.lineRaw==null);
 
   let discountRows = [];
@@ -1338,6 +1584,9 @@ async function buildQuotePDF(order, withDiscount){
 
   wrap.innerHTML = `
     <div style="padding:30px 36px;">
+      <div style="display:flex;justify-content:center;margin-bottom:14px;">
+        <div id="qr-holder-top" style="text-align:center;"></div>
+      </div>
       <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #C9A227;padding-bottom:18px;margin-bottom:20px;">
         <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:60px;height:60px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
         <div style="flex:1;">
@@ -1368,6 +1617,7 @@ async function buildQuotePDF(order, withDiscount){
       <table style="width:100%;border-collapse:collapse;font-size:11px;">
         <thead>
           <tr style="background:#1F3050;color:#fff;">
+            <th style="padding:9px 5px;text-align:center;width:26px;">م</th>
             <th style="padding:9px 5px;text-align:right;">اسم الصنف</th>
             <th style="padding:9px 5px;text-align:center;">الكمية</th>
             ${withDiscount ? `
@@ -1388,9 +1638,10 @@ async function buildQuotePDF(order, withDiscount){
               groupsMap.get(r.main).push(r);
             });
             const orderedMains = SECTOR_CHIPS.filter(g=>groupsMap.has(g));
-            const colspan = withDiscount ? 6 : 4;
+            const colspan = withDiscount ? 7 : 5;
             let html = '';
             let rowIndex = 0;
+            let serialCounter = 0;
             orderedMains.forEach(main=>{
               const pct = getDiscount(main);
               html += `
@@ -1398,23 +1649,35 @@ async function buildQuotePDF(order, withDiscount){
                   <td colspan="${colspan}" style="padding:7px 6px;background:#E4C766;color:#1F3050;font-weight:800;font-size:11px;">${esc(main)}</td>
                 </tr>`;
               groupsMap.get(main).forEach(it=>{
-                const lineDiscountAmt = withDiscount ? (it.discountEligibleAmount||0) * pct : 0;
-                const lineFinal = (it.lineRaw==null) ? null : it.lineRaw - lineDiscountAmt;
-                const unitAfter = (it.lineRaw==null || !it.normQty) ? null : lineFinal / it.normQty;
-                html += `
-                <tr style="background:${rowIndex%2===0?'#FFFFFF':'#F5F3EE'};">
-                  <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;">${esc(it.name||it.product)}</td>
-                  <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:700;">${it.normQty} ${esc(it.normUnit||'')}</td>
-                  ${withDiscount ? `
-                  <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
-                  <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;color:#B3261E;">${(it.rawPrice==null||lineDiscountAmt===0)?'—':'-'+Math.round(lineDiscountAmt).toLocaleString('en-US')}</td>
-                  <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${unitAfter==null?'—':Math.round(unitAfter).toLocaleString('en-US')}</td>
-                  ` : `
-                  <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
-                  `}
-                  <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">${lineFinal==null?'—':Math.round(lineFinal).toLocaleString('en-US')}</td>
-                </tr>`;
-                rowIndex++;
+                const shouldSplit = withDiscount && it.remainderQty>0 && it.wholeRollQty>0 && it.rawPrice!=null;
+                const renderRow = (label, qty, eligible)=>{
+                  const lineAmt = it.rawPrice==null ? null : it.rawPrice*qty;
+                  const discAmt = (withDiscount && eligible) ? lineAmt*pct : 0;
+                  const finalAmt = lineAmt==null ? null : lineAmt - discAmt;
+                  const unitAfter = (lineAmt==null || !qty) ? null : finalAmt/qty;
+                  serialCounter++;
+                  html += `
+                  <tr style="background:${rowIndex%2===0?'#FFFFFF':'#F5F3EE'};">
+                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;color:#8A8470;">${serialCounter}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;">${esc(it.name||it.product)}${label?` <span style="color:#8A8470;font-size:9.5px;">(${label})</span>`:''}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
+                    ${withDiscount ? `
+                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;color:#B3261E;">${discAmt===0?'—':'-'+Math.round(discAmt).toLocaleString('en-US')}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${unitAfter==null?'—':Math.round(unitAfter).toLocaleString('en-US')}</td>
+                    ` : `
+                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
+                    `}
+                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">${finalAmt==null?'—':Math.round(finalAmt).toLocaleString('en-US')}</td>
+                  </tr>`;
+                  rowIndex++;
+                };
+                if(shouldSplit){
+                  renderRow('لفة كاملة - بخصم', it.wholeRollQty, true);
+                  renderRow('كسر لفة - بدون خصم', it.remainderQty, false);
+                } else {
+                  renderRow('', it.normQty, true);
+                }
               });
             });
             return html;
@@ -1440,20 +1703,33 @@ async function buildQuotePDF(order, withDiscount){
         </div>
       </div>
 
+      ${rollSummary.length ? `
+      <div style="margin-top:14px;display:flex;justify-content:flex-end;">
+        <div style="width:280px;background:#F5F3EE;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:11px;font-weight:800;color:#1F3050;margin-bottom:6px;">عدد اللفات حسب القطاع</div>
+          ${rollSummary.map(r=>`
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#20242B;padding:3px 0;">
+              <span>${esc(r.sector)}</span><span style="font-weight:700;">${r.rolls % 1 === 0 ? r.rolls : r.rolls.toFixed(1)} لفة</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>` : ''}
+
       ${order.note ? `<div style="margin-top:18px;padding-top:12px;border-top:1px dashed #E4E0D6;font-size:11.5px;color:#6E7480;">ملاحظات: ${esc(order.note)}</div>` : ''}
 
-      <div style="margin-top:26px;padding-top:14px;border-top:1px solid #E4E0D6;display:flex;align-items:center;justify-content:space-between;">
-        <div style="font-size:10px;color:#6E7480;max-width:480px;">
-          المستند ده تم إنشاؤه تلقائيًا وقت إرسال الطلب — القرشي لأبواب وشبابيك الـ UPVC<br>
-          امسح كود الـ QR للدخول على نظام الطلبات مباشرة
-        </div>
-        <div id="qr-holder" style="flex-shrink:0;"></div>
+      <div style="margin-top:16px;padding:10px 14px;background:#FBEBD1;border-radius:8px;font-size:10.5px;color:#8A5A00;line-height:1.7;">
+        هذه الأسعار سارية ما لم يحدث تعديل في القوائم والأسعار قبل التنفيذ.<br>
+        الكميات وفقًا لرصيد المخزن وقت التنفيذ.
+      </div>
+
+      <div style="margin-top:26px;padding-top:14px;border-top:1px solid #E4E0D6;text-align:center;font-size:10px;color:#6E7480;">
+        المستند ده تم إنشاؤه تلقائيًا وقت إرسال الطلب — القرشي لأبواب وشبابيك الـ UPVC
       </div>
     </div>
   `;
   document.body.appendChild(wrap);
   try{
-    const qrHolder = wrap.querySelector('#qr-holder');
+    const qrHolder = wrap.querySelector('#qr-holder-top');
     if(qrHolder && typeof QRCode !== 'undefined'){
       new QRCode(qrHolder, { text: APP_URL, width:64, height:64, correctLevel: QRCode.CorrectLevel.M });
     }
@@ -1493,6 +1769,7 @@ async function exportExcel(){
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('الطلبات حسب العميل', { views:[{ rightToLeft:true }] });
   ws.columns = [
+    { header:'م', key:'serial', width:6 },
     { header:'الموزع', key:'dist', width:18 },
     { header:'المنطقة', key:'region', width:14 },
     { header:'الصنف', key:'product', width:32 },
@@ -1517,16 +1794,18 @@ async function exportExcel(){
     o.items.forEach(it => groups.get(o.distName).items.push(it));
   });
 
-  let rowIdx = 2, toggle=false, grandTotal=0;
+  let rowIdx = 2, toggle=false, grandTotal=0, serial=0;
   groups.forEach((g, dist)=>{
     const startRow = rowIdx;
     const dateStr = new Date(g.ts).toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
     const fillColor = toggle ? LIGHT : WHITE;
     g.items.forEach((it, idx)=>{
       grandTotal += it.lineTotal||0;
+      serial++;
       const row = ws.addRow({
+        serial,
         dist: idx===0?dist:'', region: idx===0?g.region:'',
-        product: it.product + (it.color?' - '+it.color:''),
+        product: it.name || it.product,
         qty: it.qty, unit: it.unitType||'',
         price: it.unitPrice==null ? 'غير متاح' : Math.round(it.unitPrice),
         total: it.lineTotal==null ? 'غير متاح' : Math.round(it.lineTotal),
@@ -1541,17 +1820,17 @@ async function exportExcel(){
       rowIdx++;
     });
     if(g.items.length>1){
-      ws.mergeCells(startRow,1,rowIdx-1,1); ws.mergeCells(startRow,2,rowIdx-1,2); ws.mergeCells(startRow,8,rowIdx-1,8);
+      ws.mergeCells(startRow,2,rowIdx-1,2); ws.mergeCells(startRow,3,rowIdx-1,3); ws.mergeCells(startRow,9,rowIdx-1,9);
     }
-    const distCell = ws.getCell(startRow,1);
+    const distCell = ws.getCell(startRow,2);
     distCell.font = { bold:true, color:{argb:NAVY}, size:11, name:'Arial' };
     distCell.alignment = { horizontal:'right', vertical:'middle', wrapText:true };
     toggle = !toggle;
   });
-  ws.autoFilter = { from:'A1', to:'H1' };
+  ws.autoFilter = { from:'A1', to:'I1' };
 
   const totalRow = ws.addRow({ product:'الإجمالي الكلي', total: Math.round(grandTotal) });
-  ws.mergeCells(rowIdx, 1, rowIdx, 6);
+  ws.mergeCells(rowIdx, 1, rowIdx, 7);
   totalRow.eachCell(cell=>{
     cell.font = { bold:true, color:{argb:WHITE}, size:12, name:'Arial' };
     cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:GOLD} };
@@ -1594,7 +1873,7 @@ function renderStagedBlock(s){
   <div class="stagedblock ${s.cancelling?'cancelling':''}">
     <div class="stagedhead">
       <div>
-        <div class="stagedname">${esc(s.product)}</div>
+        <div class="stagedname">${esc(s.product)} ${s.isEditingExisting?'<span class="edittag">✏️ تعديل</span>':''}</div>
         <div class="stagedmain">${esc(s.main)}</div>
       </div>
     </div>
@@ -1639,7 +1918,7 @@ function renderStagedBlock(s){
       }).join('')}
     </div>` : ''}
     <div class="stagedbtns">
-      <button class="confirmbtn" data-act="confirm-staged" data-key="${esc(s.key)}">✓ تمام، ضيفه للسلة</button>
+      <button class="confirmbtn" data-act="confirm-staged" data-key="${esc(s.key)}">${s.isEditingExisting?'✓ حفظ التعديل':'✓ تمام، ضيفه للسلة'}</button>
       <button class="cancelbtn" data-act="cancel-staged" data-key="${esc(s.key)}">✖ إلغاء</button>
     </div>
   </div>`;
@@ -1659,15 +1938,31 @@ function renderOrderView(){
         <h2>${state.successMode==='updated' ? 'تم تحديث الطلب بنجاح' : 'تم إرسال الطلب بنجاح'}</h2>
         <p>هيتم مراجعة طلبك والتواصل معاك لتأكيد التنفيذ</p>
         <div class="ordid">#${esc(state.successOrderId)}</div>
-        ${state.quotePdfGenerating ? '<div class="loading" style="padding:20px;">جارٍ تجهيز عرض السعر...</div>' : ''}
-        ${state.quotePdfDiscounted || state.quotePdfPlain ? `
-          ${isDistributorUnlocked() && state.quotePdfDiscounted ? `<div class="receiptpreview"><img src="${state.quotePdfDiscounted.previewUrl}" alt="عرض السعر بالخصم"><div class="previewlabel">معاينة عرض السعر (بالخصم)</div></div>`
-            : (state.quotePdfPlain ? `<div class="receiptpreview"><img src="${state.quotePdfPlain.previewUrl}" alt="عرض السعر"><div class="previewlabel">معاينة عرض السعر (بدون خصم)</div></div>` : '')}
-          <div class="receiptbtns">
-            ${state.quotePdfDiscounted ? `<button class="newbtn" data-act="share-quote-disc">${isDistributorUnlocked()?'📤':'🔒'} إرسال ملف PDF عبر واتساب (بالخصم)</button>` : ''}
-            ${state.quotePdfDiscounted ? `<button class="newbtn outline" data-act="download-quote-disc">${isDistributorUnlocked()?'⬇️':'🔒'} تحميل عرض السعر PDF (بالخصم)</button>` : ''}
-            ${state.quotePdfPlain ? `<button class="newbtn outline" data-act="share-quote-plain">📤 إرسال ملف PDF عبر واتساب (بدون خصم)</button>` : ''}
-            ${state.quotePdfPlain ? `<button class="newbtn outline" data-act="download-quote-plain">⬇️ تحميل عرض السعر PDF (بدون خصم)</button>` : ''}
+        ${state.quotePdfGenerating ? '<div class="loading" style="padding:20px;">جارٍ تجهيز المستندات...</div>' : ''}
+        ${(state.quotePdfDiscounted || state.quotePdfPlain || state.purchaseOrderPdf) ? `
+          <div class="docsection">
+            <div class="docsectiontitle">📄 عرض السعر (بالخصم) ${isDistributorUnlocked()?'':'🔒'}</div>
+            <div class="iconbtnrow">
+              <button class="iconbtn" data-act="share-quote-disc">📤<span>واتساب</span></button>
+              <button class="iconbtn" data-act="download-quote-disc">⬇️<span>تنزيل</span></button>
+              <button class="iconbtn" data-act="preview-quote-disc">👁️<span>معاينة</span></button>
+            </div>
+          </div>
+          <div class="docsection">
+            <div class="docsectiontitle">📄 عرض السعر (بدون خصم)</div>
+            <div class="iconbtnrow">
+              <button class="iconbtn" data-act="share-quote-plain">📤<span>واتساب</span></button>
+              <button class="iconbtn" data-act="download-quote-plain">⬇️<span>تنزيل</span></button>
+              <button class="iconbtn" data-act="preview-quote-plain">👁️<span>معاينة</span></button>
+            </div>
+          </div>
+          <div class="docsection">
+            <div class="docsectiontitle">📋 طلب شراء (أصناف وكميات بدون أسعار)</div>
+            <div class="iconbtnrow">
+              <button class="iconbtn" data-act="share-purchase">📤<span>واتساب</span></button>
+              <button class="iconbtn" data-act="download-purchase">⬇️<span>تنزيل</span></button>
+              <button class="iconbtn" data-act="preview-purchase">👁️<span>معاينة</span></button>
+            </div>
           </div>
         ` : ''}
         <br>
@@ -1853,6 +2148,9 @@ function renderOrderView(){
         <button class="savebtn ${state.draftJustSaved?'saved':''}" data-act="save-draft" type="button">
           <span class="ic">${state.draftJustSaved?'✓':'🛒'}</span>${state.draftJustSaved?'اتحفظ':'حفظ للسلة'}
         </button>` : ''}
+        <button class="savebtn" data-act="preview-cart-invoice" type="button" ${state.previewGenerating?'disabled':''}>
+          <span class="ic">${state.previewGenerating?'⏳':'👁️'}</span>معاينة
+        </button>
       </div>
     </div>
   </main>
@@ -1958,7 +2256,12 @@ function renderMyOrdersView(){
           `).join('')}
         </div>
         ${renderOrderTotalLine(o)}
-        ${!isDone ? `<button class="delbtn edit" data-act="edit-order" data-id="${esc(o.id)}">✏️ تعديل الطلب</button>` : ''}
+        <div class="adminbtnrow">
+          <button class="delbtn pdf" data-act="preview-myorder-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
+            ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : '📄 عرض PDF'}
+          </button>
+          ${!isDone ? `<button class="delbtn edit" data-act="edit-order" data-id="${esc(o.id)}">✏️ تعديل الطلب</button>` : ''}
+        </div>
       </div>`;
     }).join('');
   }
@@ -2041,6 +2344,7 @@ function renderAdminView(){
   <main>
     <div class="adminbar">
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
+      <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
       <button class="exportbtn" data-act="export-excel">تصدير Excel</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُسلَّم</button>
     </div>
@@ -2143,9 +2447,9 @@ function onInputChange(act, el, val){
 
   switch(act){
     case 'search-product': state.productSearch = val; break;
-    case 'set-distname': state.distName = val; autoSaveDraft(); break;
-    case 'set-distregion': state.distRegion = val; autoSaveDraft(); break;
-    case 'set-distphone': state.distPhone = val; autoSaveDraft(); break;
+    case 'set-distname': state.distName = val; autoSaveDraft(); saveProfile(); break;
+    case 'set-distregion': state.distRegion = val; autoSaveDraft(); saveProfile(); break;
+    case 'set-distphone': state.distPhone = val; autoSaveDraft(); saveProfile(); break;
     case 'set-note': state.note = val; autoSaveDraft(); break;
     case 'set-othername': state.otherName = val; break;
     case 'set-othernote': state.otherNote = val; break;
@@ -2228,6 +2532,7 @@ async function onAction(act, el){
 
     case 'request-submit': requestSubmit(); break;
     case 'save-draft': saveDraft(); break;
+    case 'preview-cart-invoice': previewCartInvoice(); break;
     case 'continue-daily': proceedAfterDailyWarning(); break;
     case 'goto-myorders-from-warning':
       state.showDailyWarning = false;
@@ -2247,6 +2552,29 @@ async function onAction(act, el){
     case 'share-quote-plain': shareQuotePDF(false); break;
     case 'download-quote-disc': requestDistributorAction('download-disc'); break;
     case 'download-quote-plain': downloadQuote(false); break;
+    case 'preview-quote-disc': requestDistributorAction('preview-disc'); break;
+    case 'preview-quote-plain': previewPdfBlob(state.quotePdfPlain); break;
+    case 'share-purchase':{
+      if(!state.purchaseOrderPdf){ showToast('الملف لسه بيتجهز، حاول تاني بعد لحظة'); break; }
+      (async ()=>{
+        try{
+          const file = new File([state.purchaseOrderPdf.blob], 'طلب_شراء_' + (state.successOrderId||'order') + '.pdf', {type:'application/pdf'});
+          if(navigator.canShare && navigator.canShare({files:[file]})){
+            await navigator.share({ files:[file], title:'طلب شراء', text:'طلب رقم #' + (state.successOrderId||'') });
+            return;
+          }
+        }catch(e){}
+        downloadBlob(state.purchaseOrderPdf.blob, 'طلب_شراء_' + (state.successOrderId||'order') + '.pdf');
+        showToast('اتحمل ملف الـ PDF — هتفتح واتساب، ارفق الملف يدويًا');
+        setTimeout(()=>{ window.open('https://wa.me/?text=' + encodeURIComponent('طلب شراء #' + (state.successOrderId||'')), '_blank'); }, 900);
+      })();
+      break;
+    }
+    case 'download-purchase':
+      if(state.purchaseOrderPdf) downloadBlob(state.purchaseOrderPdf.blob, 'طلب_شراء_' + (state.successOrderId||'order') + '.pdf');
+      else showToast('الملف لسه بيتجهز، حاول تاني بعد لحظة');
+      break;
+    case 'preview-purchase': previewPdfBlob(state.purchaseOrderPdf); break;
 
     case 'myorders-search': searchMyOrdersByPhone(); break;
     case 'myorders-refresh': refreshMyOrders(); break;
@@ -2278,6 +2606,11 @@ async function onAction(act, el){
       if(!state.adminPdfGeneratingId) handleOrderPDF(id, 'preview');
       break;
     }
+    case 'preview-myorder-pdf':{
+      const id = el.getAttribute('data-id');
+      if(!state.adminPdfGeneratingId) previewMyOrderPDF(id);
+      break;
+    }
     case 'download-order-pdf':{
       const id = el.getAttribute('data-id');
       if(!state.adminPdfGeneratingId) handleOrderPDF(id, 'download');
@@ -2288,6 +2621,7 @@ async function onAction(act, el){
       break;
     case 'admin-status': state.adminStatusFilter = el.getAttribute('data-val'); render(); break;
     case 'export-excel': exportExcel(); break;
+    case 'refresh-orders': loadOrders(); showToast('جارٍ التحديث...'); break;
     case 'install-app': installApp(); break;
     case 'dismiss-install': dismissInstallBanner(); break;
     case 'bypass-install': state.installGateBypassed = true; render(); break;
@@ -2324,11 +2658,20 @@ function dismissInstallBanner(){
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      reg.update().catch(()=>{});
+    }).catch(()=>{});
+  });
+  let reloadedOnce = false;
+  navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+    if(reloadedOnce) return;
+    reloadedOnce = true;
+    window.location.reload();
   });
 }
 
 // ===== init =====
+loadProfile();
 loadCatalog().then(()=>{ checkForResumableDraft(); render(); });
 render();
 
