@@ -711,7 +711,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v37';
+const APP_BUILD = 'v38';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -1038,6 +1038,25 @@ function withTimeout(promise, ms, label){
 // بتتجمّد فعليًا (والـ timeout نفسه مش بيقدر يشتغل لأن الـ thread متشغل).
 // عشان كده بنقلل الـ scale على الموبايل وعلى الطلبات الكبيرة — الجودة تفضل
 // كويسة والملف يتولد من غير ما التطبيق يهنج.
+// بنطلّع نسخة صورة (PNG) من نفس الكانفس اللي بنعمل منه الـ PDF —
+// عشان الإرسال على واتساب يبقى صورة تتفتح على طول بدل ملف PDF.
+function canvasToPngBlob_(canvas){
+  return new Promise(resolve=>{
+    try{
+      if(canvas.toBlob){
+        canvas.toBlob(b=>resolve(b), 'image/png');
+      } else {
+        // متصفحات قديمة: نحوّل الـ dataURL بإيدنا
+        const parts = canvas.toDataURL('image/png').split(',');
+        const bin = atob(parts[1]);
+        const arr = new Uint8Array(bin.length);
+        for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+        resolve(new Blob([arr], {type:'image/png'}));
+      }
+    }catch(e){ resolve(null); }
+  });
+}
+
 function pdfScale_(itemCount){
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
   const n = Number(itemCount) || 0;
@@ -2012,35 +2031,59 @@ function downloadShortage(){
 async function shareShortagePDF(){
   const q = state.shortagePdf;
   if(!q) return;
-  try{
-    const file = new File([q.blob], 'طلبية_نواقص_' + (state.successOrderId||'order') + '.pdf', {type:'application/pdf'});
-    if(navigator.canShare && navigator.canShare({files:[file]})){
-      await navigator.share({ files:[file], title:'طلبية نواقص', text:'طلب رقم #' + (state.successOrderId||'') });
-      return;
-    }
-  }catch(e){ /* fallback below */ }
-  downloadShortage();
-  showToast('اتحمل ملف الـ PDF — هتفتح واتساب، ارفق الملف يدويًا');
+  const name = 'طلبية_نواقص_' + (state.successOrderId||'order');
+  if(await shareAsImage_(q, name, 'طلبية نواقص')) return;
+  if(q.imgBlob){
+    downloadBlob(q.imgBlob, name + '.png');
+    showToast('اتحملت الصورة — هتفتح واتساب، ارفقها من المعرض');
+  } else {
+    downloadShortage();
+    showToast('اتحمل الملف — هتفتح واتساب، ارفقه يدويًا');
+  }
   setTimeout(()=>{ window.open('https://wa.me/?text=' + encodeURIComponent('طلبية نواقص #' + (state.successOrderId||'')), '_blank'); }, 900);
+}
+
+// الإرسال على واتساب بقى بصورة (PNG) مش PDF — الصورة بتتفتح في الشات على طول
+// من غير ما حد ينزّل ملف. لو الجهاز مش بيدعم مشاركة الصور، بنرجع للـ PDF.
+async function shareAsImage_(q, baseName, title){
+  if(!q) return false;
+  // 1) الأفضل: مشاركة صورة
+  if(q.imgBlob){
+    try{
+      const img = new File([q.imgBlob], baseName + '.png', {type:'image/png'});
+      if(navigator.canShare && navigator.canShare({files:[img]})){
+        await navigator.share({ files:[img], title: title, text:'طلب رقم #' + (state.successOrderId||'') });
+        return true;
+      }
+    }catch(e){ /* المستخدم لغى أو الجهاز مش داعم */ }
+  }
+  // 2) احتياطي: مشاركة PDF
+  try{
+    const file = new File([q.blob], baseName + '.pdf', {type:'application/pdf'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({ files:[file], title: title, text:'طلب رقم #' + (state.successOrderId||'') });
+      return true;
+    }
+  }catch(e){ /* fallthrough */ }
+  return false;
 }
 
 async function shareQuotePDF(){
   const q = state.quotePdfPlain;
   if(!q) return;
-  try{
-    const file = new File([q.blob], 'عرض_سعر_' + (state.successOrderId||'order') + '.pdf', {type:'application/pdf'});
-    if(navigator.canShare && navigator.canShare({files:[file]})){
-      await navigator.share({ files:[file], title:'عرض سعر', text:'طلب رقم #' + (state.successOrderId||'') });
-      return;
-    }
-  }catch(e){ /* fallback below */ }
-  downloadQuote();
+  const name = 'عرض_سعر_' + (state.successOrderId||'order');
+  if(await shareAsImage_(q, name, 'عرض سعر')) return;
+  // 3) آخر حل: ننزّل الصورة ونفتح واتساب عشان يرفقها بإيده
+  if(q.imgBlob){
+    downloadBlob(q.imgBlob, name + '.png');
+    showToast('اتحملت الصورة — هتفتح واتساب، ارفقها من المعرض');
+  } else {
+    downloadQuote();
+    showToast('اتحمل الملف — هتفتح واتساب، ارفقه يدويًا');
+  }
   const o = state.lastOrder;
   let msg = 'طلب #' + (state.successOrderId||'') + '\n';
-  if(o){
-    msg += 'الموزع: ' + o.distName + '\nالمنطقة: ' + (o.distRegion||'') + '\n';
-  }
-  showToast('اتحمل ملف الـ PDF — هتفتح واتساب، ارفق الملف يدويًا');
+  if(o) msg += 'الموزع: ' + asText(o.distName) + '\nالمنطقة: ' + asText(o.distRegion) + '\n';
   setTimeout(()=>{ window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank'); }, 900);
 }
 
@@ -2270,7 +2313,8 @@ async function buildQuotePDF(order){
       doc.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
       heightLeft -= pageHeight;
     }
-    result = { blob: doc.output('blob'), previewUrl: imgData };
+    const imgBlob = await canvasToPngBlob_(canvas);
+    result = { blob: doc.output('blob'), previewUrl: imgData, imgBlob: imgBlob };
   }catch(e){ console.error('buildQuotePDF failed:', e); result = null; }
   try{ document.body.removeChild(wrap); }catch(e){}
   return result;
@@ -2398,7 +2442,8 @@ async function buildShortagePDF(order){
       doc.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
       heightLeft -= pageHeight;
     }
-    result = { blob: doc.output('blob'), previewUrl: imgData };
+    const imgBlob = await canvasToPngBlob_(canvas);
+    result = { blob: doc.output('blob'), previewUrl: imgData, imgBlob: imgBlob };
   }catch(e){ result = null; }
   try{ document.body.removeChild(wrap); }catch(e){}
   return result;
@@ -2618,8 +2663,8 @@ function renderOrderView(){
           <div class="docsection">
             <div class="docsectiontitle">📄 عرض سعر</div>
             <div class="iconbtnrow">
-              <button class="iconbtn" data-act="share-quote-plain">📤<span>واتساب</span></button>
-              <button class="iconbtn" data-act="download-quote-plain">⬇️<span>تنزيل</span></button>
+              <button class="iconbtn" data-act="share-quote-plain">📤<span>واتساب (صورة)</span></button>
+              <button class="iconbtn" data-act="download-quote-plain">⬇️<span>تنزيل PDF</span></button>
               <button class="iconbtn" data-act="preview-quote-plain">👁️<span>معاينة</span></button>
             </div>
           </div>
@@ -2628,8 +2673,8 @@ function renderOrderView(){
           <div class="docsection">
             <div class="docsectiontitle">📋 طلبية نواقص (بدون أسعار)</div>
             <div class="iconbtnrow">
-              <button class="iconbtn" data-act="share-shortage">📤<span>واتساب</span></button>
-              <button class="iconbtn" data-act="download-shortage">⬇️<span>تنزيل</span></button>
+              <button class="iconbtn" data-act="share-shortage">📤<span>واتساب (صورة)</span></button>
+              <button class="iconbtn" data-act="download-shortage">⬇️<span>تنزيل PDF</span></button>
               <button class="iconbtn" data-act="preview-shortage">👁️<span>معاينة</span></button>
             </div>
           </div>
