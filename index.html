@@ -711,7 +711,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v38';
+const APP_BUILD = 'v39';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -771,6 +771,8 @@ const state = {
   notifyPromptId:null,
   pinChecking:false,
   orderSentToWa:false,
+  orderImage:null,
+  orderImgPreparing:false,
   showDiag:false,
   diagText:'',
   saveError:'',
@@ -1757,6 +1759,7 @@ async function actuallySubmit(){
 
 function resetOrderForm(){
   state.orderSentToWa = false;
+  state.orderImage = null;
   state.successOrderId = null;
   state.lastOrder = null;
   state.quotePdfPlain = null;
@@ -2644,15 +2647,23 @@ function renderOrderView(){
         <h2>${state.successMode==='updated' ? 'تم تحديث الطلب بنجاح' : 'تم إرسال الطلب بنجاح'}</h2>
         <p>هيتم مراجعة طلبك والتواصل معاك لتأكيد التنفيذ</p>
         <div class="ordid">#${esc(state.successOrderId)}</div>
-        <!-- الموزع لازم يبعت الطلب على واتساب — بنخليها أول وأوضح حاجة يشوفها -->
+        <!-- الموزع لازم يبعت الطلب كصورة — بنخليها أول وأوضح حاجة يشوفها -->
         <div class="card" style="border:2px solid ${state.orderSentToWa ? 'var(--success)' : 'var(--danger)'};margin-bottom:12px;">
           ${state.orderSentToWa ? `
-            <div style="color:var(--success);font-weight:800;font-size:14px;">✅ تمام، الطلب اتبعت على واتساب</div>
-            <button class="newbtn outline" data-act="send-order-wa" style="margin-top:8px;">ابعته تاني</button>
+            <div style="color:var(--success);font-weight:800;font-size:14px;">✅ تمام، الطلب اتبعت</div>
+            <button class="newbtn outline" data-act="send-order-wa" style="margin-top:8px;">📲 ابعته تاني</button>
           ` : `
             <div style="color:var(--danger);font-weight:800;font-size:14px;margin-bottom:4px;">⚠️ الطلب لسه ما اتبعتش</div>
-            <p style="color:var(--muted);font-size:12px;margin:0 0 10px;">لازم تبعت الطلب على واتساب عشان يوصل ويتنفذ</p>
-            <button class="newbtn" data-act="send-order-wa" style="background:#25D366;border-color:#25D366;">📲 ابعت الطلب على واتساب</button>
+            <p style="color:var(--muted);font-size:12px;margin:0 0 10px;">
+              ${state.orderImage ? 'الصورة جاهزة — دوس ابعت واختار الجروب أو الشخص' : 'جهّز صورة الطلب الأول، وبعدين ابعتها لأي حد تختاره'}
+            </p>
+            ${state.orderImage ? `
+              <button class="newbtn" data-act="send-order-wa" style="background:#25D366;border-color:#25D366;">📲 ابعت الصورة — اختار لمين</button>
+            ` : `
+              <button class="newbtn" data-act="prepare-order-img" ${state.orderImgPreparing?'disabled':''}>
+                ${state.orderImgPreparing ? '⏳ جارٍ تجهيز الصورة...' : '🖼️ جهّز صورة الطلب'}
+              </button>
+            `}
           `}
         </div>
         ${state.quotePdfGenerating ? '<div class="loading" style="padding:20px;">جارٍ تجهيز المستندات...</div>' : ''}
@@ -3130,25 +3141,49 @@ function normalizePhoneIntl_(p){
   return d;
 }
 
-// الموزع يبعت طلبه بنفسه على واتساب الأدمن.
-// لازم تبقى ضغطة مباشرة منه — المتصفح بيمنع فتح واتساب بعد await من غير ضغطة.
-function sendOrderToAdminWhatsApp(){
+// الموزع بيبعت الطلب كـ"صورة" ويختار بنفسه هيبعتها لمين (جروب / شخص).
+// مفيش رقم محدد — بنفتح شاشة المشاركة بتاعة الموبايل وهو يختار.
+//
+// ⚠️ قيد مهم: navigator.share لازم يتنده في نفس لحظة الضغطة. لو استنينا الصورة
+// تتولد الأول (بتاخد ثانية أو اتنين)، المتصفح بيعتبر إن الضغطة ضاعت وبيلغي
+// المشاركة. عشان كده فصلناها خطوتين: "جهّز الصورة" الأول، وبعدين "ابعت".
+async function prepareOrderImage(){
   const o = state.lastOrder;
-  if(!o){ showToast('مفيش طلب أبعته'); return; }
-  let msg = '📦 طلب جديد #' + String(o.id).toUpperCase() + '\n';
-  msg += '👤 الموزع: ' + asText(o.distName) + '\n';
-  msg += '📍 المنطقة: ' + asText(o.distRegion) + '\n';
-  if(o.distPhone) msg += '📞 ' + asText(o.distPhone) + '\n';
-  msg += '——————\n';
-  (o.items||[]).forEach((it, i)=>{
-    const n = normalizeItemToSmallUnit(it);
-    msg += (i+1) + '. ' + asText(it.name || it.product)
-         + (it.color ? ' - ' + asText(it.color) : '')
-         + ' × ' + n.qty + ' ' + asText(n.unitLabel) + '\n';
-  });
-  if(asText(o.note).trim()) msg += '📝 ' + asText(o.note).trim() + '\n';
-  if(CREDIT_LINE) msg += '\n' + CREDIT_LINE;
-  window.open('https://wa.me/' + ADMIN_WHATSAPP + '?text=' + encodeURIComponent(msg), '_blank');
+  if(!o){ showToast('مفيش طلب'); return; }
+  state.orderImgPreparing = true; render();
+  try{
+    const res = await buildQuotePDF(o);
+    state.orderImage = (res && res.imgBlob) ? res : null;
+    if(!state.orderImage) showToast('تعذّر تجهيز الصورة، حاول تاني');
+  }catch(e){
+    state.orderImage = null;
+    showToast('تعذّر تجهيز الصورة: ' + (e && e.message ? e.message : e));
+  }
+  state.orderImgPreparing = false;
+  render();
+}
+
+async function shareOrderImage(){
+  const q = state.orderImage;
+  if(!q || !q.imgBlob){ showToast('جهّز الصورة الأول'); return; }
+  const o = state.lastOrder;
+  const name = 'طلب_' + String(o ? o.id : 'order').toUpperCase();
+  try{
+    const img = new File([q.imgBlob], name + '.png', {type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[img]})){
+      // مفيش رقم — شاشة المشاركة هتفتح وهو يختار الجروب أو الشخص
+      await navigator.share({ files:[img], title:'طلبية', text:'طلب #' + (o ? String(o.id).toUpperCase() : '') });
+      state.orderSentToWa = true;
+      render();
+      return;
+    }
+  }catch(e){
+    // المستخدم لغى المشاركة — مش خطأ
+    if(e && e.name === 'AbortError') return;
+  }
+  // احتياطي: ننزّل الصورة وهو يرفعها بإيده
+  downloadBlob(q.imgBlob, name + '.png');
+  showToast('اتحملت الصورة — افتح واتساب وابعتها من المعرض');
   state.orderSentToWa = true;
   render();
 }
@@ -3548,7 +3583,8 @@ async function onActionInner(act, el){
       break;
     }
     case 'skip-notify': state.notifyPromptId=null; render(); break;
-    case 'send-order-wa': sendOrderToAdminWhatsApp(); break;
+    case 'prepare-order-img': await prepareOrderImage(); break;
+    case 'send-order-wa': await shareOrderImage(); break;
     case 'copy-app-link': copyAppLink(); break;
     case 'run-diag': runDiagnostics(); break;
     case 'close-diag': state.showDiag=false; render(); break;
