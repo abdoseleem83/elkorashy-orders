@@ -733,7 +733,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v44';
+const APP_BUILD = 'v45';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -801,6 +801,10 @@ const state = {
   orderSentToWa:false,
   orderImage:null,
   orderImgPreparing:false,
+  warehouseImages:[],
+  whImgPreparing:false,
+  showStock:false,
+  stockSearch:'',
   showDiag:false,
   diagText:'',
   saveError:'',
@@ -1158,14 +1162,20 @@ async function loadOrders(){
     const data = await res.json();
     if(Array.isArray(data)){
       state.orders = data;
-    } else {
+    } else if(data && data.error === 'unauthorized'){
       // التوكن خلص أو مش صالح — نرجّع الأدمن لشاشة الرقم
-      state.orders = [];
       setAdminToken('');
       state.adminUnlocked = false;
       showToast('انتهت جلسة الأدمن، ادخل الرقم تاني');
+    } else {
+      showToast('السيرفر مردش صح — الطلبات المعروضة ممكن تكون قديمة');
     }
-  }catch(e){ state.orders = []; }
+  }catch(e){
+    // ⚠️ قبل كده كنا بنعمل state.orders = [] هنا — فأي انقطاع بسيط في النت (أو
+    // إعادة تحميل بعد تحديث) كان بيمسح الطلبات من الشاشة وتبان كأنها "اختفت".
+    // دلوقتي بنسيب آخر قايمة ظاهرة زي ما هي وبنقول إن التحديث فشل.
+    showToast('تعذّر تحديث الطلبات — النت. الطلبات الظاهرة زي ما هي');
+  }
   state.ordersLoading = false;
   render();
 }
@@ -1825,6 +1835,7 @@ async function actuallySubmit(){
 function resetOrderForm(){
   state.orderSentToWa = false;
   state.orderImage = null;
+  state.warehouseImages = [];
   state.successOrderId = null;
   state.lastOrder = null;
   state.quotePdfPlain = null;
@@ -2018,6 +2029,58 @@ function renderWarehouseModal(){
           <button class="modalbtn ${state.warehouse===w?'primary':''}" data-act="pick-warehouse" data-val="${esc(w)}">${esc(w)}</button>
         `).join('')}
         <button class="modalbtn" data-act="close-warehouse" style="color:var(--muted);">إلغاء</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// شاشة الأرصدة — للأدمن بس (فيها أرقام، والموزع مش المفروض يشوفها).
+// الأرقام دي = الرصيد − المحجوز، بالعود/القطعة.
+function renderStockModal(){
+  if(!state.showStock) return '';
+  const q = asText(state.stockSearch).trim().toLowerCase();
+
+  // بنجمّع: الاسم المختصر (المنتج) → الألوان وكمياتها
+  const byProduct = new Map();
+  CATALOG.forEach(d=>{
+    if(d.available === false) return;
+    const key = d.main + ' ⟩ ' + d.product;
+    if(q && !key.toLowerCase().includes(q)) return;
+    if(!byProduct.has(key)) byProduct.set(key, []);
+    byProduct.get(key).push(d);
+  });
+
+  const rows = [...byProduct.entries()].map(([key, list])=>{
+    const label = smallUnitLabelFor(list[0].main);
+    const cells = list.map(d=>{
+      const n = Number(d.stock);
+      const has = isFinite(n) && n > 0;
+      const low = has && n < LOW_STOCK_THRESHOLD;
+      const color = !has ? 'var(--danger)' : (low ? '#8A5A00' : 'var(--success)');
+      const bg    = !has ? '#FDECEC'      : (low ? '#FBEBD1' : '#EDF7EE');
+      return `<span style="background:${bg};color:${color};border-radius:6px;padding:2px 7px;font-size:11.5px;font-weight:700;white-space:nowrap;">
+        ${esc(d.color || 'بدون لون')}: ${has ? n + ' ' + esc(label) : 'صفر'}
+      </span>`;
+    }).join(' ');
+    return `<div style="padding:9px 0;border-bottom:1px solid var(--line);">
+      <div style="font-weight:800;color:var(--navy);font-size:12.5px;margin-bottom:5px;">${esc(key)}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;">${cells}</div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="modalbg" data-act="close-stock">
+    <div class="previewmodal" data-act="noop" style="max-width:560px;">
+      <div class="previewhead">
+        <span>📊 الأرصدة المتاحة</span>
+        <button class="previewclose" data-act="close-stock">✕</button>
+      </div>
+      <div style="padding:8px 10px 0;">
+        <input type="text" placeholder="ابحث عن صنف..." value="${esc(state.stockSearch)}" data-act="stock-search">
+        <div style="font-size:10.5px;color:var(--muted);margin:4px 0 6px;">المتاح = الرصيد − المحجوز · بالعود/القطعة</div>
+      </div>
+      <div class="previewbody" style="background:#fff;">
+        ${rows || '<div class="loading">مفيش نتيجة</div>'}
       </div>
     </div>
   </div>`;
@@ -2544,6 +2607,140 @@ async function buildShortagePDF(order){
   return result;
 }
 
+// ===== صور المخزن =====
+// صورة لكل مجموعة رئيسية لوحدها (عشان متبقاش صفحة طويلة)، من غير أي أسعار —
+// فيها: مسلسل / اسم العميل / الصنف / الكمية. توجّهها للمخزن على طول.
+async function buildWarehouseImage(order, mainGroup, rows, pageNo, pageCount){
+  if(typeof html2canvas === 'undefined') return null;
+
+  const wrap = document.createElement('div');
+  wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
+  wrap.style.width='760px';
+  wrap.style.fontFamily = "'Cairo', sans-serif";
+  wrap.style.direction='rtl';
+  wrap.style.background='#FFFFFF';
+
+  const date = new Date(order.ts);
+  const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  wrap.innerHTML = `
+    <div style="padding:28px 34px;">
+      <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #C9A227;padding-bottom:14px;margin-bottom:16px;">
+        <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
+        <div style="flex:1;">
+          <div style="font-size:19px;font-weight:800;color:#1F3050;">أمر صرف مخزن</div>
+          <div style="font-size:12px;color:#6E7480;margin-top:2px;">القرشي لأبواب وشبابيك الـ UPVC</div>
+        </div>
+        <div style="text-align:left;">
+          <div style="font-size:13px;font-weight:800;color:#C9A227;">#${esc(String(order.id).toUpperCase())}</div>
+          <div style="font-size:11px;color:#6E7480;">${esc(dateStr)}</div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;margin-bottom:14px;font-size:13px;">
+        <div><span style="color:#6E7480;">العميل: </span><b style="color:#1F3050;">${esc(asText(order.distName))}</b></div>
+        <div><span style="color:#6E7480;">المخزن: </span><b style="color:#C9A227;">${esc(asText(order.warehouse) || '—')}</b></div>
+        <div><span style="color:#6E7480;">صفحة </span><b style="color:#1F3050;">${pageNo} / ${pageCount}</b></div>
+      </div>
+
+      <div style="background:#E4C766;color:#1F3050;font-weight:800;font-size:14px;padding:8px 12px;border-radius:8px 8px 0 0;">
+        ${esc(mainGroup)}
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:#1F3050;color:#fff;">
+            <th style="padding:9px 6px;text-align:center;width:44px;">م</th>
+            <th style="padding:9px 6px;text-align:right;">الصنف</th>
+            <th style="padding:9px 6px;text-align:center;width:130px;">الكمية</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((it, i)=>{
+            const n = normalizeItemToSmallUnit(it);
+            const bg = i%2===0 ? '#FFFFFF' : '#F5F3EE';
+            return `
+            <tr style="background:${bg};">
+              <td style="padding:10px 6px;border-bottom:1px solid #E4E0D6;text-align:center;color:#8A8470;">${i+1}</td>
+              <td style="padding:10px 6px;border-bottom:1px solid #E4E0D6;">
+                ${esc(it.name || it.product)}${it.color?` <span style="color:#6E7480;">- ${esc(it.color)}</span>`:''}
+              </td>
+              <td style="padding:10px 6px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">
+                ${n.qty} ${esc(n.unitLabel||'')}
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+
+      ${asText(order.note).trim() && pageNo===1 ? `<div style="margin-top:14px;padding-top:10px;border-top:1px dashed #E4E0D6;font-size:12px;color:#6E7480;">ملاحظات: ${esc(asText(order.note))}</div>` : ''}
+
+      <div style="margin-top:22px;display:flex;justify-content:space-between;font-size:11px;color:#6E7480;">
+        <div>توقيع أمين المخزن: ....................</div>
+        <div>توقيع المستلم: ....................</div>
+      </div>
+      ${CREDIT_LINE ? `<div style="margin-top:10px;text-align:center;color:#A8A498;font-size:9px;">${esc(CREDIT_LINE)}</div>` : ''}
+    </div>
+  `;
+  document.body.appendChild(wrap);
+
+  let blob = null;
+  try{
+    const canvas = await withTimeout(
+      html2canvas(wrap, {scale: pdfScale_(rows.length), backgroundColor:'#ffffff', useCORS:true, allowTaint:true}),
+      20000, 'warehouse-img'
+    );
+    blob = await canvasToPngBlob_(canvas);
+  }catch(e){ console.error('buildWarehouseImage failed:', e); }
+  try{ document.body.removeChild(wrap); }catch(e){}
+  return blob;
+}
+
+async function prepareWarehouseImages(){
+  const o = state.lastOrder;
+  if(!o || !o.items || !o.items.length){ showToast('مفيش طلب'); return; }
+  state.whImgPreparing = true; state.warehouseImages = []; render();
+
+  // مجموعة رئيسية لكل صورة
+  const groups = new Map();
+  o.items.forEach(it=>{
+    if(!groups.has(it.main)) groups.set(it.main, []);
+    groups.get(it.main).push(it);
+  });
+  const ordered = orderGroups_(groups);
+  const out = [];
+  for(let i=0;i<ordered.length;i++){
+    const g = ordered[i];
+    // فسحة صغيرة بين كل صورة عشان الواجهة ما تتجمدش
+    await new Promise(r=>setTimeout(r, 60));
+    const blob = await buildWarehouseImage(o, g, groups.get(g), i+1, ordered.length);
+    if(blob) out.push({ group: g, blob: blob });
+  }
+  state.warehouseImages = out;
+  state.whImgPreparing = false;
+  if(!out.length) showToast('تعذّر تجهيز الصور، حاول تاني');
+  render();
+}
+
+async function shareWarehouseImages(){
+  const imgs = state.warehouseImages || [];
+  if(!imgs.length){ showToast('جهّز الصور الأول'); return; }
+  const o = state.lastOrder;
+  const base = 'مخزن_' + String(o ? o.id : 'order').toUpperCase();
+  const files = imgs.map((x, i)=> new File([x.blob], base + '_' + (i+1) + '_' + x.group + '.png', {type:'image/png'}));
+  try{
+    if(navigator.canShare && navigator.canShare({files})){
+      await navigator.share({ files, title:'أمر صرف مخزن', text:'طلب #' + (o?String(o.id).toUpperCase():'') });
+      return;
+    }
+  }catch(e){
+    if(e && e.name === 'AbortError') return;
+  }
+  // احتياطي: ننزّلهم واحدة واحدة
+  imgs.forEach((x,i)=> downloadBlob(x.blob, base + '_' + (i+1) + '_' + x.group + '.png'));
+  showToast('اتحملت الصور — ابعتها من المعرض');
+}
+
 // ===== excel export (admin) =====
 async function exportExcel(){
   if(state.orders.length===0){ showToast('مفيش طلبات لتصديرها'); return; }
@@ -2772,6 +2969,18 @@ function renderOrderView(){
                 ${state.orderImgPreparing ? '⏳ جارٍ تجهيز الصورة...' : '🖼️ جهّز صورة الطلب'}
               </button>
             `}
+          `}
+        </div>
+        <!-- أمر صرف المخزن: صورة لكل مجموعة، بدون أسعار -->
+        <div class="docsection">
+          <div class="docsectiontitle">🏬 أمر صرف مخزن (بدون أسعار)</div>
+          ${state.warehouseImages && state.warehouseImages.length ? `
+            <p style="color:var(--muted);font-size:11.5px;margin:0 0 8px;">جاهز — ${state.warehouseImages.length} صورة (مجموعة لكل صورة)</p>
+            <button class="newbtn" data-act="share-wh-img" style="background:#25D366;border-color:#25D366;">📲 ابعت للمخزن — اختار لمين</button>
+          ` : `
+            <button class="newbtn outline" data-act="prepare-wh-img" ${state.whImgPreparing?'disabled':''}>
+              ${state.whImgPreparing ? '⏳ جارٍ تجهيز الصور...' : '🖼️ جهّز صور المخزن'}
+            </button>
           `}
         </div>
         ${state.quotePdfGenerating ? '<div class="loading" style="padding:20px;">جارٍ تجهيز المستندات...</div>' : ''}
@@ -3204,6 +3413,7 @@ function renderAdminView(){
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
       <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
       <button class="exportbtn" data-act="export-excel">تصدير Excel</button>
+      <button class="exportbtn" data-act="show-stock">📊 الأرصدة</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُسلَّم</button>
     </div>
     <div class="statuschips">
@@ -3377,7 +3587,7 @@ function render(){
     else if(state.view==='myorders') view = renderMyOrdersView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
-    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderGlobalError();
+    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderGlobalError();
     bindEvents();
 
     // نرجّع التمرير بس لو إحنا في نفس الشاشة (مش لما ننتقل من شاشة لشاشة)
@@ -3642,6 +3852,9 @@ async function onActionInner(act, el){
       requestSubmit();
       break;
     case 'close-warehouse': state.showWarehouseModal=false; render(); break;
+    case 'show-stock': state.showStock=true; state.stockSearch=''; render(); break;
+    case 'close-stock': state.showStock=false; render(); break;
+    case 'stock-search': state.stockSearch = el.value; render(); break;
     case 'change-warehouse':
       state.showConfirmModal = false;
       state.showWarehouseModal = true;
@@ -3754,6 +3967,8 @@ async function onActionInner(act, el){
     }
     case 'skip-notify': state.notifyPromptId=null; render(); break;
     case 'prepare-order-img': await prepareOrderImage(); break;
+    case 'prepare-wh-img': await prepareWarehouseImages(); break;
+    case 'share-wh-img': await shareWarehouseImages(); break;
     case 'send-order-wa': await shareOrderImage(); break;
     case 'copy-app-link': copyAppLink(); break;
     case 'run-diag': runDiagnostics(); break;
