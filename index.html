@@ -207,7 +207,7 @@ textarea{resize:vertical;min-height:60px;}
   border:1.5px solid var(--line);
   border-radius:9px;
   background:#FCFBF8;
-  padding:8px 5px 16px;
+  padding:8px 5px 22px;
   font-size:10.5px;
   line-height:1.25;
   text-align:center;
@@ -215,7 +215,7 @@ textarea{resize:vertical;min-height:60px;}
   display:flex;
   align-items:center;
   justify-content:center;
-  min-height:62px;
+  min-height:72px;
   word-break:break-word;
 }
 .productgrid .ptile:hover{background:#F0EDE4;}
@@ -559,7 +559,8 @@ textarea{resize:vertical;min-height:60px;}
 }
 .productgrid .ptile .stocktag{
   position:absolute;bottom:2px;left:2px;right:2px;
-  font-size:8px;font-weight:800;border-radius:4px;padding:1px 2px;text-align:center;
+  font-size:7.5px;font-weight:800;border-radius:4px;padding:2px;text-align:center;
+  line-height:1.2;white-space:normal;
 }
 .productgrid .ptile .stocktag.out{background:var(--danger);color:#fff;}
 .productgrid .ptile .stocktag.in{background:var(--success);color:#fff;}
@@ -710,7 +711,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v36';
+const APP_BUILD = 'v37';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -769,6 +770,7 @@ const state = {
   previewModal:null,
   notifyPromptId:null,
   pinChecking:false,
+  orderSentToWa:false,
   showDiag:false,
   diagText:'',
   saveError:'',
@@ -846,6 +848,20 @@ function isProductOutOfStock(main, product){
   const opts = colorsForProduct(main, product);
   return opts.length>0 && opts.every(c=>c.available!==false && isColorOutOfStock(main, product, c.color));
 }
+// بيرجّع نص مختصر بالألوان المتوفرة فعلاً في الصنف ده:
+// "جميع الألوان" لو كلها متوفرة · "بيج، ابيض" لو بعضها · '' لو مفيش
+function availableColorsLabel(main, product){
+  const opts = colorsForProduct(main, product).filter(c => c.available !== false);
+  if(!opts.length) return '';
+  const withColor = opts.filter(c => c.color);
+  // صنف من غير ألوان أصلاً
+  if(!withColor.length) return opts.some(c=>c.inStock!==false) ? 'متوفر' : '';
+  const inStock = withColor.filter(c => c.inStock !== false).map(c => c.color);
+  if(!inStock.length) return '';
+  if(inStock.length === withColor.length) return 'جميع الألوان';
+  return inStock.join('، ');
+}
+
 function isColorOutOfStock(main, product, color){
   const item = findCatalogItem(main, product, color);
   return item ? (item.available!==false && item.inStock===false) : false;
@@ -1721,6 +1737,7 @@ async function actuallySubmit(){
 }
 
 function resetOrderForm(){
+  state.orderSentToWa = false;
   state.successOrderId = null;
   state.lastOrder = null;
   state.quotePdfPlain = null;
@@ -2429,12 +2446,15 @@ async function exportExcel(){
     g.items.forEach((it, idx)=>{
       grandTotal += it.lineTotal||0;
       serial++;
+      // بنصدّر بالوحدة الصغيرة (عود / قطعة) مش باللفة — زي عرض السعر بالظبط
+      const norm = normalizeItemToSmallUnit(it);
+      const rawPrice = rawPriceForItem(it);
       const row = ws.addRow({
         serial,
         dist: idx===0?dist:'', region: idx===0?g.region:'',
         product: it.name || it.product,
-        qty: it.qty, unit: it.unitType||'',
-        price: it.unitPrice==null ? 'غير متاح' : Math.round(it.unitPrice),
+        qty: norm.qty, unit: norm.unitLabel||'',
+        price: rawPrice==null ? 'غير متاح' : Math.round(rawPrice),
         total: it.lineTotal==null ? 'غير متاح' : Math.round(it.lineTotal),
         date: idx===0?dateStr:''
       });
@@ -2579,6 +2599,17 @@ function renderOrderView(){
         <h2>${state.successMode==='updated' ? 'تم تحديث الطلب بنجاح' : 'تم إرسال الطلب بنجاح'}</h2>
         <p>هيتم مراجعة طلبك والتواصل معاك لتأكيد التنفيذ</p>
         <div class="ordid">#${esc(state.successOrderId)}</div>
+        <!-- الموزع لازم يبعت الطلب على واتساب — بنخليها أول وأوضح حاجة يشوفها -->
+        <div class="card" style="border:2px solid ${state.orderSentToWa ? 'var(--success)' : 'var(--danger)'};margin-bottom:12px;">
+          ${state.orderSentToWa ? `
+            <div style="color:var(--success);font-weight:800;font-size:14px;">✅ تمام، الطلب اتبعت على واتساب</div>
+            <button class="newbtn outline" data-act="send-order-wa" style="margin-top:8px;">ابعته تاني</button>
+          ` : `
+            <div style="color:var(--danger);font-weight:800;font-size:14px;margin-bottom:4px;">⚠️ الطلب لسه ما اتبعتش</div>
+            <p style="color:var(--muted);font-size:12px;margin:0 0 10px;">لازم تبعت الطلب على واتساب عشان يوصل ويتنفذ</p>
+            <button class="newbtn" data-act="send-order-wa" style="background:#25D366;border-color:#25D366;">📲 ابعت الطلب على واتساب</button>
+          `}
+        </div>
         ${state.quotePdfGenerating ? '<div class="loading" style="padding:20px;">جارٍ تجهيز المستندات...</div>' : ''}
         ${(!state.quotePdfPlain && !state.quotePdfGenerating) ? `
           <button class="newbtn" data-act="make-docs">📄 تجهيز عرض السعر وطلبية النواقص</button>
@@ -2636,6 +2667,13 @@ function renderOrderView(){
       const prodMap = productsForGroup(state.mainGroup, subToUse);
       const q = state.productSearch.trim().toLowerCase();
       const names = [...prodMap.keys()].filter(n => !q || n.toLowerCase().includes(q));
+      // ترتيب: المتوفر الأول، بعدين اللي مفيش منه رصيد، وآخر حاجة الموقوف
+      const rank_ = (n)=>{
+        if(isProductFullyUnavailable(state.mainGroup, n)) return 2;
+        if(isProductOutOfStock(state.mainGroup, n)) return 1;
+        return 0;
+      };
+      names.sort((a,b)=> rank_(a) - rank_(b));
       productSection = `
       <div class="card">
         <h2><span class="num">4</span>اختار الأصناف (تقدر تختار أكتر من واحد)</h2>
@@ -2662,7 +2700,7 @@ function renderOrderView(){
               <span>${esc(n)}</span>
               ${unavailable?'<span class="unavailtag">موقوف</span>':''}
               ${outOfStock?'<span class="stocktag out">مفيش رصيد</span>':''}
-              ${inStock?'<span class="stocktag in">متوفر</span>':''}
+              ${inStock?`<span class="stocktag in">متوفر: ${esc(availableColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
             </div>`;
           }).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>'}
         </div>
@@ -3045,6 +3083,29 @@ function normalizePhoneIntl_(p){
   if(d.startsWith('0')) return '20' + d.slice(1);
   if(d.startsWith('1')) return '20' + d;
   return d;
+}
+
+// الموزع يبعت طلبه بنفسه على واتساب الأدمن.
+// لازم تبقى ضغطة مباشرة منه — المتصفح بيمنع فتح واتساب بعد await من غير ضغطة.
+function sendOrderToAdminWhatsApp(){
+  const o = state.lastOrder;
+  if(!o){ showToast('مفيش طلب أبعته'); return; }
+  let msg = '📦 طلب جديد #' + String(o.id).toUpperCase() + '\n';
+  msg += '👤 الموزع: ' + asText(o.distName) + '\n';
+  msg += '📍 المنطقة: ' + asText(o.distRegion) + '\n';
+  if(o.distPhone) msg += '📞 ' + asText(o.distPhone) + '\n';
+  msg += '——————\n';
+  (o.items||[]).forEach((it, i)=>{
+    const n = normalizeItemToSmallUnit(it);
+    msg += (i+1) + '. ' + asText(it.name || it.product)
+         + (it.color ? ' - ' + asText(it.color) : '')
+         + ' × ' + n.qty + ' ' + asText(n.unitLabel) + '\n';
+  });
+  if(asText(o.note).trim()) msg += '📝 ' + asText(o.note).trim() + '\n';
+  if(CREDIT_LINE) msg += '\n' + CREDIT_LINE;
+  window.open('https://wa.me/' + ADMIN_WHATSAPP + '?text=' + encodeURIComponent(msg), '_blank');
+  state.orderSentToWa = true;
+  render();
 }
 
 async function copyAppLink(){
@@ -3442,6 +3503,7 @@ async function onActionInner(act, el){
       break;
     }
     case 'skip-notify': state.notifyPromptId=null; render(); break;
+    case 'send-order-wa': sendOrderToAdminWhatsApp(); break;
     case 'copy-app-link': copyAppLink(); break;
     case 'run-diag': runDiagnostics(); break;
     case 'close-diag': state.showDiag=false; render(); break;
