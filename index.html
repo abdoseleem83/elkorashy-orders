@@ -573,9 +573,21 @@ textarea{resize:vertical;min-height:60px;}
 .stocklegend span{display:flex;align-items:center;gap:4px;}
 .stocklegend i{width:10px;height:10px;border-radius:3px;display:inline-block;}
 .chip.disabled{
-  opacity:.5;cursor:not-allowed;text-decoration:line-through;
+  opacity:.5;cursor:not-allowed;
   background:#EDEBE4;border-color:var(--line);color:var(--muted);
 }
+/* لون مفيش منه رصيد: أحمر واضح + كلمة "غير متوفر" تحته */
+.chip.outstockchip{
+  background:#FDECEC;border-color:var(--danger);color:#8A1F1F;font-weight:700;
+}
+.chip.outstockchip.active{
+  background:var(--danger);border-color:var(--danger);color:#fff;
+}
+.chip small, .chip.disabled small{
+  display:block;font-size:8.5px;font-weight:800;line-height:1.2;margin-top:1px;opacity:.9;
+}
+.chip.outstockchip small{color:var(--danger);}
+.chip.outstockchip.active small{color:#fff;}
 
 /* staged product block */
 .stagedblock{
@@ -711,10 +723,12 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v39';
+const APP_BUILD = 'v41';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
+// المخازن اللي الموزع بيحمّل منها — عايز تضيف/تشيل مخزن؟ عدّل السطر ده بس.
+const WAREHOUSES = ['طنطا', 'الاسكندرية', 'المنصورة اكسا', 'العاشر اكسا'];
 const LS_ORDERS_KEY = 'qurashi_my_orders';
 const LS_LAST_DATE_KEY = 'qurashi_last_order_date';
 const LS_LAST_ID_KEY = 'qurashi_last_order_id';
@@ -759,6 +773,7 @@ const state = {
   distName:'',
   distRegion:'',
   distPhone:'',
+  warehouse:'',
   note:'',
   submitting:false,
   successOrderId:null,
@@ -778,6 +793,7 @@ const state = {
   saveError:'',
 
   showConfirmModal:false,
+  showWarehouseModal:false,
   showDailyWarning:false,
   showResumeModal:false,
   pendingDraft:null,
@@ -1067,10 +1083,24 @@ function pdfScale_(itemCount){
 }
 
 // ===== storage (Google Sheet via Apps Script) =====
+// بيتأكد إن الطلب موجود فعلاً في الشيت (بنستخدمها بعد الـ timeout).
+// مهم: الـ timeout مش معناه إن الحفظ فشل — ساعات السيرفر بيسجّل الطلب بس بياخد
+// وقت طويل في الرد، والتطبيق يقطع الاتصال. لو قلنا للموزع "فشل" وهو اتسجل،
+// هيبعته تاني ويتكرر الطلب مرتين.
+async function orderExistsRemote(id){
+  try{
+    const r = await fetch(APPS_SCRIPT_URL + '?action=lookup&ids=' + encodeURIComponent(id));
+    const d = await r.json();
+    return Array.isArray(d) && d.some(o => String(o.id) === String(id));
+  }catch(e){ return false; }
+}
+
 async function saveOrderRemote(order, isUpdate){
   const payload = Object.assign({}, order, { action: isUpdate ? 'update' : 'create' });
   const controller = new AbortController();
-  const killer = setTimeout(()=>controller.abort(), 25000);
+  // Apps Script بياخد وقت خصوصًا في أول نداء أو لما الطلب فيه أصناف كتير.
+  // 25 ثانية كانت قصيرة وبتقطع على طلبات شغالة — رفعناها لـ 60.
+  const killer = setTimeout(()=>controller.abort(), 60000);
   let res;
   try{
     res = await fetch(APPS_SCRIPT_URL, {
@@ -1080,7 +1110,13 @@ async function saveOrderRemote(order, isUpdate){
       signal: controller.signal
     });
   }catch(e){
-    if(e && e.name==='AbortError') throw new Error('timeout: السيرفر مارضّش يرد، جرّب تاني');
+    clearTimeout(killer);
+    if(e && e.name==='AbortError'){
+      // اتأخر في الرد — بس يمكن يكون اتسجل فعلاً. نتأكد بنفسنا قبل ما نقول "فشل".
+      await new Promise(r=>setTimeout(r, 2500));
+      if(await orderExistsRemote(order.id)) return { ok:true, recovered:true };
+      throw new Error('السيرفر أخد وقت طويل ومردش. الطلب غالبًا ما اتسجلش — جرّب تاني.');
+    }
     throw e;
   }finally{
     clearTimeout(killer);
@@ -1088,7 +1124,7 @@ async function saveOrderRemote(order, isUpdate){
   if(!res.ok) throw new Error('server responded with status ' + res.status);
   let data;
   try{ data = await res.json(); }catch(e){ throw new Error('invalid server response'); }
-  if(!data || data.ok !== true) throw new Error('server did not confirm save');
+  if(!data || data.ok !== true) throw new Error(data && data.error ? data.error : 'server did not confirm save');
   return data;
 }
 
@@ -1521,6 +1557,7 @@ function resumeDraft(){
     state.distRegion = asText(draft.distRegion);
     state.distPhone = asText(draft.distPhone);
     state.note = asText(draft.note);
+    state.warehouse = asText(draft.warehouse);
     state.cart = draft.cart || [];
   }
   state.pendingDraft = null;
@@ -1695,6 +1732,10 @@ function requestSubmit(){
   if(!state.distName.trim()){ showToast('من فضلك اكتب اسم الموزع / الفرع'); return; }
   if(!state.distRegion.trim()){ showToast('من فضلك اكتب المنطقة'); return; }
   if(!state.distPhone.trim()){ showToast('من فضلك اكتب رقم الهاتف — محتاجه عشان تقدر تستعلم عن طلباتك بعدين'); return; }
+  // المخزن بيتسأل عنه هنا، وقت الإرسال — مش في بيانات الموزع
+  if(!asText(state.warehouse).trim()){
+    state.showWarehouseModal = true; render(); return;
+  }
   if(state.cart.length===0){ showToast('لسه محضتش أي صنف للطلب'); return; }
 
   if(!state.editingOrderId){
@@ -1725,6 +1766,7 @@ async function actuallySubmit(){
     distName: asText(state.distName).trim(),
     distRegion: asText(state.distRegion).trim(),
     distPhone: asText(state.distPhone).trim(),
+    warehouse: asText(state.warehouse).trim(),
     note: asText(state.note).trim(),
     items: state.cart,
     status:'قيد التنفيذ'
@@ -1739,7 +1781,7 @@ async function actuallySubmit(){
       localStorage.setItem(LS_LAST_DATE_KEY, todayStr());
       localStorage.setItem(LS_LAST_ID_KEY, id.toUpperCase());
     }
-    state.cart=[]; state.staged=[]; state.distName=''; state.distRegion=''; state.distPhone=''; state.note=''; state.editingOrderId=null;
+    state.cart=[]; state.staged=[]; state.distName=''; state.distRegion=''; state.distPhone=''; state.note=''; state.warehouse=''; state.editingOrderId=null;
     loadProfile();
     clearDraft();
   }catch(e){
@@ -1775,6 +1817,7 @@ function startEditOrder(order){
   state.distRegion = asText(order.distRegion);
   state.distPhone = asText(order.distPhone);
   state.note = asText(order.note);
+  state.warehouse = asText(order.warehouse);
   state.cart = order.items.map(it=>Object.assign({}, it));
   state.staged = [];
   state.mainGroup = null;
@@ -1934,6 +1977,24 @@ function renderNotifyPrompt(){
       <div class="modalbtns">
         <button class="modalbtn primary" data-act="do-notify-dist">📲 ابعت على واتساب</button>
         <button class="modalbtn" data-act="skip-notify">مش دلوقتي</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderWarehouseModal(){
+  if(!state.showWarehouseModal) return '';
+  return `
+  <div class="modalbg">
+    <div class="modalcard">
+      <div class="modalic">🏬</div>
+      <h3>هتحمّل من أنهي مخزن؟</h3>
+      <p>اختار المخزن اللي هتستلم منه الطلبية</p>
+      <div class="modalbtns">
+        ${WAREHOUSES.map(w=>`
+          <button class="modalbtn ${state.warehouse===w?'primary':''}" data-act="pick-warehouse" data-val="${esc(w)}">${esc(w)}</button>
+        `).join('')}
+        <button class="modalbtn" data-act="close-warehouse" style="color:var(--muted);">إلغاء</button>
       </div>
     </div>
   </div>`;
@@ -2167,6 +2228,10 @@ async function buildQuotePDF(order){
           <div style="font-weight:800;color:#1F3050;">${esc(order.distRegion||'')}</div>
         </div>
         <div>
+          <div style="color:#6E7480;">المخزن</div>
+          <div style="font-weight:800;color:#C9A227;">${esc(asText(order.warehouse) || '—')}</div>
+        </div>
+        <div>
           <div style="color:#6E7480;">التاريخ</div>
           <div style="font-weight:800;color:#1F3050;">${esc(dateStr)}</div>
         </div>
@@ -2365,6 +2430,10 @@ async function buildShortagePDF(order){
         <div>
           <div style="color:#6E7480;">المنطقة</div>
           <div style="font-weight:800;color:#1F3050;">${esc(order.distRegion||'')}</div>
+        </div>
+        <div>
+          <div style="color:#6E7480;">المخزن</div>
+          <div style="font-weight:800;color:#C9A227;">${esc(asText(order.warehouse) || '—')}</div>
         </div>
         <div>
           <div style="color:#6E7480;">التاريخ</div>
@@ -2585,10 +2654,15 @@ function renderStagedBlock(s){
       ${s.availableColors.map(c=>{
         const unavailable = isColorUnavailable(s.main, s.product, c);
         if(unavailable){
-          return `<button class="chip disabled" data-act="noop-unavailable" disabled>${esc(c)} (غير متوفر)</button>`;
+          return `<button class="chip disabled" data-act="noop-unavailable" disabled>${esc(c)}<small>موقوف</small></button>`;
         }
         const outOfStock = isColorOutOfStock(s.main, s.product, c);
-        return `<button class="chip gold ${s.selectedColors.includes(c)?'active':''}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}${outOfStock?' ⚠️':''}</button>`;
+        const sel = s.selectedColors.includes(c) ? 'active' : '';
+        // اللون اللي مفيش منه رصيد: أحمر ومكتوب تحته "غير متوفر" — بس لسه ينفع يتختار
+        if(outOfStock){
+          return `<button class="chip outstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متوفر</small></button>`;
+        }
+        return `<button class="chip gold ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
       }).join('')}
     </div>` : ''}
     ${s.selectedColors.length>0 ? `
@@ -2960,6 +3034,13 @@ function renderConfirmModal(){
       <div class="modalic">📦</div>
       <h3>متأكد من ${state.editingOrderId?'حفظ التعديلات':'إرسال الطلب'}؟</h3>
       <p>الطلب فيه <b>${count}</b> صنف باسم <b>${esc(state.distName)}</b> — ${esc(state.distRegion)}.<br>راجع الأصناف قبل التأكيد، مش هتقدر تعدّل إلا من "طلباتي" بعدين.</p>
+      <div style="background:#FAF9F5;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <span style="font-size:12.5px;color:var(--muted);">🏬 مخزن التحميل</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <b style="color:var(--navy);font-size:13px;">${esc(asText(state.warehouse) || '—')}</b>
+          <button class="chip" data-act="change-warehouse" style="padding:3px 9px;font-size:11px;">غيّر</button>
+        </span>
+      </div>
       <div class="modalbtns">
         <button class="modalbtn primary" data-act="do-submit">${state.editingOrderId?'تأكيد الحفظ':'تأكيد الإرسال'}</button>
         <button class="modalbtn" data-act="close-confirm">الرجوع للمراجعة</button>
@@ -3224,7 +3305,7 @@ function render(){
     else if(state.view==='myorders') view = renderMyOrdersView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
-    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderGlobalError();
+    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderGlobalError();
     bindEvents();
   }catch(err){
     // لو أي جزء من الشاشة فشل يترندر، مانسيبش الشاشة "هنجانة" بصمت — نوريّ رسالة
@@ -3477,6 +3558,18 @@ async function onActionInner(act, el){
     case 'enable-biometric': await enableBiometricLogin(); break;
     case 'disable-biometric': disableBiometricLogin(); break;
     case 'register-submit': await submitRegister(); break;
+    case 'pick-warehouse':
+      state.warehouse = el.getAttribute('data-val');
+      state.showWarehouseModal = false;
+      // اختار المخزن → نكمّل على تأكيد الإرسال على طول
+      requestSubmit();
+      break;
+    case 'close-warehouse': state.showWarehouseModal=false; render(); break;
+    case 'change-warehouse':
+      state.showConfirmModal = false;
+      state.showWarehouseModal = true;
+      render();
+      break;
     case 'reg-type-dist': state.regDistType='موزع'; render(); break;
     case 'reg-type-client': state.regDistType='عميل'; render(); break;
     case 'forgot-submit': submitForgot(); break;
