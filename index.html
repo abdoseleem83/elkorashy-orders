@@ -733,7 +733,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v47';
+const APP_BUILD = 'v48';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -2044,73 +2044,92 @@ function renderWarehouseModal(){
 
 // شاشة الأرصدة — للأدمن بس (فيها أرقام، والموزع مش المفروض يشوفها).
 // الأرقام دي = الرصيد − المحجوز، بالعود/القطعة.
-function stockRows_(){
+// بيبني مصفوفة الأرصدة: لكل مجموعة رئيسية → صفوف (الأصناف) وأعمدة (الألوان).
+// الكميات باللفة. الصنف اللي كل ألوانه صفر مش بيتعرض خالص.
+function stockMatrix_(){
   const q = asText(state.stockSearch).trim().toLowerCase();
-  const byProduct = new Map();
+  const groups = new Map();
+
   CATALOG.forEach(d=>{
     if(d.available === false) return;
-    const key = d.main + '|' + d.product;
+    const n = Number(d.stock);
+    if(!isFinite(n) || n <= 0) return;               // صفر → مش بيتعرض
     if(q && !(d.main + ' ' + d.product + ' ' + (d.color||'')).toLowerCase().includes(q)) return;
-    if(!byProduct.has(key)) byProduct.set(key, { main:d.main, product:d.product, list:[] });
-    byProduct.get(key).list.push(d);
+
+    if(!groups.has(d.main)) groups.set(d.main, { colors:new Set(), rows:new Map() });
+    const g = groups.get(d.main);
+    const color = d.color || 'بدون لون';
+    g.colors.add(color);
+
+    if(!g.rows.has(d.product)) g.rows.set(d.product, {});
+    const content = Number(d.unit) || 1;
+    g.rows.get(d.product)[color] = n / content;      // باللفة
   });
-  return [...byProduct.values()];
+
+  // ترتيب الألوان: الشائع الأول، وأي لون تاني بعديهم
+  const PREF = ['بيج','ابيض','خشبي','رمادي','اسود'];
+  return [...groups.entries()].map(([main, g])=>{
+    const known = PREF.filter(c=>g.colors.has(c));
+    const rest  = [...g.colors].filter(c=>!PREF.includes(c));
+    return { main, colors:[...known, ...rest], rows:[...g.rows.entries()] };
+  });
 }
 
-// شاشة الأرصدة — للأدمن بس. الأرقام = الرصيد − المحجوز، بالعود/القطعة.
+function fmtRolls_(v){
+  if(v === undefined || v === null || v <= 0) return '';
+  return (Math.round(v * 10) / 10).toString();
+}
+
+function stockTableHTML_(forPdf){
+  const mats = stockMatrix_();
+  if(!mats.length) return '';
+  const line = forPdf ? '#E4E0D6' : 'var(--line)';
+  const navy = forPdf ? '#1F3050' : 'var(--navy)';
+  const gold = forPdf ? '#E4C766' : 'var(--gold-light)';
+
+  return mats.map(m=>`
+    <div style="margin-bottom:16px;">
+      <div style="background:${gold};color:${navy};font-weight:800;font-size:12.5px;padding:6px 10px;border-radius:6px 6px 0 0;">
+        ${esc(m.main)}
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:11.5px;">
+        <thead>
+          <tr style="background:${navy};color:#fff;">
+            <th style="padding:7px 6px;text-align:right;">الصنف</th>
+            ${m.colors.map(c=>`<th style="padding:7px 4px;text-align:center;">${esc(c)}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${m.rows.map(([prod, byColor], i)=>`
+            <tr style="background:${i%2===0 ? '#FFFFFF' : '#F5F3EE'};">
+              <td style="padding:7px 6px;border-bottom:1px solid ${line};">${esc(prod)}</td>
+              ${m.colors.map(c=>{
+                const v = fmtRolls_(byColor[c]);
+                return `<td style="padding:7px 4px;border-bottom:1px solid ${line};text-align:center;font-weight:${v?'800':'400'};color:${v?navy:'#C9C5BA'};">${v || '—'}</td>`;
+              }).join('')}
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`).join('');
+}
+
+// شاشة الأرصدة — للأدمن بس
 function renderStockModal(){
   if(!state.showStock) return '';
-  const groups = stockRows_();
-
-  const body = groups.map(g=>{
-    const label = smallUnitLabelFor(g.main);
-    const cells = g.list.map(d=>{
-      const n = Number(d.stock);
-      const has = isFinite(n) && n > 0;
-      const low = has && n < lowStockLimitFor(d);
-      const color = !has ? 'var(--danger)' : (low ? '#8A5A00' : 'var(--success)');
-      const rolls = has ? (n / (Number(d.unit)||1)) : 0;
-      return `<tr>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line);">${esc(d.color || 'بدون لون')}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line);text-align:center;font-weight:800;color:${color};">
-          ${has ? n + ' ' + esc(label) : 'صفر'}
-        </td>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line);text-align:center;color:var(--muted);font-size:11px;">
-          ${has ? (Math.floor(rolls*10)/10) + ' لفة' : '—'}
-        </td>
-      </tr>`;
-    }).join('');
-    return `
-      <div style="margin-bottom:14px;">
-        <div style="background:var(--gold-light);color:var(--navy);font-weight:800;font-size:12px;padding:6px 9px;border-radius:6px;">
-          ${esc(g.main)} ⟩ ${esc(g.product)}
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:12px;">
-          <thead>
-            <tr style="background:#F5F3EE;color:var(--muted);font-size:11px;">
-              <th style="padding:5px 8px;text-align:right;">اللون</th>
-              <th style="padding:5px 8px;">المتاح</th>
-              <th style="padding:5px 8px;">تقريبًا</th>
-            </tr>
-          </thead>
-          <tbody>${cells}</tbody>
-        </table>
-      </div>`;
-  }).join('');
-
+  const body = stockTableHTML_(false);
   return `
   <div class="modalbg" data-act="close-stock">
-    <div class="previewmodal" data-act="noop" style="max-width:580px;">
+    <div class="previewmodal" data-act="noop" style="max-width:640px;">
       <div class="previewhead">
         <span>📊 الأرصدة المتاحة</span>
         <button class="previewclose" data-act="close-stock">✕</button>
       </div>
       <div style="padding:8px 10px 0;">
         <input type="text" placeholder="ابحث عن صنف أو لون..." value="${esc(state.stockSearch)}" data-act="stock-search">
-        <div style="font-size:10.5px;color:var(--muted);margin:4px 0 6px;">المتاح = الرصيد − المحجوز · بالعود/القطعة</div>
+        <div style="font-size:10.5px;color:var(--muted);margin:4px 0 6px;">الكميات باللفة · المتاح = الرصيد − المحجوز · الصنف الصفر مش ظاهر</div>
       </div>
-      <div class="previewbody" style="background:#fff;">
-        ${body || '<div class="loading">مفيش نتيجة</div>'}
+      <div class="previewbody" style="background:#fff;overflow:auto;">
+        ${body || '<div class="loading">مفيش أرصدة</div>'}
       </div>
       <div class="previewfoot">
         <button class="savebtn" data-act="export-stock-pdf" ${state.stockPdfBusy?'disabled':''}>
@@ -2121,64 +2140,30 @@ function renderStockModal(){
   </div>`;
 }
 
-// تصدير جدول الأرصدة كـ PDF عشان تبعته
 async function exportStockPDF(){
   if(typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined'){
     showToast('مكتبة التصدير مش جاهزة، حاول تاني'); return;
   }
-  const groups = stockRows_();
-  if(!groups.length){ showToast('مفيش أرصدة تتصدّر'); return; }
+  const tables = stockTableHTML_(true);
+  if(!tables){ showToast('مفيش أرصدة تتصدّر'); return; }
 
   state.stockPdfBusy = true; render();
 
   const wrap = document.createElement('div');
   wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
-  wrap.style.width='760px';
+  wrap.style.width='860px';
   wrap.style.fontFamily = "'Cairo', sans-serif";
   wrap.style.direction='rtl';
   wrap.style.background='#FFFFFF';
 
   const dateStr = new Date().toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
-  let rowCount = 0;
-
-  const tables = groups.map(g=>{
-    const label = smallUnitLabelFor(g.main);
-    const rows = g.list.map(d=>{
-      rowCount++;
-      const n = Number(d.stock);
-      const has = isFinite(n) && n > 0;
-      const low = has && n < lowStockLimitFor(d);
-      const color = !has ? '#C0392B' : (low ? '#8A5A00' : '#1E7A32');
-      const rolls = has ? (Math.floor((n/(Number(d.unit)||1))*10)/10) : 0;
-      return `<tr>
-        <td style="padding:6px 8px;border-bottom:1px solid #E4E0D6;">${esc(d.color||'بدون لون')}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:${color};">${has ? n + ' ' + esc(label) : 'صفر'}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid #E4E0D6;text-align:center;color:#6E7480;">${has ? rolls + ' لفة' : '—'}</td>
-      </tr>`;
-    }).join('');
-    return `
-      <div style="margin-bottom:12px;break-inside:avoid;">
-        <div style="background:#E4C766;color:#1F3050;font-weight:800;font-size:12px;padding:6px 9px;border-radius:6px;">
-          ${esc(g.main)} ⟩ ${esc(g.product)}
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:11.5px;">
-          <thead><tr style="background:#F5F3EE;color:#6E7480;font-size:10.5px;">
-            <th style="padding:5px 8px;text-align:right;">اللون</th>
-            <th style="padding:5px 8px;">المتاح</th>
-            <th style="padding:5px 8px;">تقريبًا</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
-  }).join('');
-
   wrap.innerHTML = `
     <div style="padding:28px 34px;">
       <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #C9A227;padding-bottom:14px;margin-bottom:16px;">
         <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
         <div style="flex:1;">
           <div style="font-size:19px;font-weight:800;color:#1F3050;">تقرير الأرصدة المتاحة</div>
-          <div style="font-size:11.5px;color:#6E7480;margin-top:2px;">المتاح = الرصيد − المحجوز · بالعود/القطعة</div>
+          <div style="font-size:11.5px;color:#6E7480;margin-top:2px;">الكميات باللفة · المتاح = الرصيد − المحجوز</div>
         </div>
         <div style="font-size:12px;color:#6E7480;">${esc(dateStr)}</div>
       </div>
@@ -2189,7 +2174,7 @@ async function exportStockPDF(){
 
   try{
     const canvas = await withTimeout(
-      html2canvas(wrap, {scale: pdfScale_(rowCount), backgroundColor:'#ffffff', useCORS:true, allowTaint:true}),
+      html2canvas(wrap, {scale: 1.5, backgroundColor:'#ffffff', useCORS:true, allowTaint:true}),
       30000, 'stock-pdf'
     );
     const { jsPDF } = window.jspdf;
@@ -3709,53 +3694,43 @@ function captureUiState_(){
 
 function restoreUiState_(snap, sameScreen){
   if(!snap) return;
-
-  const apply = ()=>{
-    if(sameScreen){
-      const a = snap.anchor;
-      let done = false;
-      if(a && a.sel){
-        try{
-          const el = document.querySelector(a.sel);
-          if(el){
-            // زحلق التمرير بالفرق بين مكان العنصر قبل وبعد إعادة البناء
-            const delta = el.getBoundingClientRect().top - a.top;
-            if(Math.abs(delta) > 0.5) window.scrollBy(0, delta);
-            done = true;
-          }
-        }catch(e){}
-      }
-      if(!done) window.scrollTo(0, snap.scrollY);
+  if(sameScreen && Math.abs((window.scrollY||0) - snap.scrollY) > 0.5){
+    window.scrollTo(0, snap.scrollY);
+  }
+  const f = snap.focus;
+  if(f && f.sel){
+    const el = document.querySelector(f.sel);
+    if(el && (el.tagName==='INPUT' || el.tagName==='TEXTAREA')){
+      el.focus();
+      try{ el.setSelectionRange(f.start, f.end); }catch(e){}
     }
-
-    const f = snap.focus;
-    if(f && f.sel){
-      const el = document.querySelector(f.sel);
-      if(el && (el.tagName==='INPUT' || el.tagName==='TEXTAREA')){
-        el.focus();
-        try{ el.setSelectionRange(f.start, f.end); }catch(e){}
-      }
-    }
-  };
-
-  apply();
-  // تاني مرة بعد ما المتصفح يخلص تخطيط الصفحة (الصور/الخطوط بتغيّر الارتفاعات)
-  requestAnimationFrame(apply);
+  }
   scrollAnchor_ = null;
 }
 
 function render(){
   const app = $('#app');
   const snap = captureUiState_();
+
+  // 🔑 السبب الحقيقي للقفز: وقت استبدال innerHTML الصفحة بتفضى للحظة، فارتفاعها
+  // بيقل، والمتصفح بيقصقص مكان التمرير لأقصى حد متاح. المحتوى بيرجع يكبر بعدين
+  // بس التمرير فضل مقصقص. الحل: نقفل الارتفاع قبل الاستبدال ونفكّه بعد الرسم —
+  // كده الصفحة عمرها ما تقصر، ومفيش قصقصة، ومفيش قفز لا لفوق ولا لتحت.
+  const prevH = app.offsetHeight;
+  if(prevH) app.style.minHeight = prevH + 'px';
+  const unlock = ()=>{ try{ app.style.minHeight=''; }catch(e){} };
+
   try{
     if(!isStandaloneMode() && !state.installGateBypassed){
       app.innerHTML = renderInstallGate();
       bindEvents();
+      unlock();
       return;
     }
     if(!state.currentUser){
       app.innerHTML = renderAuthView();
       bindEvents();
+      unlock();
       return;
     }
     let view;
@@ -3770,10 +3745,12 @@ function render(){
     const viewKey = state.view + '|' + (state.successOrderId ? 'success' : '') + '|' + (state.adminUnlocked ? 'a' : '');
     restoreUiState_(snap, viewKey === lastViewKey);
     lastViewKey = viewKey;
+    requestAnimationFrame(unlock);
   }catch(err){
     // لو أي جزء من الشاشة فشل يترندر، مانسيبش الشاشة "هنجانة" بصمت — نوريّ رسالة
     // واضحة بدل ما تفضل واقفة من غير أي تفسير.
     console.error('render() failed:', err);
+    unlock();
     try{ showToast('⚠️ حصل خطأ في عرض الشاشة: ' + (err && err.message ? err.message : err)); }catch(e){}
   }
 }
