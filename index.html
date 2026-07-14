@@ -586,6 +586,16 @@ textarea{resize:vertical;min-height:60px;}
 .chip small, .chip.disabled small{
   display:block;font-size:8.5px;font-weight:800;line-height:1.2;margin-top:1px;opacity:.9;
 }
+.chip.gold.lowstockchip{
+  border-color:#E0A800;background:#FFF8E6;
+}
+.chip.gold.lowstockchip small{color:#8A5A00;}
+.chip.gold.lowstockchip.active small{color:#fff;}
+.lowstocknote{
+  background:#FBEBD1;color:#8A5A00;border:1px solid #E0A800;
+  border-radius:8px;padding:7px 10px;font-size:11.5px;font-weight:700;
+  margin-top:8px;line-height:1.5;
+}
 .chip.outstockchip small{color:var(--danger);}
 .chip.outstockchip.active small{color:#fff;}
 
@@ -723,12 +733,15 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v41';
+const APP_BUILD = 'v44';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
 // المخازن اللي الموزع بيحمّل منها — عايز تضيف/تشيل مخزن؟ عدّل السطر ده بس.
 const WAREHOUSES = ['طنطا', 'الاسكندرية', 'المنصورة اكسا', 'العاشر اكسا'];
+// لو الرصيد أقل من الرقم ده، بيظهر تنبيه "الكمية مش كتيرة".
+// الوحدة هنا هي نفس وحدة عمود "الرصيد" في شيت الأصناف.
+const LOW_STOCK_THRESHOLD = 5;
 const LS_ORDERS_KEY = 'qurashi_my_orders';
 const LS_LAST_DATE_KEY = 'qurashi_last_order_date';
 const LS_LAST_ID_KEY = 'qurashi_last_order_id';
@@ -868,6 +881,16 @@ function isProductOutOfStock(main, product){
 }
 // بيرجّع نص مختصر بالألوان المتوفرة فعلاً في الصنف ده:
 // "جميع الألوان" لو كلها متوفرة · "بيج، ابيض" لو بعضها · '' لو مفيش
+// هل الكمية المتاحة قليلة؟ (بنرجّع true/false بس — الموزع مش المفروض يشوف الرقم)
+// الرقم اللي جاي من السيرفر أصلاً = الرصيد − المحجوز، وبالعود/القطعة.
+function isLowStock(main, product, color){
+  const item = findCatalogItem(main, product, color);
+  if(!item || item.available===false || item.inStock===false) return false;
+  const q = Number(item.stock);
+  if(!isFinite(q) || q <= 0) return false;
+  return q < LOW_STOCK_THRESHOLD;
+}
+
 function availableColorsLabel(main, product){
   const opts = colorsForProduct(main, product).filter(c => c.available !== false);
   if(!opts.length) return '';
@@ -2662,8 +2685,19 @@ function renderStagedBlock(s){
         if(outOfStock){
           return `<button class="chip outstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متوفر</small></button>`;
         }
+        if(isLowStock(s.main, s.product, c)){
+          return `<button class="chip gold lowstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
+        }
         return `<button class="chip gold ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
       }).join('')}
+      ${(()=>{
+        // ملاحظة تحت الألوان لأي لون مختار كميته قليلة — من غير ما نقول الرقم
+        const lows = s.selectedColors.filter(c => isLowStock(s.main, s.product, c));
+        if(!lows.length) return '';
+        return `<div class="lowstocknote">⚠️ خلي بالك الكمية مش كتيرة في: ${
+          lows.map(c=>esc(c)).join(' · ')
+        } — يفضل تتأكد قبل ما تطلب كمية كبيرة</div>`;
+      })()}
     </div>` : ''}
     ${s.selectedColors.length>0 ? `
     <div class="colorqtytable">
@@ -3287,8 +3321,46 @@ function isIOSSafari(){
 }
 
 // ===== main render =====
+// كل مرة بنعمل render بنعيد بناء الصفحة كلها (innerHTML) — وده كان بيضيّع
+// مكان التمرير، فالشاشة ترجع لفوق (لأول صنف) في كل مرة تختار صنف.
+// هنا بنحفظ مكان التمرير والحقل اللي إيدك فيه، وبنرجّعهم بعد إعادة البناء.
+let lastViewKey = '';
+
+function captureUiState_(){
+  const el = document.activeElement;
+  let focus = null;
+  if(el && el.dataset && el.dataset.act && (el.tagName==='INPUT' || el.tagName==='TEXTAREA')){
+    focus = {
+      act: el.dataset.act,
+      key: el.getAttribute('data-key') || '',
+      val: el.getAttribute('data-val') || '',
+      start: el.selectionStart,
+      end: el.selectionEnd
+    };
+  }
+  return { scrollY: window.scrollY || window.pageYOffset || 0, focus };
+}
+
+function restoreUiState_(snap, sameScreen){
+  if(!snap) return;
+  if(sameScreen){
+    window.scrollTo(0, snap.scrollY);
+  }
+  const f = snap.focus;
+  if(!f) return;
+  let sel = `[data-act="${f.act}"]`;
+  if(f.key) sel += `[data-key="${f.key}"]`;
+  if(f.val) sel += `[data-val="${f.val}"]`;
+  const el = document.querySelector(sel);
+  if(el && (el.tagName==='INPUT' || el.tagName==='TEXTAREA')){
+    el.focus();
+    try{ el.setSelectionRange(f.start, f.end); }catch(e){}
+  }
+}
+
 function render(){
   const app = $('#app');
+  const snap = captureUiState_();
   try{
     if(!isStandaloneMode() && !state.installGateBypassed){
       app.innerHTML = renderInstallGate();
@@ -3307,6 +3379,11 @@ function render(){
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
     app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderGlobalError();
     bindEvents();
+
+    // نرجّع التمرير بس لو إحنا في نفس الشاشة (مش لما ننتقل من شاشة لشاشة)
+    const viewKey = state.view + '|' + (state.successOrderId ? 'success' : '') + '|' + (state.adminUnlocked ? 'a' : '');
+    restoreUiState_(snap, viewKey === lastViewKey);
+    lastViewKey = viewKey;
   }catch(err){
     // لو أي جزء من الشاشة فشل يترندر، مانسيبش الشاشة "هنجانة" بصمت — نوريّ رسالة
     // واضحة بدل ما تفضل واقفة من غير أي تفسير.
