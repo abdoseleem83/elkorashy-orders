@@ -190,6 +190,12 @@ textarea{resize:vertical;min-height:60px;}
   height:auto;
 }
 .whgrid{display:grid;grid-template-columns:repeat(2, 1fr);gap:10px;}
+.cartbtn{position:relative;}
+.cartbadge{
+  position:absolute;top:-6px;left:-6px;background:var(--danger);color:#fff;
+  border-radius:999px;min-width:18px;height:18px;font-size:10.5px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;padding:0 4px;
+}
 .whtile{
   border:1.5px solid var(--line);background:#FCFBF8;border-radius:12px;
   padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;
@@ -834,7 +840,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v58';
+const APP_BUILD = 'v59';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -913,6 +919,7 @@ const state = {
   stockSearch:'',
   stockPdfBusy:false,
   showPwRequests:false,
+  showCartReview:false,
   pwRequests:[],
   pwRequestsLoading:false,
   pwRequestsCount:0,
@@ -1153,6 +1160,63 @@ function getDiscount(main){
 function isDiscountEligible(){
   return !!(state.currentUser && state.currentUser.distType === 'موزع');
 }
+// نفس محتوى بلوك "الأصناف المطلوبة" — استخرجناها لدالة مستقلة عشان نقدر
+// نستخدمها في مكانين: الكارت جوه فورم الطلب، وشاشة مراجعة السلة الجديدة
+// (اللي بتفتح لما تدوس على أيقونة السلة فوق).
+function renderCartItemsHtml(cart){
+  if(!cart.length) return '<div class="cartempty">لسه معملتش إضافة لأي صنف</div>';
+  const cartGroups = new Map();
+  cart.forEach((it,idx)=>{
+    if(!cartGroups.has(it.main)) cartGroups.set(it.main, []);
+    cartGroups.get(it.main).push({...it, _idx: idx});
+  });
+  const orderedMains = orderGroups_(cartGroups);
+  const pricing = computeCartPricing(cart);
+  const hasMissingPrice = cart.some(it=>it.lineTotal==null);
+
+  return `
+    ${orderedMains.map(main=>`
+      <div class="cartgroup">
+        <div class="cartgrouptitle">${esc(main)}</div>
+        ${cartGroups.get(main).map(it=>`
+          <div class="cartrow">
+            <div class="info">
+              <div class="pname">${esc(it.product)}</div>
+              <div class="pmeta">${it.color ? esc(it.color) : ''}${it.note ? (it.color?' · ':'') + esc(it.note) : ''}${it.autoBundled ? ' <span class="autotag">🔗 مضاف تلقائيًا مع الباب</span>' : ''}</div>
+            </div>
+            <div class="qty">×${it.qty} ${esc(it.unitType||'')}<br><span class="linetotal">${it.lineTotal==null?'بدون سعر':Math.round(it.lineTotal).toLocaleString('en-US')+' ج.م'}</span></div>
+            ${it.autoBundled ? '' : `<button class="del edit" data-act="edit-cart-item" data-main="${esc(it.main)}" data-product="${esc(it.product)}">✏️</button>`}
+            <button class="del" data-act="del-cart" data-idx="${it._idx}">✕</button>
+          </div>
+        `).join('')}
+      </div>
+    `).join('')}
+    ${renderPriceTable(cart)}
+    ${
+      pricing.discountAmount>0 ? `
+      <div class="carttotal">
+        <span>الإجمالي قبل الخصم</span>
+        <b>${Math.round(pricing.subtotal).toLocaleString('en-US')} ج.م</b>
+      </div>
+      <div class="carttotal" style="color:var(--gold);">
+        <span>الخصم</span>
+        <b>- ${Math.round(pricing.discountAmount).toLocaleString('en-US')} ج.م</b>
+      </div>
+      <div class="carttotal">
+        <span>الإجمالي بعد الخصم</span>
+        <b>${Math.round(pricing.total).toLocaleString('en-US')} ج.م</b>
+      </div>
+      ` : `
+      <div class="carttotal">
+        <span>الإجمالي</span>
+        <b>${Math.round(pricing.total).toLocaleString('en-US')} ج.م</b>
+      </div>
+      `
+    }
+    ${hasMissingPrice ? '<div class="pricenote">⚠️ في أصناف بدون سعر مش داخلة في الإجمالي</div>' : ''}
+  `;
+}
+
 function computeCartPricing(cartItems){
   const subtotal = cartItems.reduce((s,it)=> s + (it.lineTotal||0), 0);
   let discountAmount = 0;
@@ -2317,6 +2381,30 @@ function stockTableHTML_(forPdf){
 
 // شاشة الأرصدة — للأدمن بس
 // طلبات الباسورد — للأدمن بس. الموزع كتب الباسورد الجديد وهو مستنّي الموافقة.
+// شاشة مراجعة السلة — بتفتح بضغطة على أيقونة السلة فوق. فيها كل الأصناف
+// وسؤال واضح: تزود ولا تبعت؟ لو تزود بترجع لنفس الفورم تكمل اختيار.
+// لو تبعت بتقفل الشاشة دي وتبدأ إجراء الإرسال العادي (تأكيد ثم إرسال).
+function renderCartReviewModal(){
+  if(!state.showCartReview) return '';
+  return `
+  <div class="modalbg" data-act="close-cart-review">
+    <div class="previewmodal" data-act="noop" style="max-width:560px;">
+      <div class="previewhead">
+        <span>🛒 السلة (${state.cart.length})</span>
+        <button class="previewclose" data-act="close-cart-review">✕</button>
+      </div>
+      <div class="previewbody" style="background:#fff;">
+        ${renderCartItemsHtml(state.cart)}
+      </div>
+      ${state.cart.length ? `
+      <div class="previewfoot" style="display:flex;gap:8px;">
+        <button class="savebtn" style="flex:1;min-height:56px;" data-act="cart-add-more">➕ زود أصناف</button>
+        <button class="submitbtn" style="flex:1;min-height:56px;" data-act="cart-send">📨 ابعت الطلب</button>
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+
 function renderPwRequestsModal(){
   if(!state.showPwRequests) return '';
   const list = state.pwRequests || [];
@@ -3234,6 +3322,10 @@ function renderHeader(){
     </div>
     <nav class="tabs">
       <button class="${state.view==='order'?'active':''}" data-act="goto" data-view="order">طلب جديد</button>
+      ${(state.view==='order' && state.currentUser && state.currentUser.username!=='admin') ? `
+      <button class="cartbtn" data-act="open-cart-review" title="السلة">
+        🛒${state.cart && state.cart.length ? `<span class="cartbadge">${state.cart.length}</span>` : ''}
+      </button>` : ''}
       <button class="${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">طلباتي</button>
       <button class="${state.view==='admin'?'active':''}" data-act="goto" data-view="admin">متابعة الطلبات</button>
       ${isWebAuthnSupported() ? (
@@ -3486,58 +3578,10 @@ function renderOrderView(){
       ${state.staged.map(renderStagedBlock).join('')}
     </div>` : '';
 
-  // group cart by sector, keeping SECTOR order
-  const cartGroups = new Map();
-  state.cart.forEach((it,idx)=>{
-    if(!cartGroups.has(it.main)) cartGroups.set(it.main, []);
-    cartGroups.get(it.main).push({...it, _idx: idx});
-  });
-  const orderedMains = orderGroups_(cartGroups);
-  const pricing = computeCartPricing(state.cart);
-  const hasMissingPrice = state.cart.some(it=>it.lineTotal==null);
-
   const cartSection = `
     <div class="card">
       <h2><span class="num">7</span>الأصناف المطلوبة (${state.cart.length})</h2>
-      ${state.cart.length===0 ? '<div class="cartempty">لسه معملتش إضافة لأي صنف</div>' : orderedMains.map(main=>`
-        <div class="cartgroup">
-          <div class="cartgrouptitle">${esc(main)}</div>
-          ${cartGroups.get(main).map(it=>`
-            <div class="cartrow">
-              <div class="info">
-                <div class="pname">${esc(it.product)}</div>
-                <div class="pmeta">${it.color ? esc(it.color) : ''}${it.note ? (it.color?' · ':'') + esc(it.note) : ''}${it.autoBundled ? ' <span class="autotag">🔗 مضاف تلقائيًا مع الباب</span>' : ''}</div>
-              </div>
-              <div class="qty">×${it.qty} ${esc(it.unitType||'')}<br><span class="linetotal">${it.lineTotal==null?'بدون سعر':Math.round(it.lineTotal).toLocaleString('en-US')+' ج.م'}</span></div>
-              ${it.autoBundled ? '' : `<button class="del edit" data-act="edit-cart-item" data-main="${esc(it.main)}" data-product="${esc(it.product)}">✏️</button>`}
-              <button class="del" data-act="del-cart" data-idx="${it._idx}">✕</button>
-            </div>
-          `).join('')}
-        </div>
-      `).join('')}
-      ${state.cart.length>0 ? renderPriceTable(state.cart) : ''}
-      ${state.cart.length>0 ? (
-        pricing.discountAmount>0 ? `
-        <div class="carttotal">
-          <span>الإجمالي قبل الخصم</span>
-          <b>${Math.round(pricing.subtotal).toLocaleString('en-US')} ج.م</b>
-        </div>
-        <div class="carttotal" style="color:var(--gold);">
-          <span>الخصم</span>
-          <b>- ${Math.round(pricing.discountAmount).toLocaleString('en-US')} ج.م</b>
-        </div>
-        <div class="carttotal">
-          <span>الإجمالي بعد الخصم</span>
-          <b>${Math.round(pricing.total).toLocaleString('en-US')} ج.م</b>
-        </div>
-        ` : `
-        <div class="carttotal">
-          <span>الإجمالي</span>
-          <b>${Math.round(pricing.total).toLocaleString('en-US')} ج.م</b>
-        </div>
-        `
-      ) : ''}
-      ${hasMissingPrice ? '<div class="pricenote">⚠️ في أصناف بدون سعر مش داخلة في الإجمالي</div>' : ''}
+      ${renderCartItemsHtml(state.cart)}
     </div>`;
 
   // المخزن بقى أول خطوة — يظهر كإيقونات، ولحد ما الموزع يختار مخزن،
@@ -4088,7 +4132,7 @@ function render(){
     else if(state.view==='myorders') view = renderMyOrdersView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
-    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderGlobalError();
+    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCartReviewModal() + renderGlobalError();
     bindEvents();
 
     // نرجّع التمرير بس لو إحنا في نفس الشاشة (مش لما ننتقل من شاشة لشاشة)
@@ -4462,6 +4506,13 @@ async function onActionInner(act, el){
     case 'add-other': addOtherItem(); break;
 
     case 'request-submit': requestSubmit(); break;
+    case 'open-cart-review': state.showCartReview=true; render(); break;
+    case 'close-cart-review': state.showCartReview=false; render(); break;
+    case 'cart-add-more': state.showCartReview=false; render(); break;
+    case 'cart-send':
+      state.showCartReview=false;
+      requestSubmit(); // نفس مسار "إرسال الطلب" العادي: تأكيد ثم إرسال فعلي
+      break;
     case 'save-draft': saveDraft(); break;
     case 'preview-cart-invoice': previewCartInvoice(); break;
     case 'continue-daily': proceedAfterDailyWarning(); break;
