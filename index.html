@@ -192,6 +192,13 @@ textarea{resize:vertical;min-height:60px;}
 }
 .chip.gold.active{background:var(--gold);border-color:var(--gold);color:var(--navy-deep);}
 
+.subchipwrap-compact{gap:5px;}
+.chip.subchip-compact{
+  padding:4px 9px;
+  font-size:10.5px;
+  border-radius:14px;
+}
+
 .searchbox{position:relative;margin-bottom:10px;}
 .searchbox input{padding-left:14px;}
 
@@ -3042,7 +3049,7 @@ function renderStagedBlock(s){
           return `<button class="chip outstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متاح رصيد</small></button>`;
         }
         if(lvl === 'crit'){
-          return `<button class="chip outstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
+          return `<button class="chip outstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة اعواد</small></button>`;
         }
         if(lvl === 'low'){
           return `<button class="chip gold lowstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
@@ -3193,8 +3200,8 @@ function renderOrderView(){
         subSection = `
         <div class="card">
           <h2><span class="num">3</span>اختار التصنيف الفرعي</h2>
-          <div class="chipwrap">
-            ${subs.map(s=>`<button class="chip ${state.subGroup===s?'active':''}" data-act="set-sub" data-val="${esc(s)}">${esc(s)}</button>`).join('')}
+          <div class="chipwrap subchipwrap-compact">
+            ${subs.map(s=>`<button class="chip subchip-compact ${state.subGroup===s?'active':''}" data-act="set-sub" data-val="${esc(s)}">${esc(s)}</button>`).join('')}
           </div>
         </div>`;
       }
@@ -3774,8 +3781,24 @@ function captureUiState_(){
 
 function restoreUiState_(snap, sameScreen){
   if(!snap) return;
-  if(sameScreen && Math.abs(currentScroll_() - snap.scrollY) > 0.5){
-    scrollTo_(snap.scrollY);
+  if(sameScreen){
+    let targetY = snap.scrollY;
+    const a = snap.anchor;
+    if(a && a.sel){
+      try{
+        const el = document.querySelector(a.sel);
+        if(el){
+          const newTop = el.getBoundingClientRect().top;
+          // العنصر اتحرك بمقدار (newTop - a.top) بسبب محتوى اتضاف/اتشال فوقه
+          // (زي بلوك "حدد التفاصيل")، فبنعوّض الفرق ده على التمرير الحالي
+          // عشان العنصر يفضل في نفس مكانه بالظبط على الشاشة.
+          targetY = currentScroll_() + (newTop - a.top);
+        }
+      }catch(e){}
+    }
+    if(Math.abs(currentScroll_() - targetY) > 0.5){
+      scrollTo_(targetY);
+    }
   }
   const f = snap.focus;
   if(f && f.sel){
@@ -3791,8 +3814,18 @@ function restoreUiState_(snap, sameScreen){
 
   // نثبّت التمرير تاني بعد الرسم (بعض المتصفحات بتزحلقه شوية)
   if(sameScreen){
+    const finalY = (()=>{
+      const a = snap.anchor;
+      if(a && a.sel){
+        try{
+          const el = document.querySelector(a.sel);
+          if(el) return currentScroll_() + (el.getBoundingClientRect().top - a.top);
+        }catch(e){}
+      }
+      return snap.scrollY;
+    })();
     requestAnimationFrame(()=>{
-      if(Math.abs(currentScroll_() - snap.scrollY) > 1) scrollTo_(snap.scrollY);
+      if(Math.abs(currentScroll_() - finalY) > 1) scrollTo_(finalY);
     });
   }
   scrollAnchor_ = null;
