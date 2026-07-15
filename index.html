@@ -862,7 +862,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v61';
+const APP_BUILD = 'v62';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -1026,7 +1026,8 @@ function isColorUnavailable(main, product, color){
 //   'low'  = أقل من 5 لفات (بس لفة فأكتر)               -> أصفر "كمية قليلة"
 //   'ok'   = كفاية
 function colorStockLevel(item){
-  if(!item || item.available===false) return 'out';
+  if(!item || item.available===false) return 'out'; // "موقوف" يفضل زي ما هو
+  if(!warehouseAffectsStock()) return 'ok';
   const n = Number(item.stock);
   if(!isFinite(n) || n <= 0) return 'out';
   if(item.inStock === false) return 'out';
@@ -1036,8 +1037,25 @@ function colorStockLevel(item){
   return 'ok';
 }
 
+// المخازن دي (العاشر والمنصورة) ماعندهاش تتبّع رصيد حقيقي — الأصناف كلها
+// تتعامل كأنها متاحة دايمًا فيها من غير أي تلوين أو لافتة "متوفر/مفيش رصيد".
+// وطنطا والإسكندرية بس هما اللي بيتبع فيهم الرصيد الحقيقي.
+// والعميل (مش الموزع) ميشوفش أي معلومة رصيد في أي مخزن، ومش بيشوف اختيار
+// مخزن أصلاً — فالرصيد بالنسبالو مالوش معنى في كل الأحوال.
+function isClientAccount(){
+  return !!(state.currentUser && state.currentUser.distType === 'عميل');
+}
+
+const STOCK_TRACKED_WAREHOUSES_ = ['طنطا', 'الاسكندرية'];
+function warehouseAffectsStock(){
+  if(state.currentUser && state.currentUser.distType === 'عميل') return false;
+  return STOCK_TRACKED_WAREHOUSES_.includes(state.warehouse);
+}
+
 function effectiveInStock(item){
-  if(!item || item.available===false || item.inStock===false) return false;
+  if(!item || item.available===false) return false; // "موقوف" من الأدمن يفضل يتطبق دايمًا
+  if(!warehouseAffectsStock()) return true;
+  if(item.inStock===false) return false;
   const n = Number(item.stock);
   if(!isFinite(n) || n <= 0) return false;
   const content = Number(item.unit) || 1;
@@ -2066,8 +2084,9 @@ function requestSubmit(){
   if(!state.distName.trim()){ showToast('من فضلك اكتب اسم الموزع / الفرع'); return; }
   if(!state.distRegion.trim()){ showToast('من فضلك اكتب المنطقة'); return; }
   if(!state.distPhone.trim()){ showToast('من فضلك اكتب رقم الهاتف — محتاجه عشان تقدر تستعلم عن طلباتك بعدين'); return; }
-  // المخزن بيتسأل عنه هنا، وقت الإرسال — مش في بيانات الموزع
-  if(!asText(state.warehouse).trim()){
+  // المخزن بيتسأل عنه هنا، وقت الإرسال — مش في بيانات الموزع. العميل مالوش
+  // دعوة بالمخزن أصلاً فمابيتسألش عنه خالص.
+  if(!asText(state.warehouse).trim() && !isClientAccount()){
     state.showWarehouseModal = true; render(); return;
   }
   if(state.cart.length===0){ showToast('لسه محضتش أي صنف للطلب'); return; }
@@ -3405,6 +3424,11 @@ function renderStagedBlock(s){
           return `<button class="chip disabled" data-act="noop-unavailable" disabled>${esc(c)}<small>موقوف</small></button>`;
         }
         const sel = s.selectedColors.includes(c) ? 'active' : '';
+        // ⚠️ في مخازن العاشر/المنصورة، أو لو الداخل عميل، الرصيد مالوش معنى —
+        // اللون بيتعرض عادي (شكل افتراضي، مفيش لون تلوين ولا لافتة خالص).
+        if(!warehouseAffectsStock()){
+          return `<button class="chip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
+        }
         const lvl = colorStockLevel(findCatalogItem(s.main, s.product, c));
         // أحمر: أقل من لفة (أو صفر) · أصفر: أقل من 5 لفات · عادي: كفاية
         if(lvl === 'out'){
@@ -3575,18 +3599,20 @@ function renderOrderView(){
             const isStaged = state.staged.some(s=>s.key===stagedKey(state.mainGroup,n));
             const inCart = state.cart.some(it=>it.main===state.mainGroup && it.product===n);
             const unavailable = isProductFullyUnavailable(state.mainGroup, n);
-            const lvl = unavailable ? 'unavailable' : productStockLevel(state.mainGroup, n);
-            // أخضر = متوفر بلفة كاملة · أحمر "كمية قليلة" = عيدان بس مفيش لفة كاملة
-            // أحمر "مفيش رصيد" = صفر فعلي في كل الألوان · رمادي = موقوف من الأدمن
-            const stockClass = unavailable ? 'unavailable' : (lvl==='ok' ? 'instock' : 'outstock');
+            // ⚠️ في مخازن العاشر والمنصورة، ولو الداخل عميل، الرصيد مالوش
+            // معنى — نوري الصنف عادي من غير أي تلوين أو لافتة "متوفر/مفيش
+            // رصيد" خالص. "موقوف" من الأدمن يفضل يتطبق دايمًا مهما كان.
+            const showStock = warehouseAffectsStock();
+            const lvl = unavailable ? 'unavailable' : (showStock ? productStockLevel(state.mainGroup, n) : 'ok');
+            const stockClass = unavailable ? 'unavailable' : (showStock ? (lvl==='ok' ? 'instock' : 'outstock') : '');
             return `
             <div class="ptile ${isStaged?'selected':''} ${inCart?'incart':''} ${stockClass}" data-act="${unavailable?'noop-unavailable':'toggle-product'}" data-val="${esc(n)}">
               ${isStaged?'<span class="tick">✓</span>':''}
               <span>${esc(n)}</span>
               ${unavailable?'<span class="unavailtag">موقوف</span>':''}
-              ${(!unavailable && lvl==='out')?'<span class="stocktag out">مفيش رصيد</span>':''}
-              ${(!unavailable && lvl==='crit')?'<span class="stocktag out">كمية قليلة</span>':''}
-              ${(!unavailable && lvl==='ok')?`<span class="stocktag in">متوفر: ${esc(availableColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
+              ${(showStock && !unavailable && lvl==='out')?'<span class="stocktag out">مفيش رصيد</span>':''}
+              ${(showStock && !unavailable && lvl==='crit')?'<span class="stocktag out">كمية قليلة</span>':''}
+              ${(showStock && !unavailable && lvl==='ok')?`<span class="stocktag in">متوفر: ${esc(availableColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
             </div>`;
           }).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>'}
         </div>
@@ -3662,17 +3688,20 @@ function renderOrderView(){
       <button class="newbtn outline" data-act="open-saved-draft">🛒 عندي طلب محفوظ في السلة — افتحه</button>
     </div>`;
 
-  if(!state.warehouse){
+  // العميل ميشوفش شاشة اختيار المخزن أصلاً — مالهاش معنى بالنسباله لأنه
+  // مش بيشوف رصيد في أي مخزن.
+  if(!state.warehouse && !isClientAccount()){
     return `<main>${warehouseCard}${openDraftBtn}</main>`;
   }
 
   const distSection = `
     <div class="card distcard">
       ${state.editingOrderId ? `<div class="editbanner">✏️ بتعدّل على طلب سابق #${esc(state.editingOrderId.toUpperCase())}</div>` : ''}
+      ${isClientAccount() ? '' : `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <span style="font-size:12px;color:var(--muted);">🏬 المخزن: <b style="color:var(--navy);">${esc(state.warehouse)}</b></span>
         <button class="chip" style="padding:3px 10px;font-size:11px;" data-act="pick-warehouse-inline" data-val="">غيّر</button>
-      </div>
+      </div>`}
       <h2><span class="num">2</span>بيانات الموزع</h2>
       <div class="row3">
         <div class="field">
