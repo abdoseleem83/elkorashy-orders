@@ -3038,7 +3038,10 @@ function renderStagedBlock(s){
         const sel = s.selectedColors.includes(c) ? 'active' : '';
         const lvl = colorStockLevel(findCatalogItem(s.main, s.product, c));
         // أحمر: أقل من لفة (أو صفر) · أصفر: أقل من 5 لفات · عادي: كفاية
-        if(lvl === 'out' || lvl === 'crit'){
+        if(lvl === 'out'){
+          return `<button class="chip outstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متاح رصيد</small></button>`;
+        }
+        if(lvl === 'crit'){
           return `<button class="chip outstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
         }
         if(lvl === 'low'){
