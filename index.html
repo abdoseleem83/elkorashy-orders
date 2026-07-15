@@ -722,8 +722,8 @@ textarea{resize:vertical;min-height:60px;}
 .chip.gold.lowstockchip.active small{color:#fff;}
 .lowstocknote{
   background:#FBEBD1;color:#8A5A00;border:1px solid #E0A800;
-  border-radius:8px;padding:7px 10px;font-size:12.9px;font-weight:700;
-  margin-top:8px;line-height:1.5;
+  border-radius:8px;padding:6px 9px;font-size:10.5px;font-weight:700;
+  margin-top:6px;line-height:1.4;
 }
 .chip.outstockchip small{color:var(--danger);}
 .chip.outstockchip.active small{color:#fff;}
@@ -778,12 +778,12 @@ textarea{resize:vertical;min-height:60px;}
 }
 .stagedbtns{display:flex;gap:8px;margin-top:12px;}
 .confirmbtn{
-  flex:1;background:var(--success);color:#fff;border:none;border-radius:10px;
-  padding:11px;font-family:'Cairo',sans-serif;font-weight:800;font-size:14.6px;cursor:pointer;
+  flex:1;background:var(--success);color:#fff;border:none;border-radius:9px;
+  padding:8px;font-family:'Cairo',sans-serif;font-weight:800;font-size:11.8px;cursor:pointer;
 }
 .cancelbtn{
-  flex:1;background:none;border:1.5px solid var(--danger);color:var(--danger);border-radius:10px;
-  padding:11px;font-family:'Cairo',sans-serif;font-weight:700;font-size:14.6px;cursor:pointer;
+  flex:1;background:none;border:1.5px solid var(--danger);color:var(--danger);border-radius:9px;
+  padding:8px;font-family:'Cairo',sans-serif;font-weight:700;font-size:11.8px;cursor:pointer;
 }
 
 /* cart grouped by sector */
@@ -862,7 +862,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v60';
+const APP_BUILD = 'v61';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -1967,7 +1967,23 @@ const DOOR_ACCESSORIES = [
   { product:'كالون سلندر نحاس ابواب WPC', perDoor:1 },
 ];
 
+// بعد "تمام، ضيفه للسلة"، بلوك "حدد التفاصيل" الطويل بيختفي من الصفحة —
+// والصفحة بتقصر بشكل كبير، فمحتوى تحته بيتزحلق لفوق ويحل مكانه قدام عينك
+// (حتى لو رقم التمرير نفسه فضل ثابت)، وده اللي كان بيحس إنه "بينزل تحت".
+// بنمسك مكان شبكة الأصناف على الشاشة قبل التأكيد ونرجّعها لنفس المكان
+// بالظبط بعده، عشان يفضل شايف نفس الأصناف اللي كان بيختار منها.
 function confirmStaged(key){
+  const anchorEl = document.querySelector('.productgrid');
+  const anchorTop = anchorEl ? anchorEl.getBoundingClientRect().top : null;
+  const restoreAnchor = ()=>{
+    if(anchorTop === null) return;
+    const el2 = document.querySelector('.productgrid');
+    if(el2){
+      const delta = el2.getBoundingClientRect().top - anchorTop;
+      if(Math.abs(delta) > 1) window.scrollBy(0, delta);
+    }
+  };
+
   const s = state.staged.find(x=>x.key===key);
   if(!s) return;
   if(s.colorRequired && s.selectedColors.length===0){ showToast('اختار لون واحد على الأقل'); return; }
@@ -1999,6 +2015,8 @@ function confirmStaged(key){
   showToast('تمت إضافة الصنف للسلة');
   autoSaveDraft();
   render();
+  restoreAnchor();
+  requestAnimationFrame(restoreAnchor);
 }
 
 function cancelStaged(key){
@@ -3380,7 +3398,7 @@ function renderStagedBlock(s){
     </div>
     ${s.colorRequired ? `
     <label>الألوان (اختار أكتر من واحد)</label>
-    <div class="chipwrap chipgrid4 chipsquares" style="margin-bottom:10px;">
+    <div class="chipwrap chipgrid4 chipsquares" style="margin-bottom:10px;grid-template-columns:repeat(${Math.min(Math.max(s.availableColors.length,1),6)}, 1fr);">
       ${s.availableColors.map(c=>{
         const unavailable = isColorUnavailable(s.main, s.product, c);
         if(unavailable){
@@ -3400,29 +3418,29 @@ function renderStagedBlock(s){
         }
         return `<button class="chip greenchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
       }).join('')}
-      ${(()=>{
-        // ⚠️ كان فيه تناقض هنا: لون "مفيش رصيد خالص" (out) كان بياخد نفس رسالة
-        // "الكمية قليلة" بتاعة لون فيه رصيد جزئي (low/crit) — وده مضلل، لأن
-        // "قليلة" بتوحي إن فيه حاجة، والصفر مفيهوش حاجة أصلاً. بنفصل الرسالتين.
-        const outs = s.selectedColors.filter(c => colorStockLevel(findCatalogItem(s.main, s.product, c)) === 'out');
-        const partial = s.selectedColors.filter(c => {
-          const l = colorStockLevel(findCatalogItem(s.main, s.product, c));
-          return l === 'low' || l === 'crit';
-        });
-        let html = '';
-        if(outs.length){
-          html += `<div class="lowstocknote" style="background:#FDECEC;border-color:var(--danger);color:#8A1F1F;">🚫 مفيش رصيد خالص دلوقتي في: ${
-            outs.map(c=>esc(c)).join(' · ')
-          } — السعر متاح لو حبيت تطلبه على أي حال</div>`;
-        }
-        if(partial.length){
-          html += `<div class="lowstocknote">⚠️ خلي بالك الكمية مش كتيرة في: ${
-            partial.map(c=>esc(c)).join(' · ')
-          } — يفضل تتأكد قبل ما تطلب كمية كبيرة</div>`;
-        }
-        return html;
-      })()}
-    </div>` : ''}
+    </div>
+    ${(()=>{
+      // ⚠️ كان فيه تناقض هنا: لون "مفيش رصيد خالص" (out) كان بياخد نفس رسالة
+      // "الكمية قليلة" بتاعة لون فيه رصيد جزئي (low/crit) — وده مضلل، لأن
+      // "قليلة" بتوحي إن فيه حاجة، والصفر مفيهوش حاجة أصلاً. بنفصل الرسالتين.
+      const outs = s.selectedColors.filter(c => colorStockLevel(findCatalogItem(s.main, s.product, c)) === 'out');
+      const partial = s.selectedColors.filter(c => {
+        const l = colorStockLevel(findCatalogItem(s.main, s.product, c));
+        return l === 'low' || l === 'crit';
+      });
+      let html = '';
+      if(outs.length){
+        html += `<div class="lowstocknote" style="background:#FDECEC;border-color:var(--danger);color:#8A1F1F;">🚫 مفيش رصيد خالص في: ${
+          outs.map(c=>esc(c)).join(' · ')
+        } — السعر متاح لو حبيت تطلبه</div>`;
+      }
+      if(partial.length){
+        html += `<div class="lowstocknote">⚠️ الكمية مش كتيرة في: ${
+          partial.map(c=>esc(c)).join(' · ')
+        } — يفضل تتأكد الأول</div>`;
+      }
+      return html;
+    })()}` : ''}
     ${s.selectedColors.length>0 ? `
     <div class="colorqtytable">
       <div class="cqheader">
