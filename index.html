@@ -89,8 +89,8 @@ header.top .logoimg{
   width:46px;height:46px;border-radius:10px;
   background:#fff;object-fit:contain;padding:4px;flex-shrink:0;
 }
-header.top h1{font-size:20px;margin:0;font-weight:800;letter-spacing:.2px;}
-header.top p.sub{margin:2px 0 0;font-size:12.5px;color:#C7D0DE;font-weight:500;}
+header.top h1{font-size:22.4px;margin:0;font-weight:800;letter-spacing:.2px;}
+header.top p.sub{margin:2px 0 0;font-size:14px;color:#C7D0DE;font-weight:500;}
 
 nav.tabs{
   display:flex;
@@ -108,7 +108,7 @@ nav.tabs button{
   border-radius:10px;
   font-family:'Cairo',sans-serif;
   font-weight:700;
-  font-size:12px;
+  font-size:13.4px;
   cursor:pointer;
   transition:.15s;
 }
@@ -129,7 +129,7 @@ main{flex:1;padding:18px 16px 100px;}
   border:1px solid var(--line);
 }
 .card h2{
-  font-size:14.5px;
+  font-size:16.2px;
   margin:0 0 12px;
   font-weight:800;
   color:var(--navy);
@@ -140,13 +140,13 @@ main{flex:1;padding:18px 16px 100px;}
 .card h2 .num{
   width:22px;height:22px;border-radius:6px;
   background:var(--navy);color:#fff;
-  font-size:11.5px;display:flex;align-items:center;justify-content:center;
+  font-size:12.9px;display:flex;align-items:center;justify-content:center;
   font-weight:800;flex-shrink:0;
 }
 
 label{
   display:block;
-  font-size:12.5px;
+  font-size:14px;
   font-weight:700;
   color:var(--muted);
   margin-bottom:6px;
@@ -157,7 +157,7 @@ input[type=text],input[type=tel],input[type=number],input[type=password],textare
   border-radius:10px;
   padding:11px 12px;
   font-family:'Cairo',sans-serif;
-  font-size:14.5px;
+  font-size:16.2px;
   color:var(--ink);
   background:#FCFBF8;
 }
@@ -181,7 +181,7 @@ textarea{resize:vertical;min-height:60px;}
   padding:9px 14px;
   border-radius:999px;
   font-family:'Cairo',sans-serif;
-  font-size:13px;
+  font-size:14.6px;
   font-weight:600;
   cursor:pointer;
 }
@@ -192,16 +192,47 @@ textarea{resize:vertical;min-height:60px;}
 }
 .chip.gold.active{background:var(--gold);border-color:var(--gold);color:var(--navy-deep);}
 
+/* شيبس عمودي (قايمة رأسية) - بيتستخدم لعمود القطاعات الرئيسية */
+.chipwrap-vertical{display:flex;flex-direction:column;flex-wrap:nowrap;gap:6px;}
+.chipwrap-vertical .chip{
+  width:100%;
+  text-align:center;
+  border-radius:10px;
+  padding:10px 6px;
+  white-space:normal;
+  line-height:1.3;
+}
+
+/* تخطيط الأعمدة الثلاثة: القطاعات / الأصناف / التفاصيل - جنب بعض وقابلة للتمرير أفقيًا */
+.ordercols{
+  display:flex;
+  gap:8px;
+  align-items:flex-start;
+  overflow-x:auto;
+  padding-bottom:6px;
+  -webkit-overflow-scrolling:touch;
+  margin-bottom:12px;
+}
+.ordercols .card{margin-bottom:0;}
+.ordercol{flex:0 0 auto;}
+.ordercol-sectors{width:112px;}
+.ordercol-products{width:230px;}
+.ordercol-details{width:250px;}
+.ordercol .productgrid{
+  grid-template-columns:1fr;
+  max-height:420px;
+}
+
 .subchipwrap-compact{
   display:grid;
   grid-template-columns:repeat(4, 1fr);
   gap:5px;
 }
 .chip.subchip-compact{
-  padding:5px 4px;
-  font-size:9.5px;
+  padding:6px 5px;
+  font-size:13.4px;
   border-radius:10px;
-  line-height:1.25;
+  line-height:1.3;
   white-space:normal;
   text-align:center;
   overflow-wrap:break-word;
@@ -225,19 +256,19 @@ textarea{resize:vertical;min-height:60px;}
 }
 .productgrid.compact .ptile{
   min-height:54px;
-  font-size:9.5px;
+  font-size:10.6px;
   padding:6px 4px 16px;
 }
 .productgrid.compact .ptile .stocktag,
 .productgrid.compact .ptile .unavailtag{
-  font-size:7px;
+  font-size:7.8px;
 }
 .productgrid .ptile{
   border:1.5px solid var(--line);
   border-radius:9px;
   background:#FCFBF8;
   padding:8px 5px 22px;
-  font-size:10.5px;
+  font-size:11.8px;
   line-height:1.25;
   text-align:center;
   cursor:pointer;
@@ -251,13 +282,13 @@ textarea{resize:vertical;min-height:60px;}
 .productgrid .ptile.selected{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:700;}
 .productgrid .empty{
   grid-column:1 / -1;
-  padding:20px;text-align:center;color:var(--muted);font-size:13px;
+  padding:20px;text-align:center;color:var(--muted);font-size:14.6px;
 }
 
 .qtystepper{display:flex;align-items:center;gap:10px;}
 .qtystepper button{
   width:38px;height:38px;border-radius:10px;border:1.5px solid var(--line);
-  background:#FCFBF8;font-size:18px;font-weight:800;color:var(--navy);cursor:pointer;
+  background:#FCFBF8;font-size:20.2px;font-weight:800;color:var(--navy);cursor:pointer;
 }
 .qtystepper input{text-align:center;width:70px;}
 
@@ -270,7 +301,7 @@ textarea{resize:vertical;min-height:60px;}
   padding:13px;
   font-family:'Cairo',sans-serif;
   font-weight:800;
-  font-size:14.5px;
+  font-size:16.2px;
   cursor:pointer;
   margin-top:14px;
 }
@@ -287,30 +318,30 @@ textarea{resize:vertical;min-height:60px;}
 }
 .cartrow:last-child{border-bottom:none;}
 .cartrow .info{flex:1;min-width:0;}
-.cartrow .pname{font-size:13.5px;font-weight:700;color:var(--ink);}
-.cartrow .pmeta{font-size:12px;color:var(--muted);margin-top:2px;}
-.cartrow .qty{font-size:13.5px;font-weight:800;color:var(--navy);white-space:nowrap;}
+.cartrow .pname{font-size:15.1px;font-weight:700;color:var(--ink);}
+.cartrow .pmeta{font-size:13.4px;color:var(--muted);margin-top:2px;}
+.cartrow .qty{font-size:15.1px;font-weight:800;color:var(--navy);white-space:nowrap;}
 .cartrow .del{
-  background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer;padding:4px 6px;
+  background:none;border:none;color:var(--danger);font-size:20.2px;cursor:pointer;padding:4px 6px;
 }
-.cartrow .del.edit{color:var(--navy);font-size:15px;}
-.cartempty{color:var(--muted);font-size:13px;text-align:center;padding:14px 0;}
-.linetotal{font-size:10.5px;color:var(--gold);font-weight:700;}
-.autotag{font-size:10px;color:var(--navy);background:#EAF0F8;padding:1px 6px;border-radius:6px;font-weight:700;}
+.cartrow .del.edit{color:var(--navy);font-size:16.8px;}
+.cartempty{color:var(--muted);font-size:14.6px;text-align:center;padding:14px 0;}
+.linetotal{font-size:11.8px;color:var(--gold);font-weight:700;}
+.autotag{font-size:11.2px;color:var(--navy);background:#EAF0F8;padding:1px 6px;border-radius:6px;font-weight:700;}
 .pricetablewrap{overflow-x:auto;margin-top:14px;border:1px solid var(--line);border-radius:10px;}
-.pricetable{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap;}
+.pricetable{width:100%;border-collapse:collapse;font-size:13.4px;white-space:nowrap;}
 .pricetable th,.pricetable td{padding:8px 10px;text-align:center;border-bottom:1px solid var(--line);}
-.pricetable th{background:var(--navy);color:#fff;font-weight:700;font-size:11.5px;}
+.pricetable th{background:var(--navy);color:#fff;font-weight:700;font-size:12.9px;}
 .pricetable td:nth-child(2){text-align:right;white-space:normal;min-width:140px;}
 .pricetable tbody tr:nth-child(even){background:#FAF9F5;}
 .pricetable tbody tr:last-child td{border-bottom:none;}
 .carttotal{
   display:flex;justify-content:space-between;align-items:center;
   margin-top:12px;padding-top:12px;border-top:2px solid var(--navy);
-  font-size:14px;font-weight:800;color:var(--navy);
+  font-size:15.7px;font-weight:800;color:var(--navy);
 }
-.carttotal b{font-size:16px;}
-.pricenote{font-size:11px;color:#8A5A00;margin-top:6px;text-align:center;}
+.carttotal b{font-size:17.9px;}
+.pricenote{font-size:12.3px;color:#8A5A00;margin-top:6px;text-align:center;}
 
 .submitbar{
   position:sticky;bottom:0;left:0;right:0;
@@ -328,7 +359,7 @@ textarea{resize:vertical;min-height:60px;}
   padding:15px;
   font-family:'Cairo',sans-serif;
   font-weight:800;
-  font-size:15.5px;
+  font-size:17.4px;
   cursor:pointer;
   box-shadow:0 6px 18px rgba(201,162,39,.35);
 }
@@ -342,7 +373,7 @@ textarea{resize:vertical;min-height:60px;}
   padding:10px 6px;
   font-family:'Cairo',sans-serif;
   font-weight:800;
-  font-size:11.5px;
+  font-size:12.9px;
   cursor:pointer;
   display:flex;
   flex-direction:column;
@@ -350,7 +381,7 @@ textarea{resize:vertical;min-height:60px;}
   justify-content:center;
   gap:2px;
 }
-.savebtn .ic{font-size:18px;}
+.savebtn .ic{font-size:20.2px;}
 .savebtn.saved{background:var(--success);border-color:var(--success);color:#fff;}
 
 /* success screen */
@@ -362,17 +393,17 @@ textarea{resize:vertical;min-height:60px;}
   width:70px;height:70px;border-radius:50%;
   background:var(--success-bg);color:var(--success);
   display:flex;align-items:center;justify-content:center;
-  font-size:34px;margin:0 auto 18px;
+  font-size:38.1px;margin:0 auto 18px;
 }
-.success h2{color:var(--navy);font-size:19px;margin:0 0 8px;}
-.success p{color:var(--muted);font-size:13.5px;margin:0 0 22px;}
+.success h2{color:var(--navy);font-size:21.3px;margin:0 0 8px;}
+.success p{color:var(--muted);font-size:15.1px;margin:0 0 22px;}
 .success .ordid{
   display:inline-block;background:#fff;border:1.5px solid var(--line);
-  border-radius:10px;padding:8px 16px;font-weight:800;color:var(--navy);font-size:14px;letter-spacing:.5px;
+  border-radius:10px;padding:8px 16px;font-weight:800;color:var(--navy);font-size:15.7px;letter-spacing:.5px;
 }
 .newbtn{
   margin-top:22px;background:var(--navy);color:#fff;border:none;border-radius:10px;
-  padding:12px 24px;font-family:'Cairo',sans-serif;font-weight:700;font-size:14px;cursor:pointer;
+  padding:12px 24px;font-family:'Cairo',sans-serif;font-weight:700;font-size:15.7px;cursor:pointer;
 }
 .newbtn.outline{background:none;border:1.5px solid var(--navy);color:var(--navy);margin-top:10px;}
 .receiptpreview{
@@ -381,19 +412,19 @@ textarea{resize:vertical;min-height:60px;}
 }
 .receiptpreview img{width:100%;display:block;}
 .previewlabel{
-  background:var(--navy);color:#fff;font-size:11px;font-weight:700;
+  background:var(--navy);color:#fff;font-size:12.3px;font-weight:700;
   text-align:center;padding:6px;
 }
 .docsection{
   border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;
   background:#FCFBF8;text-align:right;
 }
-.docsectiontitle{font-size:12.5px;font-weight:800;color:var(--navy);margin-bottom:10px;}
+.docsectiontitle{font-size:14px;font-weight:800;color:var(--navy);margin-bottom:10px;}
 .iconbtnrow{display:flex;gap:8px;}
 .iconbtn{
   flex:1;background:#fff;border:1.5px solid var(--line);border-radius:10px;
   padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;
-  font-size:10.5px;font-weight:700;color:var(--ink);cursor:pointer;font-family:'Cairo',sans-serif;
+  font-size:11.8px;font-weight:700;color:var(--ink);cursor:pointer;font-family:'Cairo',sans-serif;
 }
 .iconbtn:active{background:#F0EDE4;}
 .receiptbtns{display:flex;flex-direction:column;gap:8px;max-width:280px;margin:0 auto;}
@@ -401,13 +432,13 @@ textarea{resize:vertical;min-height:60px;}
 
 /* admin */
 .pingate{padding:60px 20px;text-align:center;}
-.pingate .ic{font-size:30px;margin-bottom:12px;}
-.pingate input{max-width:180px;margin:14px auto;text-align:center;letter-spacing:4px;font-size:18px;}
+.pingate .ic{font-size:33.6px;margin-bottom:12px;}
+.pingate input{max-width:180px;margin:14px auto;text-align:center;letter-spacing:4px;font-size:20.2px;}
 .pingate button{
   background:var(--navy);color:#fff;border:none;border-radius:10px;padding:11px 26px;
   font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;
 }
-.pingate .err{color:var(--danger);font-size:12.5px;margin-top:8px;}
+.pingate .err{color:var(--danger);font-size:14px;margin-top:8px;}
 
 /* auth screen (login/register/forgot) */
 .authwrap{
@@ -432,74 +463,74 @@ textarea{resize:vertical;min-height:60px;}
   background:#fff;border:1px solid var(--line);padding:5px;
   display:block;margin:0 auto 10px;
 }
-.authtitle{color:var(--navy);font-size:15.5px;font-weight:800;text-align:center;margin:0 0 2px;}
-.authsub{color:var(--muted);font-size:12px;text-align:center;margin:0 0 18px;}
-.authcard h3{color:var(--navy);font-size:15px;margin:0 0 14px;text-align:center;font-weight:800;}
+.authtitle{color:var(--navy);font-size:17.4px;font-weight:800;text-align:center;margin:0 0 2px;}
+.authsub{color:var(--muted);font-size:13.4px;text-align:center;margin:0 0 18px;}
+.authcard h3{color:var(--navy);font-size:16.8px;margin:0 0 14px;text-align:center;font-weight:800;}
 .authcard label{margin-top:2px;}
 .authcard input{margin-bottom:2px;}
 .authcard button:not([type=button]){
   width:100%;
   background:var(--navy);color:#fff;border:none;border-radius:10px;
-  padding:13px;font-family:'Cairo',sans-serif;font-weight:800;font-size:14.5px;
+  padding:13px;font-family:'Cairo',sans-serif;font-weight:800;font-size:16.2px;
   cursor:pointer;margin-top:10px;transition:.15s;
 }
 .authcard button:not([type=button]):active{background:var(--navy-deep);}
 .authcard button:not([type=button]):disabled{opacity:.6;cursor:default;}
-.authlinks{display:flex;justify-content:space-between;margin-top:16px;font-size:12.5px;}
+.authlinks{display:flex;justify-content:space-between;margin-top:16px;font-size:14px;}
 .authlinks span{cursor:pointer;}
 .authlinks .lnk{color:var(--gold);font-weight:700;}
 .authlinks .muted{color:var(--muted);}
-.authcard .err{color:var(--danger);font-size:12.5px;margin:6px 0 0;text-align:center;}
+.authcard .err{color:var(--danger);font-size:14px;margin:6px 0 0;text-align:center;}
 
 .adminbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
 .adminbar input{flex:1 1 100%;}
 .adminbar .exportbtn{flex:1;padding:10px 8px;}
 .exportbtn{
   background:var(--navy);color:#fff;border:none;border-radius:10px;padding:0 14px;
-  font-family:'Cairo',sans-serif;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;
+  font-family:'Cairo',sans-serif;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;
 }
 .exportbtn.danger{background:var(--danger);}
 .delbtn{
   margin-top:10px;width:100%;background:none;border:1.5px solid var(--danger);color:var(--danger);
-  border-radius:10px;padding:9px;font-family:'Cairo',sans-serif;font-weight:700;font-size:12.5px;cursor:pointer;
+  border-radius:10px;padding:9px;font-family:'Cairo',sans-serif;font-weight:700;font-size:14px;cursor:pointer;
 }
 .statuschips{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
-.statuschips .chip{padding:6px 12px;font-size:12px;}
+.statuschips .chip{padding:6px 12px;font-size:13.4px;}
 
 .ordercard{margin-bottom:12px;}
 .ordercard .ohead{
   display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;
   padding-bottom:10px;border-bottom:1px dashed var(--line);
 }
-.ordercard .dname{font-weight:800;font-size:14.5px;color:var(--navy);}
-.ordercard .dmeta{font-size:11.5px;color:var(--muted);margin-top:3px;}
-.ordercard .oid{font-size:11px;color:var(--muted);font-weight:700;}
+.ordercard .dname{font-weight:800;font-size:16.2px;color:var(--navy);}
+.ordercard .dmeta{font-size:12.9px;color:var(--muted);margin-top:3px;}
+.ordercard .oid{font-size:12.3px;color:var(--muted);font-weight:700;}
 .statusbadge{
-  font-size:11px;font-weight:800;padding:5px 10px;border-radius:999px;white-space:nowrap;cursor:pointer;
+  font-size:12.3px;font-weight:800;padding:5px 10px;border-radius:999px;white-space:nowrap;cursor:pointer;
   border:none;font-family:'Cairo',sans-serif;
 }
 .statusbadge.pending{background:#FBEBD1;color:#8A5A00;}
 .statusbadge.done{background:var(--success-bg);color:var(--success);}
-.ordercard .items{font-size:12.5px;}
+.ordercard .items{font-size:14px;}
 .ordercard .item-row{display:flex;justify-content:space-between;padding:4px 0;color:var(--ink);}
 .ordercard .item-row b{color:var(--navy);}
 .ordercard .note{
   margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);
-  font-size:12px;color:var(--muted);
+  font-size:13.4px;color:var(--muted);
 }
-.loading{text-align:center;padding:40px;color:var(--muted);font-size:13.5px;}
+.loading{text-align:center;padding:40px;color:var(--muted);font-size:15.1px;}
 .ordertotalline{
   margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);
-  font-size:12.5px;color:var(--muted);text-align:left;
+  font-size:14px;color:var(--muted);text-align:left;
 }
-.ordertotalline b{color:var(--navy);font-size:14px;}
+.ordertotalline b{color:var(--navy);font-size:15.7px;}
 .emptystate{text-align:center;padding:50px 20px;color:var(--muted);}
-.emptystate .ic{font-size:30px;margin-bottom:10px;}
+.emptystate .ic{font-size:33.6px;margin-bottom:10px;}
 
 .toast{
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
   background:var(--navy-deep);color:#fff;padding:11px 20px;border-radius:10px;
-  font-size:13px;font-weight:600;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,.25);
+  font-size:14.6px;font-weight:600;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,.25);
   max-width:90%;text-align:center;
 }
 
@@ -510,13 +541,13 @@ textarea{resize:vertical;min-height:60px;}
 }
 .installbanner img{width:36px;height:36px;border-radius:8px;object-fit:contain;flex-shrink:0;}
 .installtext{flex:1;display:flex;flex-direction:column;min-width:0;}
-.installtext b{font-size:12.5px;color:var(--navy);}
-.installtext span{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.installtext b{font-size:14px;color:var(--navy);}
+.installtext span{font-size:11.8px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .installbtn{
   background:var(--gold);color:var(--navy-deep);border:none;border-radius:8px;
-  padding:8px 14px;font-family:'Cairo',sans-serif;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap;
+  padding:8px 14px;font-family:'Cairo',sans-serif;font-weight:800;font-size:13.4px;cursor:pointer;white-space:nowrap;
 }
-.installclose{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px;}
+.installclose{background:none;border:none;color:var(--muted);font-size:17.9px;cursor:pointer;padding:4px;}
 
 .installgate{
   min-height:100vh;
@@ -528,26 +559,26 @@ textarea{resize:vertical;min-height:60px;}
   width:88px;height:88px;border-radius:18px;background:#fff;object-fit:contain;
   padding:10px;margin-bottom:20px;box-shadow:0 10px 30px rgba(0,0,0,.3);
 }
-.installgate h1{font-size:19px;font-weight:800;margin:0 0 10px;}
-.installgate .gatesub{font-size:13px;color:#C7D0DE;line-height:1.7;max-width:320px;margin:0 0 28px;}
+.installgate h1{font-size:21.3px;font-weight:800;margin:0 0 10px;}
+.installgate .gatesub{font-size:14.6px;color:#C7D0DE;line-height:1.7;max-width:320px;margin:0 0 28px;}
 .gatebtn{
   background:var(--gold);color:var(--navy-deep);border:none;border-radius:12px;
-  padding:15px 30px;font-family:'Cairo',sans-serif;font-weight:800;font-size:15px;cursor:pointer;
+  padding:15px 30px;font-family:'Cairo',sans-serif;font-weight:800;font-size:16.8px;cursor:pointer;
   box-shadow:0 8px 22px rgba(201,162,39,.4);
 }
-.gatehint{font-size:11px;color:#9FAAC0;margin-top:14px;max-width:280px;line-height:1.6;}
+.gatehint{font-size:12.3px;color:#9FAAC0;margin-top:14px;max-width:280px;line-height:1.6;}
 .gatesteps{max-width:320px;width:100%;margin-bottom:10px;}
 .gatestep{
   display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.08);
-  border-radius:10px;padding:12px 14px;margin-bottom:10px;text-align:right;font-size:12.5px;
+  border-radius:10px;padding:12px 14px;margin-bottom:10px;text-align:right;font-size:14px;
 }
 .gatestep b{
   width:24px;height:24px;border-radius:50%;background:var(--gold);color:var(--navy-deep);
-  display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:13.4px;flex-shrink:0;
 }
-.shareicon{margin-right:auto;font-size:15px;}
+.shareicon{margin-right:auto;font-size:16.8px;}
 .gateskip{
-  background:none;border:none;color:#9FAAC0;font-size:12px;font-family:'Cairo',sans-serif;
+  background:none;border:none;color:#9FAAC0;font-size:13.4px;font-family:'Cairo',sans-serif;
   text-decoration:underline;cursor:pointer;margin-top:26px;padding:6px;
 }
 
@@ -556,7 +587,7 @@ textarea{resize:vertical;min-height:60px;}
 .productgrid .ptile .tick{
   position:absolute;top:3px;left:3px;
   background:var(--success);color:#fff;border-radius:50%;
-  width:16px;height:16px;font-size:10px;display:flex;align-items:center;justify-content:center;
+  width:16px;height:16px;font-size:11.2px;display:flex;align-items:center;justify-content:center;
 }
 .productgrid .ptile.incart{border-color:var(--success);}
 
@@ -583,12 +614,12 @@ textarea{resize:vertical;min-height:60px;}
 }
 .productgrid .ptile .unavailtag{
   position:absolute;bottom:2px;left:2px;right:2px;
-  background:var(--danger);color:#fff;font-size:8px;font-weight:800;
+  background:var(--danger);color:#fff;font-size:9px;font-weight:800;
   border-radius:4px;padding:1px 2px;text-align:center;
 }
 .productgrid .ptile .stocktag{
   position:absolute;bottom:2px;left:2px;right:2px;
-  font-size:7.5px;font-weight:800;border-radius:4px;padding:2px;text-align:center;
+  font-size:8.4px;font-weight:800;border-radius:4px;padding:2px;text-align:center;
   line-height:1.2;white-space:normal;
 }
 .productgrid .ptile .stocktag.out{background:var(--danger);color:#fff;}
@@ -597,7 +628,7 @@ textarea{resize:vertical;min-height:60px;}
 /* مفتاح الألوان فوق شبكة الأصناف */
 .stocklegend{
   display:flex;gap:12px;justify-content:center;flex-wrap:wrap;
-  font-size:11px;color:var(--muted);margin-bottom:10px;
+  font-size:12.3px;color:var(--muted);margin-bottom:10px;
 }
 .stocklegend span{display:flex;align-items:center;gap:4px;}
 .stocklegend i{width:10px;height:10px;border-radius:3px;display:inline-block;}
@@ -629,7 +660,7 @@ textarea{resize:vertical;min-height:60px;}
   background:var(--danger);border-color:var(--danger);color:#fff;
 }
 .chip small, .chip.disabled small{
-  display:block;font-size:8.5px;font-weight:800;line-height:1.2;margin-top:1px;opacity:.9;
+  display:block;font-size:9.5px;font-weight:800;line-height:1.2;margin-top:1px;opacity:.9;
 }
 .chip.gold.lowstockchip{
   border-color:#E0A800;background:#FFF8E6;
@@ -638,7 +669,7 @@ textarea{resize:vertical;min-height:60px;}
 .chip.gold.lowstockchip.active small{color:#fff;}
 .lowstocknote{
   background:#FBEBD1;color:#8A5A00;border:1px solid #E0A800;
-  border-radius:8px;padding:7px 10px;font-size:11.5px;font-weight:700;
+  border-radius:8px;padding:7px 10px;font-size:12.9px;font-weight:700;
   margin-top:8px;line-height:1.5;
 }
 .chip.outstockchip small{color:var(--danger);}
@@ -656,16 +687,16 @@ textarea{resize:vertical;min-height:60px;}
   text-decoration-thickness:3px;
 }
 .stagedhead{margin-bottom:10px;}
-.stagedname{font-weight:800;font-size:14px;color:var(--navy);}
+.stagedname{font-weight:800;font-size:15.7px;color:var(--navy);}
 .edittag{
-  display:inline-block;background:#FBEBD1;color:#8A5A00;font-size:10px;font-weight:800;
+  display:inline-block;background:#FBEBD1;color:#8A5A00;font-size:11.2px;font-weight:800;
   padding:2px 8px;border-radius:6px;margin-right:6px;vertical-align:middle;
 }
-.stagedmain{font-size:11.5px;color:var(--muted);margin-top:1px;}
+.stagedmain{font-size:12.9px;color:var(--muted);margin-top:1px;}
 .colorqtytable{margin-top:6px;margin-bottom:8px;}
 .cqheader{
   display:flex;align-items:center;gap:4px;padding:0 2px 4px;
-  font-size:9px;color:var(--muted);font-weight:800;
+  font-size:10.1px;color:var(--muted);font-weight:800;
 }
 .cqheader .cqcol-color{flex:1.1;}
 .cqheader .cqcol-unit{width:64px;text-align:center;}
@@ -677,43 +708,43 @@ textarea{resize:vertical;min-height:60px;}
 }
 .cqrow:last-child{border-bottom:none;}
 .cqcolor{
-  flex:1.1;font-size:11px;font-weight:700;color:var(--ink);
+  flex:1.1;font-size:12.3px;font-weight:700;color:var(--ink);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .cqselect{
   width:64px;border:1.3px solid var(--line);border-radius:8px;background:#fff;
-  font-family:'Cairo',sans-serif;font-size:9.5px;padding:5px 1px;color:var(--ink);text-align:center;
+  font-family:'Cairo',sans-serif;font-size:10.6px;padding:5px 1px;color:var(--ink);text-align:center;
 }
-.cqunitfixed{width:64px;text-align:center;font-size:9.5px;color:var(--muted);font-weight:700;}
+.cqunitfixed{width:64px;text-align:center;font-size:10.6px;color:var(--muted);font-weight:700;}
 .qtystepper.small{display:flex;align-items:center;gap:3px;width:82px;justify-content:center;}
-.qtystepper.small button{width:23px;height:23px;font-size:13px;border-radius:6px;}
-.qtystepper.small input{width:30px;font-size:10.5px;padding:4px 1px;}
+.qtystepper.small button{width:23px;height:23px;font-size:14.6px;border-radius:6px;}
+.qtystepper.small input{width:30px;font-size:11.8px;padding:4px 1px;}
 .cqprice{
-  width:50px;text-align:center;font-size:10px;font-weight:800;color:var(--navy);
+  width:50px;text-align:center;font-size:11.2px;font-weight:800;color:var(--navy);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .stagedbtns{display:flex;gap:8px;margin-top:12px;}
 .confirmbtn{
   flex:1;background:var(--success);color:#fff;border:none;border-radius:10px;
-  padding:11px;font-family:'Cairo',sans-serif;font-weight:800;font-size:13px;cursor:pointer;
+  padding:11px;font-family:'Cairo',sans-serif;font-weight:800;font-size:14.6px;cursor:pointer;
 }
 .cancelbtn{
   flex:1;background:none;border:1.5px solid var(--danger);color:var(--danger);border-radius:10px;
-  padding:11px;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;
+  padding:11px;font-family:'Cairo',sans-serif;font-weight:700;font-size:14.6px;cursor:pointer;
 }
 
 /* cart grouped by sector */
 .cartgroup{margin-bottom:14px;}
 .cartgroup:last-child{margin-bottom:0;}
 .cartgrouptitle{
-  font-size:12px;font-weight:800;color:var(--gold);
+  font-size:13.4px;font-weight:800;color:var(--gold);
   text-transform:uppercase;letter-spacing:.3px;
   padding-bottom:6px;margin-bottom:4px;border-bottom:1.5px solid var(--gold-light);
 }
 
 /* edit banner */
 .editbanner{
-  background:#FBEBD1;color:#8A5A00;font-size:12.5px;font-weight:700;
+  background:#FBEBD1;color:#8A5A00;font-size:14px;font-weight:700;
   padding:9px 12px;border-radius:9px;margin-bottom:14px;text-align:center;
 }
 
@@ -726,13 +757,13 @@ textarea{resize:vertical;min-height:60px;}
   background:#fff;border-radius:16px;padding:26px 22px;max-width:360px;width:100%;
   text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.3);
 }
-.modalic{font-size:32px;margin-bottom:10px;}
-.modalcard h3{color:var(--navy);font-size:16.5px;margin:0 0 10px;}
-.modalcard p{color:var(--muted);font-size:12.5px;line-height:1.7;margin:0 0 20px;}
+.modalic{font-size:35.8px;margin-bottom:10px;}
+.modalcard h3{color:var(--navy);font-size:18.5px;margin:0 0 10px;}
+.modalcard p{color:var(--muted);font-size:14px;line-height:1.7;margin:0 0 20px;}
 .modalbtns{display:flex;flex-direction:column;gap:8px;}
 .modalbtn{
   border:1.5px solid var(--line);background:#fff;color:var(--ink);
-  border-radius:10px;padding:12px;font-family:'Cairo',sans-serif;font-weight:700;font-size:13.5px;cursor:pointer;
+  border-radius:10px;padding:12px;font-family:'Cairo',sans-serif;font-weight:700;font-size:15.1px;cursor:pointer;
 }
 .modalbtn.primary{background:var(--navy);border-color:var(--navy);color:#fff;}
 
@@ -744,10 +775,10 @@ textarea{resize:vertical;min-height:60px;}
 }
 .previewhead{
   display:flex;align-items:center;justify-content:space-between;
-  padding:12px 14px;background:var(--navy);color:#fff;font-weight:800;font-size:14px;
+  padding:12px 14px;background:var(--navy);color:#fff;font-weight:800;font-size:15.7px;
 }
 .previewclose{
-  background:transparent;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;
+  background:transparent;border:none;color:#fff;font-size:20.2px;cursor:pointer;line-height:1;
 }
 .previewbody{overflow:auto;padding:10px;background:#F5F3EE;flex:1;}
 .previewfoot{padding:10px 14px;border-top:1px solid var(--line);}
@@ -778,7 +809,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v52';
+const APP_BUILD = 'v53';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -818,7 +849,10 @@ const state = {
   regDistPhone:'',
   regDistType:'موزع',
   forgotUsername:'',
+  forgotNewPassword:'',
+  forgotNewPassword2:'',
   forgotSent:false,
+  forgotSubmitting:false,
 
   // sector / product staging
   mainGroup:null,
@@ -853,6 +887,10 @@ const state = {
   showStock:false,
   stockSearch:'',
   stockPdfBusy:false,
+  showPwRequests:false,
+  pwRequests:[],
+  pwRequestsLoading:false,
+  pwRequestsCount:0,
   showDiag:false,
   diagText:'',
   saveError:'',
@@ -1566,12 +1604,32 @@ async function submitRegister(){
   }
 }
 
-function submitForgot(){
-  const username = state.forgotUsername.trim();
+async function submitForgot(){
+  const username = asText(state.forgotUsername).trim();
+  const p1 = asText(state.forgotNewPassword);
+  const p2 = asText(state.forgotNewPassword2);
   if(!username){ state.authError='من فضلك اكتب اسم المستخدم'; render(); return; }
-  const msg = 'نسيت الباسورد الخاص بيا\nاسم المستخدم: ' + username + '\nمحتاج ريست للباسورد من فضلك';
-  window.open('https://wa.me/' + ADMIN_WHATSAPP + '?text=' + encodeURIComponent(msg), '_blank');
-  state.forgotSent = true;
+  if(!p1){ state.authError='من فضلك اكتب الباسورد الجديد اللي عايزه'; render(); return; }
+  if(p1.length < 4){ state.authError='الباسورد لازم يكون 4 حروف/أرقام على الأقل'; render(); return; }
+  if(p1 !== p2){ state.authError='الباسوردين مش متطابقين'; render(); return; }
+
+  state.forgotSubmitting = true; state.authError=''; render();
+  try{
+    const r = await fetch(APPS_SCRIPT_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action:'requestPasswordReset', username, newPassword: p1 })
+    });
+    const d = await r.json();
+    if(d && d.ok){
+      state.forgotSent = true;
+    } else {
+      state.authError = (d && d.error) ? d.error : 'تعذّر إرسال الطلب، حاول تاني';
+    }
+  }catch(e){
+    state.authError = 'مفيش اتصال بالسيرفر، حاول تاني';
+  }
+  state.forgotSubmitting = false;
   render();
 }
 
@@ -1943,6 +2001,24 @@ function smallUnitLabelFor(main){
   if(main.includes('اكسسوارات')) return 'قطعة';
   return 'عود';
 }
+// أمر صرف المخزن لازم يكون باللفة (وحدة العدّ اللي أمين المخزن بيشتغل بيها)،
+// مش بالعود زي تصدير الإكسيل. لو الموزع طلب بالعود لصنف من مجموعات اللفة،
+// بنحوّله للفة هنا (بالكسر لو مش لفة كاملة) بدل ما نسيبه بالعود.
+const ROLL_GROUPS_ = ['قطاعات PVC كومبن', 'قطاعات كرافت لاين', 'نيو لاين', 'شاتر'];
+function warehouseUnitDisplay(it){
+  if(it.unitType === 'لفة' || it.unitType === 'كرتونة'){
+    return { qty: it.qty, unitLabel: it.unitType };
+  }
+  if(ROLL_GROUPS_.includes(it.main) && it.unitType === 'عود'){
+    const cat = findCatalogItem(it.main, it.product, it.color);
+    const content = Number(cat && cat.unit) || 1;
+    const rolls = Math.round((Number(it.qty)/content) * 10) / 10;
+    return { qty: rolls, unitLabel: 'لفة' };
+  }
+  // أصناف من غير لفة أصلاً (أبواب/أكسسوارات) — تفضل بوحدتها الأصلية
+  return { qty: it.qty, unitLabel: it.unitType || '' };
+}
+
 function normalizeItemToSmallUnit(it){
   if(it.main===OTHER_SECTOR) return { qty: it.qty, unitLabel: it.unitType||'' };
   if(it.main==='ابواب WPC') return { qty: it.qty, unitLabel:'قطعة' };
@@ -2162,10 +2238,10 @@ function stockTableHTML_(forPdf){
 
   return mats.map(m=>`
     <div style="margin-bottom:16px;">
-      <div style="background:${gold};color:${navy};font-weight:800;font-size:12.5px;padding:6px 10px;border-radius:6px 6px 0 0;">
+      <div style="background:${gold};color:${navy};font-weight:800;font-size:14px;padding:6px 10px;border-radius:6px 6px 0 0;">
         ${esc(m.main)}
       </div>
-      <table style="width:100%;border-collapse:collapse;font-size:11.5px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12.9px;">
         <thead>
           <tr style="background:${navy};color:#fff;">
             <th style="padding:7px 6px;text-align:right;">الصنف</th>
@@ -2187,6 +2263,37 @@ function stockTableHTML_(forPdf){
 }
 
 // شاشة الأرصدة — للأدمن بس
+// طلبات الباسورد — للأدمن بس. الموزع كتب الباسورد الجديد وهو مستنّي الموافقة.
+function renderPwRequestsModal(){
+  if(!state.showPwRequests) return '';
+  const list = state.pwRequests || [];
+  const body = list.length ? list.map(r=>`
+    <div style="padding:10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px;">
+      <div>
+        <div style="font-weight:800;color:var(--navy);font-size:13px;">${esc(r.username)}</div>
+        <div style="font-size:11px;color:var(--muted);">${esc(r.date||'')}</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="chip" style="background:var(--success);color:#fff;border-color:var(--success);" data-act="approve-pwreq" data-val="${esc(r.id)}">✅ موافقة</button>
+        <button class="chip" style="background:var(--danger);color:#fff;border-color:var(--danger);" data-act="reject-pwreq" data-val="${esc(r.id)}">❌ رفض</button>
+      </div>
+    </div>
+  `).join('') : '<div class="loading">مفيش طلبات قيد المراجعة</div>';
+
+  return `
+  <div class="modalbg" data-act="close-pwreq">
+    <div class="previewmodal" data-act="noop" style="max-width:520px;">
+      <div class="previewhead">
+        <span>🔑 طلبات تغيير الباسورد</span>
+        <button class="previewclose" data-act="close-pwreq">✕</button>
+      </div>
+      <div class="previewbody" style="background:#fff;">
+        ${state.pwRequestsLoading ? '<div class="loading">جارٍ التحميل...</div>' : body}
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderStockModal(){
   if(!state.showStock) return '';
   const body = stockTableHTML_(false);
@@ -2199,7 +2306,7 @@ function renderStockModal(){
       </div>
       <div style="padding:8px 10px 0;">
         <input type="text" placeholder="ابحث عن صنف أو لون..." value="${esc(state.stockSearch)}" data-act="stock-search">
-        <div style="font-size:10.5px;color:var(--muted);margin:4px 0 6px;">الكميات باللفة · المتاح = الرصيد − المحجوز · الصنف الصفر مش ظاهر</div>
+        <div style="font-size:11.8px;color:var(--muted);margin:4px 0 6px;">الكميات باللفة · المتاح = الرصيد − المحجوز · الصنف الصفر مش ظاهر</div>
       </div>
       <div class="previewbody" style="background:#fff;overflow:auto;">
         ${body || '<div class="loading">مفيش أرصدة</div>'}
@@ -2211,6 +2318,39 @@ function renderStockModal(){
       </div>
     </div>
   </div>`;
+}
+
+async function loadPwRequests(){
+  state.showPwRequests = true; state.pwRequestsLoading = true; render();
+  try{
+    const r = await fetch(APPS_SCRIPT_URL + '?action=passwordRequests&token=' + encodeURIComponent(getAdminToken()));
+    const d = await r.json();
+    state.pwRequests = Array.isArray(d) ? d : [];
+    state.pwRequestsCount = state.pwRequests.length;
+  }catch(e){
+    state.pwRequests = [];
+    showToast('تعذّر تحميل الطلبات');
+  }
+  state.pwRequestsLoading = false;
+  render();
+}
+
+async function decidePwRequest(id, approve){
+  try{
+    const action = approve ? 'approvePasswordReset' : 'rejectPasswordReset';
+    const r = await fetch(APPS_SCRIPT_URL + '?action=' + action + '&token=' + encodeURIComponent(getAdminToken()) + '&id=' + encodeURIComponent(id));
+    const d = await r.json();
+    if(d && d.ok){
+      showToast(approve ? 'اتغيّر الباسورد ✅' : 'اترفض الطلب');
+      state.pwRequests = state.pwRequests.filter(x=>String(x.id)!==String(id));
+      state.pwRequestsCount = state.pwRequests.length;
+    } else {
+      showToast('تعذّر تنفيذ الطلب');
+    }
+  }catch(e){
+    showToast('تعذّر الاتصال بالسيرفر');
+  }
+  render();
 }
 
 async function exportStockPDF(){
@@ -2235,13 +2375,13 @@ async function exportStockPDF(){
       <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #C9A227;padding-bottom:14px;margin-bottom:16px;">
         <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
         <div style="flex:1;">
-          <div style="font-size:19px;font-weight:800;color:#1F3050;">تقرير الأرصدة المتاحة</div>
-          <div style="font-size:11.5px;color:#6E7480;margin-top:2px;">الكميات باللفة · المتاح = الرصيد − المحجوز</div>
+          <div style="font-size:21.3px;font-weight:800;color:#1F3050;">تقرير الأرصدة المتاحة</div>
+          <div style="font-size:12.9px;color:#6E7480;margin-top:2px;">الكميات باللفة · المتاح = الرصيد − المحجوز</div>
         </div>
-        <div style="font-size:12px;color:#6E7480;">${esc(dateStr)}</div>
+        <div style="font-size:13.4px;color:#6E7480;">${esc(dateStr)}</div>
       </div>
       ${tables}
-      ${CREDIT_LINE ? `<div style="margin-top:14px;text-align:center;color:#A8A498;font-size:9px;">${esc(CREDIT_LINE)}</div>` : ''}
+      ${CREDIT_LINE ? `<div style="margin-top:14px;text-align:center;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
     </div>`;
   document.body.appendChild(wrap);
 
@@ -2279,8 +2419,8 @@ function renderGlobalError(){
   if(!state.saveError) return '';
   return `
   <div style="position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:#fff;border:2px solid var(--danger);border-radius:12px;padding:10px;box-shadow:0 8px 30px rgba(0,0,0,.3);">
-    <div style="color:var(--danger);font-weight:800;font-size:13px;margin-bottom:6px;">⚠️ خطأ — ابعت النص ده</div>
-    <textarea readonly style="width:100%;min-height:110px;font-family:monospace;font-size:10px;direction:ltr;text-align:left;padding:6px;border:1px solid #ddd;border-radius:6px;">${esc(state.saveError)}</textarea>
+    <div style="color:var(--danger);font-weight:800;font-size:14.6px;margin-bottom:6px;">⚠️ خطأ — ابعت النص ده</div>
+    <textarea readonly style="width:100%;min-height:110px;font-family:monospace;font-size:11.2px;direction:ltr;text-align:left;padding:6px;border:1px solid #ddd;border-radius:6px;">${esc(state.saveError)}</textarea>
     <button class="savebtn" data-act="clear-save-error" style="width:100%;margin-top:6px;">إخفاء</button>
   </div>`;
 }
@@ -2295,7 +2435,7 @@ function renderDiagModal(){
         <button class="previewclose" data-act="close-diag">✕</button>
       </div>
       <div class="previewbody">
-        <textarea readonly style="width:100%;min-height:280px;font-family:monospace;font-size:11px;direction:ltr;text-align:left;padding:8px;border:1px solid #ddd;border-radius:6px;">${esc(state.diagText||'جارٍ الفحص...')}</textarea>
+        <textarea readonly style="width:100%;min-height:280px;font-family:monospace;font-size:12.3px;direction:ltr;text-align:left;padding:8px;border:1px solid #ddd;border-radius:6px;">${esc(state.diagText||'جارٍ الفحص...')}</textarea>
       </div>
     </div>
   </div>`;
@@ -2484,16 +2624,16 @@ async function buildQuotePDF(order){
       <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #C9A227;padding-bottom:18px;margin-bottom:20px;">
         <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:60px;height:60px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
         <div style="flex:1;">
-          <div style="font-size:20px;font-weight:800;color:#1F3050;">القرشي لأبواب وشبابيك الـ UPVC</div>
-          <div style="font-size:12px;color:#6E7480;margin-top:2px;">وكيل AXA مصر</div>
+          <div style="font-size:22.4px;font-weight:800;color:#1F3050;">القرشي لأبواب وشبابيك الـ UPVC</div>
+          <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">وكيل AXA مصر</div>
         </div>
         <div style="text-align:left;">
-          <div style="font-size:15px;font-weight:800;color:#C9A227;">عرض سعر</div>
-          <div style="font-size:11px;color:#6E7480;">#${esc(order.id.toUpperCase())}</div>
+          <div style="font-size:16.8px;font-weight:800;color:#C9A227;">عرض سعر</div>
+          <div style="font-size:12.3px;color:#6E7480;">#${esc(order.id.toUpperCase())}</div>
         </div>
       </div>
 
-      <div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:12.5px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:14px;">
         <div>
           <div style="color:#6E7480;">الموزع</div>
           <div style="font-weight:800;color:#1F3050;">${esc(order.distName)}</div>
@@ -2512,7 +2652,7 @@ async function buildQuotePDF(order){
         </div>
       </div>
 
-      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12.3px;">
         <thead>
           <tr style="background:#1F3050;color:#fff;">
             <th style="padding:9px 5px;text-align:center;width:26px;">م</th>
@@ -2541,7 +2681,7 @@ async function buildQuotePDF(order){
             orderedMains.forEach(main=>{
               html += `
                 <tr>
-                  <td colspan="${colspan}" style="padding:7px 6px;background:#E4C766;color:#1F3050;font-weight:800;font-size:11px;">${esc(main)}</td>
+                  <td colspan="${colspan}" style="padding:7px 6px;background:#E4C766;color:#1F3050;font-weight:800;font-size:12.3px;">${esc(main)}</td>
                 </tr>`;
               groupsMap.get(main).forEach(it=>{
                 const qty = it.normQty;
@@ -2583,46 +2723,46 @@ async function buildQuotePDF(order){
       <div style="display:flex;justify-content:flex-end;margin-top:18px;">
         <div style="width:280px;">
           ${eligible && discountTotal>0 ? `
-          <div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:12px;color:#20242B;">
+          <div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:13.4px;color:#20242B;">
             <span>الإجمالي قبل الخصم</span><span>${Math.round(subtotal).toLocaleString('en-US')} ج.م</span>
           </div>
-          <div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:12px;color:#C9A227;font-weight:700;">
+          <div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:13.4px;color:#C9A227;font-weight:700;">
             <span>الخصم</span><span>- ${Math.round(discountTotal).toLocaleString('en-US')} ج.م</span>
           </div>
-          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#1F3050;color:#fff;border-radius:8px;font-size:14px;font-weight:800;margin-top:4px;">
+          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#1F3050;color:#fff;border-radius:8px;font-size:15.7px;font-weight:800;margin-top:4px;">
             <span>الإجمالي بعد الخصم</span><span>${Math.round(netTotal).toLocaleString('en-US')} ج.م</span>
           </div>
           ` : `
-          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#1F3050;color:#fff;border-radius:8px;font-size:14px;font-weight:800;margin-top:8px;">
+          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#1F3050;color:#fff;border-radius:8px;font-size:15.7px;font-weight:800;margin-top:8px;">
             <span>الإجمالي</span><span>${Math.round(subtotal).toLocaleString('en-US')} ج.م</span>
           </div>
           `}
-          ${hasMissing ? '<div style="font-size:10.5px;color:#8A5A00;margin-top:6px;text-align:left;">⚠️ فيه أصناف بدون سعر متاح مش داخلة في الإجمالي</div>' : ''}
+          ${hasMissing ? '<div style="font-size:11.8px;color:#8A5A00;margin-top:6px;text-align:left;">⚠️ فيه أصناف بدون سعر متاح مش داخلة في الإجمالي</div>' : ''}
         </div>
       </div>
 
       ${rollSummary.length ? `
       <div style="margin-top:14px;display:flex;justify-content:flex-end;">
         <div style="width:280px;background:#F5F3EE;border-radius:8px;padding:10px 14px;">
-          <div style="font-size:11px;font-weight:800;color:#1F3050;margin-bottom:6px;">عدد اللفات حسب القطاع</div>
+          <div style="font-size:12.3px;font-weight:800;color:#1F3050;margin-bottom:6px;">عدد اللفات حسب القطاع</div>
           ${rollSummary.map(r=>`
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:#20242B;padding:3px 0;">
+            <div style="display:flex;justify-content:space-between;font-size:12.3px;color:#20242B;padding:3px 0;">
               <span>${esc(r.sector)}</span><span style="font-weight:700;">${r.rolls % 1 === 0 ? r.rolls : r.rolls.toFixed(1)} لفة</span>
             </div>
           `).join('')}
         </div>
       </div>` : ''}
 
-      ${order.note ? `<div style="margin-top:18px;padding-top:12px;border-top:1px dashed #E4E0D6;font-size:11.5px;color:#6E7480;">ملاحظات: ${esc(order.note)}</div>` : ''}
+      ${order.note ? `<div style="margin-top:18px;padding-top:12px;border-top:1px dashed #E4E0D6;font-size:12.9px;color:#6E7480;">ملاحظات: ${esc(order.note)}</div>` : ''}
 
-      <div style="margin-top:16px;padding:10px 14px;background:#FBEBD1;border-radius:8px;font-size:10.5px;color:#8A5A00;line-height:1.7;">
+      <div style="margin-top:16px;padding:10px 14px;background:#FBEBD1;border-radius:8px;font-size:11.8px;color:#8A5A00;line-height:1.7;">
         هذه الأسعار سارية ما لم يحدث تعديل في القوائم والأسعار قبل التنفيذ.<br>
         الكميات وفقًا لرصيد المخزن وقت التنفيذ.
       </div>
 
-      <div style="margin-top:26px;padding-top:14px;border-top:1px solid #E4E0D6;text-align:center;font-size:10px;color:#6E7480;">
+      <div style="margin-top:26px;padding-top:14px;border-top:1px solid #E4E0D6;text-align:center;font-size:11.2px;color:#6E7480;">
         المستند ده تم إنشاؤه تلقائيًا وقت إرسال الطلب — القرشي لأبواب وشبابيك الـ UPVC
-        ${CREDIT_LINE ? `<div style="margin-top:5px;color:#A8A498;font-size:9px;">${esc(CREDIT_LINE)}</div>` : ''}
+        ${CREDIT_LINE ? `<div style="margin-top:5px;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
       </div>
     </div>
   `;
@@ -2688,16 +2828,16 @@ async function buildShortagePDF(order){
       <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #C9A227;padding-bottom:18px;margin-bottom:20px;">
         <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:60px;height:60px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
         <div style="flex:1;">
-          <div style="font-size:20px;font-weight:800;color:#1F3050;">القرشي لأبواب وشبابيك الـ UPVC</div>
-          <div style="font-size:12px;color:#6E7480;margin-top:2px;">وكيل AXA مصر</div>
+          <div style="font-size:22.4px;font-weight:800;color:#1F3050;">القرشي لأبواب وشبابيك الـ UPVC</div>
+          <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">وكيل AXA مصر</div>
         </div>
         <div style="text-align:left;">
-          <div style="font-size:15px;font-weight:800;color:#C9A227;">طلبية نواقص</div>
-          <div style="font-size:11px;color:#6E7480;">#${esc(order.id.toUpperCase())}</div>
+          <div style="font-size:16.8px;font-weight:800;color:#C9A227;">طلبية نواقص</div>
+          <div style="font-size:12.3px;color:#6E7480;">#${esc(order.id.toUpperCase())}</div>
         </div>
       </div>
 
-      <div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:12.5px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:14px;">
         <div>
           <div style="color:#6E7480;">الموزع</div>
           <div style="font-weight:800;color:#1F3050;">${esc(order.distName)}</div>
@@ -2716,7 +2856,7 @@ async function buildShortagePDF(order){
         </div>
       </div>
 
-      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <table style="width:100%;border-collapse:collapse;font-size:13.4px;">
         <thead>
           <tr style="background:#1F3050;color:#fff;">
             <th style="padding:9px 6px;text-align:center;width:40px;">م</th>
@@ -2738,7 +2878,7 @@ async function buildShortagePDF(order){
             orderedMains.forEach(main=>{
               html += `
                 <tr>
-                  <td colspan="3" style="padding:7px 6px;background:#E4C766;color:#1F3050;font-weight:800;font-size:11.5px;">${esc(main)}</td>
+                  <td colspan="3" style="padding:7px 6px;background:#E4C766;color:#1F3050;font-weight:800;font-size:12.9px;">${esc(main)}</td>
                 </tr>`;
               groupsMap.get(main).forEach(it=>{
                 serial++;
@@ -2757,11 +2897,11 @@ async function buildShortagePDF(order){
         </tbody>
       </table>
 
-      ${order.note ? `<div style="margin-top:18px;padding-top:12px;border-top:1px dashed #E4E0D6;font-size:11.5px;color:#6E7480;">ملاحظات: ${esc(order.note)}</div>` : ''}
+      ${order.note ? `<div style="margin-top:18px;padding-top:12px;border-top:1px dashed #E4E0D6;font-size:12.9px;color:#6E7480;">ملاحظات: ${esc(order.note)}</div>` : ''}
 
-      <div style="margin-top:26px;padding-top:14px;border-top:1px solid #E4E0D6;text-align:center;font-size:10px;color:#6E7480;">
+      <div style="margin-top:26px;padding-top:14px;border-top:1px solid #E4E0D6;text-align:center;font-size:11.2px;color:#6E7480;">
         طلبية نواقص — بدون أسعار — القرشي لأبواب وشبابيك الـ UPVC
-        ${CREDIT_LINE ? `<div style="margin-top:5px;color:#A8A498;font-size:9px;">${esc(CREDIT_LINE)}</div>` : ''}
+        ${CREDIT_LINE ? `<div style="margin-top:5px;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
       </div>
     </div>
   `;
@@ -2817,26 +2957,26 @@ async function buildWarehouseImage(order, mainGroup, rows, pageNo, pageCount){
       <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #C9A227;padding-bottom:14px;margin-bottom:16px;">
         <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
         <div style="flex:1;">
-          <div style="font-size:19px;font-weight:800;color:#1F3050;">أمر صرف مخزن</div>
-          <div style="font-size:12px;color:#6E7480;margin-top:2px;">القرشي لأبواب وشبابيك الـ UPVC</div>
+          <div style="font-size:21.3px;font-weight:800;color:#1F3050;">أمر صرف مخزن</div>
+          <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">القرشي لأبواب وشبابيك الـ UPVC</div>
         </div>
         <div style="text-align:left;">
-          <div style="font-size:13px;font-weight:800;color:#C9A227;">#${esc(String(order.id).toUpperCase())}</div>
-          <div style="font-size:11px;color:#6E7480;">${esc(dateStr)}</div>
+          <div style="font-size:14.6px;font-weight:800;color:#C9A227;">#${esc(String(order.id).toUpperCase())}</div>
+          <div style="font-size:12.3px;color:#6E7480;">${esc(dateStr)}</div>
         </div>
       </div>
 
-      <div style="display:flex;justify-content:space-between;margin-bottom:14px;font-size:13px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:14px;font-size:14.6px;">
         <div><span style="color:#6E7480;">العميل: </span><b style="color:#1F3050;">${esc(asText(order.distName))}</b></div>
         <div><span style="color:#6E7480;">المخزن: </span><b style="color:#C9A227;">${esc(asText(order.warehouse) || '—')}</b></div>
         <div><span style="color:#6E7480;">صفحة </span><b style="color:#1F3050;">${pageNo} / ${pageCount}</b></div>
       </div>
 
-      <div style="background:#E4C766;color:#1F3050;font-weight:800;font-size:14px;padding:8px 12px;border-radius:8px 8px 0 0;">
+      <div style="background:#E4C766;color:#1F3050;font-weight:800;font-size:15.7px;padding:8px 12px;border-radius:8px 8px 0 0;">
         ${esc(mainGroup)}
       </div>
 
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <table style="width:100%;border-collapse:collapse;font-size:14.6px;">
         <thead>
           <tr style="background:#1F3050;color:#fff;">
             <th style="padding:9px 6px;text-align:center;width:44px;">م</th>
@@ -2846,7 +2986,7 @@ async function buildWarehouseImage(order, mainGroup, rows, pageNo, pageCount){
         </thead>
         <tbody>
           ${rows.map((it, i)=>{
-            const n = normalizeItemToSmallUnit(it);
+            const n = warehouseUnitDisplay(it);
             const bg = i%2===0 ? '#FFFFFF' : '#F5F3EE';
             return `
             <tr style="background:${bg};">
@@ -2862,13 +3002,13 @@ async function buildWarehouseImage(order, mainGroup, rows, pageNo, pageCount){
         </tbody>
       </table>
 
-      ${asText(order.note).trim() && pageNo===1 ? `<div style="margin-top:14px;padding-top:10px;border-top:1px dashed #E4E0D6;font-size:12px;color:#6E7480;">ملاحظات: ${esc(asText(order.note))}</div>` : ''}
+      ${asText(order.note).trim() && pageNo===1 ? `<div style="margin-top:14px;padding-top:10px;border-top:1px dashed #E4E0D6;font-size:13.4px;color:#6E7480;">ملاحظات: ${esc(asText(order.note))}</div>` : ''}
 
-      <div style="margin-top:22px;display:flex;justify-content:space-between;font-size:11px;color:#6E7480;">
+      <div style="margin-top:22px;display:flex;justify-content:space-between;font-size:12.3px;color:#6E7480;">
         <div>توقيع أمين المخزن: ....................</div>
         <div>توقيع المستلم: ....................</div>
       </div>
-      ${CREDIT_LINE ? `<div style="margin-top:10px;text-align:center;color:#A8A498;font-size:9px;">${esc(CREDIT_LINE)}</div>` : ''}
+      ${CREDIT_LINE ? `<div style="margin-top:10px;text-align:center;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
     </div>
   `;
   document.body.appendChild(wrap);
@@ -3044,7 +3184,7 @@ function renderHeader(){
     </nav>
   </header>
   <div class="profile-bar"><span></span><span></span><span></span><span></span><span></span></div>
-  <div style="text-align:center;font-size:10px;color:var(--muted);padding:2px;">نسخة ${APP_BUILD}${CREDIT_LINE ? ` · ${esc(CREDIT_LINE)}` : ''}</div>
+  <div style="text-align:center;font-size:11.2px;color:var(--muted);padding:2px;">نسخة ${APP_BUILD}${CREDIT_LINE ? ` · ${esc(CREDIT_LINE)}` : ''}</div>
   `;
 }
 
@@ -3081,15 +3221,26 @@ function renderStagedBlock(s){
         return `<button class="chip greenchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
       }).join('')}
       ${(()=>{
-        // ملاحظة تحت الألوان لأي لون مختار كميته قليلة — من غير ما نقول الرقم
-        const lows = s.selectedColors.filter(c=>{
+        // ⚠️ كان فيه تناقض هنا: لون "مفيش رصيد خالص" (out) كان بياخد نفس رسالة
+        // "الكمية قليلة" بتاعة لون فيه رصيد جزئي (low/crit) — وده مضلل، لأن
+        // "قليلة" بتوحي إن فيه حاجة، والصفر مفيهوش حاجة أصلاً. بنفصل الرسالتين.
+        const outs = s.selectedColors.filter(c => colorStockLevel(findCatalogItem(s.main, s.product, c)) === 'out');
+        const partial = s.selectedColors.filter(c => {
           const l = colorStockLevel(findCatalogItem(s.main, s.product, c));
-          return l==='low' || l==='crit' || l==='out';
+          return l === 'low' || l === 'crit';
         });
-        if(!lows.length) return '';
-        return `<div class="lowstocknote">⚠️ خلي بالك الكمية مش كتيرة في: ${
-          lows.map(c=>esc(c)).join(' · ')
-        } — يفضل تتأكد قبل ما تطلب كمية كبيرة</div>`;
+        let html = '';
+        if(outs.length){
+          html += `<div class="lowstocknote" style="background:#FDECEC;border-color:var(--danger);color:#8A1F1F;">🚫 مفيش رصيد خالص دلوقتي في: ${
+            outs.map(c=>esc(c)).join(' · ')
+          } — السعر متاح لو حبيت تطلبه على أي حال</div>`;
+        }
+        if(partial.length){
+          html += `<div class="lowstocknote">⚠️ خلي بالك الكمية مش كتيرة في: ${
+            partial.map(c=>esc(c)).join(' · ')
+          } — يفضل تتأكد قبل ما تطلب كمية كبيرة</div>`;
+        }
+        return html;
       })()}
     </div>` : ''}
     ${s.selectedColors.length>0 ? `
@@ -3137,7 +3288,7 @@ function renderOrderView(){
   const saveErrorBanner = state.saveError ? `
     <div class="card" style="border:2px solid var(--danger);">
       <h2 style="color:var(--danger);">⚠️ الحفظ فشل — السبب:</h2>
-      <textarea readonly style="width:100%;min-height:120px;font-family:monospace;font-size:11px;direction:ltr;text-align:left;padding:8px;">${esc(state.saveError)}</textarea>
+      <textarea readonly style="width:100%;min-height:120px;font-family:monospace;font-size:12.3px;direction:ltr;text-align:left;padding:8px;">${esc(state.saveError)}</textarea>
       <button class="savebtn" data-act="clear-save-error" style="margin-top:8px;">إخفاء</button>
     </div>` : '';
   if(state.successOrderId){
@@ -3151,11 +3302,11 @@ function renderOrderView(){
         <!-- الموزع لازم يبعت الطلب كصورة — بنخليها أول وأوضح حاجة يشوفها -->
         <div class="card" style="border:2px solid ${state.orderSentToWa ? 'var(--success)' : 'var(--danger)'};margin-bottom:12px;">
           ${state.orderSentToWa ? `
-            <div style="color:var(--success);font-weight:800;font-size:14px;">✅ تمام، الطلب اتبعت</div>
+            <div style="color:var(--success);font-weight:800;font-size:15.7px;">✅ تمام، الطلب اتبعت</div>
             <button class="newbtn outline" data-act="send-order-wa" style="margin-top:8px;">📲 ابعته تاني</button>
           ` : `
-            <div style="color:var(--danger);font-weight:800;font-size:14px;margin-bottom:4px;">⚠️ الطلب لسه ما اتبعتش</div>
-            <p style="color:var(--muted);font-size:12px;margin:0 0 10px;">
+            <div style="color:var(--danger);font-weight:800;font-size:15.7px;margin-bottom:4px;">⚠️ الطلب لسه ما اتبعتش</div>
+            <p style="color:var(--muted);font-size:13.4px;margin:0 0 10px;">
               ${state.orderImage ? 'الصورة جاهزة — دوس ابعت واختار الجروب أو الشخص' : 'جهّز صورة الطلب الأول، وبعدين ابعتها لأي حد تختاره'}
             </p>
             ${state.orderImage ? `
@@ -3171,7 +3322,7 @@ function renderOrderView(){
         <div class="docsection">
           <div class="docsectiontitle">🏬 أمر صرف مخزن (بدون أسعار)</div>
           ${state.warehouseImages && state.warehouseImages.length ? `
-            <p style="color:var(--muted);font-size:11.5px;margin:0 0 8px;">جاهز — ${state.warehouseImages.length} صورة (مجموعة لكل صورة)</p>
+            <p style="color:var(--muted);font-size:12.9px;margin:0 0 8px;">جاهز — ${state.warehouseImages.length} صورة (مجموعة لكل صورة)</p>
             <button class="newbtn" data-act="share-wh-img" style="background:#25D366;border-color:#25D366;">📲 ابعت للمخزن — اختار لمين</button>
           ` : `
             <button class="newbtn outline" data-act="prepare-wh-img" ${state.whImgPreparing?'disabled':''}>
@@ -3391,7 +3542,7 @@ function renderOrderView(){
   const groupCard = `
     <div class="card">
       <h2><span class="num">2</span>اختار القطاع</h2>
-      <div class="chipwrap">${sectorChips}</div>
+      <div class="chipwrap chipwrap-vertical">${sectorChips}</div>
     </div>`;
 
   const noteSection = `
@@ -3400,16 +3551,27 @@ function renderOrderView(){
       <textarea placeholder="أي تفاصيل إضافية عن الطلب..." data-act="set-note">${esc(state.note)}</textarea>
     </div>`;
 
+  const orderColumns = `
+  <div class="ordercols">
+    <div class="ordercol ordercol-sectors">${groupCard}</div>
+    ${(subSection || productSection || otherSection) ? `
+    <div class="ordercol ordercol-products">
+      ${subSection}
+      ${productSection}
+      ${otherSection}
+    </div>` : ''}
+    ${stagedSection ? `
+    <div class="ordercol ordercol-details">
+      ${stagedSection}
+    </div>` : ''}
+  </div>`;
+
   return `
   <main>
     ${saveErrorBanner}
     ${catalogErrorBanner}
     ${distSection}
-    ${groupCard}
-    ${subSection}
-    ${productSection}
-    ${otherSection}
-    ${stagedSection}
+    ${orderColumns}
     ${cartSection}
     ${noteSection}
     <div class="submitbar">
@@ -3474,10 +3636,10 @@ function renderConfirmModal(){
       <h3>متأكد من ${state.editingOrderId?'حفظ التعديلات':'إرسال الطلب'}؟</h3>
       <p>الطلب فيه <b>${count}</b> صنف باسم <b>${esc(state.distName)}</b> — ${esc(state.distRegion)}.<br>راجع الأصناف قبل التأكيد، مش هتقدر تعدّل إلا من "طلباتي" بعدين.</p>
       <div style="background:#FAF9F5;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-        <span style="font-size:12.5px;color:var(--muted);">🏬 مخزن التحميل</span>
+        <span style="font-size:14px;color:var(--muted);">🏬 مخزن التحميل</span>
         <span style="display:flex;align-items:center;gap:8px;">
-          <b style="color:var(--navy);font-size:13px;">${esc(asText(state.warehouse) || '—')}</b>
-          <button class="chip" data-act="change-warehouse" style="padding:3px 9px;font-size:11px;">غيّر</button>
+          <b style="color:var(--navy);font-size:14.6px;">${esc(asText(state.warehouse) || '—')}</b>
+          <button class="chip" data-act="change-warehouse" style="padding:3px 9px;font-size:12.3px;">غيّر</button>
         </span>
       </div>
       <div class="modalbtns">
@@ -3549,8 +3711,8 @@ function renderAdminView(){
     <main>
       <div class="card pingate">
         <div class="ic">🔒</div>
-        <h2 style="color:var(--navy);font-size:16px;margin:0 0 6px;">دخول المتابعة</h2>
-        <p style="color:var(--muted);font-size:13px;margin:0;">أدخل رقم المتابعة الخاص بالإدارة</p>
+        <h2 style="color:var(--navy);font-size:17.9px;margin:0 0 6px;">دخول المتابعة</h2>
+        <p style="color:var(--muted);font-size:14.6px;margin:0;">أدخل رقم المتابعة الخاص بالإدارة</p>
         <input type="tel" inputmode="numeric" placeholder="••••" maxlength="6" value="${esc(state.pinInput)}" data-act="pin-input">
         ${state.pinError ? '<div class="err">الرقم غير صحيح</div>' : ''}
         <br><button data-act="pin-submit" ${state.pinChecking?'disabled':''}>${state.pinChecking?'جارٍ التحقق...':'دخول'}</button>
@@ -3610,6 +3772,7 @@ function renderAdminView(){
       <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
       <button class="exportbtn" data-act="export-excel">تصدير Excel</button>
       <button class="exportbtn" data-act="show-stock">📊 الأرصدة</button>
+      <button class="exportbtn" data-act="show-pwreq">🔑 طلبات الباسورد${state.pwRequestsCount ? ' ('+state.pwRequestsCount+')' : ''}</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُسلَّم</button>
     </div>
     <div class="statuschips">
@@ -3855,13 +4018,28 @@ function restoreUiState_(snap, sameScreen){
   scrollAnchor_ = null;
 }
 
+// 🔑 اللقطة الناقصة: ".productgrid" (شبكة الأصناف) عندها overflow-y:auto
+// وscroll خاص بيها لوحدها (مش صفحة المتصفح). كل render بيستبدل الـ innerHTML
+// بتاعها بالكامل، فالعنصر القديم بتمريره بيتمسح ويتحط عنصر جديد scrollTop=0 —
+// فلو الموزع نازل جوه الشبكة ودوس على صنف تحت، الشبكة "تقفز" لفوق فورًا حتى
+// لو صفحة المتصفح نفسها ثابتة. ده كان السبب الحقيقي الباقي وراء القفزات.
+function captureGridScroll_(){
+  const el = document.querySelector('.productgrid');
+  return el ? el.scrollTop : null;
+}
+function restoreGridScroll_(val){
+  if(val === null) return;
+  const el = document.querySelector('.productgrid');
+  if(el) el.scrollTop = val;
+}
+
 function render(){
   const app = $('#app');
   const snap = captureUiState_();
+  const gridScroll = captureGridScroll_();
 
-  // 🔑 السبب الحقيقي للقفز: وقت استبدال innerHTML الصفحة بتفضى للحظة، فارتفاعها
-  // بيقل، والمتصفح بيقصقص مكان التمرير لأقصى حد متاح. المحتوى بيرجع يكبر بعدين
-  // بس التمرير فضل مقصقص.
+  // 🔑 السبب الرئيسي للقفز على مستوى الصفحة: وقت استبدال innerHTML الصفحة
+  // بتفضى للحظة، فارتفاعها بيقل، والمتصفح بيقصقص مكان التمرير لأقصى حد متاح.
   // ⚠️ #app عليه min-height:100vh أصلاً، فقفل الارتفاع عليه مبيعملش حاجة —
   // القفل لازم يكون على <body> نفسه (هو صندوق التمرير الفعلي).
   const prevH = document.body.offsetHeight;
@@ -3886,14 +4064,15 @@ function render(){
     else if(state.view==='myorders') view = renderMyOrdersView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
-    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderGlobalError();
+    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderGlobalError();
     bindEvents();
 
     // نرجّع التمرير بس لو إحنا في نفس الشاشة (مش لما ننتقل من شاشة لشاشة)
     const viewKey = state.view + '|' + (state.successOrderId ? 'success' : '') + '|' + (state.adminUnlocked ? 'a' : '');
     restoreUiState_(snap, viewKey === lastViewKey);
+    restoreGridScroll_(gridScroll);
     lastViewKey = viewKey;
-    requestAnimationFrame(unlock);
+    requestAnimationFrame(()=>{ unlock(); restoreGridScroll_(gridScroll); });
   }catch(err){
     // لو أي جزء من الشاشة فشل يترندر، مانسيبش الشاشة "هنجانة" بصمت — نوريّ رسالة
     // واضحة بدل ما تفضل واقفة من غير أي تفسير.
@@ -3923,7 +4102,7 @@ function renderAuthView(){
 function renderBiometricGate(){
   return `
     <h3>الجهاز ده متعرّف عليه</h3>
-    <p style="font-size:12.5px;color:var(--muted);text-align:center;margin:0 0 18px;">افتح حسابك بالبصمة أو التعرف على الوجه</p>
+    <p style="font-size:14px;color:var(--muted);text-align:center;margin:0 0 18px;">افتح حسابك بالبصمة أو التعرف على الوجه</p>
     <button data-act="biometric-unlock" ${state.biometricBusy?'disabled':''} style="display:flex;align-items:center;justify-content:center;gap:8px;">
       ${state.biometricBusy ? 'جارٍ التحقق...' : '👆 افتح بالبصمة'}
     </button>
@@ -3969,7 +4148,7 @@ function renderRegisterForm(){
     </div>
     ${state.authError ? `<div class="err">${esc(state.authError)}</div>` : ''}
     <button data-act="register-submit" ${state.authLoading?'disabled':''}>${state.authLoading?'جارٍ التسجيل...':'تسجيل وإرسال طلب التفعيل'}</button>
-    <p style="font-size:11.5px;color:var(--muted);margin-top:8px;">هيتم فتح واتساب لإرسال طلب تفعيل الحساب للأدمن، وحسابك هيتفعل بعد المراجعة.</p>
+    <p style="font-size:12.9px;color:var(--muted);margin-top:8px;">هيتم فتح واتساب لإرسال طلب تفعيل الحساب للأدمن، وحسابك هيتفعل بعد المراجعة.</p>
     <div class="authlinks" style="justify-content:center;">
       <span class="lnk" data-act="goto-login">عندك حساب بالفعل؟ سجّل الدخول</span>
     </div>`;
@@ -3979,7 +4158,10 @@ function renderForgotForm(){
   if(state.forgotSent){
     return `
     <h3>تم إرسال الطلب</h3>
-    <p style="font-size:13px;color:var(--muted);text-align:center;">استنى رد الأدمن على واتساب فيه الباسورد الجديد.</p>
+    <p style="font-size:14.6px;color:var(--muted);text-align:center;">
+      طلبك اتبعت للأدمن للموافقة. الباسورد الجديد هيشتغل بس بعد ما يوافق —
+      لحد ساعتها استخدم الباسورد القديم.
+    </p>
     <div class="authlinks" style="justify-content:center;">
       <span class="lnk" data-act="goto-login">رجوع لتسجيل الدخول</span>
     </div>`;
@@ -3988,9 +4170,16 @@ function renderForgotForm(){
     <h3>نسيت الباسورد</h3>
     <label>اسم المستخدم</label>
     <input type="text" placeholder="اسم المستخدم" value="${esc(state.forgotUsername)}" data-act="forgot-username">
+    <label>الباسورد الجديد اللي عايزه</label>
+    <input type="password" placeholder="الباسورد الجديد" value="${esc(state.forgotNewPassword)}" data-act="forgot-newpass">
+    <label>أعد كتابة الباسورد الجديد</label>
+    <input type="password" placeholder="أعد كتابة الباسورد الجديد" value="${esc(state.forgotNewPassword2)}" data-act="forgot-newpass2">
     ${state.authError ? `<div class="err">${esc(state.authError)}</div>` : ''}
-    <button data-act="forgot-submit">إرسال طلب عبر واتساب</button>
-    <p style="font-size:11.5px;color:var(--muted);margin-top:8px;">لازم تبعت رسالة الواتساب اللي هتفتح عشان الأدمن يقدر يعمل ريست للباسورد.</p>
+    <button data-act="forgot-submit" ${state.forgotSubmitting?'disabled':''}>${state.forgotSubmitting?'جارٍ الإرسال...':'إرسال طلب للأدمن'}</button>
+    <p style="font-size:12.9px;color:var(--muted);margin-top:8px;">
+      الطلب بيروح للأدمن كإشعار واتساب، وبيوافق عليه من داخل التطبيق —
+      الباسورد الجديد مش بيشتغل غير بعد الموافقة.
+    </p>
     <div class="authlinks" style="justify-content:center;">
       <span class="lnk" data-act="goto-login">رجوع لتسجيل الدخول</span>
     </div>`;
@@ -4006,13 +4195,13 @@ function renderInstallGate(){
     ${ios ? (isIOSSafari() ? `
     <div class="gatesteps">
       <div class="gatestep"><b>1</b> دوس زرار المشاركة <span class="shareicon">⬆️</span> تحت في نص الشاشة</div>
-      <div class="gatestep"><b>2</b> انزل تحت واختار "إضافة إلى الشاشة الرئيسية"<br><span style="color:var(--muted);font-size:11.5px;">(Add to Home Screen)</span></div>
+      <div class="gatestep"><b>2</b> انزل تحت واختار "إضافة إلى الشاشة الرئيسية"<br><span style="color:var(--muted);font-size:12.9px;">(Add to Home Screen)</span></div>
       <div class="gatestep"><b>3</b> دوس "إضافة" فوق على اليمين</div>
     </div>
     ` : `
     <div class="gatesteps" style="border:2px solid var(--gold);">
       <div class="gatestep" style="color:#8A5A00;"><b>!</b> إنت فاتح اللينك من متصفح مش Safari (أو من جوه واتساب/فيسبوك). التثبيت على الآيفون بيشتغل من <b>Safari</b> بس.</div>
-      <div class="gatestep"><b>1</b> دوس زرار المشاركة <span class="shareicon">⬆️</span> واختار "فتح في Safari"<br><span style="color:var(--muted);font-size:11.5px;">أو افتح Safari وانسخ اللينك فيه</span></div>
+      <div class="gatestep"><b>1</b> دوس زرار المشاركة <span class="shareicon">⬆️</span> واختار "فتح في Safari"<br><span style="color:var(--muted);font-size:12.9px;">أو افتح Safari وانسخ اللينك فيه</span></div>
       <div class="gatestep"><b>2</b> ومن Safari دوس المشاركة ⬆️ واختار "إضافة إلى الشاشة الرئيسية"</div>
     </div>
     <button class="gatebtn" data-act="copy-app-link">📋 نسخ لينك التطبيق</button>
@@ -4093,6 +4282,8 @@ function onInputChange(act, el, val){
     case 'reg-distregion': state.regDistRegion = val; break;
     case 'reg-distphone': state.regDistPhone = val; break;
     case 'forgot-username': state.forgotUsername = val; state.authError=''; break;
+    case 'forgot-newpass': state.forgotNewPassword = val; state.authError=''; break;
+    case 'forgot-newpass2': state.forgotNewPassword2 = val; state.authError=''; break;
   }
   const scrollY = window.scrollY;
   render();
@@ -4154,6 +4345,10 @@ async function onActionInner(act, el){
       break;
     case 'close-warehouse': state.showWarehouseModal=false; render(); break;
     case 'show-stock': state.showStock=true; state.stockSearch=''; render(); break;
+    case 'show-pwreq': await loadPwRequests(); break;
+    case 'close-pwreq': state.showPwRequests=false; render(); break;
+    case 'approve-pwreq': await decidePwRequest(el.getAttribute('data-val'), true); break;
+    case 'reject-pwreq': await decidePwRequest(el.getAttribute('data-val'), false); break;
     case 'close-stock': state.showStock=false; render(); break;
     case 'stock-search': state.stockSearch = el.value; render(); break;
     case 'export-stock-pdf': await exportStockPDF(); break;
@@ -4164,7 +4359,7 @@ async function onActionInner(act, el){
       break;
     case 'reg-type-dist': state.regDistType='موزع'; render(); break;
     case 'reg-type-client': state.regDistType='عميل'; render(); break;
-    case 'forgot-submit': submitForgot(); break;
+    case 'forgot-submit': await submitForgot(); break;
     case 'logout':
       state.currentUser = null;
       setAdminToken('');
