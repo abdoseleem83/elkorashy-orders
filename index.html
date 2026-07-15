@@ -50,7 +50,7 @@ body{
 
 /* ---------- profile motif ---------- */
 .profile-bar{
-  height:10px;
+  height:5px;
   display:flex;
   width:100%;
 }
@@ -77,39 +77,39 @@ body{
 header.top{
   background:linear-gradient(155deg,var(--navy) 0%,var(--navy-deep) 100%);
   color:#fff;
-  padding:22px 20px 18px;
+  padding:12px 14px 10px;
   position:relative;
   overflow:hidden;
 }
 header.top .brand{
   display:flex;
   align-items:center;
-  gap:12px;
+  gap:9px;
 }
 header.top .logoimg{
-  width:46px;height:46px;border-radius:10px;
-  background:#fff;object-fit:contain;padding:4px;flex-shrink:0;
+  width:34px;height:34px;border-radius:8px;
+  background:#fff;object-fit:contain;padding:3px;flex-shrink:0;
 }
-header.top h1{font-size:22.4px;margin:0;font-weight:800;letter-spacing:.2px;}
-header.top p.sub{margin:2px 0 0;font-size:14px;color:#C7D0DE;font-weight:500;}
+header.top h1{font-size:15px;margin:0;font-weight:800;letter-spacing:.1px;line-height:1.25;}
+header.top p.sub{margin:1px 0 0;font-size:10.5px;color:#C7D0DE;font-weight:500;}
 
 nav.tabs{
   display:flex;
   flex-wrap:wrap;
-  gap:8px;
-  margin-top:18px;
+  gap:6px;
+  margin-top:10px;
 }
 nav.tabs button{
   flex:1 1 auto;
-  min-width:84px;
+  min-width:68px;
   background:rgba(255,255,255,.08);
   border:1px solid rgba(255,255,255,.16);
   color:#DCE3EE;
-  padding:10px 4px;
-  border-radius:10px;
+  padding:7px 4px;
+  border-radius:8px;
   font-family:'Cairo',sans-serif;
   font-weight:700;
-  font-size:13.4px;
+  font-size:10.8px;
   cursor:pointer;
   transition:.15s;
 }
@@ -198,19 +198,26 @@ textarea{resize:vertical;min-height:60px;}
 }
 /* الألوان بقت مربعات متساوية بالظبط (مش بيضاوي زي القطاعات) */
 .chipwrap.chipgrid4.chipsquares .chip{
+  /* ⚠️ aspect-ratio:1/1 + overflow:hidden كانوا بيقصّوا أي اسم لون طويل
+     (زي "بيج بكاوتش 6 م") ويسيبوا كلمة واحدة بس ظاهرة. المربع دلوقتي
+     "مربع لحد ما المحتوى يحتاج مساحة أكتر" — يكبر لفوق لو الاسم طويل
+     بدل ما يقص جزء منه، ومفيش overflow:hidden خالص على النص. */
   aspect-ratio:1/1;
-  max-width:76px;
+  min-height:64px;
+  max-width:80px;
   width:100%;
   min-width:0;
   margin:0 auto;
   border-radius:10px;
-  padding:3px;
-  font-size:10.3px;
+  padding:4px 3px;
+  font-size:10px;
+  line-height:1.2;
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  overflow:hidden;
+  white-space:normal;
+  word-break:break-word;
   height:auto;
 }
 .chipwrap.chipgrid4.chipsquares .chip small{
@@ -869,7 +876,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v63';
+const APP_BUILD = 'v65';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
