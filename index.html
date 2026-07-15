@@ -819,7 +819,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v55';
+const APP_BUILD = 'v56';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -3578,20 +3578,17 @@ function renderOrderView(){
       <textarea placeholder="أي تفاصيل إضافية عن الطلب..." data-act="set-note">${esc(state.note)}</textarea>
     </div>`;
 
+  // ⚠️ رجّعنا الشكل الأصلي: كروت كاملة العرض واحد تحت التاني، مش أعمدة
+  // ضيقة جنب بعض (112/230/250px) — الأعمدة الضيقة دي كانت هي السبب الحقيقي
+  // إن أزرار القطاعات كانت بتظهر عمودي (واحد تحت التاني) رغم إن الكود بتاعها
+  // نفسه أفقي — العمود كان ضيق أوي ومكنش بيسع غير زرار واحد في الصف.
   const orderColumns = `
-  <div class="ordercols">
-    <div class="ordercol ordercol-sectors">${groupCard}</div>
-    ${(subSection || productSection || otherSection) ? `
-    <div class="ordercol ordercol-products">
-      ${subSection}
-      ${productSection}
-      ${otherSection}
-    </div>` : ''}
-    ${stagedSection ? `
-    <div class="ordercol ordercol-details">
-      ${stagedSection}
-    </div>` : ''}
-  </div>`;
+    ${groupCard}
+    ${subSection}
+    ${productSection}
+    ${otherSection}
+    ${stagedSection}
+  `;
 
   return `
   <main>
