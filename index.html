@@ -733,7 +733,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v48';
+const APP_BUILD = 'v50';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -882,6 +882,31 @@ function isColorUnavailable(main, product, color){
 }
 // "غير متوفر بالمخزون حاليًا" — تحذير بس، مش بيمنع الاختيار أو عرض السعر
 // (عشان موزع/عميل يقدر ياخد سعر صنف حتى لو مفيش رصيد منه دلوقتي).
+// أقل من لفة كاملة = صفر فعليًا (في كل مكان، مش بس في التقرير)
+// حالة اللون في شاشة الاختيار:
+//   'out'  = صفر فعلي (الرصيد صفر أو الأدمن قافله)      -> أحمر "مفيش رصيد"
+//   'crit' = أقل من لفة كاملة                            -> أحمر "كمية قليلة"
+//   'low'  = أقل من 5 لفات (بس لفة فأكتر)               -> أصفر "كمية قليلة"
+//   'ok'   = كفاية
+function colorStockLevel(item){
+  if(!item || item.available===false) return 'out';
+  const n = Number(item.stock);
+  if(!isFinite(n) || n <= 0) return 'out';
+  if(item.inStock === false) return 'out';
+  const content = Number(item.unit) || 1;
+  if(n < content) return 'crit';               // أقل من لفة
+  if(n < lowStockLimitFor(item)) return 'low'; // أقل من 5 لفات
+  return 'ok';
+}
+
+function effectiveInStock(item){
+  if(!item || item.available===false || item.inStock===false) return false;
+  const n = Number(item.stock);
+  if(!isFinite(n) || n <= 0) return false;
+  const content = Number(item.unit) || 1;
+  return n >= content;
+}
+
 function isProductOutOfStock(main, product){
   const opts = colorsForProduct(main, product);
   return opts.length>0 && opts.every(c=>c.available!==false && isColorOutOfStock(main, product, c.color));
@@ -897,9 +922,8 @@ function lowStockLimitFor(item){
 }
 function isLowStock(main, product, color){
   const item = findCatalogItem(main, product, color);
-  if(!item || item.available===false || item.inStock===false) return false;
+  if(!effectiveInStock(item)) return false;   // أقل من لفة = صفر مش قليل
   const q = Number(item.stock);
-  if(!isFinite(q) || q <= 0) return false;
   return q < lowStockLimitFor(item);
 }
 
@@ -908,8 +932,8 @@ function availableColorsLabel(main, product){
   if(!opts.length) return '';
   const withColor = opts.filter(c => c.color);
   // صنف من غير ألوان أصلاً
-  if(!withColor.length) return opts.some(c=>c.inStock!==false) ? 'متوفر' : '';
-  const inStock = withColor.filter(c => c.inStock !== false).map(c => c.color);
+  if(!withColor.length) return opts.some(c=>effectiveInStock(c)) ? 'متوفر' : '';
+  const inStock = withColor.filter(c => effectiveInStock(c)).map(c => c.color);
   if(!inStock.length) return '';
   if(inStock.length === withColor.length) return 'جميع الألوان';
   return inStock.join('، ');
@@ -917,7 +941,8 @@ function availableColorsLabel(main, product){
 
 function isColorOutOfStock(main, product, color){
   const item = findCatalogItem(main, product, color);
-  return item ? (item.available!==false && item.inStock===false) : false;
+  if(!item) return false;
+  return item.available!==false && !effectiveInStock(item);
 }
 function unitOptionsForGroup(main){
   if(main==='ابواب WPC') return ['بدون إكسسوارات','بإكسسوارات'];
@@ -2054,6 +2079,9 @@ function stockMatrix_(){
     if(d.available === false) return;
     const n = Number(d.stock);
     if(!isFinite(n) || n <= 0) return;               // صفر → مش بيتعرض
+    // أي كمية أقل من لفة كاملة بتتعتبر صفر — عشان التقرير يبقى واقعي
+    const content_ = Number(d.unit) || 1;
+    if(n < content_) return;
     if(q && !(d.main + ' ' + d.product + ' ' + (d.color||'')).toLowerCase().includes(q)) return;
 
     if(!groups.has(d.main)) groups.set(d.main, { colors:new Set(), rows:new Map() });
@@ -2992,20 +3020,23 @@ function renderStagedBlock(s){
         if(unavailable){
           return `<button class="chip disabled" data-act="noop-unavailable" disabled>${esc(c)}<small>موقوف</small></button>`;
         }
-        const outOfStock = isColorOutOfStock(s.main, s.product, c);
         const sel = s.selectedColors.includes(c) ? 'active' : '';
-        // اللون اللي مفيش منه رصيد: أحمر ومكتوب تحته "غير متوفر" — بس لسه ينفع يتختار
-        if(outOfStock){
-          return `<button class="chip outstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متوفر</small></button>`;
+        const lvl = colorStockLevel(findCatalogItem(s.main, s.product, c));
+        // أحمر: أقل من لفة (أو صفر) · أصفر: أقل من 5 لفات · عادي: كفاية
+        if(lvl === 'out' || lvl === 'crit'){
+          return `<button class="chip outstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
         }
-        if(isLowStock(s.main, s.product, c)){
+        if(lvl === 'low'){
           return `<button class="chip gold lowstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
         }
         return `<button class="chip gold ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
       }).join('')}
       ${(()=>{
         // ملاحظة تحت الألوان لأي لون مختار كميته قليلة — من غير ما نقول الرقم
-        const lows = s.selectedColors.filter(c => isLowStock(s.main, s.product, c));
+        const lows = s.selectedColors.filter(c=>{
+          const l = colorStockLevel(findCatalogItem(s.main, s.product, c));
+          return l==='low' || l==='crit' || l==='out';
+        });
         if(!lows.length) return '';
         return `<div class="lowstocknote">⚠️ خلي بالك الكمية مش كتيرة في: ${
           lows.map(c=>esc(c)).join(' · ')
@@ -3660,6 +3691,15 @@ let lastViewKey = '';
 // حتى لو التمرير رجع لنفس الرقم. فبنمسك العنصر نفسه مش الرقم.
 let scrollAnchor_ = null;
 
+function currentScroll_(){
+  return window.scrollY || window.pageYOffset ||
+         (document.scrollingElement ? document.scrollingElement.scrollTop : 0) || 0;
+}
+function scrollTo_(y){
+  try{ window.scrollTo(0, y); }catch(e){}
+  try{ if(document.scrollingElement) document.scrollingElement.scrollTop = y; }catch(e){}
+}
+
 function selectorFor_(el){
   if(!el || !el.dataset || !el.dataset.act) return '';
   let sel = `[data-act="${el.dataset.act}"]`;
@@ -3689,21 +3729,31 @@ function captureUiState_(){
       end: el.selectionEnd
     };
   }
-  return { scrollY: window.scrollY || window.pageYOffset || 0, focus, anchor: scrollAnchor_ };
+  return { scrollY: currentScroll_(), focus, anchor: scrollAnchor_ };
 }
 
 function restoreUiState_(snap, sameScreen){
   if(!snap) return;
-  if(sameScreen && Math.abs((window.scrollY||0) - snap.scrollY) > 0.5){
-    window.scrollTo(0, snap.scrollY);
+  if(sameScreen && Math.abs(currentScroll_() - snap.scrollY) > 0.5){
+    scrollTo_(snap.scrollY);
   }
   const f = snap.focus;
   if(f && f.sel){
     const el = document.querySelector(f.sel);
     if(el && (el.tagName==='INPUT' || el.tagName==='TEXTAREA')){
-      el.focus();
+      // ⚠️ ده كان السبب الحقيقي للقفز لفوق: el.focus() العادي بيخلي المتصفح
+      // يسحب الصفحة عشان يوريك الحقل — وخانة البحث فوق الشبكة، فالشاشة تطلع فوق.
+      // preventScroll بيرجّع التركيز من غير ما يحرّك الصفحة.
+      try{ el.focus({ preventScroll: true }); }catch(e){ el.focus(); }
       try{ el.setSelectionRange(f.start, f.end); }catch(e){}
     }
+  }
+
+  // نثبّت التمرير تاني بعد الرسم (بعض المتصفحات بتزحلقه شوية)
+  if(sameScreen){
+    requestAnimationFrame(()=>{
+      if(Math.abs(currentScroll_() - snap.scrollY) > 1) scrollTo_(snap.scrollY);
+    });
   }
   scrollAnchor_ = null;
 }
@@ -3714,11 +3764,12 @@ function render(){
 
   // 🔑 السبب الحقيقي للقفز: وقت استبدال innerHTML الصفحة بتفضى للحظة، فارتفاعها
   // بيقل، والمتصفح بيقصقص مكان التمرير لأقصى حد متاح. المحتوى بيرجع يكبر بعدين
-  // بس التمرير فضل مقصقص. الحل: نقفل الارتفاع قبل الاستبدال ونفكّه بعد الرسم —
-  // كده الصفحة عمرها ما تقصر، ومفيش قصقصة، ومفيش قفز لا لفوق ولا لتحت.
-  const prevH = app.offsetHeight;
-  if(prevH) app.style.minHeight = prevH + 'px';
-  const unlock = ()=>{ try{ app.style.minHeight=''; }catch(e){} };
+  // بس التمرير فضل مقصقص.
+  // ⚠️ #app عليه min-height:100vh أصلاً، فقفل الارتفاع عليه مبيعملش حاجة —
+  // القفل لازم يكون على <body> نفسه (هو صندوق التمرير الفعلي).
+  const prevH = document.body.offsetHeight;
+  if(prevH) document.body.style.minHeight = prevH + 'px';
+  const unlock = ()=>{ try{ document.body.style.minHeight=''; }catch(e){} };
 
   try{
     if(!isStandaloneMode() && !state.installGateBypassed){
