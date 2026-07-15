@@ -747,7 +747,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v51';
+const APP_BUILD = 'v52';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -3008,6 +3008,7 @@ function renderHeader(){
           ? `<button data-act="disable-biometric" title="إلغاء الدخول بالبصمة من الجهاز ده">🔓 إلغاء البصمة</button>`
           : `<button data-act="enable-biometric" title="فعّل الدخول بالبصمة على الجهاز ده">👆 تفعيل البصمة</button>`
       ) : ''}
+      <button data-act="force-update" title="تحديث إجباري">🔄 تحديث</button>
       <button data-act="logout" title="تسجيل خروج">🚪 خروج</button>
     </nav>
   </header>
@@ -3674,6 +3675,28 @@ async function shareOrderImage(){
   render();
 }
 
+// تحديث إجباري: بيمسح كل الكاش ويلغي الـ Service Worker ويعيد التحميل من السيرفر.
+// بيحل حالة إن الموبايل عالق على نسخة قديمة.
+async function forceUpdate(){
+  showToast('جارٍ التحديث... استنى لحظة');
+  try{
+    if('caches' in window){
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
+    }
+  }catch(e){}
+  try{
+    if('serviceWorker' in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+  }catch(e){}
+  // نضيف بارامتر عشوائي عشان نتخطى كاش المتصفح نفسه
+  const u = new URL(window.location.href);
+  u.searchParams.set('v', Date.now());
+  window.location.replace(u.toString());
+}
+
 async function copyAppLink(){
   try{
     await navigator.clipboard.writeText(APP_URL);
@@ -4189,6 +4212,7 @@ async function onActionInner(act, el){
     case 'prepare-wh-img': await prepareWarehouseImages(); break;
     case 'share-wh-img': await shareWarehouseImages(); break;
     case 'send-order-wa': await shareOrderImage(); break;
+    case 'force-update': await forceUpdate(); break;
     case 'copy-app-link': copyAppLink(); break;
     case 'run-diag': runDiagnostics(); break;
     case 'close-diag': state.showDiag=false; render(); break;
