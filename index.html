@@ -44,7 +44,7 @@ body{
   font-family:'Cairo',sans-serif;
   -webkit-font-smoothing:antialiased;
   min-height:100vh;
-  font-size:16px;
+  font-size:12px;
 }
 #app{max-width:640px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;background:var(--bg);}
 
@@ -178,6 +178,17 @@ textarea{resize:vertical;min-height:60px;}
 /* 4 في الصف — للقطاعات والألوان بالظبط زي ما طلب */
 .chipwrap.chipgrid4{display:grid;grid-template-columns:repeat(4, 1fr);gap:7px;}
 .chipwrap.chipgrid4 .chip{padding:9px 6px;text-align:center;}
+/* الألوان بقت مربعات متساوية بالظبط (مش بيضاوي زي القطاعات) */
+.chipwrap.chipgrid4.chipsquares .chip{
+  aspect-ratio:1/1;
+  border-radius:12px;
+  padding:4px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  height:auto;
+}
 .whgrid{display:grid;grid-template-columns:repeat(2, 1fr);gap:10px;}
 .whtile{
   border:1.5px solid var(--line);background:#FCFBF8;border-radius:12px;
@@ -194,7 +205,7 @@ textarea{resize:vertical;min-height:60px;}
   padding:9px 14px;
   border-radius:999px;
   font-family:'Cairo',sans-serif;
-  font-size:16px;
+  font-size:12px;
   font-weight:600;
   cursor:pointer;
 }
@@ -281,7 +292,7 @@ textarea{resize:vertical;min-height:60px;}
   border-radius:9px;
   background:#FCFBF8;
   padding:8px 5px 22px;
-  font-size:13.5px;
+  font-size:12px;
   line-height:1.3;
   text-align:center;
   cursor:pointer;
@@ -362,26 +373,13 @@ textarea{resize:vertical;min-height:60px;}
   padding:14px 16px 18px;
   margin-top:-10px;
 }
+/* ⚠️ الشكل ده اتوحّد بعد ما اتشتكى إن "إرسال الطلب" شكله مختلف تمامًا
+   عن "معاينة"/"حفظ للسلة" (عرض وطول وتخطيط مختلف). الثلاثة دلوقتي بنفس
+   الحجم والشكل بالظبط — بس إرسال الطلب فاضل بلونه الذهبي المميز. */
 .submitrow{display:flex;gap:8px;}
-.submitbtn{
-  flex:2;
-  background:var(--gold);
-  color:var(--navy-deep);
-  border:none;
-  border-radius:12px;
-  padding:15px;
-  font-family:'Cairo',sans-serif;
-  font-weight:800;
-  font-size:17.4px;
-  cursor:pointer;
-  box-shadow:0 6px 18px rgba(201,162,39,.35);
-}
-.submitbtn:disabled{background:#D9D2BC;box-shadow:none;cursor:not-allowed;color:#8A8470;}
-.savebtn{
+.submitrow .submitbtn,
+.submitrow .savebtn{
   flex:1;
-  background:#fff;
-  border:1.5px solid var(--navy);
-  color:var(--navy);
   border-radius:12px;
   padding:10px 6px;
   font-family:'Cairo',sans-serif;
@@ -393,9 +391,23 @@ textarea{resize:vertical;min-height:60px;}
   align-items:center;
   justify-content:center;
   gap:2px;
+  min-height:66px;
+  border:1.5px solid var(--navy);
+}
+.submitbtn{
+  background:var(--gold);
+  color:var(--navy-deep);
+  border-color:var(--gold);
+  box-shadow:0 6px 18px rgba(201,162,39,.35);
+}
+.submitbtn:disabled{background:#D9D2BC;box-shadow:none;cursor:not-allowed;color:#8A8470;border-color:#D9D2BC;}
+.savebtn{
+  background:#fff;
+  color:var(--navy);
 }
 .savebtn .ic{font-size:20.2px;}
 .savebtn.saved{background:var(--success);border-color:var(--success);color:#fff;}
+.previewfoot .savebtn{width:100%;min-height:auto;flex-direction:row;}
 
 /* success screen */
 .success{
@@ -822,7 +834,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v57';
+const APP_BUILD = 'v58';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -2622,11 +2634,22 @@ async function buildQuotePDF(order){
   const date = new Date(order.ts);
   const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
 
+  // ⚠️ عرض السعر (PDF) بيتعرض باللفة لأصناف القطاعات — بعكس تصدير الإكسيل اللي
+  // فضل بالعود زي ما هو (متلمسناهوش). السعر بيتحوّل لسعر اللفة (سعر العود ×
+  // محتوى اللفة) عشان الإجمالي يفضل مطابق للحقيقي بالظبط، مش بس الكمية.
   const rows = order.items.map(it=>{
+    const raw = rawPriceForItem(it); // سعر الوحدة الصغيرة (عود/قطعة) — الأساس المالي الصحيح
     const norm = normalizeItemToSmallUnit(it);
-    const raw = rawPriceForItem(it);
-    const lineRaw = raw==null ? null : raw*norm.qty;
-    return Object.assign({}, it, { normQty: norm.qty, normUnit: norm.unitLabel, rawPrice: raw, lineRaw });
+    let dispQty = norm.qty, dispUnit = norm.unitLabel, dispPrice = raw;
+    if(ROLL_GROUPS_.includes(it.main)){
+      const catItem = findCatalogItem(it.main, it.product, it.color);
+      const content = Number(catItem && catItem.unit) || 1;
+      dispQty = Math.round((norm.qty/content)*10)/10;
+      dispUnit = 'لفة';
+      dispPrice = raw==null ? null : raw*content;
+    }
+    const lineRaw = dispPrice==null ? null : dispPrice*dispQty;
+    return Object.assign({}, it, { normQty: dispQty, normUnit: dispUnit, rawPrice: dispPrice, lineRaw });
   });
   const subtotal = rows.reduce((s,r)=> s + (r.lineRaw||0), 0);
   // الخصم يتفصل نسبة ومبلغ في عرض السعر بس لو النوع (من شيت المستخدمين) "موزع"
@@ -2647,12 +2670,10 @@ async function buildQuotePDF(order){
   ROLL_SUMMARY_SECTORS.forEach(sector=>{
     const items = rows.filter(r=>r.main===sector);
     if(!items.length) return;
+    // normQty هنا بقى أصلاً بالِلفة (اتحوّل فوق) للأصناف دي — بنجمعه زي ما هو
+    // من غير ما نقسم على المحتوى تاني (كان ده بيدي رقم غلط أصغر من الحقيقي).
     let totalRolls = 0;
-    items.forEach(it=>{
-      const catItem = findCatalogItem(it.main, it.product, it.color);
-      const content = catItem ? (catItem.unit || 1) : 1;
-      totalRolls += it.normQty / content;
-    });
+    items.forEach(it=>{ totalRolls += it.normQty; });
     if(totalRolls>0) rollSummary.push({ sector, rolls: totalRolls });
   });
   const hasMissing = rows.some(r=>r.lineRaw==null);
@@ -3241,7 +3262,7 @@ function renderStagedBlock(s){
     </div>
     ${s.colorRequired ? `
     <label>الألوان (اختار أكتر من واحد)</label>
-    <div class="chipwrap chipgrid4" style="margin-bottom:10px;">
+    <div class="chipwrap chipgrid4 chipsquares" style="margin-bottom:10px;">
       ${s.availableColors.map(c=>{
         const unavailable = isColorUnavailable(s.main, s.product, c);
         if(unavailable){
@@ -3603,7 +3624,7 @@ function renderOrderView(){
     <div class="submitbar">
       <div class="submitrow">
         <button class="submitbtn" data-act="request-submit" ${state.submitting?'disabled':''}>
-          ${state.submitting ? 'جارٍ الإرسال...' : (state.editingOrderId ? 'حفظ التعديلات' : 'إرسال الطلب')}
+          <span class="ic">${state.submitting ? '⏳' : '📨'}</span>${state.submitting ? 'جارٍ الإرسال...' : (state.editingOrderId ? 'حفظ التعديلات' : 'إرسال الطلب')}
         </button>
         ${!state.editingOrderId ? `
         <button class="savebtn ${state.draftJustSaved?'saved':''}" data-act="save-draft" type="button">
@@ -3992,53 +4013,30 @@ function captureUiState_(){
   return { scrollY: currentScroll_(), focus, anchor: scrollAnchor_ };
 }
 
+// ⚠️ كان فيه هنا نظام "مرساة" بيحاول يتتبّع العنصر المضغوط بالاسم ويعوّض
+// أي فرق في مكانه بعد الرسم. ده كان بيتعارض مع تثبيت الارتفاع على body
+// (اللي بيحل نفس المشكلة أصلاً بطريقة أبسط وأضمن) ومع تثبيت تمرير الشبكة
+// الداخلية لوحدها — والتعارض ده هو اللي كان بيسبب قفزة لفوق لما تختار صنف.
+// شلنا المرساة خالص وسيبنا حاجتين بس: رجّع نفس رقم التمرير بالظبط، ورجّع
+// تمرير الشبكة الداخلية لوحدها (captureGridScroll_/restoreGridScroll_).
 function restoreUiState_(snap, sameScreen){
   if(!snap) return;
-  if(sameScreen){
-    let targetY = snap.scrollY;
-    const a = snap.anchor;
-    if(a && a.sel){
-      try{
-        const el = document.querySelector(a.sel);
-        if(el){
-          const newTop = el.getBoundingClientRect().top;
-          // العنصر اتحرك بمقدار (newTop - a.top) بسبب محتوى اتضاف/اتشال فوقه
-          // (زي بلوك "حدد التفاصيل")، فبنعوّض الفرق ده على التمرير الحالي
-          // عشان العنصر يفضل في نفس مكانه بالظبط على الشاشة.
-          targetY = currentScroll_() + (newTop - a.top);
-        }
-      }catch(e){}
-    }
-    if(Math.abs(currentScroll_() - targetY) > 0.5){
-      scrollTo_(targetY);
-    }
+  if(sameScreen && Math.abs(currentScroll_() - snap.scrollY) > 0.5){
+    scrollTo_(snap.scrollY);
   }
   const f = snap.focus;
   if(f && f.sel){
     const el = document.querySelector(f.sel);
     if(el && (el.tagName==='INPUT' || el.tagName==='TEXTAREA')){
-      // ⚠️ ده كان السبب الحقيقي للقفز لفوق: el.focus() العادي بيخلي المتصفح
-      // يسحب الصفحة عشان يوريك الحقل — وخانة البحث فوق الشبكة، فالشاشة تطلع فوق.
+      // ⚠️ el.focus() العادي بيخلي المتصفح يسحب الصفحة عشان يوريك الحقل —
       // preventScroll بيرجّع التركيز من غير ما يحرّك الصفحة.
       try{ el.focus({ preventScroll: true }); }catch(e){ el.focus(); }
       try{ el.setSelectionRange(f.start, f.end); }catch(e){}
     }
   }
-
-  // نثبّت التمرير تاني بعد الرسم (بعض المتصفحات بتزحلقه شوية)
   if(sameScreen){
-    const finalY = (()=>{
-      const a = snap.anchor;
-      if(a && a.sel){
-        try{
-          const el = document.querySelector(a.sel);
-          if(el) return currentScroll_() + (el.getBoundingClientRect().top - a.top);
-        }catch(e){}
-      }
-      return snap.scrollY;
-    })();
     requestAnimationFrame(()=>{
-      if(Math.abs(currentScroll_() - finalY) > 1) scrollTo_(finalY);
+      if(Math.abs(currentScroll_() - snap.scrollY) > 1) scrollTo_(snap.scrollY);
     });
   }
   scrollAnchor_ = null;
