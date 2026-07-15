@@ -175,6 +175,9 @@ textarea{resize:vertical;min-height:60px;}
 
 /* chips */
 .chipwrap{display:flex;flex-wrap:wrap;gap:8px;}
+/* 4 في الصف — للقطاعات والألوان بالظبط زي ما طلب */
+.chipwrap.chipgrid4{display:grid;grid-template-columns:repeat(4, 1fr);gap:7px;}
+.chipwrap.chipgrid4 .chip{padding:9px 6px;text-align:center;}
 .whgrid{display:grid;grid-template-columns:repeat(2, 1fr);gap:10px;}
 .whtile{
   border:1.5px solid var(--line);background:#FCFBF8;border-radius:12px;
@@ -819,7 +822,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v56';
+const APP_BUILD = 'v57';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -1003,6 +1006,25 @@ function effectiveInStock(item){
 function isProductOutOfStock(main, product){
   const opts = colorsForProduct(main, product);
   return opts.length>0 && opts.every(c=>c.available!==false && isColorOutOfStock(main, product, c.color));
+}
+
+// ⚠️ كان فيه تناقض: تاج الصنف كان بيقول "مفيش رصيد" (أحمر) حتى لو لون واحد
+// فيه عيدان متاحة (crit) — بينما شاشة تفاصيل نفس الصنف كانت بتوري اللون ده
+// "متاح اعواد". بنجمع حالة الألوان كلها هنا بنفس المنطق (3 مستويات) عشان
+// التاج فوق يطابق اللي جوه بالظبط:
+//   'ok'   = فيه لون واحد على الأقل بلفة كاملة فأكتر
+//   'crit' = مفيش لفة كاملة في أي لون، بس فيه عيدان في لون واحد على الأقل
+//   'out'  = كل الألوان صفر فعليًا
+function productStockLevel(main, product){
+  const opts = colorsForProduct(main, product).filter(c=>c.available!==false);
+  if(!opts.length) return 'out';
+  let sawCrit = false;
+  for(const c of opts){
+    const lvl = colorStockLevel(findCatalogItem(main, product, c.color));
+    if(lvl==='ok' || lvl==='low') return 'ok';
+    if(lvl==='crit') sawCrit = true;
+  }
+  return sawCrit ? 'crit' : 'out';
 }
 // بيرجّع نص مختصر بالألوان المتوفرة فعلاً في الصنف ده:
 // "جميع الألوان" لو كلها متوفرة · "بيج، ابيض" لو بعضها · '' لو مفيش
@@ -1721,6 +1743,19 @@ function getStoredDraft(){
   }catch(e){ return null; }
 }
 
+// نسخة قابلة للاستدعاء في أي وقت (مش بس أول ما التطبيق يفتح) — لو مفيش طلب
+// محفوظ بتقول للموزع بدل ما تسكت. بتُستخدم من زرار "🛒 عندي طلب محفوظ".
+function openSavedDraftManually(){
+  const draft = getStoredDraft();
+  if(draft && Array.isArray(draft.cart) && draft.cart.length>0){
+    state.pendingDraft = draft;
+    state.showResumeModal = true;
+    render();
+  } else {
+    showToast('مفيش طلب محفوظ حاليًا');
+  }
+}
+
 function checkForResumableDraft(){
   const draft = getStoredDraft();
   if(draft && Array.isArray(draft.cart) && draft.cart.length>0){
@@ -2090,17 +2125,13 @@ async function previewMyOrderPDF(id){
   render();
 }
 
+// ✂️ بقت بتجهّز عرض السعر بس — طلبية النواقص مبقتش تتولّد هنا خالص
+// (الدالة buildShortagePDF لسه موجودة في الكود لو احتجناها تاني بعدين).
 async function generateBothQuotes(order){
   state.quotePdfGenerating = true; render();
   try{
     state.quotePdfPlain = await buildQuotePDF(order);
   }catch(e){ console.error(e); state.quotePdfPlain = null; }
-  // نفس الطلب كـ "طلبية نواقص" بدون أسعار. بنولّده بعد الأول (مش بالتوازي)
-  // عشان مانحملش الـ thread مرتين في نفس الوقت ونسبب هنج.
-  try{
-    await new Promise(r=>setTimeout(r,50));
-    state.shortagePdf = await buildShortagePDF(order);
-  }catch(e){ console.error(e); state.shortagePdf = null; }
   state.quotePdfGenerating = false;
   render();
 }
@@ -3210,7 +3241,7 @@ function renderStagedBlock(s){
     </div>
     ${s.colorRequired ? `
     <label>الألوان (اختار أكتر من واحد)</label>
-    <div class="chipwrap" style="margin-bottom:10px;">
+    <div class="chipwrap chipgrid4" style="margin-bottom:10px;">
       ${s.availableColors.map(c=>{
         const unavailable = isColorUnavailable(s.main, s.product, c);
         if(unavailable){
@@ -3309,40 +3340,12 @@ function renderOrderView(){
         <h2>${state.successMode==='updated' ? 'تم تحديث الطلب بنجاح' : 'تم إرسال الطلب بنجاح'}</h2>
         <p>هيتم مراجعة طلبك والتواصل معاك لتأكيد التنفيذ</p>
         <div class="ordid">#${esc(state.successOrderId)}</div>
-        <!-- الموزع لازم يبعت الطلب كصورة — بنخليها أول وأوضح حاجة يشوفها -->
-        <div class="card" style="border:2px solid ${state.orderSentToWa ? 'var(--success)' : 'var(--danger)'};margin-bottom:12px;">
-          ${state.orderSentToWa ? `
-            <div style="color:var(--success);font-weight:800;font-size:15.7px;">✅ تمام، الطلب اتبعت</div>
-            <button class="newbtn outline" data-act="send-order-wa" style="margin-top:8px;">📲 ابعته تاني</button>
-          ` : `
-            <div style="color:var(--danger);font-weight:800;font-size:15.7px;margin-bottom:4px;">⚠️ الطلب لسه ما اتبعتش</div>
-            <p style="color:var(--muted);font-size:13.4px;margin:0 0 10px;">
-              ${state.orderImage ? 'الصورة جاهزة — دوس ابعت واختار الجروب أو الشخص' : 'جهّز صورة الطلب الأول، وبعدين ابعتها لأي حد تختاره'}
-            </p>
-            ${state.orderImage ? `
-              <button class="newbtn" data-act="send-order-wa" style="background:#25D366;border-color:#25D366;">📲 ابعت الصورة — اختار لمين</button>
-            ` : `
-              <button class="newbtn" data-act="prepare-order-img" ${state.orderImgPreparing?'disabled':''}>
-                ${state.orderImgPreparing ? '⏳ جارٍ تجهيز الصورة...' : '🖼️ جهّز صورة الطلب'}
-              </button>
-            `}
-          `}
-        </div>
-        <!-- أمر صرف المخزن: صورة لكل مجموعة، بدون أسعار -->
-        <div class="docsection">
-          <div class="docsectiontitle">🏬 أمر صرف مخزن (بدون أسعار)</div>
-          ${state.warehouseImages && state.warehouseImages.length ? `
-            <p style="color:var(--muted);font-size:12.9px;margin:0 0 8px;">جاهز — ${state.warehouseImages.length} صورة (مجموعة لكل صورة)</p>
-            <button class="newbtn" data-act="share-wh-img" style="background:#25D366;border-color:#25D366;">📲 ابعت للمخزن — اختار لمين</button>
-          ` : `
-            <button class="newbtn outline" data-act="prepare-wh-img" ${state.whImgPreparing?'disabled':''}>
-              ${state.whImgPreparing ? '⏳ جارٍ تجهيز الصور...' : '🖼️ جهّز صور المخزن'}
-            </button>
-          `}
-        </div>
-        ${state.quotePdfGenerating ? '<div class="loading" style="padding:20px;">جارٍ تجهيز المستندات...</div>' : ''}
+        <!-- ✂️ بناءً على طلب صريح: المستندات بقت "عرض السعر" بس، بأيقوناته
+             التلاتة (واتساب صورة / تنزيل PDF / معاينة). باقي المستندات
+             (صورة الطلب العامة، أمر صرف المخزن، طلبية النواقص) اتشالت. -->
+        ${state.quotePdfGenerating ? '<div class="loading" style="padding:20px;">جارٍ تجهيز المستند...</div>' : ''}
         ${(!state.quotePdfPlain && !state.quotePdfGenerating) ? `
-          <button class="newbtn" data-act="make-docs">📄 تجهيز عرض السعر وطلبية النواقص</button>
+          <button class="newbtn" data-act="make-docs">📄 تجهيز عرض السعر</button>
         ` : ''}
         ${state.quotePdfPlain ? `
           <div class="docsection">
@@ -3351,16 +3354,6 @@ function renderOrderView(){
               <button class="iconbtn" data-act="share-quote-plain">📤<span>واتساب (صورة)</span></button>
               <button class="iconbtn" data-act="download-quote-plain">⬇️<span>تنزيل PDF</span></button>
               <button class="iconbtn" data-act="preview-quote-plain">👁️<span>معاينة</span></button>
-            </div>
-          </div>
-        ` : ''}
-        ${state.shortagePdf ? `
-          <div class="docsection">
-            <div class="docsectiontitle">📋 طلبية نواقص (بدون أسعار)</div>
-            <div class="iconbtnrow">
-              <button class="iconbtn" data-act="share-shortage">📤<span>واتساب (صورة)</span></button>
-              <button class="iconbtn" data-act="download-shortage">⬇️<span>تنزيل PDF</span></button>
-              <button class="iconbtn" data-act="preview-shortage">👁️<span>معاينة</span></button>
             </div>
           </div>
         ` : ''}
@@ -3414,17 +3407,18 @@ function renderOrderView(){
             const isStaged = state.staged.some(s=>s.key===stagedKey(state.mainGroup,n));
             const inCart = state.cart.some(it=>it.main===state.mainGroup && it.product===n);
             const unavailable = isProductFullyUnavailable(state.mainGroup, n);
-            const outOfStock = !unavailable && isProductOutOfStock(state.mainGroup, n);
-            const inStock = !unavailable && !outOfStock;
-            // أحمر = مفيش رصيد · أخضر = متوفر · رمادي = موقوف من الأدمن
-            const stockClass = unavailable ? 'unavailable' : (outOfStock ? 'outstock' : 'instock');
+            const lvl = unavailable ? 'unavailable' : productStockLevel(state.mainGroup, n);
+            // أخضر = متوفر بلفة كاملة · أحمر "كمية قليلة" = عيدان بس مفيش لفة كاملة
+            // أحمر "مفيش رصيد" = صفر فعلي في كل الألوان · رمادي = موقوف من الأدمن
+            const stockClass = unavailable ? 'unavailable' : (lvl==='ok' ? 'instock' : 'outstock');
             return `
             <div class="ptile ${isStaged?'selected':''} ${inCart?'incart':''} ${stockClass}" data-act="${unavailable?'noop-unavailable':'toggle-product'}" data-val="${esc(n)}">
               ${isStaged?'<span class="tick">✓</span>':''}
               <span>${esc(n)}</span>
               ${unavailable?'<span class="unavailtag">موقوف</span>':''}
-              ${outOfStock?'<span class="stocktag out">مفيش رصيد</span>':''}
-              ${inStock?`<span class="stocktag in">متوفر: ${esc(availableColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
+              ${(!unavailable && lvl==='out')?'<span class="stocktag out">مفيش رصيد</span>':''}
+              ${(!unavailable && lvl==='crit')?'<span class="stocktag out">كمية قليلة</span>':''}
+              ${(!unavailable && lvl==='ok')?`<span class="stocktag in">متوفر: ${esc(availableColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
             </div>`;
           }).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>'}
         </div>
@@ -3540,8 +3534,16 @@ function renderOrderView(){
       </div>
     </div>`;
 
+  // زرار للرجوع لأي طلب اتحفظ في السلة قبل كده — ظاهر أول حاجة في الفورم
+  // عشان يبقى سهل الوصول، خصوصًا إن مفيش طريقة تانية غير الرسالة التلقائية
+  // اللي بتظهر أول ما التطبيق يفتح بس.
+  const openDraftBtn = `
+    <div class="card" style="text-align:center;">
+      <button class="newbtn outline" data-act="open-saved-draft">🛒 عندي طلب محفوظ في السلة — افتحه</button>
+    </div>`;
+
   if(!state.warehouse){
-    return `<main>${warehouseCard}</main>`;
+    return `<main>${warehouseCard}${openDraftBtn}</main>`;
   }
 
   const distSection = `
@@ -3569,7 +3571,7 @@ function renderOrderView(){
   const groupCard = `
     <div class="card">
       <h2><span class="num">3</span>اختار القطاع</h2>
-      <div class="chipwrap">${sectorChips}</div>
+      <div class="chipwrap chipgrid4">${sectorChips}</div>
     </div>`;
 
   const noteSection = `
@@ -4475,6 +4477,7 @@ async function onActionInner(act, el){
     case 'do-submit': actuallySubmit(); break;
     case 'resume-draft': resumeDraft(); break;
     case 'discard-draft': discardDraftAndStartFresh(); break;
+    case 'open-saved-draft': openSavedDraftManually(); break;
 
     case 'new-order': resetOrderForm(); break;
     case 'share-quote-plain': shareQuotePDF(); break;
