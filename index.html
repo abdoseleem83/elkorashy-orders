@@ -203,6 +203,20 @@ textarea{resize:vertical;min-height:60px;}
   overflow-y:auto;
   padding:2px;
 }
+/* الأكسسوارات: أسماء قصيرة، فبنعمل خانات أصغر وأعمدة أكتر */
+.productgrid.compact{
+  grid-template-columns:repeat(auto-fill, minmax(78px, 1fr));
+  gap:6px;
+}
+.productgrid.compact .ptile{
+  min-height:54px;
+  font-size:9.5px;
+  padding:6px 4px 16px;
+}
+.productgrid.compact .ptile .stocktag,
+.productgrid.compact .ptile .unavailtag{
+  font-size:7px;
+}
 .productgrid .ptile{
   border:1.5px solid var(--line);
   border-radius:9px;
@@ -733,7 +747,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v50';
+const APP_BUILD = 'v51';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -3205,7 +3219,7 @@ function renderOrderView(){
           <span><i style="background:var(--danger);"></i> مفيش رصيد (السعر متاح)</span>
           <span><i style="background:#C9C5BA;"></i> موقوف</span>
         </div>
-        <div class="productgrid">
+        <div class="productgrid ${state.mainGroup && state.mainGroup.includes('اكسسوارات') ? 'compact' : ''}">
           ${names.length ? names.map(n=>{
             const isStaged = state.staged.some(s=>s.key===stagedKey(state.mainGroup,n));
             const inCart = state.cart.some(it=>it.main===state.mainGroup && it.product===n);
