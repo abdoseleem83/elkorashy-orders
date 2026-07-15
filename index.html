@@ -172,17 +172,39 @@ textarea{resize:vertical;min-height:60px;}
 .field:last-child{margin-bottom:0;}
 .row2{display:flex;gap:10px;}
 .row2 .field{flex:1;}
+.row3{display:flex;gap:6px;}
+.row3 .field{flex:1;min-width:0;margin-bottom:0;}
+.row3 .field input{padding:8px 6px;font-size:11.5px;}
+.row3 .field label{font-size:10.5px;margin-bottom:2px;}
+.distcard .field{margin-bottom:8px;}
 
 /* chips */
 .chipwrap{display:flex;flex-wrap:wrap;gap:8px;}
 /* 4 في الصف — للقطاعات والألوان بالظبط زي ما طلب */
 .chipwrap.chipgrid4{display:grid;grid-template-columns:repeat(4, 1fr);gap:7px;}
 .chipwrap.chipgrid4 .chip{padding:9px 6px;text-align:center;}
+/* لون مميّز لكل قطاع — يبقى واضح ومختلف عن اللي جنبه في شبكة الـ4 في الصف */
+.chip.sc-1{background:#EAF3FB;border-color:#8FB8DE;color:#1F4E79;}
+.chip.sc-2{background:#EAF7EF;border-color:#8FCFA6;color:#1E6B3A;}
+.chip.sc-3{background:#FBEFEA;border-color:#E3A98A;color:#8A4A1F;}
+.chip.sc-4{background:#F4EAFB;border-color:#C6A0E0;color:#5B2C82;}
+.chip.sc-5{background:#FBEAF0;border-color:#E0A0BE;color:#82285A;}
+.chip.sc-6{background:#EAEFFB;border-color:#A0B3E0;color:#2A3C82;}
+.chip.sc-7{background:#FBF7EA;border-color:#E0CE9F;color:#7A5F1F;}
+.chip.sc-8{background:#EEEEEE;border-color:#BFBFBF;color:#444;}
+.chip.sc-1.active,.chip.sc-2.active,.chip.sc-3.active,.chip.sc-4.active,
+.chip.sc-5.active,.chip.sc-6.active,.chip.sc-7.active,.chip.sc-8.active{
+  background:var(--navy);border-color:var(--navy);color:#fff;
+}
 /* الألوان بقت مربعات متساوية بالظبط (مش بيضاوي زي القطاعات) */
 .chipwrap.chipgrid4.chipsquares .chip{
   aspect-ratio:1/1;
-  border-radius:12px;
-  padding:4px;
+  max-width:76px;
+  width:100%;
+  margin:0 auto;
+  border-radius:10px;
+  padding:3px;
+  font-size:10.3px;
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -840,7 +862,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v59';
+const APP_BUILD = 'v60';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -1153,7 +1175,11 @@ function findCatalogItemAnyMain(product, color){
 }
 function getDiscount(main){
   const v = DISCOUNTS[main];
-  return (typeof v==='number' && !isNaN(v)) ? v : 0;
+  if(typeof v!=='number' || isNaN(v)) return 0;
+  // ⚠️ السيرفر بيحوّل الكسر العشري لنسبة مئوية (×100)، وده بيولّد صور مشوّهة
+  // زي 7.000000000000001% بسبب دقة الأرقام العشرية في الكمبيوتر. بنقرّبها
+  // هنا لأقرب رقمين عشريين عشان تتعرض نضيفة (7%) في كل حتة بتستخدمها.
+  return Math.round(v * 100) / 100;
 }
 // الخصم يتفصل ويتحسب بس للموزع (النوع من شيت المستخدمين)؛ العميل يشوف السعر
 // من غير أي خصم خالص.
@@ -3476,8 +3502,19 @@ function renderOrderView(){
     </main>`;
   }
 
+  // كل قطاع بلونه الخاص عشان يتميّز عن التاني بصريًا وهو مجمّع 4 في الصف
+  const SECTOR_COLOR_CLASS_ = {
+    'قطاعات PVC كومبن': 'sc-1',
+    'قطاعات كرافت لاين': 'sc-2',
+    'نيو لاين': 'sc-3',
+    'اكسسوارات pvc اكسا': 'sc-4',
+    'ابواب WPC': 'sc-5',
+    'تصنيع': 'sc-6',
+    'حشوات': 'sc-7',
+    'اخري': 'sc-8'
+  };
   const sectorChips = SECTOR_CHIPS.map(g=>`
-    <button class="chip ${g===OTHER_SECTOR?'gold':''} ${state.mainGroup===g?'active':''}" data-act="set-group" data-val="${esc(g)}">${esc(g)}</button>
+    <button class="chip ${g===OTHER_SECTOR?'gold':(SECTOR_COLOR_CLASS_[g]||'')} ${state.mainGroup===g?'active':''}" data-act="set-group" data-val="${esc(g)}">${esc(g)}</button>
   `).join('');
 
   let subSection = '';
@@ -3612,24 +3649,26 @@ function renderOrderView(){
   }
 
   const distSection = `
-    <div class="card">
+    <div class="card distcard">
       ${state.editingOrderId ? `<div class="editbanner">✏️ بتعدّل على طلب سابق #${esc(state.editingOrderId.toUpperCase())}</div>` : ''}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <span style="font-size:12px;color:var(--muted);">🏬 المخزن: <b style="color:var(--navy);">${esc(state.warehouse)}</b></span>
         <button class="chip" style="padding:3px 10px;font-size:11px;" data-act="pick-warehouse-inline" data-val="">غيّر</button>
       </div>
       <h2><span class="num">2</span>بيانات الموزع</h2>
-      <div class="field">
-        <label>اسم الموزع / الفرع *</label>
-        <input type="text" placeholder="مثال: فرع طنطا" value="${esc(state.distName)}" data-act="set-distname">
-      </div>
-      <div class="field">
-        <label>المنطقة *</label>
-        <input type="text" placeholder="مثال: طنطا - المنشية" value="${esc(state.distRegion)}" data-act="set-distregion">
-      </div>
-      <div class="field">
-        <label>رقم الهاتف *</label>
-        <input type="tel" placeholder="01xxxxxxxxx" value="${esc(state.distPhone)}" data-act="set-distphone">
+      <div class="row3">
+        <div class="field">
+          <label>اسم الموزع *</label>
+          <input type="text" placeholder="فرع طنطا" value="${esc(state.distName)}" data-act="set-distname">
+        </div>
+        <div class="field">
+          <label>المنطقة *</label>
+          <input type="text" placeholder="المنشية" value="${esc(state.distRegion)}" data-act="set-distregion">
+        </div>
+        <div class="field">
+          <label>الموبايل *</label>
+          <input type="tel" placeholder="01xxxxxxxxx" value="${esc(state.distPhone)}" data-act="set-distphone">
+        </div>
       </div>
     </div>`;
 
