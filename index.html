@@ -192,11 +192,19 @@ textarea{resize:vertical;min-height:60px;}
 }
 .chip.gold.active{background:var(--gold);border-color:var(--gold);color:var(--navy-deep);}
 
-.subchipwrap-compact{gap:5px;}
+.subchipwrap-compact{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:5px;
+}
 .chip.subchip-compact{
-  padding:4px 9px;
-  font-size:10.5px;
-  border-radius:14px;
+  padding:5px 4px;
+  font-size:9.5px;
+  border-radius:10px;
+  line-height:1.25;
+  white-space:normal;
+  text-align:center;
+  overflow-wrap:break-word;
 }
 
 .searchbox{position:relative;margin-bottom:10px;}
@@ -598,6 +606,22 @@ textarea{resize:vertical;min-height:60px;}
   background:#EDEBE4;border-color:var(--line);color:var(--muted);
 }
 /* لون مفيش منه رصيد: أحمر واضح + كلمة "غير متوفر" تحته */
+/* لون مفيش منه رصيد خالص: أسود واضح */
+.chip.nostockchip{
+  background:#2A2A2A;border-color:#2A2A2A;color:#fff;font-weight:700;
+}
+.chip.nostockchip.active{
+  background:#000;border-color:#000;color:#fff;
+}
+.chip.nostockchip small{color:#D8D8D8;}
+.chip.nostockchip.active small{color:#fff;}
+/* لون متاح بالكامل: أخضر */
+.chip.greenchip{
+  background:var(--success-bg);border-color:var(--success);color:var(--success);font-weight:700;
+}
+.chip.greenchip.active{
+  background:var(--success);border-color:var(--success);color:#fff;
+}
 .chip.outstockchip{
   background:#FDECEC;border-color:var(--danger);color:#8A1F1F;font-weight:700;
 }
@@ -3046,15 +3070,15 @@ function renderStagedBlock(s){
         const lvl = colorStockLevel(findCatalogItem(s.main, s.product, c));
         // أحمر: أقل من لفة (أو صفر) · أصفر: أقل من 5 لفات · عادي: كفاية
         if(lvl === 'out'){
-          return `<button class="chip outstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متاح رصيد</small></button>`;
+          return `<button class="chip nostockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متاح رصيد</small></button>`;
         }
         if(lvl === 'crit'){
-          return `<button class="chip outstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة اعواد</small></button>`;
+          return `<button class="chip outstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>متاح اعواد</small></button>`;
         }
         if(lvl === 'low'){
           return `<button class="chip gold lowstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
         }
-        return `<button class="chip gold ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
+        return `<button class="chip greenchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
       }).join('')}
       ${(()=>{
         // ملاحظة تحت الألوان لأي لون مختار كميته قليلة — من غير ما نقول الرقم
