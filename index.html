@@ -299,7 +299,6 @@ textarea{resize:vertical;min-height:60px;}
 .ordercol-details{width:250px;}
 .ordercol .productgrid{
   grid-template-columns:1fr;
-  max-height:420px;
 }
 
 .subchipwrap-compact{
@@ -324,8 +323,6 @@ textarea{resize:vertical;min-height:60px;}
   display:grid;
   grid-template-columns:repeat(4, minmax(0,1fr));
   gap:7px;
-  max-height:320px;
-  overflow-y:auto;
   padding:2px;
 }
 /* الأكسسوارات: أسماء قصيرة، فبنعمل خانات أصغر وأعمدة أكتر */
@@ -890,8 +887,8 @@ const LOGO_B64 = "/9j/4QFCRXhpZgAATU0AKgAAAAgABQEAAAMAAAABA/4AAAEBAAMAAAABAtsAAA
 const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
-const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v69';
+const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
+const APP_BUILD = 'v70';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -3442,7 +3439,7 @@ function renderHeader(){
   </header>
   <div class="profile-bar"><span></span><span></span><span></span><span></span><span></span></div>
   </div></div>
-  <div style="text-align:center;font-size:11.2px;color:var(--muted);padding:2px;">نسخة ${APP_BUILD}${CREDIT_LINE ? ` · ${esc(CREDIT_LINE)}` : ''}</div>
+  <div class="versionline" style="text-align:center;font-size:11.2px;color:var(--muted);padding:2px;">نسخة ${APP_BUILD}${CREDIT_LINE ? ` · ${esc(CREDIT_LINE)}` : ''}</div>
   `;
 }
 
@@ -3602,6 +3599,10 @@ function renderOrderView(){
 
   let subSection = '';
   let productSection = '';
+  // مفاتيح الأصناف اللي اتعرض تفاصيلها "جوه" الشبكة نفسها (تحت الصنف بالظبط) —
+  // أي صنف متختار مش موجود في الشبكة الحالية (لو الموزع غيّر القطاع/التصنيف
+  // وهو لسه مختار صنف من مكان تاني) هيفضل يظهر في الكارت الاحتياطي تحت.
+  const inlineStagedKeys_ = [];
   if(state.mainGroup && state.mainGroup!==OTHER_SECTOR){
     const needsSub = sectorNeedsSubFilter(state.mainGroup);
     let subToUse = null;
@@ -3637,7 +3638,9 @@ function renderOrderView(){
         </div>
         <div class="productgrid ${state.mainGroup && state.mainGroup.includes('اكسسوارات') ? 'compact' : ''}">
           ${names.length ? names.map(n=>{
-            const isStaged = state.staged.some(s=>s.key===stagedKey(state.mainGroup,n));
+            const stagedEntry = state.staged.find(s=>s.key===stagedKey(state.mainGroup,n));
+            inlineStagedKeys_.push(stagedEntry ? stagedEntry.key : null);
+            const isStaged = !!stagedEntry;
             const inCart = state.cart.some(it=>it.main===state.mainGroup && it.product===n);
             const unavailable = isProductFullyUnavailable(state.mainGroup, n);
             // ⚠️ في مخازن العاشر والمنصورة، ولو الداخل عميل، الرصيد مالوش
@@ -3646,7 +3649,7 @@ function renderOrderView(){
             const showStock = warehouseAffectsStock();
             const lvl = unavailable ? 'unavailable' : (showStock ? productStockLevel(state.mainGroup, n) : 'ok');
             const stockClass = unavailable ? 'unavailable' : (showStock ? (lvl==='ok' ? 'instock' : 'outstock') : '');
-            return `
+            const tile = `
             <div class="ptile ${isStaged?'selected':''} ${inCart?'incart':''} ${stockClass}" data-act="${unavailable?'noop-unavailable':'toggle-product'}" data-val="${esc(n)}">
               ${isStaged?'<span class="tick">✓</span>':''}
               <span>${esc(n)}</span>
@@ -3655,6 +3658,14 @@ function renderOrderView(){
               ${(showStock && !unavailable && lvl==='crit')?`<span class="stocktag out">كمية قليلة: ${esc(lowStockColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
               ${(showStock && !unavailable && lvl==='ok')?`<span class="stocktag in">متوفر: ${esc(availableColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
             </div>`;
+            // ⚠️ لو الصنف ده متختار، تفاصيله (الألوان/الكمية/السعر) بتظهر
+            // على طول تحته في نفس الشبكة — مش في بلوك منفصل تحت كل الأصناف.
+            // grid-column:1/-1 بتخلي البلوك ده ياخد صف كامل لوحده، فـCSS Grid
+            // تلقائيًا بيبدأ صف جديد للأصناف الباقية بعده — من غير أي JS إضافي.
+            const inlineDetail = stagedEntry
+              ? `<div style="grid-column:1/-1;">${renderStagedBlock(stagedEntry)}</div>`
+              : '';
+            return tile + inlineDetail;
           }).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>'}
         </div>
       </div>`;
@@ -3694,10 +3705,13 @@ function renderOrderView(){
     </div>`;
   }
 
-  const stagedSection = state.staged.length ? `
+  // الأصناف اللي اتعرضت بالفعل جوه الشبكة (تحت الصنف بالظبط) مش بتتكرر هنا —
+  // الكارت ده بقى احتياطي بس، لأي صنف متختار مش ظاهر في الشبكة الحالية.
+  const orphanStaged = state.staged.filter(s => !inlineStagedKeys_.includes(s.key));
+  const stagedSection = orphanStaged.length ? `
     <div class="card">
       <h2><span class="num">6</span>حدد التفاصيل</h2>
-      ${state.staged.map(renderStagedBlock).join('')}
+      ${orphanStaged.map(renderStagedBlock).join('')}
     </div>` : '';
 
   const cartSection = `
@@ -4229,13 +4243,16 @@ function restoreGridScroll_(val){
 }
 
 function applyFixedHeaderSpacing_(){
-  // بندفع أول عنصر جاي بعد الهيدر الثابت (سواء بانر التثبيت أو main نفسه)
-  // بارتفاع الهيدر بالظبط — عشان محتوى الصفحة ميتغطّاش تحته.
+  // ⚠️ سطر "نسخة vNN" كان بيروح تحت الهيدر الثابت ويختفي، لأنه أول عنصر
+  // جاي في ترتيب الصفحة بعد الهيدر مباشرة — والهيدر الثابت مابياخدش مكانه
+  // في الترتيب العادي، فالسطر ده كان بيترسم فوق الصفحة تمامًا (تحت الهيدر).
+  // بندفعه هو كمان بنفس ارتفاع الهيدر، وبعده أول عنصر تاني (بانر أو main).
   const head = document.querySelector('.fixedhead-outer');
+  const h = head ? head.offsetHeight : 0;
+  const version = document.querySelector('#app > .versionline');
+  if(version) version.style.marginTop = head ? h + 'px' : '';
   const target = document.querySelector('#app > .installbanner') || document.querySelector('#app > main');
-  if(!target) return;
-  if(!head){ target.style.marginTop = ''; return; }
-  target.style.marginTop = head.offsetHeight + 'px';
+  if(target) target.style.marginTop = '';
 }
 
 function render(){
