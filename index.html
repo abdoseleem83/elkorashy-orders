@@ -900,7 +900,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v75';
+const APP_BUILD = 'v76';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -2858,8 +2858,12 @@ async function buildQuotePDF(order){
     return Object.assign({}, it, { normQty: dispQty, normUnit: dispUnit, rawPrice: dispPrice, lineRaw });
   });
   const subtotal = rows.reduce((s,r)=> s + (r.lineRaw||0), 0);
-  // الخصم يتفصل نسبة ومبلغ في عرض السعر بس لو النوع (من شيت المستخدمين) "موزع"
-  const eligible = isDiscountEligible();
+  // ⚠️ فرّقنا بين حاجتين هنا: "الخصم موجود أصلاً" (بيتحسب دايمًا لو موزع،
+  // بغض النظر عن الزرار) و"نوريه ولا لأ" (ده بس اللي بيتحكم فيه الزرار).
+  // لو الزرار "مخفي"، السعر النهائي المعروض لازم يفضل السعر بعد الخصم
+  // (الموزع أخد خصمه فعلًا)، بس من غير ما نوري تفاصيل إزاي اتحسب.
+  const eligible = isDiscountEligible(); // فيه خصم أصلاً لنوع الحساب ده؟
+  const showDiscount = eligible && state.discountVisible; // نوري التفاصيل ولا لأ؟
   let discountTotal = 0;
   if(eligible){
     rows.forEach(r=>{
@@ -2927,7 +2931,7 @@ async function buildQuotePDF(order){
             <th style="padding:9px 5px;text-align:right;">اسم الصنف</th>
             <th style="padding:9px 5px;text-align:center;">الكمية</th>
             <th style="padding:9px 5px;text-align:center;">سعر الوحدة</th>
-            ${eligible ? `
+            ${showDiscount ? `
             <th style="padding:9px 5px;text-align:center;">نسبة الخصم</th>
             <th style="padding:9px 5px;text-align:center;">خصم مبلغ</th>
             <th style="padding:9px 5px;text-align:center;">الصافي</th>
@@ -2942,7 +2946,7 @@ async function buildQuotePDF(order){
               groupsMap.get(r.main).push(r);
             });
             const orderedMains = orderGroups_(groupsMap);
-            const colspan = eligible ? 7 : 5;
+            const colspan = showDiscount ? 7 : 5;
             let html = '';
             let rowIndex = 0;
             let serialCounter = 0;
@@ -2956,7 +2960,7 @@ async function buildQuotePDF(order){
                 const lineAmt = it.rawPrice==null ? null : it.rawPrice*qty;
                 serialCounter++;
                 const rowBg = rowIndex%2===0?'#FFFFFF':'#F5F3EE';
-                if(eligible){
+                if(showDiscount){
                   const pct = getDiscount(it.main);
                   const discAmt = (lineAmt!=null && pct>0) ? lineAmt*(pct/100) : 0;
                   const net = lineAmt==null ? null : lineAmt - discAmt;
@@ -2971,13 +2975,19 @@ async function buildQuotePDF(order){
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">${net==null?'—':Math.round(net).toLocaleString('en-US')}</td>
                   </tr>`;
                 } else {
+                  // لو موزع بس الزرار مخفي، لسه بيتحسب خصمه فعليًا — بنوري
+                  // السعر الصافي بعد الخصم هنا، مش السعر الخام، عشان الرقم
+                  // النهائي يفضل صحيح حتى من غير ما نوري تفاصيل الخصم.
+                  const pct = getDiscount(it.main);
+                  const discAmt = (eligible && lineAmt!=null && pct>0) ? lineAmt*(pct/100) : 0;
+                  const net = lineAmt==null ? null : lineAmt - discAmt;
                   html += `
                   <tr style="background:${rowBg};">
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;color:#8A8470;">${serialCounter}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;">${esc(it.name||it.product)}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">${lineAmt==null?'—':Math.round(lineAmt).toLocaleString('en-US')}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">${net==null?'—':Math.round(net).toLocaleString('en-US')}</td>
                   </tr>`;
                 }
                 rowIndex++;
@@ -2990,7 +3000,7 @@ async function buildQuotePDF(order){
 
       <div style="display:flex;justify-content:flex-end;margin-top:18px;">
         <div style="width:280px;">
-          ${eligible && discountTotal>0 ? `
+          ${showDiscount && discountTotal>0 ? `
           <div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:13.4px;color:#20242B;">
             <span>الإجمالي قبل الخصم</span><span>${Math.round(subtotal).toLocaleString('en-US')} ج.م</span>
           </div>
@@ -3002,7 +3012,7 @@ async function buildQuotePDF(order){
           </div>
           ` : `
           <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#1F3050;color:#fff;border-radius:8px;font-size:15.7px;font-weight:800;margin-top:8px;">
-            <span>الإجمالي</span><span>${Math.round(subtotal).toLocaleString('en-US')} ج.م</span>
+            <span>الإجمالي</span><span>${Math.round(netTotal).toLocaleString('en-US')} ج.م</span>
           </div>
           `}
           ${hasMissing ? '<div style="font-size:11.8px;color:#8A5A00;margin-top:6px;text-align:left;">⚠️ فيه أصناف بدون سعر متاح مش داخلة في الإجمالي</div>' : ''}
