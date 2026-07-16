@@ -114,6 +114,17 @@ nav.tabs{
   gap:6px;
   margin-top:10px;
 }
+.discounttogglebtn{
+  background:#3B7A57 !important;
+  border-color:#3B7A57 !important;
+  color:#fff !important;
+  font-weight:800;
+}
+.discounttogglebtn.on{
+  background:var(--gold) !important;
+  border-color:var(--gold) !important;
+  color:var(--navy-deep) !important;
+}
 nav.tabs button{
   flex:1 1 auto;
   min-width:68px;
@@ -888,7 +899,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v72';
+const APP_BUILD = 'v73';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -1272,11 +1283,6 @@ function renderCartItemsHtml(cart){
         `).join('')}
       </div>
     `).join('')}
-    ${isDiscountEligible() ? `
-      <button class="chip" style="margin:8px 0;" data-act="toggle-discount">
-        ${state.discountVisible ? '🙈 اخفاء الخصم' : '👁️ إظهار الخصم'}
-      </button>
-    ` : ''}
     ${renderPriceTable(cart)}
     ${
       pricing.discountAmount>0 ? `
@@ -3439,6 +3445,10 @@ function renderHeader(){
           ? `<button data-act="disable-biometric" title="إلغاء الدخول بالبصمة من الجهاز ده">🔓 إلغاء البصمة</button>`
           : `<button data-act="enable-biometric" title="فعّل الدخول بالبصمة على الجهاز ده">👆 تفعيل البصمة</button>`
       ) : ''}
+      ${isDiscountEligible() ? `
+      <button class="discounttogglebtn ${state.discountVisible?'on':''}" data-act="toggle-discount" title="إظهار/إخفاء الخصم في كل الشاشة">
+        ${state.discountVisible ? '🙈 اخفاء الخصم' : '💰 إظهار الخصم'}
+      </button>` : ''}
       <button data-act="force-update" title="تحديث إجباري">🔄 تحديث</button>
       <button data-act="logout" title="تسجيل خروج">🚪 خروج</button>
     </nav>
