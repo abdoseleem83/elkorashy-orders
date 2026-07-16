@@ -888,7 +888,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v70';
+const APP_BUILD = 'v71';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -2027,20 +2027,14 @@ const DOOR_ACCESSORIES = [
 // بنمسك مكان شبكة الأصناف على الشاشة قبل التأكيد ونرجّعها لنفس المكان
 // بالظبط بعده، عشان يفضل شايف نفس الأصناف اللي كان بيختار منها.
 function confirmStaged(key){
-  const anchorEl = document.querySelector('.productgrid');
-  const anchorTop = anchorEl ? anchorEl.getBoundingClientRect().top : null;
-  const restoreAnchor = ()=>{
-    if(anchorTop === null) return;
-    const el2 = document.querySelector('.productgrid');
-    if(el2){
-      const delta = el2.getBoundingClientRect().top - anchorTop;
-      if(Math.abs(delta) > 1) window.scrollBy(0, delta);
-    }
-  };
-
   const s = state.staged.find(x=>x.key===key);
   if(!s) return;
   if(s.colorRequired && s.selectedColors.length===0){ showToast('اختار لون واحد على الأقل'); return; }
+  // ⚠️ كنا بنمسك مكان الشبكة كلها (.productgrid) قبل كده — بس دلوقتي التفاصيل
+  // بتتحط جوه الشبكة نفسها (مش برّاها)، فحافة الشبكة العلوية ممكن ما تتحركش
+  // خالص حتى لو المحتوى اللي إنت شايفه اتزحلق. بنمسك الصنف نفسه بدل الشبكة.
+  const productSel = `[data-act="toggle-product"][data-val="${CSS.escape(s.product)}"]`;
+  const doConfirm = ()=>{
   s.selectedColors.forEach(color=>{
     const unitType = s.units[color] || s.unitOptions[0];
     const qty = s.qtys[color]||1;
@@ -2065,12 +2059,12 @@ function confirmStaged(key){
       });
     }
   });
-  state.staged = state.staged.filter(x=>x.key!==key);
-  showToast('تمت إضافة الصنف للسلة');
-  autoSaveDraft();
-  render();
-  restoreAnchor();
-  requestAnimationFrame(restoreAnchor);
+    state.staged = state.staged.filter(x=>x.key!==key);
+    showToast('تمت إضافة الصنف للسلة');
+    autoSaveDraft();
+    render();
+  };
+  withPositionAnchor_(productSel, doConfirm);
 }
 
 function cancelStaged(key){
@@ -2078,13 +2072,16 @@ function cancelStaged(key){
   if(!s) return;
   s.cancelling = true;
   render();
+  const productSel = `[data-act="toggle-product"][data-val="${CSS.escape(s.product)}"]`;
   setTimeout(()=>{
-    if(s.extractedCartItems && s.extractedCartItems.length){
-      state.cart.push(...s.extractedCartItems);
-    }
-    state.staged = state.staged.filter(x=>x.key!==key);
-    autoSaveDraft();
-    render();
+    withPositionAnchor_(productSel, ()=>{
+      if(s.extractedCartItems && s.extractedCartItems.length){
+        state.cart.push(...s.extractedCartItems);
+      }
+      state.staged = state.staged.filter(x=>x.key!==key);
+      autoSaveDraft();
+      render();
+    });
   }, 320);
 }
 
@@ -4204,6 +4201,32 @@ function captureUiState_(){
 // الداخلية لوحدها — والتعارض ده هو اللي كان بيسبب قفزة لفوق لما تختار صنف.
 // شلنا المرساة خالص وسيبنا حاجتين بس: رجّع نفس رقم التمرير بالظبط، ورجّع
 // تمرير الشبكة الداخلية لوحدها (captureGridScroll_/restoreGridScroll_).
+// بيحفظ مكان عنصر معيّن على الشاشة (بالـselector بتاعه، مش بمرجع العنصر
+// نفسه، عشان العنصر بيتبني من جديد مع كل render) وبيرجّعه لنفس المكان
+// بعد أي تغيير — مهما كان السبب في التغيير ده (إضافة/شيل تفاصيل، تغيير
+// حالة، ...). أدق بكتير من مسك التمرير كرقم مجرد أو مسك حاوية كبيرة.
+function withPositionAnchor_(selector, mutateAndRenderFn){
+  let beforeTop = null;
+  try{
+    const el = document.querySelector(selector);
+    if(el) beforeTop = el.getBoundingClientRect().top;
+  }catch(e){}
+
+  mutateAndRenderFn();
+
+  if(beforeTop === null) return;
+  const applyFix = ()=>{
+    try{
+      const el2 = document.querySelector(selector);
+      if(!el2) return;
+      const delta = el2.getBoundingClientRect().top - beforeTop;
+      if(Math.abs(delta) > 1) window.scrollBy(0, delta);
+    }catch(e){}
+  };
+  applyFix();
+  requestAnimationFrame(applyFix);
+}
+
 function restoreUiState_(snap, sameScreen){
   if(!snap) return;
   if(sameScreen && Math.abs(currentScroll_() - snap.scrollY) > 0.5){
@@ -4626,7 +4649,12 @@ async function onActionInner(act, el){
       break;
     case 'toggle-product':{
       const name = el.getAttribute('data-val');
-      toggleStagedProduct(state.mainGroup, name);
+      // بنمسك مكان الصنف اللي دوس عليه بالظبط، وبعد ما الألوان تتفتح تحته
+      // ويحصل أي تحريك للأصناف التانية، برجّعه لنفس المكان على الشاشة —
+      // فيفضل شايفه هو والصنف اللي بعده من غير ما الشاشة "تنط".
+      withPositionAnchor_(`[data-act="toggle-product"][data-val="${CSS.escape(name)}"]`, ()=>{
+        toggleStagedProduct(state.mainGroup, name);
+      });
       break;
     }
     case 'noop-unavailable': showToast('الصنف ده غير متوفر حاليًا'); break;
