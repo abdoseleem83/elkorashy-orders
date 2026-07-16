@@ -46,7 +46,7 @@ body{
   min-height:100vh;
   font-size:12px;
 }
-#app{max-width:640px;width:100%;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;background:var(--bg);overflow-x:hidden;}
+#app{max-width:640px;width:100%;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;background:var(--bg);overflow-x:hidden;overflow-y:visible;}
 
 /* ---------- profile motif ---------- */
 .profile-bar{
@@ -78,7 +78,9 @@ header.top{
   background:linear-gradient(155deg,var(--navy) 0%,var(--navy-deep) 100%);
   color:#fff;
   padding:12px 14px 10px;
-  position:relative;
+  position:sticky;
+  top:0;
+  z-index:60;
   overflow:hidden;
 }
 header.top .brand{
@@ -876,7 +878,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v65';
+const APP_BUILD = 'v67';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -1125,6 +1127,16 @@ function availableColorsLabel(main, product){
   if(!inStock.length) return '';
   if(inStock.length === withColor.length) return 'جميع الألوان';
   return inStock.join('، ');
+}
+
+// بيرجّع أسماء الألوان اللي فيها "كمية قليلة" (عيدان بس، مفيش لفة كاملة) —
+// عشان تاج الصنف "كمية قليلة" يوضّح أنهي لون بالظبط، مش يسيب الموزع يخمّن.
+function lowStockColorsLabel(main, product){
+  const opts = colorsForProduct(main, product).filter(c => c.available !== false && c.color);
+  const names = opts
+    .filter(c => colorStockLevel(findCatalogItem(main, product, c.color)) === 'crit')
+    .map(c => c.color);
+  return names.join('، ');
 }
 
 function isColorOutOfStock(main, product, color){
@@ -3625,7 +3637,7 @@ function renderOrderView(){
               <span>${esc(n)}</span>
               ${unavailable?'<span class="unavailtag">موقوف</span>':''}
               ${(showStock && !unavailable && lvl==='out')?'<span class="stocktag out">مفيش رصيد</span>':''}
-              ${(showStock && !unavailable && lvl==='crit')?'<span class="stocktag out">كمية قليلة</span>':''}
+              ${(showStock && !unavailable && lvl==='crit')?`<span class="stocktag out">كمية قليلة: ${esc(lowStockColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
               ${(showStock && !unavailable && lvl==='ok')?`<span class="stocktag in">متوفر: ${esc(availableColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
             </div>`;
           }).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>'}
