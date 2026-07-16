@@ -119,6 +119,7 @@ nav.tabs{
   border-color:#3B7A57 !important;
   color:#fff !important;
   font-weight:800;
+  border-radius:999px !important;
 }
 .discounttogglebtn.on{
   background:var(--gold) !important;
@@ -899,7 +900,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v74';
+const APP_BUILD = 'v75';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -1284,8 +1285,14 @@ function renderCartItemsHtml(cart){
       </div>
     `).join('')}
     ${renderPriceTable(cart)}
-    ${
-      pricing.discountAmount>0 ? `
+    ${(()=>{
+      // ⚠️ البق الحقيقي: الملخص ده (الإجمالي قبل/بعد الخصم) كان بيتحكم فيه
+      // بس بشرط "فيه خصم أصلاً" (discountAmount>0) — من غير ما يتأكد إن
+      // زرار "إظهار الخصم" مفعّل. فحتى لو الزرار بيقول "مخفي"، الملخص كان
+      // بيوري تفاصيل الخصم بره الجدول نفسه. دلوقتي بيتأكد من الزرار كمان.
+      const showDiscountBreakdown = isDiscountEligible() && state.discountVisible && pricing.discountAmount>0;
+      return showDiscountBreakdown;
+    })() ? `
       <div class="carttotal">
         <span>الإجمالي قبل الخصم</span>
         <b>${Math.round(pricing.subtotal).toLocaleString('en-US')} ج.م</b>
