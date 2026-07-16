@@ -81,13 +81,19 @@ body{
 }
 
 /* ---------- header ---------- */
+/* ⚠️ position:sticky اتجرّب مرتين ومكنش بيلتصق فعليًا (سواء بسبب overflow
+   ضمني على أب، أو تعارض sticky مع أب flex زي #app). بدل ما نكمل نلاحق نفس
+   المشكلة، بقى الهيدر جوه صندوق position:fixed حقيقي — ده مش بيعتمد على
+   حساب "أقرب أب فيه تمرير" خالص، فمفيش مجال يفشل بنفس الطريقة تاني. */
+.fixedhead-outer{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:var(--navy-deep);
+}
+.fixedhead-inner{max-width:640px;margin:0 auto;}
 header.top{
   background:linear-gradient(155deg,var(--navy) 0%,var(--navy-deep) 100%);
   color:#fff;
   padding:12px 14px 10px;
-  position:sticky;
-  top:0;
-  z-index:60;
   overflow:hidden;
 }
 header.top .brand{
@@ -885,7 +891,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v68';
+const APP_BUILD = 'v69';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -3408,6 +3414,7 @@ async function exportExcel(){
 // ===== render: header =====
 function renderHeader(){
   return `
+  <div class="fixedhead-outer"><div class="fixedhead-inner">
   <header class="top">
     <div class="brand">
       <img class="logoimg" src="data:image/jpeg;base64,${LOGO_B64}" alt="القرشي">
@@ -3434,6 +3441,7 @@ function renderHeader(){
     </nav>
   </header>
   <div class="profile-bar"><span></span><span></span><span></span><span></span><span></span></div>
+  </div></div>
   <div style="text-align:center;font-size:11.2px;color:var(--muted);padding:2px;">نسخة ${APP_BUILD}${CREDIT_LINE ? ` · ${esc(CREDIT_LINE)}` : ''}</div>
   `;
 }
@@ -4220,6 +4228,16 @@ function restoreGridScroll_(val){
   if(el) el.scrollTop = val;
 }
 
+function applyFixedHeaderSpacing_(){
+  // بندفع أول عنصر جاي بعد الهيدر الثابت (سواء بانر التثبيت أو main نفسه)
+  // بارتفاع الهيدر بالظبط — عشان محتوى الصفحة ميتغطّاش تحته.
+  const head = document.querySelector('.fixedhead-outer');
+  const target = document.querySelector('#app > .installbanner') || document.querySelector('#app > main');
+  if(!target) return;
+  if(!head){ target.style.marginTop = ''; return; }
+  target.style.marginTop = head.offsetHeight + 'px';
+}
+
 function render(){
   const app = $('#app');
   const snap = captureUiState_();
@@ -4253,6 +4271,7 @@ function render(){
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
     app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCartReviewModal() + renderGlobalError();
     bindEvents();
+    applyFixedHeaderSpacing_();
 
     // نرجّع التمرير بس لو إحنا في نفس الشاشة (مش لما ننتقل من شاشة لشاشة)
     const viewKey = state.view + '|' + (state.successOrderId ? 'success' : '') + '|' + (state.adminUnlocked ? 'a' : '');
