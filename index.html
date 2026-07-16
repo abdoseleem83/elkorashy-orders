@@ -888,7 +888,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v71';
+const APP_BUILD = 'v72';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -968,6 +968,7 @@ const state = {
   stockPdfBusy:false,
   showPwRequests:false,
   showCartReview:false,
+  discountVisible:false,
   pwRequests:[],
   pwRequestsLoading:false,
   pwRequestsCount:0,
@@ -1271,6 +1272,11 @@ function renderCartItemsHtml(cart){
         `).join('')}
       </div>
     `).join('')}
+    ${isDiscountEligible() ? `
+      <button class="chip" style="margin:8px 0;" data-act="toggle-discount">
+        ${state.discountVisible ? '🙈 اخفاء الخصم' : '👁️ إظهار الخصم'}
+      </button>
+    ` : ''}
     ${renderPriceTable(cart)}
     ${
       pricing.discountAmount>0 ? `
@@ -1313,7 +1319,10 @@ function computeCartPricing(cartItems){
 // العميل يشوف نفس الجدول من غير أعمدة الخصم خالص.
 function renderPriceTable(cartItems){
   if(!cartItems.length) return '';
-  const eligible = isDiscountEligible();
+  // الخصم مابيتعرضش غير لو الحساب موزع أصلاً (isDiscountEligible)، وحتى
+  // ساعتها بس لو دوس على أيقونة "إظهار الخصم" — عشان يقدر يوري الشاشة
+  // لعميل من غير ما نسبة الخصم تبان له بالغلط.
+  const eligible = isDiscountEligible() && state.discountVisible;
   const head = eligible
     ? `<tr><th>م</th><th>بيان</th><th>الكمية</th><th>السعر</th><th>نسبة الخصم</th><th>خصم مبلغ</th><th>الصافي</th></tr>`
     : `<tr><th>م</th><th>بيان</th><th>الكمية</th><th>السعر</th></tr>`;
@@ -4689,6 +4698,7 @@ async function onActionInner(act, el){
     case 'add-other': addOtherItem(); break;
 
     case 'request-submit': requestSubmit(); break;
+    case 'toggle-discount': state.discountVisible = !state.discountVisible; render(); break;
     case 'open-cart-review': state.showCartReview=true; render(); break;
     case 'close-cart-review': state.showCartReview=false; render(); break;
     case 'cart-add-more': state.showCartReview=false; render(); break;
