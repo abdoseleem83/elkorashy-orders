@@ -37,7 +37,14 @@
   --radius:14px;
 }
 *{box-sizing:border-box;}
-html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden;}
+/* ⚠️ ده كان السبب الحقيقي إن الهيدر لسه بيتحرك مع التمرير رغم
+   position:sticky: overflow-x:hidden من غير overflow-y مكتوب — قاعدة CSS
+   بتخلي المتصفح يحط overflow-y:auto ضمنيًا، فـ body كان بيبقى صندوق تمرير
+   مستقل عن نافذة العرض الحقيقية. الـ sticky كان بيلتصق بصندوق body الداخلي
+   ده، مش بالشاشة اللي إنت شايفها فعليًا — فكان بيبان وكأنه لسه بيتحرك.
+   بنكتب overflow-y:visible صراحةً عشان نفس الشاشة (viewport) تفضل هي
+   صندوق التمرير الوحيد، وsticky يلتصق بيها هي بالظبط. */
+html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden;overflow-y:visible;}
 body{
   background:var(--bg);
   color:var(--ink);
@@ -878,7 +885,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = 'تصميم وتنفيذ: عبد الخالق سليم — 01067765483';
-const APP_BUILD = 'v67';
+const APP_BUILD = 'v68';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
