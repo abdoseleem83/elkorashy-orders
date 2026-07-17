@@ -900,7 +900,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v76';
+const APP_BUILD = 'v77';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -1011,7 +1011,7 @@ const state = {
   adminFilter:'',
   adminStatusFilter:'all',
   adminPdfGeneratingId:null,
-  adminShortagePdfGenerating:false,
+  shortageImgBusy:null,
 
   catalogLoading:true,
   catalogError:false,
@@ -2718,7 +2718,21 @@ function previewPdfBlob(q, filename){
   state.previewModal = {
     imgUrl: q.previewUrl || null,
     blob: q.blob,
-    filename: filename || 'مستند.pdf'
+    filename: filename || 'مستند.pdf',
+    kind: 'pdf'
+  };
+  render();
+}
+
+// زي previewPdfBlob بالظبط بس للصور (PNG) — بيعرض الصورة نفسها في المعاينة
+// وزرار التنزيل بيحفظها كصورة، وبيحاول يفتح شاشة المشاركة لو المتصفح بيدعمها.
+function previewImageBlob(blob, filename){
+  if(!blob) { showToast('الصورة لسه بتتجهز، حاول تاني بعد لحظة'); return; }
+  state.previewModal = {
+    imgUrl: URL.createObjectURL(blob),
+    blob: blob,
+    filename: filename || 'صورة.png',
+    kind: 'image'
   };
   render();
 }
@@ -2734,22 +2748,42 @@ function downloadPreviewModal(){
   downloadBlob(p.blob, p.filename);
 }
 
+// مشاركة صورة المعاينة عن طريق شاشة المشاركة بتاعة الموبايل (لو مدعومة)،
+// وإلا بننزّلها عادي عشان يبعتها المستخدم بنفسه من المعرض.
+async function sharePreviewModal(){
+  const p = state.previewModal;
+  if(!p || !p.blob) return;
+  try{
+    const file = new File([p.blob], p.filename, {type: p.blob.type || 'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({ files:[file], title: p.filename });
+      return;
+    }
+  }catch(e){
+    if(e && e.name === 'AbortError') return;
+  }
+  downloadBlob(p.blob, p.filename);
+  showToast('اتحملت الصورة — ابعتها من المعرض');
+}
+
 function renderPreviewModal(){
   const p = state.previewModal;
   if(!p) return '';
+  const isImage = p.kind === 'image';
   return `
   <div class="modalbg" data-act="close-preview">
     <div class="previewmodal" data-act="noop">
       <div class="previewhead">
-        <span>معاينة المستند</span>
+        <span>${isImage ? 'معاينة الصورة' : 'معاينة المستند'}</span>
         <button class="previewclose" data-act="close-preview">✕</button>
       </div>
       <div class="previewbody">
         ${p.imgUrl ? `<img src="${p.imgUrl}" style="width:100%;display:block;border-radius:6px;">`
                    : '<div class="loading">مش قادر أعرض المعاينة — نزّل الملف</div>'}
       </div>
-      <div class="previewfoot">
-        <button class="savebtn" data-act="download-preview">⬇️ تنزيل PDF</button>
+      <div class="previewfoot" style="display:flex;gap:8px;">
+        ${isImage ? `<button class="savebtn" style="flex:1;" data-act="share-preview">📤 مشاركة</button>` : ''}
+        <button class="savebtn" style="flex:1;" data-act="download-preview">${isImage ? '⬇️ تنزيل الصورة' : '⬇️ تنزيل PDF'}</button>
       </div>
     </div>
   </div>`;
@@ -3082,189 +3116,41 @@ async function buildQuotePDF(order){
   return result;
 }
 
-// ===== طلبية نواقص (PDF بدون أسعار: مسلسل / صنف / كمية) =====
-async function buildShortagePDF(order){
-  if(typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') return null;
-  if(!order || !order.items || !order.items.length){ return null; }
+// ===== طلبية نواقص (صور، مش PDF): زرارين — كرافت ونيو / كومبن واكسسوارات =====
+// كل زرار بيطلّع صورة واحدة (PNG) بدل PDF: من فوق "طلبية نواقص {اسم الفرع}"
+// والتاريخ، والأصناف باللفة (لمجموعات اللفة)، ومن تحت إجمالي كل قطاع من
+// القطاعات اللي بتتحسب باللفة (كرافت/نيو/كومبن). لو الأصناف كتير بتتقسم
+// عمودين جنب بعض بنفس الهيدر — وكأن ورقتين اتلزقوا في واحدة.
+const SHORTAGE_IMG_GROUPS_ = {
+  kraft_new: { label: 'كرافت ونيو', mains: ['قطاعات كرافت لاين', 'نيو لاين'] },
+  combin_acc: { label: 'كومبن واكسسوارات', mains: ['قطاعات PVC كومبن', 'اكسسوارات pvc اكسا'] }
+};
+// القطاعات اللي إجماليها باللفة بيتحسب في الفوتر (اكسسوارات وحداتها مختلطة
+// كرتونة/قطعة فمفيش إجمالي واحد يبقى له معنى ليها).
+const SHORTAGE_TOTAL_MAINS_ = ['قطاعات كرافت لاين', 'نيو لاين', 'قطاعات PVC كومبن'];
+const SHORTAGE_SPLIT_THRESHOLD_ = 20; // فوق كده بيتقسم عمودين
 
-  const wrap = document.createElement('div');
-  wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
-  wrap.style.width='760px';
-  wrap.style.fontFamily = "'Cairo', sans-serif";
-  wrap.style.direction='rtl';
-  wrap.style.background='#FFFFFF';
+async function buildShortageImageGroup(order, groupKey){
+  if(typeof html2canvas === 'undefined') return null;
+  const group = SHORTAGE_IMG_GROUPS_[groupKey];
+  if(!order || !order.items || !order.items.length || !group) return null;
+
+  const relevant = order.items.filter(it => group.mains.includes(it.main));
+  if(!relevant.length) return null;
 
   const date = new Date(order.ts);
   const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
 
-  const rows = order.items.map(it=>{
+  // الأصناف باللفة لمجموعات اللفة، وبباقي وحداتها الصغيرة لغير كده
+  const rows = relevant.map(it=>{
     const norm = normalizeItemToSmallUnit(it);
-    return Object.assign({}, it, { normQty: norm.qty, normUnit: norm.unitLabel });
-  });
-
-  wrap.innerHTML = `
-    <div style="padding:30px 36px;">
-      <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #C9A227;padding-bottom:18px;margin-bottom:20px;">
-        <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:60px;height:60px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
-        <div style="flex:1;">
-          <div style="font-size:22.4px;font-weight:800;color:#1F3050;">القرشي لأبواب وشبابيك الـ UPVC</div>
-          <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">وكيل AXA مصر</div>
-        </div>
-        <div style="text-align:left;">
-          <div style="font-size:16.8px;font-weight:800;color:#C9A227;">طلبية نواقص</div>
-          <div style="font-size:12.3px;color:#6E7480;">#${esc(order.id.toUpperCase())}</div>
-        </div>
-      </div>
-
-      <div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:14px;">
-        <div>
-          <div style="color:#6E7480;">الموزع</div>
-          <div style="font-weight:800;color:#1F3050;">${esc(order.distName)}</div>
-        </div>
-        <div>
-          <div style="color:#6E7480;">المنطقة</div>
-          <div style="font-weight:800;color:#1F3050;">${esc(order.distRegion||'')}</div>
-        </div>
-        <div>
-          <div style="color:#6E7480;">المخزن</div>
-          <div style="font-weight:800;color:#C9A227;">${esc(asText(order.warehouse) || '—')}</div>
-        </div>
-        <div>
-          <div style="color:#6E7480;">التاريخ</div>
-          <div style="font-weight:800;color:#1F3050;">${esc(dateStr)}</div>
-        </div>
-      </div>
-
-      <table style="width:100%;border-collapse:collapse;font-size:13.4px;">
-        <thead>
-          <tr style="background:#1F3050;color:#fff;">
-            <th style="padding:9px 6px;text-align:center;width:40px;">م</th>
-            <th style="padding:9px 6px;text-align:right;">الصنف</th>
-            <th style="padding:9px 6px;text-align:center;width:120px;">الكمية</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${(()=>{
-            const groupsMap = new Map();
-            rows.forEach(r=>{
-              if(!groupsMap.has(r.main)) groupsMap.set(r.main, []);
-              groupsMap.get(r.main).push(r);
-            });
-            const orderedMains = orderGroups_(groupsMap);
-            let html = '';
-            let rowIndex = 0;
-            let serial = 0;
-            orderedMains.forEach(main=>{
-              html += `
-                <tr>
-                  <td colspan="3" style="padding:7px 6px;background:#E4C766;color:#1F3050;font-weight:800;font-size:12.9px;">${esc(main)}</td>
-                </tr>`;
-              groupsMap.get(main).forEach(it=>{
-                serial++;
-                const bg = rowIndex%2===0?'#FFFFFF':'#F5F3EE';
-                html += `
-                <tr style="background:${bg};">
-                  <td style="padding:9px 6px;border-bottom:1px solid #E4E0D6;text-align:center;color:#8A8470;">${serial}</td>
-                  <td style="padding:9px 6px;border-bottom:1px solid #E4E0D6;">${esc(it.name||it.product)}${it.color?` <span style="color:#6E7480;">- ${esc(it.color)}</span>`:''}</td>
-                  <td style="padding:9px 6px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">${it.normQty} ${esc(it.normUnit||'')}</td>
-                </tr>`;
-                rowIndex++;
-              });
-            });
-            return html;
-          })()}
-        </tbody>
-      </table>
-
-      ${order.note ? `<div style="margin-top:18px;padding-top:12px;border-top:1px dashed #E4E0D6;font-size:12.9px;color:#6E7480;">ملاحظات: ${esc(order.note)}</div>` : ''}
-
-      <div style="margin-top:26px;padding-top:14px;border-top:1px solid #E4E0D6;text-align:center;font-size:11.2px;color:#6E7480;">
-        طلبية نواقص — بدون أسعار — القرشي لأبواب وشبابيك الـ UPVC
-        ${CREDIT_LINE ? `<div style="margin-top:5px;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
-      </div>
-    </div>
-  `;
-  document.body.appendChild(wrap);
-
-  let result = null;
-  try{
-    const canvas = await withTimeout(
-      html2canvas(wrap, {scale: pdfScale_(rows.length), backgroundColor:'#ffffff', useCORS:true, allowTaint:true}),
-      20000, 'shortage-pdf'
-    );
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p','mm','a4');
-    const imgData = canvas.toDataURL('image/png');
-    const imgWidth = 210;
-    const pageHeight = 297;
-    const imgHeight = canvas.height * imgWidth / canvas.width;
-    let heightLeft = imgHeight;
-    let position = 0;
-    doc.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
-    heightLeft -= pageHeight;
-    while(heightLeft > 0){
-      position = heightLeft - imgHeight;
-      doc.addPage();
-      doc.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
-      heightLeft -= pageHeight;
-    }
-    const imgBlob = await canvasToPngBlob_(canvas);
-    result = { blob: doc.output('blob'), previewUrl: imgData, imgBlob: imgBlob };
-  }catch(e){ result = null; }
-  try{ document.body.removeChild(wrap); }catch(e){}
-  return result;
-}
-
-// ===== PDF نواقص شامل (من شاشة متابعة الطلبات) =====
-// بيجمّع كل الأصناف من الطلبات الظاهرة حاليًا في المتابعة (نفس فلتر البحث/الحالة)،
-// بيحوّل أصناف مجموعات اللفة (كومبن/كرافت لاين/نيو لاين/شاتر) من العود للفة —
-// زي عرض السعر بالظبط — وبيحط كل قطاع في صفحة لوحده.
-async function generateAdminShortagePDF(){
-  const orders = filteredAdminOrders_();
-  if(!orders.length){ showToast('مفيش طلبات مطابقة حاليًا لتجهيز نواقص منها'); return; }
-  state.adminShortagePdfGenerating = true; render();
-  try{
-    const result = await buildAdminShortagePDF(orders);
-    if(result && result.blob){
-      previewPdfBlob(result, 'طلبية_نواقص_شامل.pdf');
-    } else {
-      showToast('حصل خطأ في تجهيز الملف، حاول تاني');
-    }
-  }catch(e){
-    console.error('generateAdminShortagePDF failed:', e);
-    showToast('حصل خطأ في تجهيز الملف: ' + (e && e.message ? e.message : e));
-  }
-  state.adminShortagePdfGenerating = false;
-  render();
-}
-
-async function buildAdminShortagePDF(orders){
-  if(typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') return null;
-  if(!orders || !orders.length) return null;
-
-  // 1) نجمع كمية كل صنف (بالوحدة الصغيرة: عود/قطعة) من كل الطلبات مع بعض
-  const map = new Map();
-  orders.forEach(o=>{
-    (o.items||[]).forEach(it=>{
-      const norm = normalizeItemToSmallUnit(it);
-      const key = it.main + '|' + it.product + '|' + (it.color||'');
-      if(!map.has(key)){
-        map.set(key, { main: it.main, product: it.product, color: it.color, name: it.name, qty: 0, unitLabel: norm.unitLabel });
-      }
-      map.get(key).qty += norm.qty;
-    });
-  });
-  if(!map.size) return null;
-
-  // 2) أصناف مجموعات اللفة بتتحوّل من العود للفة (بالكسر لو مش لفة كاملة)
-  const rows = [...map.values()].map(r=>{
-    if(ROLL_GROUPS_.includes(r.main)){
-      const cat = findCatalogItem(r.main, r.product, r.color);
+    if(ROLL_GROUPS_.includes(it.main)){
+      const cat = findCatalogItem(it.main, it.product, it.color);
       const content = Number(cat && cat.unit) || 1;
-      const rolls = Math.round((r.qty/content)*10)/10;
-      return Object.assign({}, r, { dispQty: rolls, dispUnit: 'لفة' });
+      const rolls = Math.round((norm.qty/content)*10)/10;
+      return Object.assign({}, it, { dispQty: rolls, dispUnit: 'لفة' });
     }
-    return Object.assign({}, r, { dispQty: r.qty, dispUnit: r.unitLabel });
+    return Object.assign({}, it, { dispQty: norm.qty, dispUnit: norm.unitLabel });
   });
 
   const groupsMap = new Map();
@@ -3272,104 +3158,141 @@ async function buildAdminShortagePDF(orders){
     if(!groupsMap.has(r.main)) groupsMap.set(r.main, []);
     groupsMap.get(r.main).push(r);
   });
-  const orderedMains = orderGroups_(groupsMap);
-  if(!orderedMains.length) return null;
+  const orderedMains = group.mains.filter(m=>groupsMap.has(m));
 
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('p','mm','a4');
-  const dateStr = new Date().toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
-  let previewUrl = null;
-  let pagesAdded = 0;
+  // صف واحد مسطّح لكل الأصناف، مع علم يوضّح بداية قطاع جديد (لعرض هيدر فرعي)
+  const flat = [];
+  orderedMains.forEach(main=>{
+    groupsMap.get(main).forEach((it,i)=> flat.push(Object.assign({}, it, { sectionStart: i===0, sectionLabel: main })));
+  });
 
-  // كل قطاع بيتحط في صفحة (أو أكتر لو الجدول طويل) لوحده — بنولّد صورة/كانفاس
-  // منفصل لكل قطاع، وبعدين نلزّقهم واحد ورا التاني في نفس ملف الـ PDF.
-  for(let gi=0; gi<orderedMains.length; gi++){
-    const main = orderedMains[gi];
-    const items = groupsMap.get(main).slice().sort((a,b)=> String(a.name||a.product).localeCompare(String(b.name||b.product),'ar'));
+  // إجمالي كل قطاع من القطاعات المحسوبة باللفة (كرافت/نيو/كومبن)
+  const totals = orderedMains
+    .filter(m=>SHORTAGE_TOTAL_MAINS_.includes(m))
+    .map(m=>{
+      const sum = groupsMap.get(m).reduce((a,it)=>a + (Number(it.dispQty)||0), 0);
+      return { main: m, total: Math.round(sum*10)/10 };
+    });
 
-    const wrap = document.createElement('div');
-    wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
-    wrap.style.width='760px';
-    wrap.style.fontFamily = "'Cairo', sans-serif";
-    wrap.style.direction='rtl';
-    wrap.style.background='#FFFFFF';
+  const split = flat.length > SHORTAGE_SPLIT_THRESHOLD_;
+  const half = Math.ceil(flat.length/2);
+  const colA = split ? flat.slice(0, half) : flat;
+  const colB = split ? flat.slice(half) : [];
 
-    wrap.innerHTML = `
-      <div style="padding:28px 34px;">
-        <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #C9A227;padding-bottom:14px;margin-bottom:16px;">
-          <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
-          <div style="flex:1;">
-            <div style="font-size:21.3px;font-weight:800;color:#1F3050;">طلبية نواقص</div>
-            <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">القرشي لأبواب وشبابيك الـ UPVC</div>
-          </div>
-          <div style="text-align:left;">
-            <div style="font-size:12.3px;color:#6E7480;">${esc(dateStr)}</div>
-            <div style="font-size:12.3px;color:#6E7480;">صفحة ${gi+1} / ${orderedMains.length}</div>
-          </div>
-        </div>
-
-        <div style="background:#E4C766;color:#1F3050;font-weight:800;font-size:15.7px;padding:8px 12px;border-radius:8px 8px 0 0;">
-          ${esc(main)}
-        </div>
-
-        <table style="width:100%;border-collapse:collapse;font-size:14.6px;">
-          <thead>
-            <tr style="background:#1F3050;color:#fff;">
-              <th style="padding:9px 6px;text-align:center;width:44px;">م</th>
-              <th style="padding:9px 6px;text-align:right;">الصنف</th>
-              <th style="padding:9px 6px;text-align:center;width:130px;">الكمية</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${items.map((it,i)=>{
-              const bg = i%2===0 ? '#FFFFFF' : '#F5F3EE';
-              return `
-              <tr style="background:${bg};">
-                <td style="padding:10px 6px;border-bottom:1px solid #E4E0D6;text-align:center;color:#8A8470;">${i+1}</td>
-                <td style="padding:10px 6px;border-bottom:1px solid #E4E0D6;">
-                  ${esc(it.name || it.product)}${it.color?` <span style="color:#6E7480;">- ${esc(it.color)}</span>`:''}
-                </td>
-                <td style="padding:10px 6px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">
-                  ${it.dispQty} ${esc(it.dispUnit||'')}
-                </td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-        ${CREDIT_LINE ? `<div style="margin-top:14px;text-align:center;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
-      </div>
-    `;
-    document.body.appendChild(wrap);
-
-    try{
-      const canvas = await withTimeout(
-        html2canvas(wrap, {scale: pdfScale_(items.length), backgroundColor:'#ffffff', useCORS:true, allowTaint:true}),
-        20000, 'admin-shortage-pdf-' + gi
-      );
-      const imgData = canvas.toDataURL('image/png');
-      if(!previewUrl) previewUrl = imgData;
-      const imgWidth = 210;
-      const pageHeight = 297;
-      const imgHeight = canvas.height * imgWidth / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-      if(pagesAdded>0) doc.addPage();
-      doc.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
-      pagesAdded++;
-      heightLeft -= pageHeight;
-      while(heightLeft > 0){
-        position = heightLeft - imgHeight;
-        doc.addPage();
-        doc.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
-        heightLeft -= pageHeight;
-        pagesAdded++;
+  function rowsHTML(list, startIndex){
+    let html = '';
+    list.forEach((it,i)=>{
+      if(it.sectionStart && SHORTAGE_IMG_GROUPS_[groupKey].mains.length>1){
+        html += `<tr><td colspan="3" style="padding:6px 6px;background:#E4C766;color:#1F3050;font-weight:800;font-size:12.3px;">${esc(it.sectionLabel)}</td></tr>`;
       }
-    }catch(e){ console.error('buildAdminShortagePDF group failed:', e); }
-    try{ document.body.removeChild(wrap); }catch(e){}
+      const bg = i%2===0 ? '#FFFFFF' : '#F5F3EE';
+      html += `
+      <tr style="background:${bg};">
+        <td style="padding:8px 6px;border-bottom:1px solid #E4E0D6;text-align:center;color:#8A8470;">${startIndex+i+1}</td>
+        <td style="padding:8px 6px;border-bottom:1px solid #E4E0D6;">
+          ${esc(it.name || it.product)}${it.color?` <span style="color:#6E7480;">- ${esc(it.color)}</span>`:''}
+        </td>
+        <td style="padding:8px 6px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">
+          ${it.dispQty} ${esc(it.dispUnit||'')}
+        </td>
+      </tr>`;
+    });
+    return html;
   }
 
-  if(!pagesAdded) return null;
-  return { blob: doc.output('blob'), previewUrl };
+  function tableHTML(list, startIndex){
+    return `
+      <table style="width:100%;border-collapse:collapse;font-size:13.4px;">
+        <thead>
+          <tr style="background:#1F3050;color:#fff;">
+            <th style="padding:8px 6px;text-align:center;width:36px;">م</th>
+            <th style="padding:8px 6px;text-align:right;">الصنف</th>
+            <th style="padding:8px 6px;text-align:center;width:100px;">الكمية</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHTML(list, startIndex)}</tbody>
+      </table>`;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
+  wrap.style.width = split ? '1180px' : '760px';
+  wrap.style.fontFamily = "'Cairo', sans-serif";
+  wrap.style.direction='rtl';
+  wrap.style.background='#FFFFFF';
+
+  wrap.innerHTML = `
+    <div style="padding:28px 34px;">
+      <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #C9A227;padding-bottom:14px;margin-bottom:16px;">
+        <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
+        <div style="flex:1;">
+          <div style="font-size:21.3px;font-weight:800;color:#1F3050;">طلبية نواقص ${esc(asText(order.distName))}</div>
+          <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">${esc(group.label)}</div>
+        </div>
+        <div style="text-align:left;">
+          <div style="font-size:14.6px;font-weight:800;color:#C9A227;">#${esc(String(order.id).toUpperCase())}</div>
+          <div style="font-size:12.3px;color:#6E7480;">${esc(dateStr)}</div>
+        </div>
+      </div>
+
+      ${split ? `
+        <div style="display:flex;gap:28px;">
+          <div style="flex:1;">${tableHTML(colA, 0)}</div>
+          <div style="flex:1;">${tableHTML(colB, colA.length)}</div>
+        </div>
+      ` : tableHTML(colA, 0)}
+
+      ${totals.length ? `
+        <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #E4E0D6;display:flex;gap:22px;flex-wrap:wrap;">
+          ${totals.map(t=>`<div style="font-size:13.4px;"><span style="color:#6E7480;">إجمالي ${esc(t.main)}: </span><b style="color:#1F3050;">${t.total} لفة</b></div>`).join('')}
+        </div>
+      ` : ''}
+      ${CREDIT_LINE ? `<div style="margin-top:14px;text-align:center;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
+    </div>
+  `;
+  document.body.appendChild(wrap);
+
+  let blob = null;
+  try{
+    const canvas = await withTimeout(
+      html2canvas(wrap, {scale: pdfScale_(flat.length), backgroundColor:'#ffffff', useCORS:true, allowTaint:true}),
+      20000, 'shortage-img-' + groupKey
+    );
+    blob = await canvasToPngBlob_(canvas);
+  }catch(e){ console.error('buildShortageImageGroup failed:', e); }
+  try{ document.body.removeChild(wrap); }catch(e){}
+  return blob;
+}
+
+// بيدوّر على الطلب بمعرّفه (لو موجود) وإلا بيرجع لآخر طلب اتبعت (state.lastOrder) —
+// عشان نفس الزرارين يشتغلوا هنا وفي شاشة "تم إرسال الطلب".
+function findOrderForShortage_(id){
+  if(id){
+    const o = state.orders.find(o=>o.id===id) || state.myOrders.find(o=>o.id===id);
+    if(o) return o;
+  }
+  return state.lastOrder;
+}
+
+async function handleShortageImage(id, groupKey){
+  const order = findOrderForShortage_(id);
+  if(!order){ showToast('مفيش طلب'); return; }
+  const busyKey = id || 'last';
+  state.shortageImgBusy = busyKey + '|' + groupKey; render();
+  try{
+    const blob = await buildShortageImageGroup(order, groupKey);
+    if(blob){
+      const label = SHORTAGE_IMG_GROUPS_[groupKey].label;
+      previewImageBlob(blob, 'نواقص_' + label.replace(/\s+/g,'_') + '_' + String(order.id).toUpperCase() + '.png');
+    } else {
+      showToast('مفيش أصناف من "' + SHORTAGE_IMG_GROUPS_[groupKey].label + '" في الطلب ده');
+    }
+  }catch(e){
+    console.error('handleShortageImage failed:', e);
+    showToast('حصل خطأ في تجهيز الصورة: ' + (e && e.message ? e.message : e));
+  }
+  state.shortageImgBusy = null;
+  render();
 }
 
 // ===== صور المخزن =====
@@ -3764,6 +3687,8 @@ function renderOrderView(){
               <button class="iconbtn" data-act="share-quote-plain">📤<span>واتساب (صورة)</span></button>
               <button class="iconbtn" data-act="download-quote-plain">⬇️<span>تنزيل PDF</span></button>
               <button class="iconbtn" data-act="preview-quote-plain">👁️<span>معاينة</span></button>
+              <button class="iconbtn" data-act="shortage-img" data-group="kraft_new" ${state.shortageImgBusy==='last|kraft_new'?'disabled':''}>🖼️<span>${state.shortageImgBusy==='last|kraft_new'?'جارٍ...':'نواقص كرافت ونيو'}</span></button>
+              <button class="iconbtn" data-act="shortage-img" data-group="combin_acc" ${state.shortageImgBusy==='last|combin_acc'?'disabled':''}>🖼️<span>${state.shortageImgBusy==='last|combin_acc'?'جارٍ...':'نواقص كومبن واكسسوارات'}</span></button>
             </div>
           </div>
         ` : ''}
@@ -4190,6 +4115,12 @@ function renderAdminView(){
           <button class="delbtn pdf" data-act="download-order-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
             ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : '⬇️ تصدير PDF'}
           </button>
+          <button class="delbtn pdf" data-act="shortage-img" data-id="${esc(o.id)}" data-group="kraft_new" ${state.shortageImgBusy===(o.id+'|kraft_new')?'disabled':''}>
+            ${state.shortageImgBusy===(o.id+'|kraft_new') ? '⏳ جارٍ...' : '🖼️ نواقص كرافت ونيو'}
+          </button>
+          <button class="delbtn pdf" data-act="shortage-img" data-id="${esc(o.id)}" data-group="combin_acc" ${state.shortageImgBusy===(o.id+'|combin_acc')?'disabled':''}>
+            ${state.shortageImgBusy===(o.id+'|combin_acc') ? '⏳ جارٍ...' : '🖼️ نواقص كومبن واكسسوارات'}
+          </button>
         </div>
         <button class="delbtn" data-act="delete-order" data-id="${esc(o.id)}">🗑 حذف الطلب</button>
       </div>`;
@@ -4201,9 +4132,6 @@ function renderAdminView(){
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
       <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
       <button class="exportbtn" data-act="export-excel">تصدير Excel</button>
-      <button class="exportbtn" data-act="admin-shortage-pdf" ${state.adminShortagePdfGenerating?'disabled':''}>
-        ${state.adminShortagePdfGenerating ? '⏳ جارٍ...' : '📄 PDF نواقص'}
-      </button>
       <button class="exportbtn" data-act="show-stock">📊 الأرصدة</button>
       <button class="exportbtn" data-act="show-pwreq">🔑 طلبات الباسورد${state.pwRequestsCount ? ' ('+state.pwRequestsCount+')' : ''}</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُسلَّم</button>
@@ -4925,6 +4853,10 @@ async function onActionInner(act, el){
     case 'preview-shortage': previewPdfBlob(state.shortagePdf, 'طلبية_نواقص_' + (state.successOrderId||'order') + '.pdf'); break;
     case 'close-preview': closePreviewModal(); break;
     case 'download-preview': downloadPreviewModal(); break;
+    case 'share-preview': sharePreviewModal(); break;
+    case 'shortage-img':
+      handleShortageImage(el.getAttribute('data-id') || null, el.getAttribute('data-group'));
+      break;
     case 'make-docs': if(state.lastOrder) generateBothQuotes(state.lastOrder); break;
     case 'clear-save-error': state.saveError=''; render(); break;
     case 'notify-dist': notifyDistributorManually(el.getAttribute('data-id')); break;
@@ -4985,9 +4917,6 @@ async function onActionInner(act, el){
       if(!state.adminPdfGeneratingId) handleOrderPDF(id, 'download');
       break;
     }
-    case 'admin-shortage-pdf':
-      if(!state.adminShortagePdfGenerating) generateAdminShortagePDF();
-      break;
     case 'delete-delivered':
       if(confirm('هيتم حذف كل الطلبات "تم التسليم" نهائيًا. متأكد؟')) deleteDeliveredOrders();
       break;
