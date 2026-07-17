@@ -1011,6 +1011,7 @@ const state = {
   adminFilter:'',
   adminStatusFilter:'all',
   adminPdfGeneratingId:null,
+  adminShortagePdfGenerating:false,
 
   catalogLoading:true,
   catalogError:false,
@@ -3214,6 +3215,163 @@ async function buildShortagePDF(order){
   return result;
 }
 
+// ===== PDF نواقص شامل (من شاشة متابعة الطلبات) =====
+// بيجمّع كل الأصناف من الطلبات الظاهرة حاليًا في المتابعة (نفس فلتر البحث/الحالة)،
+// بيحوّل أصناف مجموعات اللفة (كومبن/كرافت لاين/نيو لاين/شاتر) من العود للفة —
+// زي عرض السعر بالظبط — وبيحط كل قطاع في صفحة لوحده.
+async function generateAdminShortagePDF(){
+  const orders = filteredAdminOrders_();
+  if(!orders.length){ showToast('مفيش طلبات مطابقة حاليًا لتجهيز نواقص منها'); return; }
+  state.adminShortagePdfGenerating = true; render();
+  try{
+    const result = await buildAdminShortagePDF(orders);
+    if(result && result.blob){
+      previewPdfBlob(result, 'طلبية_نواقص_شامل.pdf');
+    } else {
+      showToast('حصل خطأ في تجهيز الملف، حاول تاني');
+    }
+  }catch(e){
+    console.error('generateAdminShortagePDF failed:', e);
+    showToast('حصل خطأ في تجهيز الملف: ' + (e && e.message ? e.message : e));
+  }
+  state.adminShortagePdfGenerating = false;
+  render();
+}
+
+async function buildAdminShortagePDF(orders){
+  if(typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') return null;
+  if(!orders || !orders.length) return null;
+
+  // 1) نجمع كمية كل صنف (بالوحدة الصغيرة: عود/قطعة) من كل الطلبات مع بعض
+  const map = new Map();
+  orders.forEach(o=>{
+    (o.items||[]).forEach(it=>{
+      const norm = normalizeItemToSmallUnit(it);
+      const key = it.main + '|' + it.product + '|' + (it.color||'');
+      if(!map.has(key)){
+        map.set(key, { main: it.main, product: it.product, color: it.color, name: it.name, qty: 0, unitLabel: norm.unitLabel });
+      }
+      map.get(key).qty += norm.qty;
+    });
+  });
+  if(!map.size) return null;
+
+  // 2) أصناف مجموعات اللفة بتتحوّل من العود للفة (بالكسر لو مش لفة كاملة)
+  const rows = [...map.values()].map(r=>{
+    if(ROLL_GROUPS_.includes(r.main)){
+      const cat = findCatalogItem(r.main, r.product, r.color);
+      const content = Number(cat && cat.unit) || 1;
+      const rolls = Math.round((r.qty/content)*10)/10;
+      return Object.assign({}, r, { dispQty: rolls, dispUnit: 'لفة' });
+    }
+    return Object.assign({}, r, { dispQty: r.qty, dispUnit: r.unitLabel });
+  });
+
+  const groupsMap = new Map();
+  rows.forEach(r=>{
+    if(!groupsMap.has(r.main)) groupsMap.set(r.main, []);
+    groupsMap.get(r.main).push(r);
+  });
+  const orderedMains = orderGroups_(groupsMap);
+  if(!orderedMains.length) return null;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p','mm','a4');
+  const dateStr = new Date().toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
+  let previewUrl = null;
+  let pagesAdded = 0;
+
+  // كل قطاع بيتحط في صفحة (أو أكتر لو الجدول طويل) لوحده — بنولّد صورة/كانفاس
+  // منفصل لكل قطاع، وبعدين نلزّقهم واحد ورا التاني في نفس ملف الـ PDF.
+  for(let gi=0; gi<orderedMains.length; gi++){
+    const main = orderedMains[gi];
+    const items = groupsMap.get(main).slice().sort((a,b)=> String(a.name||a.product).localeCompare(String(b.name||b.product),'ar'));
+
+    const wrap = document.createElement('div');
+    wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
+    wrap.style.width='760px';
+    wrap.style.fontFamily = "'Cairo', sans-serif";
+    wrap.style.direction='rtl';
+    wrap.style.background='#FFFFFF';
+
+    wrap.innerHTML = `
+      <div style="padding:28px 34px;">
+        <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #C9A227;padding-bottom:14px;margin-bottom:16px;">
+          <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
+          <div style="flex:1;">
+            <div style="font-size:21.3px;font-weight:800;color:#1F3050;">طلبية نواقص</div>
+            <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">القرشي لأبواب وشبابيك الـ UPVC</div>
+          </div>
+          <div style="text-align:left;">
+            <div style="font-size:12.3px;color:#6E7480;">${esc(dateStr)}</div>
+            <div style="font-size:12.3px;color:#6E7480;">صفحة ${gi+1} / ${orderedMains.length}</div>
+          </div>
+        </div>
+
+        <div style="background:#E4C766;color:#1F3050;font-weight:800;font-size:15.7px;padding:8px 12px;border-radius:8px 8px 0 0;">
+          ${esc(main)}
+        </div>
+
+        <table style="width:100%;border-collapse:collapse;font-size:14.6px;">
+          <thead>
+            <tr style="background:#1F3050;color:#fff;">
+              <th style="padding:9px 6px;text-align:center;width:44px;">م</th>
+              <th style="padding:9px 6px;text-align:right;">الصنف</th>
+              <th style="padding:9px 6px;text-align:center;width:130px;">الكمية</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map((it,i)=>{
+              const bg = i%2===0 ? '#FFFFFF' : '#F5F3EE';
+              return `
+              <tr style="background:${bg};">
+                <td style="padding:10px 6px;border-bottom:1px solid #E4E0D6;text-align:center;color:#8A8470;">${i+1}</td>
+                <td style="padding:10px 6px;border-bottom:1px solid #E4E0D6;">
+                  ${esc(it.name || it.product)}${it.color?` <span style="color:#6E7480;">- ${esc(it.color)}</span>`:''}
+                </td>
+                <td style="padding:10px 6px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">
+                  ${it.dispQty} ${esc(it.dispUnit||'')}
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+        ${CREDIT_LINE ? `<div style="margin-top:14px;text-align:center;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
+      </div>
+    `;
+    document.body.appendChild(wrap);
+
+    try{
+      const canvas = await withTimeout(
+        html2canvas(wrap, {scale: pdfScale_(items.length), backgroundColor:'#ffffff', useCORS:true, allowTaint:true}),
+        20000, 'admin-shortage-pdf-' + gi
+      );
+      const imgData = canvas.toDataURL('image/png');
+      if(!previewUrl) previewUrl = imgData;
+      const imgWidth = 210;
+      const pageHeight = 297;
+      const imgHeight = canvas.height * imgWidth / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+      if(pagesAdded>0) doc.addPage();
+      doc.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
+      pagesAdded++;
+      heightLeft -= pageHeight;
+      while(heightLeft > 0){
+        position = heightLeft - imgHeight;
+        doc.addPage();
+        doc.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
+        heightLeft -= pageHeight;
+        pagesAdded++;
+      }
+    }catch(e){ console.error('buildAdminShortagePDF group failed:', e); }
+    try{ document.body.removeChild(wrap); }catch(e){}
+  }
+
+  if(!pagesAdded) return null;
+  return { blob: doc.output('blob'), previewUrl };
+}
+
 // ===== صور المخزن =====
 // صورة لكل مجموعة رئيسية لوحدها (عشان متبقاش صفحة طويلة)، من غير أي أسعار —
 // فيها: مسلسل / اسم العميل / الصنف / الكمية. توجّهها للمخزن على طول.
@@ -3970,6 +4128,18 @@ function renderMyOrdersView(){
 }
 
 // ===== render: admin view =====
+// نفس منطق الفلترة اللي المتابعة بتعرضه (بحث بالاسم + حالة الطلب)، بنستخدمه
+// هنا وكمان في تجهيز PDF النواقص عشان الأصناف اللي بتتجمّع تكون مطابقة
+// بالظبط لللي ظاهر على الشاشة في لحظة الضغط على الزرار.
+function filteredAdminOrders_(){
+  const q = state.adminFilter.trim().toLowerCase();
+  return state.orders.filter(o=>{
+    if(state.adminStatusFilter!=='all' && o.status!==state.adminStatusFilter) return false;
+    if(q && !(o.distName||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
 function renderAdminView(){
   if(!state.adminUnlocked){
     return `
@@ -3986,12 +4156,7 @@ function renderAdminView(){
   }
   if(state.ordersLoading){ return `<main><div class="loading">جارٍ تحميل الطلبات...</div></main>`; }
 
-  const q = state.adminFilter.trim().toLowerCase();
-  let orders = state.orders.filter(o=>{
-    if(state.adminStatusFilter!=='all' && o.status!==state.adminStatusFilter) return false;
-    if(q && !(o.distName||'').toLowerCase().includes(q)) return false;
-    return true;
-  });
+  let orders = filteredAdminOrders_();
 
   const list = orders.length===0 ? `
     <div class="emptystate"><div class="ic">📭</div><div>مفيش طلبات مطابقة حاليًا</div></div>` : orders.map(o=>{
@@ -4036,6 +4201,9 @@ function renderAdminView(){
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
       <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
       <button class="exportbtn" data-act="export-excel">تصدير Excel</button>
+      <button class="exportbtn" data-act="admin-shortage-pdf" ${state.adminShortagePdfGenerating?'disabled':''}>
+        ${state.adminShortagePdfGenerating ? '⏳ جارٍ...' : '📄 PDF نواقص'}
+      </button>
       <button class="exportbtn" data-act="show-stock">📊 الأرصدة</button>
       <button class="exportbtn" data-act="show-pwreq">🔑 طلبات الباسورد${state.pwRequestsCount ? ' ('+state.pwRequestsCount+')' : ''}</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُسلَّم</button>
@@ -4817,6 +4985,9 @@ async function onActionInner(act, el){
       if(!state.adminPdfGeneratingId) handleOrderPDF(id, 'download');
       break;
     }
+    case 'admin-shortage-pdf':
+      if(!state.adminShortagePdfGenerating) generateAdminShortagePDF();
+      break;
     case 'delete-delivered':
       if(confirm('هيتم حذف كل الطلبات "تم التسليم" نهائيًا. متأكد؟')) deleteDeliveredOrders();
       break;
