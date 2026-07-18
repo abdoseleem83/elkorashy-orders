@@ -900,7 +900,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v79';
+const APP_BUILD = 'v80';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -1741,6 +1741,7 @@ async function unlockWithBiometric(){
       state.currentUser = u;
       try{ sessionStorage.setItem(LS_USER_KEY, JSON.stringify(u)); }catch(e){}
       state.showBiometricGate = false;
+      checkForResumableDraft(); // 🛒 لو في مسودة محفوظة، نعرض إشعار بعد فتح البصمة
     }
   }catch(e){
     showToast('تعذّر التحقق بالبصمة، جرّب تاني أو ادخل بكلمة المرور');
@@ -1770,6 +1771,7 @@ async function submitLogin(){
     if(!state.distPhone) state.distPhone = asText(data.distPhone);
     saveProfile();
     state.authPassword='';
+    checkForResumableDraft(); // 🛒 لو في مسودة محفوظة، نعرض إشعار بعد الدخول مباشرة
     render();
   }catch(e){
     state.authLoading = false;
@@ -2953,7 +2955,7 @@ async function buildQuotePDF(order){
         </div>
       </div>
 
-      <div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:16px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:14px;">
         <div>
           <div style="color:#6E7480;">الموزع</div>
           <div style="font-weight:800;color:#1F3050;">${esc(order.distName)}</div>
@@ -2972,7 +2974,7 @@ async function buildQuotePDF(order){
         </div>
       </div>
 
-      <table style="width:100%;border-collapse:collapse;font-size:16px;font-weight:800;">
+      <table style="width:100%;border-collapse:collapse;font-size:12.3px;">
         <thead>
           <tr style="background:#1F3050;color:#fff;">
             <th style="padding:9px 5px;text-align:center;width:26px;">م</th>
@@ -3001,7 +3003,7 @@ async function buildQuotePDF(order){
             orderedMains.forEach(main=>{
               html += `
                 <tr>
-                  <td colspan="${colspan}" style="padding:7px 6px;background:#E4C766;color:#1F3050;font-weight:800;font-size:16px;">${esc(main)}</td>
+                  <td colspan="${colspan}" style="padding:7px 6px;background:#E4C766;color:#1F3050;font-weight:800;font-size:12.3px;">${esc(main)}</td>
                 </tr>`;
               groupsMap.get(main).forEach(it=>{
                 const qty = it.normQty;
@@ -3049,17 +3051,17 @@ async function buildQuotePDF(order){
       <div style="display:flex;justify-content:flex-end;margin-top:18px;">
         <div style="width:280px;">
           ${showDiscount && discountTotal>0 ? `
-          <div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:16px;font-weight:800;color:#20242B;">
+          <div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:13.4px;color:#20242B;">
             <span>الإجمالي قبل الخصم</span><span>${Math.round(subtotal).toLocaleString('en-US')} ج.م</span>
           </div>
-          <div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:16px;color:#C9A227;font-weight:800;">
+          <div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:13.4px;color:#C9A227;font-weight:700;">
             <span>الخصم</span><span>- ${Math.round(discountTotal).toLocaleString('en-US')} ج.م</span>
           </div>
-          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#1F3050;color:#fff;border-radius:8px;font-size:17px;font-weight:800;margin-top:4px;">
+          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#1F3050;color:#fff;border-radius:8px;font-size:15.7px;font-weight:800;margin-top:4px;">
             <span>الإجمالي بعد الخصم</span><span>${Math.round(netTotal).toLocaleString('en-US')} ج.م</span>
           </div>
           ` : `
-          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#1F3050;color:#fff;border-radius:8px;font-size:17px;font-weight:800;margin-top:8px;">
+          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#1F3050;color:#fff;border-radius:8px;font-size:15.7px;font-weight:800;margin-top:8px;">
             <span>الإجمالي</span><span>${Math.round(netTotal).toLocaleString('en-US')} ج.م</span>
           </div>
           `}
@@ -3070,13 +3072,13 @@ async function buildQuotePDF(order){
       ${rollSummary.length ? `
       <div style="margin-top:14px;display:flex;justify-content:flex-end;">
         <div style="width:280px;background:#F5F3EE;border-radius:8px;padding:10px 14px;">
-          <div style="font-size:16px;font-weight:800;color:#1F3050;margin-bottom:6px;">عدد اللفات حسب القطاع</div>
+          <div style="font-size:12.3px;font-weight:800;color:#1F3050;margin-bottom:6px;">عدد اللفات حسب القطاع</div>
           ${rollSummary.map(r=>{
             const parts = [];
             if(r.rolls>0) parts.push((r.rolls % 1 === 0 ? r.rolls : r.rolls.toFixed(1)) + ' لفة');
             if(r.rods>0) parts.push((r.rods % 1 === 0 ? r.rods : r.rods.toFixed(1)) + ' عود');
             return `
-            <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:800;color:#20242B;padding:3px 0;">
+            <div style="display:flex;justify-content:space-between;font-size:12.3px;color:#20242B;padding:3px 0;">
               <span>${esc(r.sector)}</span><span style="font-weight:700;">${esc(parts.join(' + '))}</span>
             </div>`;
           }).join('')}
@@ -3209,7 +3211,7 @@ async function buildShortageImageGroup(order, groupKey){
     let html = '';
     list.forEach((it,i)=>{
       if(it.sectionStart && SHORTAGE_IMG_GROUPS_[groupKey].mains.length>1){
-        html += `<tr><td colspan="3" style="padding:6px 6px;background:#E4C766;color:#1F3050;font-weight:800;font-size:16px;">${esc(it.sectionLabel)}</td></tr>`;
+        html += `<tr><td colspan="3" style="padding:6px 6px;background:#E4C766;color:#1F3050;font-weight:800;font-size:12.3px;">${esc(it.sectionLabel)}</td></tr>`;
       }
       const bg = i%2===0 ? '#FFFFFF' : '#F5F3EE';
       html += `
@@ -3228,7 +3230,7 @@ async function buildShortageImageGroup(order, groupKey){
 
   function tableHTML(list, startIndex){
     return `
-      <table style="width:100%;border-collapse:collapse;font-size:16px;font-weight:800;">
+      <table style="width:100%;border-collapse:collapse;font-size:13.4px;">
         <thead>
           <tr style="background:#1F3050;color:#fff;">
             <th style="padding:8px 6px;text-align:center;width:36px;">م</th>
@@ -3270,7 +3272,7 @@ async function buildShortageImageGroup(order, groupKey){
 
       ${totals.length ? `
         <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #E4E0D6;display:flex;gap:22px;flex-wrap:wrap;">
-          ${totals.map(t=>`<div style="font-size:16px;font-weight:800;"><span style="color:#6E7480;">إجمالي ${esc(t.main)}: </span><b style="color:#1F3050;">${esc(t.text)}</b></div>`).join('')}
+          ${totals.map(t=>`<div style="font-size:13.4px;"><span style="color:#6E7480;">إجمالي ${esc(t.main)}: </span><b style="color:#1F3050;">${esc(t.text)}</b></div>`).join('')}
         </div>
       ` : ''}
       ${CREDIT_LINE ? `<div style="margin-top:14px;text-align:center;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
@@ -3560,7 +3562,7 @@ function renderHeader(){
       <button class="${state.view==='order'?'active':''}" data-act="goto" data-view="order">طلب جديد</button>
       ${(state.view==='order' && state.currentUser && state.currentUser.username!=='admin') ? `
       <button class="cartbtn" data-act="open-cart-review" title="السلة">
-        🛒${state.cart && state.cart.length ? `<span class="cartbadge">${state.cart.length}</span>` : ''}
+        🛒${(()=>{ const n = (state.cart && state.cart.length) || (state.pendingDraft && state.pendingDraft.cart && state.pendingDraft.cart.length) || 0; return n ? `<span class="cartbadge">${n}</span>` : ''; })()}
       </button>` : ''}
       <button class="${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">طلباتي</button>
       <button class="${state.view==='admin'?'active':''}" data-act="goto" data-view="admin">متابعة الطلبات</button>
