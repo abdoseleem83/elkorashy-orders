@@ -900,7 +900,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v77';
+const APP_BUILD = 'v78';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -2245,6 +2245,17 @@ function smallUnitLabelFor(main){
 // مش بالعود زي تصدير الإكسيل. لو الموزع طلب بالعود لصنف من مجموعات اللفة،
 // بنحوّله للفة هنا (بالكسر لو مش لفة كاملة) بدل ما نسيبه بالعود.
 const ROLL_GROUPS_ = ['قطاعات PVC كومبن', 'قطاعات كرافت لاين', 'نيو لاين', 'شاتر'];
+
+// بيحوّل كمية بالوحدة الصغيرة (عود) للفة — لكن لو الكمية أقل من لفة كاملة،
+// بيسيبها بالعود عشان متظهرش ككسر (زي 0.3 لفة) وده مش مفهوم عمليًا.
+function rollsOrRodsDisplay_(smallQty, content){
+  const c = Number(content) || 1;
+  if(c <= 1) return { qty: smallQty, unitLabel: 'عود' };
+  const rolls = smallQty / c;
+  if(rolls < 1) return { qty: smallQty, unitLabel: 'عود' };
+  return { qty: Math.round(rolls*10)/10, unitLabel: 'لفة' };
+}
+
 function warehouseUnitDisplay(it){
   if(it.unitType === 'لفة' || it.unitType === 'كرتونة'){
     return { qty: it.qty, unitLabel: it.unitType };
@@ -2252,8 +2263,7 @@ function warehouseUnitDisplay(it){
   if(ROLL_GROUPS_.includes(it.main) && it.unitType === 'عود'){
     const cat = findCatalogItem(it.main, it.product, it.color);
     const content = Number(cat && cat.unit) || 1;
-    const rolls = Math.round((Number(it.qty)/content) * 10) / 10;
-    return { qty: rolls, unitLabel: 'لفة' };
+    return rollsOrRodsDisplay_(Number(it.qty), content);
   }
   // أصناف من غير لفة أصلاً (أبواب/أكسسوارات) — تفضل بوحدتها الأصلية
   return { qty: it.qty, unitLabel: it.unitType || '' };
@@ -2875,9 +2885,11 @@ async function buildQuotePDF(order){
   const date = new Date(order.ts);
   const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
 
-  // ⚠️ عرض السعر (PDF) بيتعرض باللفة لأصناف القطاعات — بعكس تصدير الإكسيل اللي
-  // فضل بالعود زي ما هو (متلمسناهوش). السعر بيتحوّل لسعر اللفة (سعر العود ×
-  // محتوى اللفة) عشان الإجمالي يفضل مطابق للحقيقي بالظبط، مش بس الكمية.
+  // ⚠️ عرض السعر (PDF) بيتعرض باللفة لأصناف القطاعات لو الكمية لفة كاملة
+  // أو أكتر — لكن لو الكمية أقل من لفة، بتتعرض بالعود عشان متبقاش كسر لفة
+  // (زي 0.3 لفة) — بعكس تصدير الإكسيل اللي فضل بالعود زي ما هو (متلمسناهوش).
+  // السعر بيتحوّل لسعر اللفة (سعر العود × محتوى اللفة) بس لما تكون العرض
+  // فعلًا لفات، عشان الإجمالي يفضل مطابق للحقيقي بالظبط في الحالتين.
   const rows = order.items.map(it=>{
     const raw = rawPriceForItem(it); // سعر الوحدة الصغيرة (عود/قطعة) — الأساس المالي الصحيح
     const norm = normalizeItemToSmallUnit(it);
@@ -2885,9 +2897,10 @@ async function buildQuotePDF(order){
     if(ROLL_GROUPS_.includes(it.main)){
       const catItem = findCatalogItem(it.main, it.product, it.color);
       const content = Number(catItem && catItem.unit) || 1;
-      dispQty = Math.round((norm.qty/content)*10)/10;
-      dispUnit = 'لفة';
-      dispPrice = raw==null ? null : raw*content;
+      const disp = rollsOrRodsDisplay_(norm.qty, content);
+      dispQty = disp.qty;
+      dispUnit = disp.unitLabel;
+      dispPrice = raw==null ? null : (dispUnit==='لفة' ? raw*content : raw);
     }
     const lineRaw = dispPrice==null ? null : dispPrice*dispQty;
     return Object.assign({}, it, { normQty: dispQty, normUnit: dispUnit, rawPrice: dispPrice, lineRaw });
@@ -2909,17 +2922,17 @@ async function buildQuotePDF(order){
   }
   const netTotal = subtotal - discountTotal;
 
-  // ملخص عدد اللفات لكل قطاع (كومبن / كرافت لاين / نيو لاين / شاتر)
+  // ملخص عدد اللفات لكل قطاع (كومبن / كرافت لاين / نيو لاين / شاتر) — لو فيه
+  // صنف كميته أقل من لفة هيبقى معروض بالعود، فبنجمع اللفات لوحدها والعيدان
+  // لوحدها وبنوريهم مع بعض لو الاتنين موجودين.
   const ROLL_SUMMARY_SECTORS = ['قطاعات PVC كومبن', 'قطاعات كرافت لاين', 'نيو لاين', 'شاتر'];
   const rollSummary = [];
   ROLL_SUMMARY_SECTORS.forEach(sector=>{
     const items = rows.filter(r=>r.main===sector);
     if(!items.length) return;
-    // normQty هنا بقى أصلاً بالِلفة (اتحوّل فوق) للأصناف دي — بنجمعه زي ما هو
-    // من غير ما نقسم على المحتوى تاني (كان ده بيدي رقم غلط أصغر من الحقيقي).
-    let totalRolls = 0;
-    items.forEach(it=>{ totalRolls += it.normQty; });
-    if(totalRolls>0) rollSummary.push({ sector, rolls: totalRolls });
+    const totalRolls = items.filter(it=>it.normUnit==='لفة').reduce((a,it)=>a+it.normQty, 0);
+    const totalRods = items.filter(it=>it.normUnit==='عود').reduce((a,it)=>a+it.normQty, 0);
+    if(totalRolls>0 || totalRods>0) rollSummary.push({ sector, rolls: totalRolls, rods: totalRods });
   });
   const hasMissing = rows.some(r=>r.lineRaw==null);
 
@@ -3058,11 +3071,15 @@ async function buildQuotePDF(order){
       <div style="margin-top:14px;display:flex;justify-content:flex-end;">
         <div style="width:280px;background:#F5F3EE;border-radius:8px;padding:10px 14px;">
           <div style="font-size:12.3px;font-weight:800;color:#1F3050;margin-bottom:6px;">عدد اللفات حسب القطاع</div>
-          ${rollSummary.map(r=>`
+          ${rollSummary.map(r=>{
+            const parts = [];
+            if(r.rolls>0) parts.push((r.rolls % 1 === 0 ? r.rolls : r.rolls.toFixed(1)) + ' لفة');
+            if(r.rods>0) parts.push((r.rods % 1 === 0 ? r.rods : r.rods.toFixed(1)) + ' عود');
+            return `
             <div style="display:flex;justify-content:space-between;font-size:12.3px;color:#20242B;padding:3px 0;">
-              <span>${esc(r.sector)}</span><span style="font-weight:700;">${r.rolls % 1 === 0 ? r.rolls : r.rolls.toFixed(1)} لفة</span>
-            </div>
-          `).join('')}
+              <span>${esc(r.sector)}</span><span style="font-weight:700;">${esc(parts.join(' + '))}</span>
+            </div>`;
+          }).join('')}
         </div>
       </div>` : ''}
 
@@ -3141,14 +3158,15 @@ async function buildShortageImageGroup(order, groupKey){
   const date = new Date(order.ts);
   const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
 
-  // الأصناف باللفة لمجموعات اللفة، وبباقي وحداتها الصغيرة لغير كده
+  // الأصناف باللفة لمجموعات اللفة (أو بالعود لو الكمية أقل من لفة كاملة)،
+  // وبباقي وحداتها الصغيرة لغير كده
   const rows = relevant.map(it=>{
     const norm = normalizeItemToSmallUnit(it);
     if(ROLL_GROUPS_.includes(it.main)){
       const cat = findCatalogItem(it.main, it.product, it.color);
       const content = Number(cat && cat.unit) || 1;
-      const rolls = Math.round((norm.qty/content)*10)/10;
-      return Object.assign({}, it, { dispQty: rolls, dispUnit: 'لفة' });
+      const disp = rollsOrRodsDisplay_(norm.qty, content);
+      return Object.assign({}, it, { dispQty: disp.qty, dispUnit: disp.unitLabel });
     }
     return Object.assign({}, it, { dispQty: norm.qty, dispUnit: norm.unitLabel });
   });
@@ -3166,13 +3184,21 @@ async function buildShortageImageGroup(order, groupKey){
     groupsMap.get(main).forEach((it,i)=> flat.push(Object.assign({}, it, { sectionStart: i===0, sectionLabel: main })));
   });
 
-  // إجمالي كل قطاع من القطاعات المحسوبة باللفة (كرافت/نيو/كومبن)
+  // إجمالي كل قطاع من القطاعات المحسوبة باللفة (كرافت/نيو/كومبن) — ممكن
+  // يبقى فيه إجمالي لفات وإجمالي عيدان مع بعض لو فيه أصناف اتعرضت بالعود
+  // (كميات أقل من لفة كاملة)، فبنعرض الاتنين لو موجودين.
   const totals = orderedMains
     .filter(m=>SHORTAGE_TOTAL_MAINS_.includes(m))
     .map(m=>{
-      const sum = groupsMap.get(m).reduce((a,it)=>a + (Number(it.dispQty)||0), 0);
-      return { main: m, total: Math.round(sum*10)/10 };
-    });
+      const items = groupsMap.get(m);
+      const rollsSum = items.filter(it=>it.dispUnit==='لفة').reduce((a,it)=>a+(Number(it.dispQty)||0), 0);
+      const rodsSum = items.filter(it=>it.dispUnit==='عود').reduce((a,it)=>a+(Number(it.dispQty)||0), 0);
+      const parts = [];
+      if(rollsSum>0) parts.push(Math.round(rollsSum*10)/10 + ' لفة');
+      if(rodsSum>0) parts.push(Math.round(rodsSum*10)/10 + ' عود');
+      return { main: m, text: parts.join(' + ') };
+    })
+    .filter(t=>t.text);
 
   const split = flat.length > SHORTAGE_SPLIT_THRESHOLD_;
   const half = Math.ceil(flat.length/2);
@@ -3227,7 +3253,7 @@ async function buildShortageImageGroup(order, groupKey){
         <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
         <div style="flex:1;">
           <div style="font-size:21.3px;font-weight:800;color:#1F3050;">طلبية نواقص ${esc(asText(order.distName))}</div>
-          <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">${esc(group.label)}</div>
+          <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">${esc(asText(order.distRegion))} · ${esc(group.label)}</div>
         </div>
         <div style="text-align:left;">
           <div style="font-size:14.6px;font-weight:800;color:#C9A227;">#${esc(String(order.id).toUpperCase())}</div>
@@ -3244,7 +3270,7 @@ async function buildShortageImageGroup(order, groupKey){
 
       ${totals.length ? `
         <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #E4E0D6;display:flex;gap:22px;flex-wrap:wrap;">
-          ${totals.map(t=>`<div style="font-size:13.4px;"><span style="color:#6E7480;">إجمالي ${esc(t.main)}: </span><b style="color:#1F3050;">${t.total} لفة</b></div>`).join('')}
+          ${totals.map(t=>`<div style="font-size:13.4px;"><span style="color:#6E7480;">إجمالي ${esc(t.main)}: </span><b style="color:#1F3050;">${esc(t.text)}</b></div>`).join('')}
         </div>
       ` : ''}
       ${CREDIT_LINE ? `<div style="margin-top:14px;text-align:center;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
