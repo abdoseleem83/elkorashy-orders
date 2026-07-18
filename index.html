@@ -900,7 +900,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v81';
+const APP_BUILD = 'v82';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
@@ -2274,6 +2274,8 @@ function warehouseUnitDisplay(it){
 function normalizeItemToSmallUnit(it){
   if(it.main===OTHER_SECTOR) return { qty: it.qty, unitLabel: it.unitType||'' };
   if(it.main==='ابواب WPC') return { qty: it.qty, unitLabel:'قطعة' };
+  // الاكسسوارات: نحافظ على وحدة الموزع (كرتونة أو قطعة) بدون تحويل
+  if(it.main && it.main.includes('اكسسوارات')) return { qty: it.qty, unitLabel: it.unitType||'قطعة' };
   const bigUnits = ['لفة','كرتونة'];
   const catItem = findCatalogItem(it.main, it.product, it.color);
   const content = catItem ? (catItem.unit || 1) : 1;
