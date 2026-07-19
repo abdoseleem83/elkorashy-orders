@@ -121,6 +121,10 @@ nav.tabs{
   font-weight:800;
   border-radius:999px !important;
 }
+.extradiscwrap{display:inline-flex;align-items:center;gap:4px;margin-right:6px;vertical-align:middle;}
+.extradiscwrap label{font-size:12px;color:var(--navy);font-weight:700;white-space:nowrap;}
+.extradiscwrap input{width:52px;padding:3px 5px;border:1.5px solid var(--gold);border-radius:6px;font-size:13px;font-weight:700;text-align:center;background:#fffbe8;color:var(--navy);}
+.extradiscwrap .pctsign{font-size:13px;font-weight:800;color:var(--gold);}
 .discounttogglebtn.on{
   background:var(--gold) !important;
   border-color:var(--gold) !important;
@@ -900,7 +904,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v84';
+const APP_BUILD = 'v87';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -982,6 +986,7 @@ const state = {
   showPwRequests:false,
   showCartReview:false,
   discountVisible:false,
+  extraDiscount:0,  // خصم إضافي % يكتبه الموزع وقت التسعير
   pwRequests:[],
   pwRequestsLoading:false,
   pwRequestsCount:0,
@@ -1299,10 +1304,10 @@ function renderCartItemsHtml(cart){
         <span>الإجمالي قبل الخصم</span>
         <b>${Math.round(pricing.subtotal).toLocaleString('en-US')} ج.م</b>
       </div>
-      <div class="carttotal" style="color:var(--gold);">
-        <span>الخصم</span>
+      ${pricing.discountAmount>0?`<div class="carttotal" style="color:var(--gold);">
+        <span>${pricing.customPct>0 ? 'خصم مخصص ('+pricing.customPct+'%)' : 'خصم القطاع'}</span>
         <b>- ${Math.round(pricing.discountAmount).toLocaleString('en-US')} ج.م</b>
-      </div>
+      </div>`:''}
       <div class="carttotal">
         <span>الإجمالي بعد الخصم</span>
         <b>${Math.round(pricing.total).toLocaleString('en-US')} ج.م</b>
@@ -1320,15 +1325,17 @@ function renderCartItemsHtml(cart){
 
 function computeCartPricing(cartItems){
   const subtotal = cartItems.reduce((s,it)=> s + (it.lineTotal||0), 0);
+  const customPct = (isDiscountEligible() && state.extraDiscount>0) ? state.extraDiscount : 0;
   let discountAmount = 0;
   if(isDiscountEligible()){
     cartItems.forEach(it=>{
       if(it.lineTotal==null) return;
-      const pct = getDiscount(it.main);
+      // لو في خصم مخصص → يحل محل خصم القطاع الأصلي
+      const pct = customPct>0 ? customPct : getDiscount(it.main);
       if(pct>0) discountAmount += it.lineTotal * (pct/100);
     });
   }
-  return { subtotal, discountAmount, total: subtotal - discountAmount };
+  return { subtotal, discountAmount, customPct, total: subtotal - discountAmount };
 }
 // جدول عرض سعر رسمي: م / بيان / الكمية / السعر (+ نسبة الخصم / خصم مبلغ / الصافي للموزع بس).
 // العميل يشوف نفس الجدول من غير أعمدة الخصم خالص.
@@ -1348,7 +1355,7 @@ function renderPriceTable(cartItems){
     if(!eligible){
       return `<tr><td>${idx+1}</td><td>${desc}</td><td>${qtyTxt}</td><td>${priceTxt}</td></tr>`;
     }
-    const pct = getDiscount(it.main);
+    const pct = (state.extraDiscount>0) ? state.extraDiscount : getDiscount(it.main);
     const discAmt = (it.lineTotal!=null && pct>0) ? it.lineTotal*(pct/100) : 0;
     const net = it.lineTotal==null ? null : it.lineTotal - discAmt;
     return `<tr>
@@ -2971,11 +2978,13 @@ async function buildQuotePDF(order){
   // (الموزع أخد خصمه فعلًا)، بس من غير ما نوري تفاصيل إزاي اتحسب.
   const eligible = isDiscountEligible(); // فيه خصم أصلاً لنوع الحساب ده؟
   const showDiscount = eligible && state.discountVisible; // نوري التفاصيل ولا لأ؟
+  const customPct = (eligible && state.extraDiscount>0) ? state.extraDiscount : 0;
   let discountTotal = 0;
   if(eligible){
     rows.forEach(r=>{
       if(r.lineRaw==null) return;
-      const pct = getDiscount(r.main);
+      // لو في خصم مخصص → يحل محل خصم القطاع
+      const pct = customPct>0 ? customPct : getDiscount(r.main);
       if(pct>0) discountTotal += r.lineRaw * (pct/100);
     });
   }
@@ -3108,17 +3117,17 @@ async function buildQuotePDF(order){
       <div style="display:flex;justify-content:flex-end;margin-top:18px;">
         <div style="width:280px;">
           ${showDiscount && discountTotal>0 ? `
-          <div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:13.4px;color:#20242B;">
+          <div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:16px;font-weight:800;color:#20242B;">
             <span>الإجمالي قبل الخصم</span><span>${Math.round(subtotal).toLocaleString('en-US')} ج.م</span>
           </div>
-          <div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:13.4px;color:#C9A227;font-weight:700;">
-            <span>الخصم</span><span>- ${Math.round(discountTotal).toLocaleString('en-US')} ج.م</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#1F3050;color:#fff;border-radius:8px;font-size:15.7px;font-weight:800;margin-top:4px;">
+          ${discountTotal>0?`<div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:16px;color:#C9A227;font-weight:800;">
+            <span>${customPct>0 ? 'خصم مخصص ('+customPct+'%)' : 'خصم القطاع'}</span><span>- ${Math.round(discountTotal).toLocaleString('en-US')} ج.م</span>
+          </div>`:''}
+          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#1F3050;color:#fff;border-radius:8px;font-size:17px;font-weight:800;margin-top:4px;">
             <span>الإجمالي بعد الخصم</span><span>${Math.round(netTotal).toLocaleString('en-US')} ج.م</span>
           </div>
           ` : `
-          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#1F3050;color:#fff;border-radius:8px;font-size:15.7px;font-weight:800;margin-top:8px;">
+          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#1F3050;color:#fff;border-radius:8px;font-size:17px;font-weight:800;margin-top:8px;">
             <span>الإجمالي</span><span>${Math.round(netTotal).toLocaleString('en-US')} ج.م</span>
           </div>
           `}
@@ -3631,7 +3640,14 @@ function renderHeader(){
       ${isDiscountEligible() ? `
       <button class="discounttogglebtn ${state.discountVisible?'on':''}" data-act="toggle-discount" title="دوس تغيّر — النص بيوصف الحالة الحالية">
         ${state.discountVisible ? '💰 الخصم ظاهر دلوقتي' : '🙈 الخصم مخفي دلوقتي'}
-      </button>` : ''}
+      </button>
+      <span class="extradiscwrap" title="خصم مخصص % — يحل محل خصم القطاع لو كتبت قيمة">
+        <label for="extraDiscInput">خصم مخصص</label>
+        <input id="extraDiscInput" type="number" min="0" max="100" step="0.5"
+          value="${state.extraDiscount||''}" placeholder="0"
+          data-extradiscount>
+        <span class="pctsign">%</span>
+      </span>` : ''}
       <button data-act="force-update" title="تحديث إجباري">🔄 تحديث</button>
       <button data-act="logout" title="تسجيل خروج">🚪 خروج</button>
     </nav>
@@ -4691,6 +4707,19 @@ function renderInstallBanner(){
 
 // ===== events =====
 function bindEvents(){
+  // خانة الخصم المخصص — بتحدّث بـ blur بس عشان مانضيعش الـ focus أثناء الكتابة
+  const extraDiscEl = document.querySelector('[data-extradiscount]');
+  if(extraDiscEl){
+    extraDiscEl.addEventListener('blur', ()=>{
+      const pct = parseFloat(extraDiscEl.value);
+      state.extraDiscount = (!isNaN(pct) && pct>=0 && pct<=100) ? pct : 0;
+      render();
+    });
+    extraDiscEl.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ extraDiscEl.blur(); }
+    });
+  }
+
   document.querySelectorAll('[data-act]').forEach(el=>{
     const act = el.getAttribute('data-act');
     if(el.tagName==='INPUT' || el.tagName==='TEXTAREA'){
@@ -4907,6 +4936,7 @@ async function onActionInner(act, el){
 
     case 'request-submit': requestSubmit(); break;
     case 'toggle-discount': state.discountVisible = !state.discountVisible; render(); break;
+    // set-extra-discount: handled via blur in bindEvents
     case 'open-cart-review': if(state.pendingDraft && !state.cart.length){ resumeDraft(); state.showResumeModal=false; } state.showCartReview=true; render(); break;
     case 'close-cart-review': state.showCartReview=false; render(); break;
     case 'cart-add-more': state.showCartReview=false; render(); break;
