@@ -1,6 +1,6 @@
 // ⚠️ مهم: غيّر رقم النسخة دي في كل مرة ترفع تحديث جديد.
 // ده اللي بيخلي المتصفح يرمي الكاش القديم ويجيب الملفات الجديدة.
-const CACHE_VERSION = 'v82';
+const CACHE_VERSION = 'v84';
 const CACHE_NAME = 'elkorashy-' + CACHE_VERSION;
 
 const PRECACHE = [
@@ -46,6 +46,36 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+});
+
+
+// ===== Push Notification Handler =====
+self.addEventListener('push', (event) => {
+  let data = { title: '🔔 القرشي', body: 'إشعار جديد' };
+  try{ if(event.data) data = event.data.json(); }catch(e){}
+  event.waitUntil(
+    self.registration.showNotification(data.title || '🔔 القرشي', {
+      body: data.body || '',
+      icon: './icons/icon-192.png',
+      badge: './icons/icon-96.png',
+      dir: 'rtl',
+      lang: 'ar',
+      tag: data.tag || 'elkorashy-push',
+      renotify: true,
+      data: { url: data.url || './' }
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || './';
+  event.waitUntil(
+    self.clients.matchAll({ type:'window', includeUncontrolled:true }).then(clients => {
+      for(const c of clients){ if(c.url.includes('index.html') || c.url.endsWith('/')){ c.focus(); return; } }
+      return self.clients.openWindow(url);
+    })
+  );
 });
 
 self.addEventListener('fetch', (event) => {
