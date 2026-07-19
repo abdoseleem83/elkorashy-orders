@@ -907,7 +907,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v97';
+const APP_BUILD = 'v98';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -2300,6 +2300,10 @@ function startEditOrder(order){
   state.cart = order.items.map(it=>Object.assign({}, it));
   state.staged = [];
   state.mainGroup = null;
+  // لو المخزن فاضي في الطلب القديم، نحط أول مخزن متاح عشان الفورم يظهر
+  if(!state.warehouse){
+    if(WAREHOUSES && WAREHOUSES.length) state.warehouse = WAREHOUSES[0];
+  }
   showToast('بتعدّل على طلب سابق — كمّل التعديل وابعت تاني');
   render();
 }
@@ -3805,7 +3809,10 @@ function renderOrderView(){
           </div>
         </div>
         <br>
-        <button class="newbtn outline" data-act="new-order">تسجيل طلب جديد</button>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          <button class="newbtn" data-act="edit-last-order">✏️ تعديل الطلب / إضافة أصناف</button>
+          <button class="newbtn outline" data-act="new-order">تسجيل طلب جديد</button>
+        </div>
       </div>
     </main>`;
   }
@@ -4951,6 +4958,12 @@ async function onActionInner(act, el){
     case 'open-cart-review': if(state.pendingDraft && !state.cart.length){ resumeDraft(); state.showResumeModal=false; } state.showCartReview=true; render(); break;
     case 'close-cart-review': state.showCartReview=false; render(); break;
     case 'cart-add-more': state.showCartReview=false; render(); break;
+    case 'edit-last-order':{
+      const lo = state.lastOrder;
+      if(lo){ startEditOrder(lo); }
+      else { showToast('مفيش طلب متاح للتعديل'); }
+      break;
+    }
     case 'cart-send':
       state.showCartReview=false;
       requestSubmit(); // نفس مسار "إرسال الطلب" العادي: تأكيد ثم إرسال فعلي
