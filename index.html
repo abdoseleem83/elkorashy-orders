@@ -907,7 +907,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v93';
+const APP_BUILD = 'v94';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -3781,6 +3781,7 @@ function renderOrderView(){
              التلاتة (واتساب صورة / تنزيل PDF / معاينة). باقي المستندات
              (صورة الطلب العامة، أمر صرف المخزن، طلبية النواقص) اتشالت. -->
         ${state.quotePdfGenerating ? '<div class="loading" style="padding:20px;">جارٍ تجهيز المستند...</div>' : ''}
+
         ${(!state.quotePdfPlain && !state.quotePdfGenerating) ? `
           <button class="newbtn" data-act="make-docs">📄 تجهيز عرض السعر</button>
         ` : ''}
@@ -3791,11 +3792,17 @@ function renderOrderView(){
               <button class="iconbtn" data-act="share-quote-plain">📤<span>واتساب (صورة)</span></button>
               <button class="iconbtn" data-act="download-quote-plain">⬇️<span>تنزيل PDF</span></button>
               <button class="iconbtn" data-act="preview-quote-plain">👁️<span>معاينة</span></button>
-              <button class="iconbtn" data-act="shortage-img" data-group="kraft_new" ${state.shortageImgBusy==='last|kraft_new'?'disabled':''}>🖼️<span>${state.shortageImgBusy==='last|kraft_new'?'جارٍ...':'نواقص كرافت ونيو'}</span></button>
-              <button class="iconbtn" data-act="shortage-img" data-group="combin_acc" ${state.shortageImgBusy==='last|combin_acc'?'disabled':''}>🖼️<span>${state.shortageImgBusy==='last|combin_acc'?'جارٍ...':'نواقص كومبن واكسسوارات'}</span></button>
             </div>
           </div>
         ` : ''}
+
+        <div class="docsection">
+          <div class="docsectiontitle">📦 طلبية النواقص</div>
+          <div class="iconbtnrow">
+            <button class="iconbtn" data-act="shortage-img" data-group="kraft_new" ${state.shortageImgBusy==='last|kraft_new'?'disabled':''}>🖼️<span>${state.shortageImgBusy==='last|kraft_new'?'جارٍ...':'نواقص كرافت ونيو'}</span></button>
+            <button class="iconbtn" data-act="shortage-img" data-group="combin_acc" ${state.shortageImgBusy==='last|combin_acc'?'disabled':''}>🖼️<span>${state.shortageImgBusy==='last|combin_acc'?'جارٍ...':'نواقص كومبن واكسسوارات'}</span></button>
+          </div>
+        </div>
         <br>
         <button class="newbtn outline" data-act="new-order">تسجيل طلب جديد</button>
       </div>
