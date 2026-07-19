@@ -907,7 +907,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v100';
+const APP_BUILD = 'v101';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -3547,78 +3547,98 @@ async function exportExcel(){
 
   const NAVY='FF1F3050', WHITE='FFFFFFFF', LIGHT='FFF5F3EE', GOLD='FFC9A227';
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet('الطلبات حسب العميل', { views:[{ rightToLeft:true }] });
-  ws.columns = [
-    { header:'م', key:'serial', width:6 },
-    { header:'الموزع', key:'dist', width:18 },
-    { header:'المنطقة', key:'region', width:14 },
-    { header:'الصنف', key:'product', width:32 },
-    { header:'الكمية', key:'qty', width:8 },
-    { header:'الوحدة', key:'unit', width:10 },
-    { header:'سعر الوحدة', key:'price', width:11 },
-    { header:'الإجمالي', key:'total', width:11 },
-    { header:'التاريخ', key:'date', width:14 },
-  ];
-  const headerRow = ws.getRow(1);
-  headerRow.eachCell(cell=>{
-    cell.font = { bold:true, color:{argb:WHITE}, size:12, name:'Arial' };
-    cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:NAVY} };
-    cell.alignment = { horizontal:'center', vertical:'middle' };
-    cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
-  });
-  headerRow.height = 22;
 
-  const groups = new Map();
-  state.orders.forEach(o=>{
-    if(!groups.has(o.distName)) groups.set(o.distName, { region:o.distRegion||'', ts:o.ts, items:[] });
-    o.items.forEach(it => groups.get(o.distName).items.push(it));
-  });
-
-  let rowIdx = 2, toggle=false, grandTotal=0, serial=0;
-  groups.forEach((g, dist)=>{
-    const startRow = rowIdx;
-    const dateStr = new Date(g.ts).toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
-    const fillColor = toggle ? LIGHT : WHITE;
-    g.items.forEach((it, idx)=>{
-      grandTotal += it.lineTotal||0;
-      serial++;
-      // بنصدّر بالوحدة الصغيرة (عود / قطعة) مش باللفة — زي عرض السعر بالظبط
-      const norm = normalizeItemToSmallUnit(it);
-      const rawPrice = rawPriceForItem(it);
-      const row = ws.addRow({
-        serial,
-        dist: idx===0?dist:'', region: idx===0?g.region:'',
-        product: it.name || it.product,
-        qty: norm.qty, unit: norm.unitLabel||'',
-        price: rawPrice==null ? 'غير متاح' : Math.round(rawPrice),
-        total: it.lineTotal==null ? 'غير متاح' : Math.round(it.lineTotal),
-        date: idx===0?dateStr:''
-      });
-      row.eachCell(cell=>{
-        cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:fillColor} };
-        cell.border = { top:{style:'hair',color:{argb:'FFDDDDDD'}}, bottom:{style:'hair',color:{argb:'FFDDDDDD'}}, left:{style:'hair',color:{argb:'FFDDDDDD'}}, right:{style:'hair',color:{argb:'FFDDDDDD'}} };
-        cell.alignment = { horizontal:'right', vertical:'middle', wrapText:true };
-        cell.font = { name:'Arial', size:11 };
-      });
-      rowIdx++;
+  // بنبني الشيت (نفس شكل التجميع القديم) — لكن دلوقتي بتتنادى مرتين:
+  // مرة للطلبات "قيد التنفيذ" ومرة للطلبات "تم التسليم"، كل واحدة في شيت لوحدها.
+  function buildSheet(sheetName, ordersForSheet){
+    const ws = wb.addWorksheet(sheetName, { views:[{ rightToLeft:true }] });
+    ws.columns = [
+      { header:'م', key:'serial', width:6 },
+      { header:'الموزع', key:'dist', width:18 },
+      { header:'المنطقة', key:'region', width:14 },
+      { header:'الصنف', key:'product', width:32 },
+      { header:'الكمية', key:'qty', width:8 },
+      { header:'الوحدة', key:'unit', width:10 },
+      { header:'سعر الوحدة', key:'price', width:11 },
+      { header:'الإجمالي', key:'total', width:11 },
+      { header:'التاريخ', key:'date', width:14 },
+    ];
+    const headerRow = ws.getRow(1);
+    headerRow.eachCell(cell=>{
+      cell.font = { bold:true, color:{argb:WHITE}, size:12, name:'Arial' };
+      cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:NAVY} };
+      cell.alignment = { horizontal:'center', vertical:'middle' };
+      cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
     });
-    if(g.items.length>1){
-      ws.mergeCells(startRow,2,rowIdx-1,2); ws.mergeCells(startRow,3,rowIdx-1,3); ws.mergeCells(startRow,9,rowIdx-1,9);
-    }
-    const distCell = ws.getCell(startRow,2);
-    distCell.font = { bold:true, color:{argb:NAVY}, size:11, name:'Arial' };
-    distCell.alignment = { horizontal:'right', vertical:'middle', wrapText:true };
-    toggle = !toggle;
-  });
-  ws.autoFilter = { from:'A1', to:'I1' };
+    headerRow.height = 22;
 
-  const totalRow = ws.addRow({ product:'الإجمالي الكلي', total: Math.round(grandTotal) });
-  ws.mergeCells(rowIdx, 1, rowIdx, 7);
-  totalRow.eachCell(cell=>{
-    cell.font = { bold:true, color:{argb:WHITE}, size:12, name:'Arial' };
-    cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:GOLD} };
-    cell.alignment = { horizontal:'center', vertical:'middle' };
-  });
+    if(!ordersForSheet.length){
+      ws.mergeCells(2,1,2,9);
+      const emptyCell = ws.getCell(2,1);
+      emptyCell.value = 'مفيش طلبات في القسم ده';
+      emptyCell.alignment = { horizontal:'center', vertical:'middle' };
+      emptyCell.font = { italic:true, color:{argb:'FF8A8470'}, size:11, name:'Arial' };
+      return;
+    }
+
+    const groups = new Map();
+    ordersForSheet.forEach(o=>{
+      if(!groups.has(o.distName)) groups.set(o.distName, { region:o.distRegion||'', ts:o.ts, items:[] });
+      o.items.forEach(it => groups.get(o.distName).items.push(it));
+    });
+
+    let rowIdx = 2, toggle=false, grandTotal=0, serial=0;
+    groups.forEach((g, dist)=>{
+      const startRow = rowIdx;
+      const dateStr = new Date(g.ts).toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
+      const fillColor = toggle ? LIGHT : WHITE;
+      g.items.forEach((it, idx)=>{
+        grandTotal += it.lineTotal||0;
+        serial++;
+        // بنصدّر بالوحدة الصغيرة (عود / قطعة) مش باللفة — زي عرض السعر بالظبط
+        const norm = normalizeItemToSmallUnit(it);
+        const rawPrice = rawPriceForItem(it);
+        const row = ws.addRow({
+          serial,
+          dist: idx===0?dist:'', region: idx===0?g.region:'',
+          product: it.name || it.product,
+          qty: norm.qty, unit: norm.unitLabel||'',
+          price: rawPrice==null ? 'غير متاح' : Math.round(rawPrice),
+          total: it.lineTotal==null ? 'غير متاح' : Math.round(it.lineTotal),
+          date: idx===0?dateStr:''
+        });
+        row.eachCell(cell=>{
+          cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:fillColor} };
+          cell.border = { top:{style:'hair',color:{argb:'FFDDDDDD'}}, bottom:{style:'hair',color:{argb:'FFDDDDDD'}}, left:{style:'hair',color:{argb:'FFDDDDDD'}}, right:{style:'hair',color:{argb:'FFDDDDDD'}} };
+          cell.alignment = { horizontal:'right', vertical:'middle', wrapText:true };
+          cell.font = { name:'Arial', size:11 };
+        });
+        rowIdx++;
+      });
+      if(g.items.length>1){
+        ws.mergeCells(startRow,2,rowIdx-1,2); ws.mergeCells(startRow,3,rowIdx-1,3); ws.mergeCells(startRow,9,rowIdx-1,9);
+      }
+      const distCell = ws.getCell(startRow,2);
+      distCell.font = { bold:true, color:{argb:NAVY}, size:11, name:'Arial' };
+      distCell.alignment = { horizontal:'right', vertical:'middle', wrapText:true };
+      toggle = !toggle;
+    });
+    ws.autoFilter = { from:'A1', to:'I1' };
+
+    const totalRow = ws.addRow({ product:'الإجمالي الكلي', total: Math.round(grandTotal) });
+    ws.mergeCells(rowIdx, 1, rowIdx, 7);
+    totalRow.eachCell(cell=>{
+      cell.font = { bold:true, color:{argb:WHITE}, size:12, name:'Arial' };
+      cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:GOLD} };
+      cell.alignment = { horizontal:'center', vertical:'middle' };
+    });
+  }
+
+  const pendingOrders = state.orders.filter(o=>o.status!=='تم التسليم');
+  const deliveredOrders = state.orders.filter(o=>o.status==='تم التسليم');
+
+  buildSheet('قيد التنفيذ', pendingOrders);
+  buildSheet('تم التسليم', deliveredOrders);
 
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type:'application/octet-stream' });
@@ -4259,7 +4279,6 @@ function renderAdminView(){
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
       <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
       <button class="exportbtn" data-act="export-excel">تصدير Excel</button>
-      <button class="exportbtn" data-act="show-stock">📊 الأرصدة</button>
       <button class="exportbtn" data-act="show-pwreq">🔑 طلبات الباسورد${state.pwRequestsCount ? ' ('+state.pwRequestsCount+')' : ''}</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُسلَّم</button>
     </div>
