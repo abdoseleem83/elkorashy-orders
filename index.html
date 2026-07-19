@@ -121,8 +121,8 @@ nav.tabs{
   font-weight:800;
   border-radius:999px !important;
 }
-.extradiscwrap{display:inline-flex;align-items:center;gap:4px;margin-right:6px;vertical-align:middle;}
-.extradiscwrap label{font-size:12px;color:var(--navy);font-weight:700;white-space:nowrap;}
+.extradiscwrap{display:inline-flex;align-items:center;gap:4px;margin-right:6px;vertical-align:middle;direction:rtl;}
+.extradiscwrap label{font-size:12px;color:var(--gold);font-weight:800;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.4);}
 .extradiscwrap input{width:52px;padding:3px 5px;border:2px solid var(--gold);border-radius:6px;font-size:14px;font-weight:800;text-align:center;background:var(--gold);color:#1F3050;}
 .extradiscwrap .pctsign{font-size:13px;font-weight:800;color:var(--gold);}
 .discounttogglebtn.on{
@@ -907,7 +907,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v91';
+const APP_BUILD = 'v93';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -3646,10 +3646,10 @@ function renderHeader(){
       </button>
       <span class="extradiscwrap" title="خصم مخصص % — يحل محل خصم القطاع لو كتبت قيمة">
         <label for="extraDiscInput">💲 خصم للتسعير</label>
+        <span class="pctsign">%</span>
         <input id="extraDiscInput" type="number" min="0" max="100" step="0.5"
           value="${state.extraDiscount||''}" placeholder="0"
           data-extradiscount>
-        <span class="pctsign">%</span>
       </span>` : ''}
       <button data-act="force-update" title="تحديث إجباري">🔄 تحديث</button>
       <button data-act="logout" title="تسجيل خروج">🚪 خروج</button>
