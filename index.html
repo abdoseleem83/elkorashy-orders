@@ -907,7 +907,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v88';
+const APP_BUILD = 'v89';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1300,7 +1300,7 @@ function renderCartItemsHtml(cart){
       // بس بشرط "فيه خصم أصلاً" (discountAmount>0) — من غير ما يتأكد إن
       // زرار "إظهار الخصم" مفعّل. فحتى لو الزرار بيقول "مخفي"، الملخص كان
       // بيوري تفاصيل الخصم بره الجدول نفسه. دلوقتي بيتأكد من الزرار كمان.
-      const showDiscountBreakdown = isDiscountEligible() && state.discountVisible && pricing.discountAmount>0;
+      const showDiscountBreakdown = isDiscountEligible() && pricing.discountAmount>0 && (state.discountVisible || pricing.customPct>0);
       return showDiscountBreakdown;
     })() ? `
       <div class="carttotal">
@@ -2980,7 +2980,7 @@ async function buildQuotePDF(order){
   // لو الزرار "مخفي"، السعر النهائي المعروض لازم يفضل السعر بعد الخصم
   // (الموزع أخد خصمه فعلًا)، بس من غير ما نوري تفاصيل إزاي اتحسب.
   const eligible = isDiscountEligible(); // فيه خصم أصلاً لنوع الحساب ده؟
-  const showDiscount = eligible && state.discountVisible; // نوري التفاصيل ولا لأ؟
+  const showDiscount = eligible && (state.discountVisible || customPct>0); // نوري التفاصيل ولا لأ؟
   const customPct = (eligible && state.extraDiscount>0) ? state.extraDiscount : 0;
   let discountTotal = 0;
   if(eligible){
