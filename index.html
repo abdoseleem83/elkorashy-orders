@@ -907,13 +907,22 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v104';
+const APP_BUILD = 'v105';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
 // المخازن اللي الموزع بيحمّل منها — عايز تضيف/تشيل مخزن؟ عدّل السطر ده بس.
 const WAREHOUSES = ['طنطا', 'الاسكندرية', 'المنصورة اكسا', 'العاشر اكسا'];
+// أيقونة تمثّل مدينة كل مخزن (بدل الأيقونة الموحّدة 🏬) — عايز تضيف مخزن
+// جديد فوق؟ زوّد له سطر هنا كمان بنفس الاسم بالظبط.
+const WAREHOUSE_ICONS_ = {
+  'طنطا': '🕌',           // مسجد السيد البدوي، أشهر معلم في طنطا
+  'الاسكندرية': '🏛️',      // مكتبة الإسكندرية ومعالمها الأثرية
+  'المنصورة اكسا': '🌉',   // كوبري المنصورة على النيل
+  'العاشر اكسا': '🏭'      // مدينة العاشر من رمضان الصناعية
+};
+function warehouseIcon_(w){ return WAREHOUSE_ICONS_[w] || '🏬'; }
 // تنبيه "كمية قليلة" لو الرصيد أقل من عدد اللفات ده.
 // ⚠️ الرصيد في الشيت مكتوب بالـ"عود"، فلازم نضربه في محتوى اللفة قبل المقارنة:
 //    لفة فيها 8 عود × 5 لفات = 40 عود → أي رصيد أقل من 40 عود = كمية قليلة.
@@ -2505,11 +2514,11 @@ function renderWarehouseModal(){
   <div class="modalbg">
     <div class="modalcard">
       <div class="modalic">🏬</div>
-      <h3>هتحمّل من أنهي مخزن؟</h3>
-      <p>اختار المخزن اللي هتستلم منه الطلبية</p>
+      <h3>برجاء اختيار المخزن</h3>
+      <p>لسهولة توجيهه للمسؤول</p>
       <div class="modalbtns">
         ${WAREHOUSES.map(w=>`
-          <button class="modalbtn ${state.warehouse===w?'primary':''}" data-act="pick-warehouse" data-val="${esc(w)}">${esc(w)}</button>
+          <button class="modalbtn ${state.warehouse===w?'primary':''}" data-act="pick-warehouse" data-val="${esc(w)}">${warehouseIcon_(w)} ${esc(w)}</button>
         `).join('')}
         <button class="modalbtn" data-act="close-warehouse" style="color:var(--muted);">إلغاء</button>
       </div>
@@ -3955,11 +3964,11 @@ function renderOrderView(){
   // باقي الفورم (بيانات الموزع، القطاعات، الأصناف...) ما بيظهرش خالص.
   const warehouseCard = `
     <div class="card">
-      <h2><span class="num">1</span>هتحمّل من أنهي مخزن؟</h2>
+      <h2><span class="num">1</span>برجاء اختيار المخزن لسهولة توجيهه للمسؤول</h2>
       <div class="whgrid">
         ${WAREHOUSES.map(w=>`
           <button class="whtile ${state.warehouse===w?'active':''}" data-act="pick-warehouse-inline" data-val="${esc(w)}">
-            <span class="whicon">🏬</span>
+            <span class="whicon">${warehouseIcon_(w)}</span>
             <span>${esc(w)}</span>
           </button>
         `).join('')}
@@ -3985,7 +3994,7 @@ function renderOrderView(){
       ${state.editingOrderId ? `<div class="editbanner">✏️ بتعدّل على طلب سابق #${esc(state.editingOrderId.toUpperCase())}</div>` : ''}
       ${isClientAccount() ? '' : `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-        <span style="font-size:12px;color:var(--muted);">🏬 المخزن: <b style="color:var(--navy);">${esc(state.warehouse)}</b></span>
+        <span style="font-size:12px;color:var(--muted);">${warehouseIcon_(state.warehouse)} المخزن: <b style="color:var(--navy);">${esc(state.warehouse)}</b></span>
         <button class="chip" style="padding:3px 10px;font-size:11px;" data-act="pick-warehouse-inline" data-val="">غيّر</button>
       </div>`}
       <h2><span class="num">2</span>بيانات الموزع</h2>
@@ -4099,7 +4108,7 @@ function renderConfirmModal(){
       <h3>متأكد من ${state.editingOrderId?'حفظ التعديلات':'إرسال الطلب'}؟</h3>
       <p>الطلب فيه <b>${count}</b> صنف باسم <b>${esc(state.distName)}</b> — ${esc(state.distRegion)}.<br>راجع الأصناف قبل التأكيد، مش هتقدر تعدّل إلا من "طلباتي" بعدين.</p>
       <div style="background:#FAF9F5;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-        <span style="font-size:14px;color:var(--muted);">🏬 مخزن التحميل</span>
+        <span style="font-size:14px;color:var(--muted);">${warehouseIcon_(state.warehouse)} مخزن التحميل</span>
         <span style="display:flex;align-items:center;gap:8px;">
           <b style="color:var(--navy);font-size:14.6px;">${esc(asText(state.warehouse) || '—')}</b>
           <button class="chip" data-act="change-warehouse" style="padding:3px 9px;font-size:12.3px;">غيّر</button>
