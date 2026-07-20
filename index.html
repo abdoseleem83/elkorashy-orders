@@ -907,7 +907,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v103';
+const APP_BUILD = 'v104';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -3221,8 +3221,8 @@ async function buildQuotePDF(order){
 // ===== طلبية نواقص (صور، مش PDF): زرارين — كرافت ونيو / كومبن واكسسوارات =====
 // كل زرار بيطلّع صورة واحدة (PNG) بدل PDF: من فوق "طلبية نواقص {اسم الفرع}"
 // والتاريخ، والأصناف باللفة (لمجموعات اللفة)، ومن تحت إجمالي كل قطاع من
-// القطاعات اللي بتتحسب باللفة (كرافت/نيو/كومبن). لو الأصناف كتير بتتقسم
-// عمودين جنب بعض بنفس الهيدر — وكأن ورقتين اتلزقوا في واحدة.
+// القطاعات اللي بتتحسب باللفة (كرافت/نيو/كومبن). الصفحة دايمًا مقسومة عمودين
+// جنب بعض؛ لو الأصناف زادت عن نص الصفحة الأولى بتكمل في العمود التاني تلقائيًا.
 const SHORTAGE_IMG_GROUPS_ = {
   kraft_new: { label: 'كرافت ونيو', mains: ['قطاعات كرافت لاين', 'نيو لاين'] },
   combin_acc: { label: 'كومبن واكسسوارات', mains: ['قطاعات PVC كومبن', 'اكسسوارات pvc اكسا'] }
@@ -3230,7 +3230,6 @@ const SHORTAGE_IMG_GROUPS_ = {
 // القطاعات اللي إجماليها باللفة بيتحسب في الفوتر (اكسسوارات وحداتها مختلطة
 // كرتونة/قطعة فمفيش إجمالي واحد يبقى له معنى ليها).
 const SHORTAGE_TOTAL_MAINS_ = ['قطاعات كرافت لاين', 'نيو لاين', 'قطاعات PVC كومبن'];
-const SHORTAGE_SPLIT_THRESHOLD_ = 20; // فوق كده بيتقسم عمودين
 
 async function buildShortageImageGroup(order, groupKey){
   if(typeof html2canvas === 'undefined') return null;
@@ -3285,49 +3284,34 @@ async function buildShortageImageGroup(order, groupKey){
     })
     .filter(t=>t.text);
 
-  const split = flat.length > SHORTAGE_SPLIT_THRESHOLD_;
-  const half = Math.ceil(flat.length/2);
-  const colA = split ? flat.slice(0, half) : flat;
-  const colB = split ? flat.slice(half) : [];
+  // الصفحة دايمًا مقسومة نصين: العمود الأول ياخد النص الأول من الأصناف،
+  // والزيادة كلها بتكمل في العمود التاني — زي ورقتين اتلزقوا في واحدة.
+  const half = Math.ceil(flat.length/2) || 1;
+  const colA = flat.slice(0, half);
+  const colB = flat.slice(half);
 
   function rowsHTML(list, startIndex){
     let html = '';
     list.forEach((it,i)=>{
       if(it.sectionStart && SHORTAGE_IMG_GROUPS_[groupKey].mains.length>1){
-        html += `<tr><td colspan="3" style="padding:6px 6px;background:#E4C766;color:#1F3050;font-weight:800;font-size:12.3px;">${esc(it.sectionLabel)}</td></tr>`;
+        html += `<div style="padding:7px 10px;background:#E4C766;color:#1F3050;font-weight:800;font-size:15px;border-radius:6px;margin:${i===0?'0':'10px'} 0 6px 0;">${esc(it.sectionLabel)}</div>`;
       }
       const bg = i%2===0 ? '#FFFFFF' : '#F5F3EE';
       html += `
-      <tr style="background:${bg};">
-        <td style="padding:8px 6px;border-bottom:1px solid #E4E0D6;text-align:center;color:#8A8470;">${startIndex+i+1}</td>
-        <td style="padding:8px 6px;border-bottom:1px solid #E4E0D6;">
-          ${esc(it.name || it.product)}${it.color?` <span style="color:#6E7480;">- ${esc(it.color)}</span>`:''}
-        </td>
-        <td style="padding:8px 6px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">
-          ${it.dispQty} ${esc(it.dispUnit||'')}
-        </td>
-      </tr>`;
+      <div style="display:flex;align-items:baseline;gap:8px;background:${bg};padding:9px 8px;border-bottom:1px solid #E4E0D6;border-radius:4px;">
+        <span style="color:#8A8470;font-weight:800;font-size:14px;min-width:20px;">${startIndex+i+1}.</span>
+        <span style="flex:1;font-weight:800;font-size:20px;color:#1F3050;line-height:1.25;">
+          ${esc(it.name || it.product)}${it.color?` <span style="color:#6E7480;font-size:15px;font-weight:700;">- ${esc(it.color)}</span>`:''}
+        </span>
+        <span style="font-weight:800;font-size:20px;color:#C9A227;white-space:nowrap;">${it.dispQty} ${esc(it.dispUnit||'')}</span>
+      </div>`;
     });
     return html;
   }
 
-  function tableHTML(list, startIndex){
-    return `
-      <table style="width:100%;border-collapse:collapse;font-size:13.4px;">
-        <thead>
-          <tr style="background:#1F3050;color:#fff;">
-            <th style="padding:8px 6px;text-align:center;width:36px;">م</th>
-            <th style="padding:8px 6px;text-align:right;">الصنف</th>
-            <th style="padding:8px 6px;text-align:center;width:100px;">الكمية</th>
-          </tr>
-        </thead>
-        <tbody>${rowsHTML(list, startIndex)}</tbody>
-      </table>`;
-  }
-
   const wrap = document.createElement('div');
   wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
-  wrap.style.width = split ? '1180px' : '760px';
+  wrap.style.width = '1180px';
   wrap.style.fontFamily = "'Cairo', sans-serif";
   wrap.style.direction='rtl';
   wrap.style.background='#FFFFFF';
@@ -3337,7 +3321,7 @@ async function buildShortageImageGroup(order, groupKey){
       <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #C9A227;padding-bottom:14px;margin-bottom:16px;">
         <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
         <div style="flex:1;">
-          <div style="font-size:21.3px;font-weight:800;color:#1F3050;">طلبية نواقص ${esc(asText(order.distName))}</div>
+          <div style="font-size:22px;font-weight:800;color:#1F3050;">طلبية نواقص ${esc(asText(order.distName))}${order.warehouse ? ` <span style="color:#C9A227;">— مخزن ${esc(asText(order.warehouse))}</span>` : ''}</div>
           <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">${esc(asText(order.distRegion))} · ${esc(group.label)}</div>
         </div>
         <div style="text-align:left;">
@@ -3346,12 +3330,10 @@ async function buildShortageImageGroup(order, groupKey){
         </div>
       </div>
 
-      ${split ? `
-        <div style="display:flex;gap:28px;">
-          <div style="flex:1;">${tableHTML(colA, 0)}</div>
-          <div style="flex:1;">${tableHTML(colB, colA.length)}</div>
-        </div>
-      ` : tableHTML(colA, 0)}
+      <div style="display:flex;gap:28px;align-items:flex-start;">
+        <div style="flex:1;">${rowsHTML(colA, 0)}</div>
+        <div style="flex:1;">${colB.length ? rowsHTML(colB, colA.length) : ''}</div>
+      </div>
 
       ${totals.length ? `
         <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #E4E0D6;display:flex;gap:22px;flex-wrap:wrap;">
