@@ -18,7 +18,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root{
   --navy:#1F3050;
@@ -907,7 +906,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v105';
+const APP_BUILD = 'v106';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1233,6 +1232,14 @@ async function loadCatalog(){
 // الدالة دي بتضمن إن أي قيمة نستخدمها كنص تبقى نص فعلاً.
 function asText(v){
   return (v === null || v === undefined) ? '' : String(v);
+}
+
+// رقم الطلب المعروض للمستخدم: رقم تسلسلي لكل مخزن (1، 2، 3...) لو متوفر
+// من السيرفر، وإلا (طلبات قديمة اتسجلت قبل الميزة دي) بنرجع لمعرّف الطلب
+// القديم كـ fallback بس عشان الطلبات القديمة تفضل متعرّفة.
+function orderNoDisplay_(order){
+  if(!order) return '';
+  return asText(order.orderNo).trim() || asText(order.id).toUpperCase();
 }
 
 function normalizeProductName(s){
@@ -2254,7 +2261,9 @@ async function actuallySubmit(){
   };
   try{
     const resp = await saveOrderRemote(order, isUpdate);
-    state.successOrderId = id.toUpperCase();
+    const orderNo = (resp && resp.orderNo) ? String(resp.orderNo) : id.toUpperCase();
+    order.orderNo = orderNo;
+    state.successOrderId = orderNo;
     state.successMode = isUpdate ? 'updated' : 'new';
     state.lastOrder = order;
     if(!isUpdate){
@@ -2379,9 +2388,9 @@ async function handleOrderPDF(id, mode){
     const result = await buildQuotePDF(order, true);
     if(result && result.blob){
       if(mode==='download'){
-        downloadBlob(result.blob, 'عرض_سعر_' + order.id.toUpperCase() + '.pdf');
+        downloadBlob(result.blob, 'عرض_سعر_' + orderNoDisplay_(order) + '.pdf');
       } else {
-        previewPdfBlob(result, 'عرض_سعر_' + order.id.toUpperCase() + '.pdf');
+        previewPdfBlob(result, 'عرض_سعر_' + orderNoDisplay_(order) + '.pdf');
       }
     } else {
       showToast('حصل خطأ في تجهيز الملف، حاول تاني');
@@ -2402,7 +2411,7 @@ async function previewMyOrderPDF(id){
   try{
     const result = await buildQuotePDF(order, false);
     if(result && result.blob){
-      previewPdfBlob(result, 'عرض_سعر_' + order.id.toUpperCase() + '.pdf');
+      previewPdfBlob(result, 'عرض_سعر_' + orderNoDisplay_(order) + '.pdf');
     } else {
       showToast('حصل خطأ في تجهيز الملف، حاول تاني');
     }
@@ -3033,17 +3042,16 @@ async function buildQuotePDF(order){
   wrap.innerHTML = `
     <div style="padding:30px 36px;">
       <div style="display:flex;justify-content:center;margin-bottom:14px;">
-        <div id="qr-holder-top" style="text-align:center;"></div>
+        <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:88px;height:88px;border-radius:14px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:6px;">
       </div>
       <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #C9A227;padding-bottom:18px;margin-bottom:20px;">
-        <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:60px;height:60px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
         <div style="flex:1;">
           <div style="font-size:22.4px;font-weight:800;color:#1F3050;">القرشي لأبواب وشبابيك الـ UPVC</div>
           <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">وكيل AXA مصر</div>
         </div>
         <div style="text-align:left;">
           <div style="font-size:16.8px;font-weight:800;color:#C9A227;">عرض سعر</div>
-          <div style="font-size:12.3px;color:#6E7480;">#${esc(order.id.toUpperCase())}</div>
+          <div style="font-size:12.3px;color:#6E7480;">#${esc(orderNoDisplay_(order))}</div>
         </div>
       </div>
 
@@ -3191,12 +3199,6 @@ async function buildQuotePDF(order){
     </div>
   `;
   document.body.appendChild(wrap);
-  try{
-    const qrHolder = wrap.querySelector('#qr-holder-top');
-    if(qrHolder && typeof QRCode !== 'undefined'){
-      new QRCode(qrHolder, { text: APP_URL, width:64, height:64, correctLevel: QRCode.CorrectLevel.M });
-    }
-  }catch(e){ /* QR is a nice-to-have, ignore failures */ }
 
   let result = null;
   try{
@@ -3334,7 +3336,7 @@ async function buildShortageImageGroup(order, groupKey){
           <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">${esc(asText(order.distRegion))} · ${esc(group.label)}</div>
         </div>
         <div style="text-align:left;">
-          <div style="font-size:14.6px;font-weight:800;color:#C9A227;">#${esc(String(order.id).toUpperCase())}</div>
+          <div style="font-size:14.6px;font-weight:800;color:#C9A227;">#${esc(orderNoDisplay_(order))}</div>
           <div style="font-size:12.3px;color:#6E7480;">${esc(dateStr)}</div>
         </div>
       </div>
@@ -3385,7 +3387,7 @@ async function handleShortageImage(id, groupKey){
     const blob = await buildShortageImageGroup(order, groupKey);
     if(blob){
       const label = SHORTAGE_IMG_GROUPS_[groupKey].label;
-      previewImageBlob(blob, 'نواقص_' + label.replace(/\s+/g,'_') + '_' + String(order.id).toUpperCase() + '.png');
+      previewImageBlob(blob, 'نواقص_' + label.replace(/\s+/g,'_') + '_' + orderNoDisplay_(order) + '.png');
     } else {
       showToast('مفيش أصناف من "' + SHORTAGE_IMG_GROUPS_[groupKey].label + '" في الطلب ده');
     }
@@ -3422,7 +3424,7 @@ async function buildWarehouseImage(order, mainGroup, rows, pageNo, pageCount){
           <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">القرشي لأبواب وشبابيك الـ UPVC</div>
         </div>
         <div style="text-align:left;">
-          <div style="font-size:14.6px;font-weight:800;color:#C9A227;">#${esc(String(order.id).toUpperCase())}</div>
+          <div style="font-size:14.6px;font-weight:800;color:#C9A227;">#${esc(orderNoDisplay_(order))}</div>
           <div style="font-size:12.3px;color:#6E7480;">${esc(dateStr)}</div>
         </div>
       </div>
@@ -3520,7 +3522,7 @@ async function shareWarehouseImages(){
   const files = imgs.map((x, i)=> new File([x.blob], base + '_' + (i+1) + '_' + x.group + '.png', {type:'image/png'}));
   try{
     if(navigator.canShare && navigator.canShare({files})){
-      await navigator.share({ files, title:'أمر صرف مخزن', text:'طلب #' + (o?String(o.id).toUpperCase():'') });
+      await navigator.share({ files, title:'أمر صرف مخزن', text:'طلب #' + (o?orderNoDisplay_(o):'') });
       return;
     }
   }catch(e){
@@ -4142,7 +4144,7 @@ function renderMyOrdersView(){
           <div>
             <div class="dname">${esc(o.distName)}</div>
             <div class="dmeta">${esc(o.distRegion||'')} · ${dateStr}</div>
-            <div class="oid">#${esc(o.id.toUpperCase())}</div>
+            <div class="oid">#${esc(orderNoDisplay_(o))}</div>
           </div>
           <span class="statusbadge ${isDone?'done':'pending'}">${isDone?'✓ تم التسليم':'⏳ قيد التنفيذ'}</span>
         </div>
@@ -4218,7 +4220,7 @@ function renderAdminView(){
           <div>
             <div class="dname">${esc(o.distName)}</div>
             <div class="dmeta">${esc(o.distRegion||'')} · ${esc(o.distPhone||'بدون رقم')} · ${dateStr}</div>
-            <div class="oid">#${esc(o.id.toUpperCase())}</div>
+            <div class="oid">#${esc(orderNoDisplay_(o))}</div>
           </div>
           <button class="statusbadge ${isDone?'done':'pending'}" data-act="toggle-status" data-id="${esc(o.id)}">
             ${isDone?'✓ تم التسليم':'⏳ قيد التنفيذ'}
@@ -4342,7 +4344,7 @@ async function shareOrderImage(){
     const img = new File([q.imgBlob], name + '.png', {type:'image/png'});
     if(navigator.canShare && navigator.canShare({files:[img]})){
       // مفيش رقم — شاشة المشاركة هتفتح وهو يختار الجروب أو الشخص
-      await navigator.share({ files:[img], title:'طلبية', text:'طلب #' + (o ? String(o.id).toUpperCase() : '') });
+      await navigator.share({ files:[img], title:'طلبية', text:'طلب #' + (o ? orderNoDisplay_(o) : '') });
       state.orderSentToWa = true;
       render();
       return;
