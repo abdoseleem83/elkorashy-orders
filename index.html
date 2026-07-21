@@ -906,7 +906,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v106';
+const APP_BUILD = 'v107';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1029,6 +1029,7 @@ const state = {
   adminStatusFilter:'all',
   adminPdfGeneratingId:null,
   shortageImgBusy:null,
+  notifyImgBusy:null,
 
   catalogLoading:true,
   catalogError:false,
@@ -2511,6 +2512,7 @@ function renderNotifyPrompt(){
       <p>هيفتح واتساب برسالة جاهزة عن طلب <b>${esc(ord.distName)}</b> — تختار المستلم بنفسك</p>
       <div class="modalbtns">
         <button class="modalbtn primary" data-act="do-notify-dist">📲 ابعت على واتساب</button>
+        <button class="modalbtn" data-act="do-notify-dist-img" ${state.notifyImgBusy?'disabled':''}>${state.notifyImgBusy?'⏳ جارٍ...':'🖼️ ابعت صورة بالشعار'}</button>
         <button class="modalbtn" data-act="skip-notify">مش دلوقتي</button>
       </div>
     </div>
@@ -4235,6 +4237,9 @@ function renderAdminView(){
         ${o.note ? `<div class="note">${esc(o.note)}</div>` : ''}
         <div class="adminbtnrow">
           ${isDone ? `<button class="delbtn pdf" data-act="notify-dist" data-id="${esc(o.id)}">📲 بلّغ الموزع</button>` : ''}
+          ${isDone ? `<button class="delbtn pdf" data-act="notify-dist-img" data-id="${esc(o.id)}" ${state.notifyImgBusy===o.id?'disabled':''}>
+            ${state.notifyImgBusy===o.id ? '⏳ جارٍ...' : '🖼️ إشعار بالشعار'}
+          </button>` : ''}
           <button class="delbtn pdf" data-act="preview-order-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
             ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : '📄 معاينة'}
           </button>
@@ -4288,15 +4293,104 @@ function isIOSDevice(){
 // لو اليوزر فاتح اللينك من كروم أو فيسبوك أو واتساب، الخيار ده مش موجود عنده
 // أصلاً — وده أكتر سبب بيخلي ناس الآيفون تقول "مش عارف أثبته".
 // إشعار يدوي للموزع — بيفتح واتساب برسالة جاهزة. بيشتغل مع أي رقم من غير أي إعداد.
+// نص رسالة تبليغ الموزع — مكان واحد بس عشان الرسالة النصية وصورة الإشعار
+// يفضلوا متطابقين، ولو النص اتغير تاني نغيّره من هنا وبس.
+function notifyMessageText_(ord){
+  let msg = '✅ تم استلام الطلب الخاص بكم وجاري تنفيذه حسب المتاح بالمخزن وسيتم اعلامكم برساله بالمتاح\n';
+  msg += 'نشكر صبركم\n';
+  msg += 'رقم الطلب: #' + orderNoDisplay_(ord) + '\n';
+  msg += 'الموزع: ' + (asText(ord.distName) || '-') + '\n';
+  msg += 'المنطقة: ' + (asText(ord.distRegion) || '-') + '\n';
+  msg += 'المخزن: ' + (asText(ord.warehouse) || '-') + '\n';
+  msg += 'شكرًا لتعاملك مع القرشي لأبواب وشبابيك الـ UPVC';
+  return msg;
+}
+
+// واتساب مابيسمحش نحط صورة جوه نص الرسالة، فبنعمل الرسالة نفسها كـ"كارت"
+// صورة فيه أيقونة القرشي — الأدمن يشاركه من شاشة المشاركة أو ينزّله ويبعته.
+async function buildNotifyImage(order){
+  if(typeof html2canvas === 'undefined') return null;
+
+  const wrap = document.createElement('div');
+  wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
+  wrap.style.width='720px';
+  wrap.style.fontFamily = "'Cairo', sans-serif";
+  wrap.style.direction='rtl';
+  wrap.style.background='#FFFFFF';
+
+  const date = new Date(order.ts);
+  const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const row = (label, val)=>`
+    <div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #E4E0D6;font-size:16.5px;">
+      <div style="color:#6E7480;min-width:110px;">${esc(label)}</div>
+      <div style="font-weight:800;color:#1F3050;">${esc(val || '-')}</div>
+    </div>`;
+
+  wrap.innerHTML = `
+    <div style="padding:30px 34px;">
+      <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #C9A227;padding-bottom:14px;margin-bottom:18px;">
+        <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:64px;height:64px;border-radius:12px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:5px;">
+        <div style="flex:1;">
+          <div style="font-size:21.3px;font-weight:800;color:#1F3050;">إشعار استلام طلب</div>
+          <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">القرشي لأبواب وشبابيك الـ UPVC</div>
+        </div>
+        <div style="text-align:left;">
+          <div style="font-size:14.6px;font-weight:800;color:#C9A227;">#${esc(orderNoDisplay_(order))}</div>
+          <div style="font-size:12.3px;color:#6E7480;">${esc(dateStr)}</div>
+        </div>
+      </div>
+
+      <div style="background:#F5F3EE;border-right:5px solid #C9A227;border-radius:10px;padding:16px 18px;font-size:17px;line-height:1.7;color:#1F3050;">
+        ✅ تم استلام الطلب الخاص بكم وجاري تنفيذه حسب المتاح بالمخزن وسيتم اعلامكم برساله بالمتاح
+        <div style="margin-top:6px;color:#6E7480;font-size:15.5px;">نشكر صبركم</div>
+      </div>
+
+      <div style="margin-top:18px;">
+        ${row('رقم الطلب:', '#' + orderNoDisplay_(order))}
+        ${row('الموزع:', asText(order.distName))}
+        ${row('المنطقة:', asText(order.distRegion))}
+        ${row('المخزن:', asText(order.warehouse))}
+      </div>
+
+      <div style="margin-top:20px;text-align:center;font-size:15.5px;font-weight:800;color:#1F3050;">
+        شكرًا لتعاملك مع القرشي لأبواب وشبابيك الـ UPVC
+      </div>
+      ${CREDIT_LINE ? `<div style="margin-top:10px;text-align:center;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
+    </div>
+  `;
+  document.body.appendChild(wrap);
+
+  let blob = null;
+  try{
+    const canvas = await withTimeout(
+      html2canvas(wrap, {scale: 2, backgroundColor:'#ffffff', useCORS:true, allowTaint:true}),
+      20000, 'notify-img'
+    );
+    blob = await canvasToPngBlob_(canvas);
+  }catch(e){ console.error('buildNotifyImage failed:', e); }
+  try{ document.body.removeChild(wrap); }catch(e){}
+  return blob;
+}
+
+// بيجهّز صورة الإشعار ويفتح شاشة المعاينة (فيها زرار مشاركة وزرار تنزيل).
+async function notifyDistributorImage(id){
+  const ord = state.orders.find(o=>o.id===id);
+  if(!ord){ showToast('مفيش طلب'); return; }
+  state.notifyImgBusy = id; render();
+  try{
+    const blob = await buildNotifyImage(ord);
+    if(blob) previewImageBlob(blob, 'إشعار_استلام_' + orderNoDisplay_(ord) + '.png');
+    else showToast('تعذّر تجهيز الصورة، حاول تاني');
+  }catch(e){
+    showToast('تعذّر تجهيز الصورة: ' + (e && e.message ? e.message : e));
+  }
+  state.notifyImgBusy = null; render();
+}
+
 function notifyDistributorManually(id){
   const ord = state.orders.find(o=>o.id===id);
   if(!ord) return;
-  let msg = '✅ طلبك اتسلّم\n';
-  msg += 'رقم الطلب: #' + String(ord.id).toUpperCase() + '\n';
-  msg += 'الموزع: ' + asText(ord.distName) + '\n';
-  msg += '——————\n';
-  msg += 'تم استلام طلبك وجاري تنفيذه حسب المتاح\n';
-  msg += 'شكرًا لتعاملك مع القرشي لأبواب وشبابيك الـ UPVC';
+  let msg = notifyMessageText_(ord);
   if(CREDIT_LINE) msg += '\n' + CREDIT_LINE;
   // ⚠️ من غير رقم متحدد — الرسالة بتفتح واتساب فاضي عشان الأدمن يختار
   // المستلم بنفسه (زي الجروب الخاص) بدل ما تتبعت لرقم الموزع تلقائيًا.
@@ -5016,6 +5110,14 @@ async function onActionInner(act, el){
     case 'make-docs': if(state.lastOrder) generateBothQuotes(state.lastOrder); break;
     case 'clear-save-error': state.saveError=''; render(); break;
     case 'notify-dist': notifyDistributorManually(el.getAttribute('data-id')); break;
+    case 'notify-dist-img': notifyDistributorImage(el.getAttribute('data-id')); break;
+    case 'do-notify-dist-img':{
+      const nid = state.notifyPromptId;
+      state.notifyPromptId = null;
+      notifyDistributorImage(nid);
+      render();
+      break;
+    }
     case 'do-notify-dist':{
       const nid = state.notifyPromptId;
       state.notifyPromptId = null;
