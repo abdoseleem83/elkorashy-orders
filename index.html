@@ -604,6 +604,7 @@ textarea{resize:vertical;min-height:60px;}
   border:none;font-family:'Cairo',sans-serif;
 }
 .statusbadge.pending{background:#FBEBD1;color:#8A5A00;}
+.statusbadge.received{background:#E7EEFB;color:#1F4E9C;}
 .statusbadge.done{background:var(--success-bg);color:var(--success);}
 .ordercard .items{font-size:14px;}
 .ordercard .item-row{display:flex;justify-content:space-between;padding:4px 0;color:var(--ink);}
@@ -696,10 +697,16 @@ textarea{resize:vertical;min-height:60px;}
 
 .productgrid .ptile.lowstock{background:#FFFBE8;}
 .productgrid .ptile.lowstock:hover{background:#FFF3C4;}
-.productgrid .ptile.outstock{
+.productgrid .ptile.outstock,
+.productgrid .ptile.critstock{
   background:#FDECEC;border-color:var(--danger);color:#8A1F1F;
 }
-.productgrid .ptile.outstock:hover{background:#FADCDC;}
+.productgrid .ptile.outstock:hover,
+.productgrid .ptile.critstock:hover{background:#FADCDC;}
+.productgrid .ptile.blackstock{
+  background:#2A2A2A;border-color:#2A2A2A;color:#fff;
+}
+.productgrid .ptile.blackstock:hover{background:#000;}
 
 /* المختار يفضل بلون الاختيار مهما كانت حالته */
 .productgrid .ptile.selected{background:var(--navy);color:#fff;border-color:var(--navy);}
@@ -721,6 +728,7 @@ textarea{resize:vertical;min-height:60px;}
 .productgrid .ptile .stocktag.out{background:var(--danger);color:#fff;}
 .productgrid .ptile .stocktag.low{background:var(--gold);color:#1F3050;}
 .productgrid .ptile .stocktag.in{background:var(--success);color:#fff;}
+.productgrid .ptile .stocktag.black{background:#000;color:#fff;}
 
 /* مفتاح الألوان فوق شبكة الأصناف */
 .stocklegend{
@@ -911,6 +919,21 @@ const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9Xy
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
+
+// ===== مراحل الطلب التلاتة =====
+const STATUS_PENDING = 'تحت التنفيذ';
+const STATUS_RECEIVED = 'تم استلام الطلب';
+const STATUS_DONE = 'تم تنفيذ الطلب';
+const STATUS_ORDER = [STATUS_PENDING, STATUS_RECEIVED, STATUS_DONE];
+function statusInfo_(status){
+  if(status===STATUS_DONE) return {cls:'done', icon:'✅', label:STATUS_DONE};
+  if(status===STATUS_RECEIVED) return {cls:'received', icon:'📦', label:STATUS_RECEIVED};
+  return {cls:'pending', icon:'⏳', label:STATUS_PENDING};
+}
+function nextStatus_(status){
+  const i = STATUS_ORDER.indexOf(status);
+  return STATUS_ORDER[(i<0?0:i+1) % STATUS_ORDER.length];
+}
 // المخازن اللي الموزع بيحمّل منها — عايز تضيف/تشيل مخزن؟ عدّل السطر ده بس.
 const WAREHOUSES = ['طنطا', 'الاسكندرية', 'المنصورة اكسا', 'العاشر اكسا'];
 // أيقونة تمثّل مدينة كل مخزن (بدل الأيقونة الموحّدة 🏬) — عايز تضيف مخزن
@@ -964,6 +987,7 @@ const state = {
   // sector / product staging
   mainGroup:null,
   subGroup:null,
+  selectedColor:null,
   productSearch:'',
   staged:[],                   // [{key, main, product, colorRequired, availableColors, selectedColors:[], qtys:{color:n}, unitType, cancelling:false}]
 
@@ -1062,6 +1086,15 @@ function sectorNeedsSubFilter(main){
 }
 function colorsForProduct(main, product){
   return CATALOG.filter(d=>d.main===main && d.product===product);
+}
+// الألوان المتاحة في قطاع معيّن (بترتيب ظهورها في الكتالوج) — لو القطاع مفيهوش
+// ألوان حقيقية (زي شاتر) بترجع مصفوفة فاضية، وساعتها مش هيظهر خطوة "اختار اللون".
+function colorsForMain(main){
+  const seen = [];
+  CATALOG.forEach(d=>{
+    if(d.main===main && d.color && !seen.includes(d.color)) seen.push(d.color);
+  });
+  return seen;
 }
 function hasRealColors(main, product){
   return colorsForProduct(main, product).some(c => c.color);
@@ -1628,7 +1661,7 @@ async function updateOrderStatus(id, status){
     const r = await fetch(APPS_SCRIPT_URL + '?action=updateStatus&token=' + encodeURIComponent(getAdminToken()) + '&id=' + encodeURIComponent(id) + '&status=' + encodeURIComponent(status));
     let d = {};
     try{ d = await r.json(); }catch(e){}
-    if(status==='تم التسليم'){
+    if(status===STATUS_DONE){
       if(d.notified){
         showToast('اتحدّثت ✅ واتبعت إشعار للموزع تلقائيًا');
       } else {
@@ -1654,12 +1687,12 @@ async function deleteOrder(id){
 }
 
 async function deleteDeliveredOrders(){
-  const count = state.orders.filter(o=>o.status==='تم التسليم').length;
-  if(count===0){ showToast('مفيش طلبات "تم التسليم" حاليًا'); return; }
+  const count = state.orders.filter(o=>o.status===STATUS_DONE).length;
+  if(count===0){ showToast('مفيش طلبات "' + STATUS_DONE + '" حاليًا'); return; }
   try{
     await fetch(APPS_SCRIPT_URL + '?action=deleteDelivered&token=' + encodeURIComponent(getAdminToken()));
-    state.orders = state.orders.filter(o=>o.status!=='تم التسليم');
-    showToast('تم مسح ' + count + ' طلب متسلّم');
+    state.orders = state.orders.filter(o=>o.status!==STATUS_DONE);
+    showToast('تم مسح ' + count + ' طلب منفَّذ');
   }catch(e){ showToast('حصل خطأ في الحذف، حاول تاني'); }
   render();
 }
@@ -2257,7 +2290,7 @@ async function actuallySubmit(){
     warehouse: asText(state.warehouse).trim(),
     note: asText(state.note).trim(),
     items: state.cart,
-    status:'قيد التنفيذ'
+    status: STATUS_PENDING
   };
   try{
     const resp = await saveOrderRemote(order, isUpdate);
@@ -2318,6 +2351,8 @@ function startEditOrder(order){
   state.cart = order.items.map(it=>Object.assign({}, it));
   state.staged = [];
   state.mainGroup = null;
+  state.subGroup = null;
+  state.selectedColor = null;
   // لو المخزن فاضي في الطلب القديم، نحط أول مخزن متاح عشان الفورم يظهر
   if(!state.warehouse){
     if(WAREHOUSES && WAREHOUSES.length) state.warehouse = WAREHOUSES[0];
@@ -2479,7 +2514,7 @@ async function runDiagnostics(){
   const testOrder = {
     action:'create', id:'TEST'+Date.now().toString(36), ts:Date.now(),
     distName:'اختبار تشخيص', distRegion:'اختبار', distPhone:'0000000000',
-    note:'صف تجريبي — امسحه', status:'قيد التنفيذ',
+    note:'صف تجريبي — امسحه', status: STATUS_PENDING,
     items:[{ main:'أصناف أخرى', product:'اختبار', name:'اختبار', color:'', unitType:'قطعة', qty:1, unitPrice:0, lineTotal:0 }]
   };
   try{
@@ -3535,10 +3570,8 @@ async function shareWarehouseImages(){
 
 // ===== excel export (admin) =====
 async function exportExcel(statusFilter){
-  // statusFilter: 'قيد التنفيذ' أو 'تم التسليم' — كل زرار بيصدّر ملف مستقل بطلباته بس
-  const ordersForFile = statusFilter==='تم التسليم'
-    ? state.orders.filter(o=>o.status==='تم التسليم')
-    : state.orders.filter(o=>o.status!=='تم التسليم');
+  // statusFilter: واحدة من المراحل التلاتة بالظبط — كل زرار بيصدّر ملف مستقل بطلباته بس
+  const ordersForFile = state.orders.filter(o=>o.status===statusFilter);
 
   if(ordersForFile.length===0){ showToast('مفيش طلبات "' + statusFilter + '" لتصديرها'); return; }
   if(typeof ExcelJS === 'undefined'){ showToast('حصل خطأ في تحميل أداة التصدير، حاول تاني'); return; }
@@ -3622,7 +3655,7 @@ async function exportExcel(statusFilter){
   const blob = new Blob([buffer], { type:'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const fileTag = statusFilter==='تم التسليم' ? 'تم_التسليم' : 'قيد_التنفيذ';
+  const fileTag = statusFilter.replace(/\s+/g,'_');
   a.href = url; a.download = 'طلبات_الموزعين_' + fileTag + '.xlsx';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
@@ -3847,6 +3880,7 @@ function renderOrderView(){
   const inlineStagedKeys_ = [];
   if(state.mainGroup && state.mainGroup!==OTHER_SECTOR){
     const needsSub = sectorNeedsSubFilter(state.mainGroup);
+    const colorsAvail = !needsSub ? colorsForMain(state.mainGroup) : [];
     let subToUse = null;
     if(needsSub){
       const subs = subGroupsForMain(state.mainGroup);
@@ -3860,13 +3894,28 @@ function renderOrderView(){
         </div>`;
       }
       subToUse = state.subGroup;
+    } else if(colorsAvail.length){
+      // خطوة "اختار اللون" — بتظهر بعد القطاع مباشرة لأي قطاع فيه ألوان حقيقية
+      subSection = `
+      <div class="card">
+        <h2><span class="num">4</span>اختار اللون</h2>
+        <div class="chipwrap chipgrid4">
+          ${colorsAvail.map(c=>`<button class="chip ${state.selectedColor===c?'active':''}" data-act="set-color" data-val="${esc(c)}">${esc(c)}</button>`).join('')}
+        </div>
+      </div>`;
     }
-    const showProducts = !needsSub || !!subToUse;
+    const colorToUse = colorsAvail.length ? state.selectedColor : null;
+    const showProducts = needsSub ? !!subToUse : (colorsAvail.length ? !!colorToUse : true);
     if(showProducts){
       const prodMap = productsForGroup(state.mainGroup, subToUse);
       const q = state.productSearch.trim().toLowerCase();
       // ترتيب الأصناف رجع زي ما كان — بترتيب الكاتالوج الأصلي، من غير ترتيب حسب التوفر
-      const names = [...prodMap.keys()].filter(n => !q || n.toLowerCase().includes(q));
+      let names = [...prodMap.keys()].filter(n => !q || n.toLowerCase().includes(q));
+      // لو دخلنا من خطوة "اختار اللون"، بنفلتر الأصناف على اللي فعلاً متاحة
+      // باللون ده بس — عشان دي بالظبط اللي طلبها الموزع.
+      if(colorToUse){
+        names = names.filter(n => colorsForProduct(state.mainGroup, n).some(c=>c.color===colorToUse));
+      }
       productSection = `
       <div class="card">
         <h2><span class="num">5</span>اختار الأصناف (تقدر تختار أكتر من واحد)</h2>
@@ -3874,9 +3923,17 @@ function renderOrderView(){
           <input type="text" placeholder="ابحث عن اسم الصنف..." value="${esc(state.productSearch)}" data-act="search-product">
         </div>
         <div class="stocklegend">
+          ${colorToUse ? `
+          <span><i style="background:var(--success);"></i> متوفر</span>
+          <span><i style="background:var(--gold);"></i> كمية قليلة</span>
+          <span><i style="background:var(--danger);"></i> متاح اعواد</span>
+          <span><i style="background:#000;"></i> مفيش رصيد خالص</span>
+          <span><i style="background:#C9C5BA;"></i> موقوف</span>
+          ` : `
           <span><i style="background:var(--success);"></i> متوفر</span>
           <span><i style="background:var(--danger);"></i> مفيش رصيد (السعر متاح)</span>
           <span><i style="background:#C9C5BA;"></i> موقوف</span>
+          `}
         </div>
         <div class="productgrid ${state.mainGroup && state.mainGroup.includes('اكسسوارات') ? 'compact' : ''}">
           ${names.length ? names.map(n=>{
@@ -3884,21 +3941,36 @@ function renderOrderView(){
             inlineStagedKeys_.push(stagedEntry ? stagedEntry.key : null);
             const isStaged = !!stagedEntry;
             const inCart = state.cart.some(it=>it.main===state.mainGroup && it.product===n);
-            const unavailable = isProductFullyUnavailable(state.mainGroup, n);
+            const colorItem = colorToUse ? findCatalogItem(state.mainGroup, n, colorToUse) : null;
+            const unavailable = colorToUse ? !!(colorItem && colorItem.available===false) : isProductFullyUnavailable(state.mainGroup, n);
             // ⚠️ في مخازن العاشر والمنصورة، ولو الداخل عميل، الرصيد مالوش
             // معنى — نوري الصنف عادي من غير أي تلوين أو لافتة "متوفر/مفيش
             // رصيد" خالص. "موقوف" من الأدمن يفضل يتطبق دايمًا مهما كان.
             const showStock = warehouseAffectsStock();
-            const lvl = unavailable ? 'unavailable' : (showStock ? productStockLevel(state.mainGroup, n) : 'ok');
-            const stockClass = unavailable ? 'unavailable' : (showStock ? (lvl==='ok' ? 'instock' : lvl==='crit' ? 'lowstock' : 'outstock') : '');
+            // في وضع "اختار اللون" بنستخدم المستوى الحقيقي بتاع اللون ده بالظبط
+            // (4 مستويات: مفيش رصيد خالص / اعواد / قليلة / متوفر) — نفس الألوان
+            // والتصميم المستخدمين أصلاً في شرائح الألوان.
+            const lvl = unavailable ? 'unavailable' : (showStock ? (colorToUse ? colorStockLevel(colorItem) : productStockLevel(state.mainGroup, n)) : 'ok');
+            const stockClass = unavailable ? 'unavailable' : (showStock ? (
+              colorToUse
+                ? (lvl==='ok' ? 'instock' : lvl==='low' ? 'lowstock' : lvl==='crit' ? 'critstock' : 'blackstock')
+                : (lvl==='ok' ? 'instock' : lvl==='crit' ? 'lowstock' : 'outstock')
+            ) : '');
             const tile = `
             <div class="ptile ${isStaged?'selected':''} ${inCart?'incart':''} ${stockClass}" data-act="${unavailable?'noop-unavailable':'toggle-product'}" data-val="${esc(n)}">
               ${isStaged?'<span class="tick">✓</span>':''}
               <span>${esc(n)}</span>
               ${unavailable?'<span class="unavailtag">موقوف</span>':''}
-              ${(showStock && !unavailable && lvl==='out')?'<span class="stocktag out">مفيش رصيد</span>':''}
-              ${(showStock && !unavailable && lvl==='crit')?`<span class="stocktag low">كمية قليلة: ${esc(lowStockColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
-              ${(showStock && !unavailable && lvl==='ok')?`<span class="stocktag in">متوفر: ${esc(availableColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
+              ${colorToUse ? `
+                ${(showStock && !unavailable && lvl==='out')?'<span class="stocktag black">مفيش رصيد خالص</span>':''}
+                ${(showStock && !unavailable && lvl==='crit')?'<span class="stocktag out">متاح اعواد</span>':''}
+                ${(showStock && !unavailable && lvl==='low')?'<span class="stocktag low">كمية قليلة</span>':''}
+                ${(showStock && !unavailable && lvl==='ok')?'<span class="stocktag in">متوفر</span>':''}
+              ` : `
+                ${(showStock && !unavailable && lvl==='out')?'<span class="stocktag out">مفيش رصيد</span>':''}
+                ${(showStock && !unavailable && lvl==='crit')?`<span class="stocktag low">كمية قليلة: ${esc(lowStockColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
+                ${(showStock && !unavailable && lvl==='ok')?`<span class="stocktag in">متوفر: ${esc(availableColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
+              `}
             </div>`;
             // ⚠️ لو الصنف ده متختار، تفاصيله (الألوان/الكمية/السعر) بتظهر
             // على طول تحته في نفس الشبكة — مش في بلوك منفصل تحت كل الأصناف.
@@ -4137,7 +4209,8 @@ function renderMyOrdersView(){
     content = state.myOrders.map(o=>{
       const date = new Date(o.ts);
       const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' - ' + date.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
-      const isDone = o.status==='تم التسليم';
+      const isDone = o.status===STATUS_DONE;
+      const si = statusInfo_(o.status);
       return `
       <div class="card ordercard">
         <div class="ohead">
@@ -4146,7 +4219,7 @@ function renderMyOrdersView(){
             <div class="dmeta">${esc(o.distRegion||'')} · ${dateStr}</div>
             <div class="oid">#${esc(orderNoDisplay_(o))}</div>
           </div>
-          <span class="statusbadge ${isDone?'done':'pending'}">${isDone?'✓ تم التسليم':'⏳ قيد التنفيذ'}</span>
+          <span class="statusbadge ${si.cls}">${si.icon} ${esc(si.label)}</span>
         </div>
         <div class="items">
           ${o.items.map(it=>`
@@ -4213,7 +4286,8 @@ function renderAdminView(){
     <div class="emptystate"><div class="ic">📭</div><div>مفيش طلبات مطابقة حاليًا</div></div>` : orders.map(o=>{
       const date = new Date(o.ts);
       const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' - ' + date.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
-      const isDone = o.status==='تم التسليم';
+      const isDone = o.status===STATUS_DONE;
+      const si = statusInfo_(o.status);
       return `
       <div class="card ordercard">
         <div class="ohead">
@@ -4222,8 +4296,8 @@ function renderAdminView(){
             <div class="dmeta">${esc(o.distRegion||'')} · ${esc(o.distPhone||'بدون رقم')} · ${dateStr}</div>
             <div class="oid">#${esc(orderNoDisplay_(o))}</div>
           </div>
-          <button class="statusbadge ${isDone?'done':'pending'}" data-act="toggle-status" data-id="${esc(o.id)}">
-            ${isDone?'✓ تم التسليم':'⏳ قيد التنفيذ'}
+          <button class="statusbadge ${si.cls}" data-act="toggle-status" data-id="${esc(o.id)}" title="دوس عشان تتقدّم للمرحلة الجاية">
+            ${si.icon} ${esc(si.label)}
           </button>
         </div>
         <div class="items">
@@ -4257,15 +4331,17 @@ function renderAdminView(){
     <div class="adminbar">
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
       <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
-      <button class="exportbtn" data-act="export-excel-pending">تصدير Excel (قيد التنفيذ)</button>
-      <button class="exportbtn" data-act="export-excel-delivered">تصدير Excel (تم التسليم)</button>
+      <button class="exportbtn" data-act="export-excel-pending">تصدير Excel (${STATUS_PENDING})</button>
+      <button class="exportbtn" data-act="export-excel-received">تصدير Excel (${STATUS_RECEIVED})</button>
+      <button class="exportbtn" data-act="export-excel-delivered">تصدير Excel (${STATUS_DONE})</button>
       <button class="exportbtn" data-act="show-pwreq">🔑 طلبات الباسورد${state.pwRequestsCount ? ' ('+state.pwRequestsCount+')' : ''}</button>
-      <button class="exportbtn danger" data-act="delete-delivered">مسح المُسلَّم</button>
+      <button class="exportbtn danger" data-act="delete-delivered">مسح المُنفَّذ</button>
     </div>
     <div class="statuschips">
       <button class="chip ${state.adminStatusFilter==='all'?'active':''}" data-act="admin-status" data-val="all">الكل (${state.orders.length})</button>
-      <button class="chip ${state.adminStatusFilter==='قيد التنفيذ'?'active':''}" data-act="admin-status" data-val="قيد التنفيذ">قيد التنفيذ</button>
-      <button class="chip ${state.adminStatusFilter==='تم التسليم'?'active':''}" data-act="admin-status" data-val="تم التسليم">تم التسليم</button>
+      <button class="chip ${state.adminStatusFilter===STATUS_PENDING?'active':''}" data-act="admin-status" data-val="${esc(STATUS_PENDING)}">⏳ ${STATUS_PENDING}</button>
+      <button class="chip ${state.adminStatusFilter===STATUS_RECEIVED?'active':''}" data-act="admin-status" data-val="${esc(STATUS_RECEIVED)}">📦 ${STATUS_RECEIVED}</button>
+      <button class="chip ${state.adminStatusFilter===STATUS_DONE?'active':''}" data-act="admin-status" data-val="${esc(STATUS_DONE)}">✅ ${STATUS_DONE}</button>
     </div>
     ${list}
   </main>`;
@@ -4913,6 +4989,7 @@ async function onActionInner(act, el){
     case 'set-group':{
       state.mainGroup = el.getAttribute('data-val');
       state.productSearch='';
+      state.selectedColor = null;
       if(sectorNeedsSubFilter(state.mainGroup)){
         const subs = subGroupsForMain(state.mainGroup);
         state.subGroup = subs.length===1 ? subs[0] : null;
@@ -4926,6 +5003,10 @@ async function onActionInner(act, el){
       state.subGroup = el.getAttribute('data-val');
       render();
       break;
+    case 'set-color':
+      state.selectedColor = el.getAttribute('data-val');
+      render();
+      break;
     case 'toggle-product':{
       const name = el.getAttribute('data-val');
       // بنمسك مكان الصنف اللي دوس عليه بالظبط، وبعد ما الألوان تتفتح تحته
@@ -4933,6 +5014,15 @@ async function onActionInner(act, el){
       // فيفضل شايفه هو والصنف اللي بعده من غير ما الشاشة "تنط".
       withPositionAnchor_(`[data-act="toggle-product"][data-val="${CSS.escape(name)}"]`, ()=>{
         toggleStagedProduct(state.mainGroup, name);
+        // لو دخلنا من خطوة "اختار اللون"، اللون ده يتاختار تلقائيًا جوه
+        // تفاصيل الصنف عشان الموزع ميحتاجش يدوس عليه تاني بيده.
+        if(state.selectedColor){
+          const key = stagedKey(state.mainGroup, name);
+          const s = state.staged.find(x=>x.key===key);
+          if(s && s.colorRequired && s.availableColors.includes(state.selectedColor) && !s.selectedColors.includes(state.selectedColor)){
+            toggleStagedColor(key, state.selectedColor);
+          }
+        }
       });
       break;
     }
@@ -5056,8 +5146,8 @@ async function onActionInner(act, el){
     case 'toggle-status':{
       const id = el.getAttribute('data-id');
       const ord = state.orders.find(o=>o.id===id);
-      const next = ord.status==='تم التسليم' ? 'قيد التنفيذ' : 'تم التسليم';
-      updateOrderStatus(id, next);
+      if(!ord) break;
+      updateOrderStatus(id, nextStatus_(ord.status));
       break;
     }
     case 'delete-order':{
@@ -5081,11 +5171,12 @@ async function onActionInner(act, el){
       break;
     }
     case 'delete-delivered':
-      if(confirm('هيتم حذف كل الطلبات "تم التسليم" نهائيًا. متأكد؟')) deleteDeliveredOrders();
+      if(confirm('هيتم حذف كل الطلبات "' + STATUS_DONE + '" نهائيًا. متأكد؟')) deleteDeliveredOrders();
       break;
     case 'admin-status': state.adminStatusFilter = el.getAttribute('data-val'); render(); break;
-    case 'export-excel-pending': exportExcel('قيد التنفيذ'); break;
-    case 'export-excel-delivered': exportExcel('تم التسليم'); break;
+    case 'export-excel-pending': exportExcel(STATUS_PENDING); break;
+    case 'export-excel-received': exportExcel(STATUS_RECEIVED); break;
+    case 'export-excel-delivered': exportExcel(STATUS_DONE); break;
     case 'refresh-orders': loadOrders(); showToast('جارٍ التحديث...'); break;
     case 'install-app': installApp(); break;
     case 'dismiss-install': dismissInstallBanner(); break;
