@@ -3777,7 +3777,7 @@ function renderStagedBlock(s){
       </div>
       ${s.selectedColors.map(c=>{
         const unitType = s.units[c] || s.unitOptions[0];
-        const qty = s.qtys[c]||1;
+        const qty = s.qtys[c] ?? 1;
         const price = calcUnitPrice(s.main, s.product, c, unitType);
         const lineTotal = price==null ? null : price*qty;
         return `
@@ -4838,6 +4838,27 @@ function bindEvents(){
         if(e.key==='Enter' && act==='auth-password'){ onAction('login-submit', el); }
         if(e.key==='Enter' && act==='forgot-username'){ onAction('forgot-submit', el); }
       });
+      // خانات الأرقام: أول ما الموزع يدوس/يقف فيها، القيمة الحالية تتحدد
+      // كلها تلقائيًا — عشان أي رقم جديد يكتبه يمسح القديم بدل ما يتلزق جنبه
+      // (زي مشكلة كتابة "0" وهي بتتلزق مع الرقم القديم بدل ما تحل مكانه).
+      if(el.type==='number'){
+        el.addEventListener('focus', ()=>{ try{ el.select(); }catch(err){} });
+      }
+      // خانات الكمية: بنسيب الموزع يمسح الخانة أو يكتب "0" وهو لسه بيكتب من
+      // غير ما نرجّعها 1 فورًا (وده كان بيبان وكأن الرقم "بيختفي") — وبس لما
+      // يسيب الخانة (blur) بنتأكد إن القيمة مش أقل من 1.
+      if(act==='other-qty-input'){
+        el.addEventListener('blur', ()=>{
+          if(!state.otherQty || state.otherQty<1){ state.otherQty=1; render(); }
+        });
+      }
+      if(act==='staged-qty-input'){
+        el.addEventListener('blur', ()=>{
+          const key = el.getAttribute('data-key'), color = el.getAttribute('data-val');
+          const s = state.staged.find(x=>x.key===key);
+          if(s && (!s.qtys[color] || s.qtys[color]<1)){ s.qtys[color]=1; render(); }
+        });
+      }
     } else if(el.tagName==='SELECT'){
       el.addEventListener('change', e=>onSelectChange(act, el, e.target.value));
     } else {
@@ -4867,10 +4888,17 @@ function onInputChange(act, el, val){
     case 'set-othername': state.otherName = val; break;
     case 'set-othernote': state.otherNote = val; break;
     case 'set-otherprice': state.otherPrice = val; break;
-    case 'other-qty-input': state.otherQty = Math.max(1, parseInt(val)||1); break;
+    case 'other-qty-input': {
+      const n = parseInt(val);
+      state.otherQty = val==='' ? 0 : (isFinite(n) ? Math.max(0, n) : 0);
+      break;
+    }
     case 'staged-qty-input': {
       const s = state.staged.find(x=>x.key===activeKey);
-      if(s) s.qtys[activeVal] = Math.max(1, parseInt(val)||1);
+      if(s){
+        const n = parseInt(val);
+        s.qtys[activeVal] = val==='' ? 0 : (isFinite(n) ? Math.max(0, n) : 0);
+      }
       break;
     }
     case 'pin-input': state.pinInput = val.replace(/[^0-9]/g,''); state.pinError=false; break;
