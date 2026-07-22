@@ -833,10 +833,20 @@ textarea{resize:vertical;min-height:60px;}
   flex:1;background:var(--success);color:#fff;border:none;border-radius:9px;
   padding:8px;font-family:'Cairo',sans-serif;font-weight:800;font-size:11.8px;cursor:pointer;
 }
+.confirmbtn.small{flex:none;padding:7px 10px;font-size:11px;border-radius:8px;}
 .cancelbtn{
   flex:1;background:none;border:1.5px solid var(--danger);color:var(--danger);border-radius:9px;
   padding:8px;font-family:'Cairo',sans-serif;font-weight:700;font-size:11.8px;cursor:pointer;
 }
+/* ⚠️ الصف المختصر ده بيظهر تحت الصنف مباشرة لما يكون اللون اتحدد بالفعل من
+   خطوة "اختار اللون" العامة فوق الشبكة — مفيش داعي نعيد عرض اختيار اللون
+   ولا نبعت الموزع لقسم "حدد التفاصيل" البعيد؛ وحدة+كمية+سعر+زرار إضافة
+   وخلاص. */
+.inlineqtyrow{
+  grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  background:#F7F5F0;border:1.3px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:-4px;
+}
+.inlineqtyrow .cqprice{width:auto;flex:1;text-align:left;}
 
 /* cart grouped by sector */
 .cartgroup{margin-bottom:14px;}
@@ -914,7 +924,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v110';
+const APP_BUILD = 'v111';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -3708,6 +3718,31 @@ function renderHeader(){
 }
 
 // ===== render: staged product block =====
+// ⚠️ لما اللون يكون اتحدد بالفعل من خطوة "اختار اللون" العامة اللي فوق
+// الشبكة (state.selectedColor)، مفيش داعي نعيد عرض اختيار اللون تاني ولا
+// نودّي الموزع لقسم "حدد التفاصيل" البعيد — بنعرضله بس وحدة+كمية+سعر
+// وزرار "ضيف للسلة" مباشرة تحت الصنف، عشان يقدر يضيف أصناف كتير بسرعة.
+function renderInlineQtyRow(s, color){
+  const unitType = s.units[color] || s.unitOptions[0];
+  const qty = s.qtys[color] ?? 1;
+  const price = calcUnitPrice(s.main, s.product, color, unitType);
+  const lineTotal = price==null ? null : price*qty;
+  return `
+  <div class="inlineqtyrow">
+    ${s.unitOptions.length>1 ? `
+    <select class="cqselect" data-act="set-color-unit" data-key="${esc(s.key)}" data-val="${esc(color)}">
+      ${s.unitOptions.map(u=>`<option value="${esc(u)}" ${s.units[color]===u?'selected':''}>${esc(u)}</option>`).join('')}
+    </select>` : `<span class="cqunitfixed">${esc(s.unitOptions[0])}</span>`}
+    <div class="qtystepper small">
+      <button data-act="staged-qty-dec" data-key="${esc(s.key)}" data-val="${esc(color)}" type="button">−</button>
+      <input type="text" inputmode="numeric" pattern="[0-9]*" min="1" value="${qty}" data-act="staged-qty-input" data-key="${esc(s.key)}" data-val="${esc(color)}">
+      <button data-act="staged-qty-inc" data-key="${esc(s.key)}" data-val="${esc(color)}" type="button">+</button>
+    </div>
+    <span class="cqprice">${lineTotal==null?'—':Math.round(lineTotal).toLocaleString('en-US')}</span>
+    <button class="confirmbtn small" data-act="confirm-staged" data-key="${esc(s.key)}">✓ ضيف للسلة</button>
+  </div>`;
+}
+
 function renderStagedBlock(s){
   return `
   <div class="stagedblock ${s.cancelling?'cancelling':''}" data-stagedkey="${esc(s.key)}">
@@ -3874,8 +3909,11 @@ function renderOrderView(){
 
   let subSection = '';
   let productSection = '';
-  // ⚠️ رجعنا لوضع "حدد التفاصيل" كقسم منفصل تحت شبكة الأصناف كلها —
-  // بناءً على طلب صريح إن الألوان متبقاش ظاهرة تحت كل صنف داخل الشبكة نفسها.
+  // مفاتيح الأصناف اللي عرضنالها صف مختصر (وحدة+كمية+سعر) تحتها في الشبكة
+  // نفسها — لأن اللون كان اتحدد بالفعل من خطوة "اختار اللون" فوق، فمفيش
+  // داعي نودّي الموزع لقسم "حدد التفاصيل" البعيد. أي صنف تاني (لسه محتاج
+  // يختار لون بنفسه) بيفضل يظهر في قسم "حدد التفاصيل" العادي تحت.
+  const inlineStagedKeys_ = [];
   if(state.mainGroup && state.mainGroup!==OTHER_SECTOR){
     const needsSub = sectorNeedsSubFilter(state.mainGroup);
     const colorsAvail = !needsSub ? colorsForMain(state.mainGroup) : [];
@@ -3969,7 +4007,16 @@ function renderOrderView(){
                 ${(showStock && !unavailable && lvl==='ok')?`<span class="stocktag in">متوفر: ${esc(availableColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
               `}
             </div>`;
-            return tile;
+            // ⚠️ لو اللون اتحدد بالفعل من خطوة "اختار اللون" فوق (colorToUse)
+            // وده الصنف ده كان متضاف بلونه، بنعرض صف مختصر (وحدة+كمية+سعر+
+            // زرار إضافة) على طول تحت الصنف — من غير ما نبعته لقسم "حدد
+            // التفاصيل" البعيد ولا نعيد سؤاله عن اللون تاني.
+            let inlineRow = '';
+            if(isStaged && colorToUse && stagedEntry.selectedColors.includes(colorToUse)){
+              inlineRow = renderInlineQtyRow(stagedEntry, colorToUse);
+              inlineStagedKeys_.push(stagedEntry.key);
+            }
+            return tile + inlineRow;
           }).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>'}
         </div>
       </div>`;
@@ -4009,12 +4056,13 @@ function renderOrderView(){
     </div>`;
   }
 
-  // كل الأصناف المتختارة (staged) بتفاصيلها بتظهر هنا في قسم واحد منفصل
-  // تحت شبكة الأصناف كلها — مش تحت كل صنف داخل الشبكة نفسها.
-  const stagedSection = state.staged.length ? `
+  // الأصناف اللي عرضنالها صف مختصر تحت الصنف نفسه (لون متحدد من فوق) مش
+  // بتتكرر هنا — القسم ده بقى بس للأصناف اللي لسه محتاجة تختار لون بنفسها.
+  const remainingStaged = state.staged.filter(s => !inlineStagedKeys_.includes(s.key));
+  const stagedSection = remainingStaged.length ? `
     <div class="card">
       <h2><span class="num">6</span>حدد التفاصيل</h2>
-      ${state.staged.map(renderStagedBlock).join('')}
+      ${remainingStaged.map(renderStagedBlock).join('')}
     </div>` : '';
 
   const cartSection = `
@@ -5062,7 +5110,10 @@ async function onActionInner(act, el){
       // ⚠️ لو الصنف ده جديد (مكانش شايله قبل كده)، دلوقتي هو مضاف لقسم
       // "حدد التفاصيل" البعيد تحت — بنودّي الموزع لهناك تلقائيًا عشان
       // ميحسش إن حاجة ماحصلتش. لو كان بيلغي صنف كان شايله، مش محتاجين نودّيه.
-      if(!wasStaged) scrollToStagedDetail_(key);
+      // ⚠️ لو اللون متحدد بالفعل من فوق (state.selectedColor)، الصنف هيظهر
+      // كصف مختصر تحت التايل نفسه على طول (مش في قسم بعيد)، فمفيش داعي
+      // نعمل سكرول — هو أصلاً في مكانه قدام عين الموزع.
+      if(!wasStaged && !state.selectedColor) scrollToStagedDetail_(key);
       break;
     }
     case 'noop-unavailable': showToast('الصنف ده غير متوفر حاليًا'); break;
