@@ -914,7 +914,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v108';
+const APP_BUILD = 'v109';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -3874,10 +3874,8 @@ function renderOrderView(){
 
   let subSection = '';
   let productSection = '';
-  // مفاتيح الأصناف اللي اتعرض تفاصيلها "جوه" الشبكة نفسها (تحت الصنف بالظبط) —
-  // أي صنف متختار مش موجود في الشبكة الحالية (لو الموزع غيّر القطاع/التصنيف
-  // وهو لسه مختار صنف من مكان تاني) هيفضل يظهر في الكارت الاحتياطي تحت.
-  const inlineStagedKeys_ = [];
+  // ⚠️ رجعنا لوضع "حدد التفاصيل" كقسم منفصل تحت شبكة الأصناف كلها —
+  // بناءً على طلب صريح إن الألوان متبقاش ظاهرة تحت كل صنف داخل الشبكة نفسها.
   if(state.mainGroup && state.mainGroup!==OTHER_SECTOR){
     const needsSub = sectorNeedsSubFilter(state.mainGroup);
     const colorsAvail = !needsSub ? colorsForMain(state.mainGroup) : [];
@@ -3938,7 +3936,6 @@ function renderOrderView(){
         <div class="productgrid ${state.mainGroup && state.mainGroup.includes('اكسسوارات') ? 'compact' : ''}">
           ${names.length ? names.map(n=>{
             const stagedEntry = state.staged.find(s=>s.key===stagedKey(state.mainGroup,n));
-            inlineStagedKeys_.push(stagedEntry ? stagedEntry.key : null);
             const isStaged = !!stagedEntry;
             const inCart = state.cart.some(it=>it.main===state.mainGroup && it.product===n);
             const colorItem = colorToUse ? findCatalogItem(state.mainGroup, n, colorToUse) : null;
@@ -3972,14 +3969,7 @@ function renderOrderView(){
                 ${(showStock && !unavailable && lvl==='ok')?`<span class="stocktag in">متوفر: ${esc(availableColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
               `}
             </div>`;
-            // ⚠️ لو الصنف ده متختار، تفاصيله (الألوان/الكمية/السعر) بتظهر
-            // على طول تحته في نفس الشبكة — مش في بلوك منفصل تحت كل الأصناف.
-            // grid-column:1/-1 بتخلي البلوك ده ياخد صف كامل لوحده، فـCSS Grid
-            // تلقائيًا بيبدأ صف جديد للأصناف الباقية بعده — من غير أي JS إضافي.
-            const inlineDetail = stagedEntry
-              ? `<div style="grid-column:1/-1;">${renderStagedBlock(stagedEntry)}</div>`
-              : '';
-            return tile + inlineDetail;
+            return tile;
           }).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>'}
         </div>
       </div>`;
@@ -4019,13 +4009,12 @@ function renderOrderView(){
     </div>`;
   }
 
-  // الأصناف اللي اتعرضت بالفعل جوه الشبكة (تحت الصنف بالظبط) مش بتتكرر هنا —
-  // الكارت ده بقى احتياطي بس، لأي صنف متختار مش ظاهر في الشبكة الحالية.
-  const orphanStaged = state.staged.filter(s => !inlineStagedKeys_.includes(s.key));
-  const stagedSection = orphanStaged.length ? `
+  // كل الأصناف المتختارة (staged) بتفاصيلها بتظهر هنا في قسم واحد منفصل
+  // تحت شبكة الأصناف كلها — مش تحت كل صنف داخل الشبكة نفسها.
+  const stagedSection = state.staged.length ? `
     <div class="card">
       <h2><span class="num">6</span>حدد التفاصيل</h2>
-      ${orphanStaged.map(renderStagedBlock).join('')}
+      ${state.staged.map(renderStagedBlock).join('')}
     </div>` : '';
 
   const cartSection = `
