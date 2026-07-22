@@ -914,7 +914,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v109';
+const APP_BUILD = 'v110';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -3710,7 +3710,7 @@ function renderHeader(){
 // ===== render: staged product block =====
 function renderStagedBlock(s){
   return `
-  <div class="stagedblock ${s.cancelling?'cancelling':''}">
+  <div class="stagedblock ${s.cancelling?'cancelling':''}" data-stagedkey="${esc(s.key)}">
     <div class="stagedhead">
       <div>
         <div class="stagedname">${esc(s.product)} ${s.isEditingExisting?'<span class="edittag">✏️ تعديل</span>':''}</div>
@@ -3789,7 +3789,7 @@ function renderStagedBlock(s){
           </select>` : `<span class="cqunitfixed">${esc(s.unitOptions[0])}</span>`}
           <div class="qtystepper small">
             <button data-act="staged-qty-dec" data-key="${esc(s.key)}" data-val="${esc(c)}" type="button">−</button>
-            <input type="number" min="1" value="${qty}" data-act="staged-qty-input" data-key="${esc(s.key)}" data-val="${esc(c)}">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" min="1" value="${qty}" data-act="staged-qty-input" data-key="${esc(s.key)}" data-val="${esc(c)}">
             <button data-act="staged-qty-inc" data-key="${esc(s.key)}" data-val="${esc(c)}" type="button">+</button>
           </div>
           <span class="cqprice">${lineTotal==null?'—':Math.round(lineTotal).toLocaleString('en-US')}</span>
@@ -4596,6 +4596,22 @@ function restoreGridScroll_(val){
   if(el) el.scrollTop = val;
 }
 
+// عشان الموزع لما يختار صنف جديد (مش شايله قبل كده) ميحتاجش يدور بنفسه على
+// كارت "حدد التفاصيل" اللي ممكن يكون بعيد أوي تحت شبكة الأصناف الطويلة —
+// بندزّه (scroll) تلقائيًا لبلوك تفاصيل الصنف ده أول ما يتضاف، مع ترك مسافة
+// من فوق عشان الهيدر الثابت ميغطيش أول سطر منه.
+function scrollToStagedDetail_(key){
+  requestAnimationFrame(()=>{
+    const el = document.querySelector(`[data-stagedkey="${CSS.escape(key)}"]`);
+    if(!el) return;
+    const head = document.querySelector('.fixedhead-outer');
+    const headH = head ? head.offsetHeight : 0;
+    const rect = el.getBoundingClientRect();
+    const targetY = window.scrollY + rect.top - headH - 12;
+    window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
+  });
+}
+
 function applyFixedHeaderSpacing_(){
   // ⚠️ سطر "نسخة vNN" كان بيروح تحت الهيدر الثابت ويختفي، لأنه أول عنصر
   // جاي في ترتيب الصفحة بعد الهيدر مباشرة — والهيدر الثابت مابياخدش مكانه
@@ -4830,7 +4846,7 @@ function bindEvents(){
       // خانات الأرقام: أول ما الموزع يدوس/يقف فيها، القيمة الحالية تتحدد
       // كلها تلقائيًا — عشان أي رقم جديد يكتبه يمسح القديم بدل ما يتلزق جنبه
       // (زي مشكلة كتابة "0" وهي بتتلزق مع الرقم القديم بدل ما تحل مكانه).
-      if(el.type==='number'){
+      if(el.type==='number' || act==='staged-qty-input'){
         el.addEventListener('focus', ()=>{ try{ el.select(); }catch(err){} });
       }
       // خانات الكمية: بنسيب الموزع يمسح الخانة أو يكتب "0" وهو لسه بيكتب من
@@ -4885,8 +4901,9 @@ function onInputChange(act, el, val){
     case 'staged-qty-input': {
       const s = state.staged.find(x=>x.key===activeKey);
       if(s){
-        const n = parseInt(val);
-        s.qtys[activeVal] = val==='' ? 0 : (isFinite(n) ? Math.max(0, n) : 0);
+        const digitsOnly = val.replace(/[^0-9]/g,'');
+        const n = parseInt(digitsOnly);
+        s.qtys[activeVal] = digitsOnly==='' ? 0 : (isFinite(n) ? Math.max(0, n) : 0);
       }
       break;
     }
@@ -5026,6 +5043,8 @@ async function onActionInner(act, el){
       break;
     case 'toggle-product':{
       const name = el.getAttribute('data-val');
+      const key = stagedKey(state.mainGroup, name);
+      const wasStaged = state.staged.some(x=>x.key===key);
       // بنمسك مكان الصنف اللي دوس عليه بالظبط، وبعد ما الألوان تتفتح تحته
       // ويحصل أي تحريك للأصناف التانية، برجّعه لنفس المكان على الشاشة —
       // فيفضل شايفه هو والصنف اللي بعده من غير ما الشاشة "تنط".
@@ -5034,13 +5053,16 @@ async function onActionInner(act, el){
         // لو دخلنا من خطوة "اختار اللون"، اللون ده يتاختار تلقائيًا جوه
         // تفاصيل الصنف عشان الموزع ميحتاجش يدوس عليه تاني بيده.
         if(state.selectedColor){
-          const key = stagedKey(state.mainGroup, name);
           const s = state.staged.find(x=>x.key===key);
           if(s && s.colorRequired && s.availableColors.includes(state.selectedColor) && !s.selectedColors.includes(state.selectedColor)){
             toggleStagedColor(key, state.selectedColor);
           }
         }
       });
+      // ⚠️ لو الصنف ده جديد (مكانش شايله قبل كده)، دلوقتي هو مضاف لقسم
+      // "حدد التفاصيل" البعيد تحت — بنودّي الموزع لهناك تلقائيًا عشان
+      // ميحسش إن حاجة ماحصلتش. لو كان بيلغي صنف كان شايله، مش محتاجين نودّيه.
+      if(!wasStaged) scrollToStagedDetail_(key);
       break;
     }
     case 'noop-unavailable': showToast('الصنف ده غير متوفر حاليًا'); break;
