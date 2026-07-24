@@ -446,6 +446,30 @@ textarea{resize:vertical;min-height:60px;}
    عن "معاينة"/"حفظ للسلة" (عرض وطول وتخطيط مختلف). الثلاثة دلوقتي بنفس
    الحجم والشكل بالظبط — بس إرسال الطلب فاضل بلونه الذهبي المميز. */
 .submitrow{display:flex;gap:8px;}
+/* شريط السلة — بيظهر فوق أزرار الإرسال أول ما يتضاف صنف */
+.cartbar{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  background:#fff;border:1.5px solid var(--navy-soft);border-radius:12px;
+  padding:7px 10px;margin-bottom:8px;
+  box-shadow:0 4px 14px rgba(0,0,0,.08);
+}
+.cartbar-txt{font-size:11.6px;font-weight:800;color:var(--navy-deep);}
+.cartbar-btn{
+  background:var(--navy);color:#fff;border:none;border-radius:9px;
+  padding:8px 16px;font-family:'Cairo',sans-serif;font-weight:800;font-size:12px;cursor:pointer;
+}
+.cartbar-btn:active{background:var(--navy-deep);}
+/* شاشة النجاح: تنبيه إجباري لو الطلب ماتبعتش واتساب */
+.wamust{
+  margin:14px 0;padding:12px;border-radius:12px;
+  background:#FDECEA;border:2px solid var(--danger);text-align:center;
+}
+.wamust-t{font-weight:800;color:var(--danger);font-size:13.5px;margin-bottom:4px;}
+.wamust p{font-size:11.8px;color:var(--ink);margin:0 0 10px;}
+.wamust-btn{
+  width:100%;background:#25D366;color:#fff;border:none;border-radius:10px;
+  padding:12px;font-family:'Cairo',sans-serif;font-weight:800;font-size:13.5px;cursor:pointer;
+}
 .submitrow .submitbtn,
 .submitrow .savebtn{
   flex:1;
@@ -930,24 +954,30 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v113';
+const APP_BUILD = 'v114';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
 
 // ===== مراحل الطلب التلاتة =====
-const STATUS_PENDING = 'تحت التنفيذ';
+// ⚠️ المراحل بقت اتنين بس بطلب صريح: "تم استلام الطلب" ثم "تم تنفيذ الطلب".
+// مرحلة "تحت التنفيذ" القديمة اتشالت — أي طلب قديم متسجّل بيها في الشيت
+// بيتحوّل تلقائيًا لـ"تم استلام الطلب" عند العرض (normStatus_).
+const STATUS_LEGACY_PENDING = 'تحت التنفيذ';
 const STATUS_RECEIVED = 'تم استلام الطلب';
 const STATUS_DONE = 'تم تنفيذ الطلب';
-const STATUS_ORDER = [STATUS_PENDING, STATUS_RECEIVED, STATUS_DONE];
+const STATUS_PENDING = STATUS_RECEIVED;   // اسم قديم — سايبينه عشان أي كود بيناديه
+const STATUS_ORDER = [STATUS_RECEIVED, STATUS_DONE];
+function normStatus_(st){
+  return String(st == null ? '' : st).trim() === STATUS_DONE ? STATUS_DONE : STATUS_RECEIVED;
+}
 function statusInfo_(status){
-  if(status===STATUS_DONE) return {cls:'done', icon:'✅', label:STATUS_DONE};
-  if(status===STATUS_RECEIVED) return {cls:'received', icon:'📦', label:STATUS_RECEIVED};
-  return {cls:'pending', icon:'⏳', label:STATUS_PENDING};
+  if(normStatus_(status)===STATUS_DONE) return {cls:'done', icon:'✅', label:STATUS_DONE};
+  return {cls:'received', icon:'📦', label:STATUS_RECEIVED};
 }
 function nextStatus_(status){
-  const i = STATUS_ORDER.indexOf(status);
+  const i = STATUS_ORDER.indexOf(normStatus_(status));
   return STATUS_ORDER[(i<0?0:i+1) % STATUS_ORDER.length];
 }
 // المخازن اللي الموزع بيحمّل منها — عايز تضيف/تشيل مخزن؟ عدّل السطر ده بس.
@@ -1036,6 +1066,7 @@ const state = {
   stockPdfBusy:false,
   showPwRequests:false,
   showCartReview:false,
+  waSent:false,
   discountVisible:false,
   extraDiscount:0,  // خصم إضافي % يكتبه الموزع وقت التسعير
   pwRequests:[],
@@ -1618,6 +1649,8 @@ async function loadOrders(){
     const res = await fetch(APPS_SCRIPT_URL + '?token=' + encodeURIComponent(getAdminToken()));
     const data = await res.json();
     if(Array.isArray(data)){
+      // توحيد الحالات القديمة ('تحت التنفيذ') على النظام الجديد قبل أي فلترة
+      data.forEach(function(o){ o.status = normStatus_(o.status); });
       state.orders = data;
     } else if(data && data.error === 'unauthorized'){
       // التوكن خلص أو مش صالح — نرجّع الأدمن لشاشة الرقم
@@ -2313,7 +2346,7 @@ async function actuallySubmit(){
     warehouse: asText(state.warehouse).trim(),
     note: asText(state.note).trim(),
     items: state.cart,
-    status: STATUS_PENDING
+    status: STATUS_RECEIVED
   };
   try{
     const resp = await saveOrderRemote(order, isUpdate);
@@ -2334,6 +2367,9 @@ async function actuallySubmit(){
     showToast(isUpdate
       ? '✅ تم استلام تعديلك — جاري المراجعة والتأكيد بالمتاح'
       : '✅ تم استلام طلبك — جاري المراجعة والتأكيد بالمتاح', 5000);
+    // 📲 إرسال إجباري على واتساب — بنستخدم النافذة المحجوزة من لحظة الضغط
+    state.waSent = false;
+    try{ openOrderWhatsApp(order); }catch(e){ releaseWaWindow(); }
   }catch(e){
     // صندوق خطأ ثابت (مش toast بيختفي) فيه السبب الخام — عشان نعرف السبب الحقيقي
     state.saveError = 'نوع العملية: ' + (isUpdate ? 'تعديل' : 'جديد')
@@ -2341,24 +2377,19 @@ async function actuallySubmit(){
       + '\nعدد الأصناف: ' + (order.items ? order.items.length : 0)
       + '\nالخطأ: ' + (e && e.message ? e.message : String(e));
     console.error('actuallySubmit failed:', e);
+    releaseWaWindow();   // الطلب فشل — مانسبش نافذة فاضية مفتوحة
   }
   state.submitting = false;
   render();
   // ✅ نولّد عرض السعر تلقائياً بعد ما الطلب يتبعت
   if(state.lastOrder && state.successOrderId) generateBothQuotes(state.lastOrder);
-  // 📲 بعد ما الطلب يتسجل فعلاً ويرجع رقمه من السيرفر، بنفتح واتساب
-  // بالرسالة جاهزة والمستخدم يختار يبعتها لمين. لو المتصفح منع الفتح
-  // التلقائي، زرار "ابعت الطلب واتساب" في شاشة النجاح بيعمل نفس الحاجة.
-  if(state.lastOrder && state.successOrderId){
-    const waOrder = state.lastOrder;
-    setTimeout(function(){ try{ openOrderWhatsApp(waOrder); }catch(e){} }, 500);
-  }
   // ⛔ مابقناش نولّد الـ PDF تلقائيًا هنا. html2canvas بيجمّد الشاشة وهو شغال،
   // فكانت شاشة النجاح متظهرش والمستخدم يفتكر إن الحفظ فشل — مع إنه نجح فعلاً.
   // دلوقتي شاشة النجاح بتظهر فورًا، والملفات بتتولّد بضغطة زرار وقت ما تحتاجها.
 }
 
 function resetOrderForm(){
+  state.waSent = false;
   state.orderSentToWa = false;
   state.orderImage = null;
   state.warehouseImages = [];
@@ -3878,12 +3909,18 @@ function renderOrderView(){
         <h2>${state.successMode==='updated' ? 'تم تحديث الطلب بنجاح' : 'تم إرسال الطلب بنجاح'}</h2>
         <p>هيتم مراجعة طلبك والتواصل معاك لتأكيد التنفيذ</p>
         <div class="ordid">#${esc(state.successOrderId)}</div>
+        ${state.waSent ? `
         <div class="docsection">
           <div class="docsectiontitle">📲 إرسال الطلب</div>
           <div class="iconbtnrow">
-            <button class="iconbtn wa" data-act="send-order-wa"><span class="ic">📲</span><span>ابعت الطلب واتساب</span></button>
+            <button class="iconbtn wa" data-act="send-order-wa"><span class="ic">📲</span><span>ابعت الطلب واتساب تاني</span></button>
           </div>
-        </div>
+        </div>` : `
+        <div class="wamust">
+          <div class="wamust-t">⚠️ لسه الطلب ماتبعتش على واتساب</div>
+          <p>الطلب اتسجّل، بس <b>لازم</b> تبعته على واتساب عشان يوصل للمسؤول.</p>
+          <button class="wamust-btn" data-act="send-order-wa">📲 ابعت الطلب واتساب دلوقتي</button>
+        </div>`}
         <!-- ✂️ بناءً على طلب صريح: المستندات بقت "عرض السعر" بس، بأيقوناته
              التلاتة (واتساب صورة / تنزيل PDF / معاينة). باقي المستندات
              (صورة الطلب العامة، أمر صرف المخزن، طلبية النواقص) اتشالت. -->
@@ -4184,6 +4221,11 @@ function renderOrderView(){
     ${cartSection}
     ${noteSection}
     <div class="submitbar">
+      ${state.cart.length ? `
+      <div class="cartbar">
+        <span class="cartbar-txt">🛒 ${state.cart.length} صنف في السلة</span>
+        <button class="cartbar-btn" data-act="open-cart-review">مراجعة الطلب</button>
+      </div>` : ''}
       <div class="submitrow">
         <button class="submitbtn" data-act="request-submit" ${state.submitting?'disabled':''}>
           <span class="ic">${state.submitting ? '⏳' : '📨'}</span>${state.submitting ? 'جارٍ الإرسال...' : (state.editingOrderId ? 'حفظ التعديلات' : 'إرسال الطلب')}
@@ -4394,7 +4436,6 @@ function renderAdminView(){
     <div class="adminbar">
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
       <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
-      <button class="exportbtn" data-act="export-excel-pending">تصدير Excel (${STATUS_PENDING})</button>
       <button class="exportbtn" data-act="export-excel-received">تصدير Excel (${STATUS_RECEIVED})</button>
       <button class="exportbtn" data-act="export-excel-delivered">تصدير Excel (${STATUS_DONE})</button>
       <button class="exportbtn" data-act="show-pwreq">🔑 طلبات الباسورد${state.pwRequestsCount ? ' ('+state.pwRequestsCount+')' : ''}</button>
@@ -4402,7 +4443,6 @@ function renderAdminView(){
     </div>
     <div class="statuschips">
       <button class="chip ${state.adminStatusFilter==='all'?'active':''}" data-act="admin-status" data-val="all">الكل (${state.orders.length})</button>
-      <button class="chip ${state.adminStatusFilter===STATUS_PENDING?'active':''}" data-act="admin-status" data-val="${esc(STATUS_PENDING)}">⏳ ${STATUS_PENDING}</button>
       <button class="chip ${state.adminStatusFilter===STATUS_RECEIVED?'active':''}" data-act="admin-status" data-val="${esc(STATUS_RECEIVED)}">📦 ${STATUS_RECEIVED}</button>
       <button class="chip ${state.adminStatusFilter===STATUS_DONE?'active':''}" data-act="admin-status" data-val="${esc(STATUS_DONE)}">✅ ${STATUS_DONE}</button>
     </div>
@@ -4473,14 +4513,47 @@ function buildOrderWaText_(o){
   return m;
 }
 
+// ⚠️ السبب الحقيقي إن واتساب مكانش بيفتح: المتصفح (خصوصًا كروم/أندرويد
+// وداخل الـPWA) بيمنع window.open لو مانداهش في نفس لحظة ضغطة المستخدم.
+// إحنا بننادي عليه بعد await (استنينا رد السيرفر عشان نجيب رقم الطلب الحقيقي)
+// فالضغطة بتبقى "ضاعت" وبيتمنع بصمت.
+// الحل: بنفتح نافذة فاضية لحظة الضغط على "تأكيد الإرسال" (وهي لسه ضغطة حية)،
+// ونحتفظ بيها، وبعد ما الطلب ينجح نوجّهها هي على لينك واتساب.
+let __waWin = null;
+function reserveWaWindow(){
+  try{ __waWin = window.open('about:blank', '_blank'); }catch(e){ __waWin = null; }
+}
+function releaseWaWindow(){
+  try{ if(__waWin && !__waWin.closed) __waWin.close(); }catch(e){}
+  __waWin = null;
+}
+function orderWaUrl_(o){
+  return 'https://wa.me/?text=' + encodeURIComponent(buildOrderWaText_(o));
+}
+
 // من غير رقم في اللينك -> واتساب بيفتح شاشة "اختار المرسل إليه"
-// فالموزع هو اللي يقرر يبعتها لمين (شخص أو جروب).
+// فالموزع هو اللي يقرر يبعتها لمين (شخص أو جروب) — بس الإرسال نفسه إجباري.
 function openOrderWhatsApp(order){
   const o = order || state.lastOrder;
-  if(!o){ showToast('\u0645\u0641\u064a\u0634 \u0637\u0644\u0628'); return; }
-  const url = 'https://wa.me/?text=' + encodeURIComponent(buildOrderWaText_(o));
+  if(!o){ showToast('مفيش طلب'); return; }
+  const url = orderWaUrl_(o);
+  // 1) النافذة المحجوزة من لحظة الضغط (أضمن طريقة)
+  try{
+    if(__waWin && !__waWin.closed){
+      __waWin.location.href = url;
+      __waWin = null;
+      state.waSent = true; render();
+      return true;
+    }
+  }catch(e){ __waWin = null; }
+  // 2) فتح عادي (شغال لو إحنا جوه ضغطة مباشرة)
   const w = window.open(url, '_blank');
-  if(!w) showToast('\u0644\u0648 \u0627\u0644\u0648\u0627\u062a\u0633\u0627\u0628 \u0645\u0627\u0641\u062a\u062d\u0634\u060c \u0627\u0636\u063a\u0637 \u0632\u0631\u0627\u0631 "\u0627\u0628\u0639\u062a \u0627\u0644\u0637\u0644\u0628 \u0648\u0627\u062a\u0633\u0627\u0628"', 5000);
+  if(w){ state.waSent = true; render(); return true; }
+  // 3) آخر حل: نوجّه التبويب نفسه — واتساب بيفتح والتطبيق بيفضل وراه
+  try{ window.location.href = url; state.waSent = true; render(); return true; }catch(e){}
+  state.waSent = false; render();
+  showToast('المتصفح منع فتح واتساب — اضغط زرار "ابعت الطلب واتساب" تحت', 6000);
+  return false;
 }
 
 function notifyDistributorManually(id){
@@ -5242,7 +5315,12 @@ async function onActionInner(act, el){
       if(!state.myOrdersSearched) refreshMyOrders();
       break;
     case 'close-confirm': state.showConfirmModal=false; render(); break;
-    case 'do-submit': actuallySubmit(); break;
+    case 'do-submit':
+      // ⚠️ لازم تتنادي هنا بالظبط، جوه ضغطة المستخدم، قبل أي await —
+      // دي اللي بتخلي واتساب يفتح فعلاً بعد ما الطلب ينجح.
+      reserveWaWindow();
+      actuallySubmit();
+      break;
     case 'resume-draft': resumeDraft(); break;
     case 'discard-draft': discardDraftAndStartFresh(); break;
     case 'open-saved-draft': openSavedDraftManually(); break;
@@ -5335,7 +5413,6 @@ async function onActionInner(act, el){
       if(confirm('هيتم حذف كل الطلبات "' + STATUS_DONE + '" نهائيًا. متأكد؟')) deleteDeliveredOrders();
       break;
     case 'admin-status': state.adminStatusFilter = el.getAttribute('data-val'); render(); break;
-    case 'export-excel-pending': exportExcel(STATUS_PENDING); break;
     case 'export-excel-received': exportExcel(STATUS_RECEIVED); break;
     case 'export-excel-delivered': exportExcel(STATUS_DONE); break;
     case 'refresh-orders': loadOrders(); showToast('جارٍ التحديث...'); break;
