@@ -695,6 +695,10 @@ textarea{resize:vertical;min-height:60px;}
 .statusbadge.pending{background:#FBEBD1;color:#8A5A00;}
 .statusbadge.received{background:#E7EEFB;color:#1F4E9C;}
 .statusbadge.done{background:var(--success-bg);color:var(--success);}
+.ordercard .oheadmain{flex:1;cursor:pointer;user-select:none;padding:2px 0;}
+.ordercard .oheadmain .dmeta{margin-top:2px;}
+.ordercard .ochev{color:var(--navy-soft);font-weight:800;}
+.ordercard.open{border-color:var(--navy-soft);}
 .ordercard .items{font-size:14px;}
 .ordercard .item-row{display:flex;justify-content:space-between;padding:4px 0;color:var(--ink);}
 .ordercard .item-row b{color:var(--navy);}
@@ -1017,7 +1021,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v119';
+const APP_BUILD = 'v120';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1161,6 +1165,7 @@ const state = {
   ordersLoading:false,
   adminFilter:'',
   adminStatusFilter:'all',
+  adminOpenIds:{},   // أي كروت الطلبات مفتوحة في متابعة المخزن
   adminPdfGeneratingId:null,
   shortageImgBusy:null,
 
@@ -4448,7 +4453,8 @@ function filteredAdminOrders_(){
     if(state.adminStatusFilter!=='all' && o.status!==state.adminStatusFilter) return false;
     if(q && !(o.distName||'').toLowerCase().includes(q)) return false;
     return true;
-  });
+  // ترتيب تنازلي: الأحدث فوق دايمًا
+  }).sort((a,b)=> (b.ts||0) - (a.ts||0));
 }
 
 function renderAdminView(){
@@ -4475,18 +4481,23 @@ function renderAdminView(){
       const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' - ' + date.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
       const isDone = o.status===STATUS_DONE;
       const si = statusInfo_(o.status);
+      const isOpen = !!state.adminOpenIds[o.id];
+      const nItems = (o.items && o.items.length) || 0;
       return `
-      <div class="card ordercard">
+      <div class="card ordercard ${isOpen?'open':''}">
         <div class="ohead">
-          <div>
-            <div class="dname">${esc(o.distName)}</div>
-            <div class="dmeta">${esc(o.distRegion||'')} · ${esc(o.distPhone||'بدون رقم')} · ${dateStr}</div>
-            <div class="oid">#${esc(orderNoDisplay_(o))}</div>
+          <div class="oheadmain" data-act="toggle-order" data-id="${esc(o.id)}" title="دوس عشان تفتح/تقفل الأصناف">
+            <div class="dname"><span class="ochev">${isOpen?'▾':'▸'}</span> ${esc(o.distName)}</div>
+            <div class="dmeta">🏬 ${esc(o.warehouse||'—')}</div>
+            <div class="dmeta">🕐 ${dateStr}</div>
+            <div class="oid">#${esc(orderNoDisplay_(o))} · ${nItems} صنف</div>
           </div>
           <button class="statusbadge ${si.cls}" data-act="toggle-status" data-id="${esc(o.id)}" title="دوس عشان تتقدّم للمرحلة الجاية">
             ${si.icon} ${esc(si.label)}
           </button>
         </div>
+        ${!isOpen ? '' : `
+        <div class="dmeta" style="margin:2px 0 6px;">${esc(o.distRegion||'')} · ${esc(o.distPhone||'بدون رقم')}</div>
         <div class="items">
           ${o.items.map(it=>`
             <div class="item-row"><span>${esc(it.product)}${it.color?' — '+esc(it.color):''}</span><b>×${it.qty} ${esc(it.unitType||'')}</b></div>
@@ -4509,7 +4520,7 @@ function renderAdminView(){
             ${state.shortageImgBusy===(o.id+'|combin_acc') ? '⏳ جارٍ...' : '🖼️ نواقص كومبن واكسسوارات'}
           </button>
         </div>
-        <button class="delbtn" data-act="delete-order" data-id="${esc(o.id)}">🗑 حذف الطلب</button>
+        <button class="delbtn" data-act="delete-order" data-id="${esc(o.id)}">🗑 حذف الطلب</button>`}
       </div>`;
     }).join('');
 
@@ -5548,6 +5559,11 @@ async function onActionInner(act, el){
     case 'delete-delivered':
       if(confirm('هيتم حذف كل الطلبات "' + STATUS_DONE + '" نهائيًا. متأكد؟')) deleteDeliveredOrders();
       break;
+    case 'toggle-order': {
+      const id = el.getAttribute('data-id');
+      if(state.adminOpenIds[id]) delete state.adminOpenIds[id]; else state.adminOpenIds[id] = true;
+      render(); break;
+    }
     case 'admin-status': state.adminStatusFilter = el.getAttribute('data-val'); render(); break;
     case 'export-excel-received': exportExcel(STATUS_RECEIVED); break;
     case 'export-excel-delivered': exportExcel(STATUS_DONE); break;
