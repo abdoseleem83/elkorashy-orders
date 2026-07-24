@@ -1039,7 +1039,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v125';
+const APP_BUILD = 'v126';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1152,6 +1152,7 @@ const state = {
   showPwRequests:false,
   showCartReview:false,
   waSent:false,
+  waImgPreparing:false,
   discountVisible:false,
   extraDiscount:0,  // خصم إضافي % يكتبه الموزع وقت التسعير
   pwRequests:[],
@@ -2467,6 +2468,8 @@ async function actuallySubmit(){
     // بس بنعرض في شاشة النجاح ملاحظة + سهم بيشاور على زرار واتساب،
     // والموزع هو اللي يدوس بنفسه.
     state.waSent = false;
+    state.waImgPreparing = false;
+    state.orderImage = null;   // صورة الطلب الجديد بتتجهّز أول ما يدوس ابعت
   }catch(e){
     // صندوق خطأ ثابت (مش toast بيختفي) فيه السبب الخام — عشان نعرف السبب الحقيقي
     state.saveError = 'نوع العملية: ' + (isUpdate ? 'تعديل' : 'جديد')
@@ -2486,6 +2489,7 @@ async function actuallySubmit(){
 
 function resetOrderForm(){
   state.waSent = false;
+  state.waImgPreparing = false;
   state.orderSentToWa = false;
   state.orderImage = null;
   state.warehouseImages = [];
@@ -4011,10 +4015,10 @@ function renderOrderView(){
         <div class="ordid">#${esc(state.successOrderId)}</div>
         <div class="wanote">
           <p class="wanote-t">📲 لو سمحت اضغط <b>«ابعت الطلب واتساب»</b> عشان المخزن يستلم طلبك.</p>
-          <button class="wanote-btn ${state.waSent?'sent':''}" data-act="send-order-wa">
-            <span class="ic">📲</span> ${state.waSent ? 'تم — ابعت تاني' : 'ابعت الطلب واتساب'}
+          <button class="wanote-btn ${state.waSent?'sent':''}" data-act="send-order-img" ${state.waImgPreparing?'disabled':''}>
+            <span class="ic">📲</span> ${state.waImgPreparing ? 'جارٍ التجهيز...' : (state.waSent ? 'تم — ابعت تاني' : 'ابعت الطلب واتساب')}
           </button>
-          ${state.waSent ? '' : '<div class="wanote-arrow">⬆️</div>'}
+          ${(state.waSent || state.waImgPreparing) ? '' : '<div class="wanote-arrow">⬆️</div>'}
         </div>
         <!-- ✂️ بناءً على طلب صريح: المستندات بقت "عرض السعر" بس، بأيقوناته
              التلاتة (واتساب صورة / تنزيل PDF / معاينة). باقي المستندات
@@ -4758,6 +4762,27 @@ async function prepareOrderImage(){
   render();
 }
 
+// إرسال الطلب كصورة (نفس صورة عرض السعر، اللي فيها علامات "غير متاح" الحمرا).
+// بيجهّز الصورة الأول لو مش متجهّزة، وبعدين يفتح شاشة مشاركة واتساب والموزع
+// يختار المستلم. لو الجهاز مبيدعمش مشاركة الملفات، بينزّل الصورة.
+async function sendOrderAsImage(){
+  const o = state.lastOrder;
+  if(!o){ showToast('مفيش طلب'); return; }
+  // نجهّز الصورة لو لسه
+  if(!state.orderImage || !state.orderImage.imgBlob){
+    state.waImgPreparing = true; render();
+    try{
+      const res = await buildQuotePDF(o);
+      state.orderImage = (res && res.imgBlob) ? res : null;
+    }catch(e){ state.orderImage = null; }
+    state.waImgPreparing = false; render();
+    if(!state.orderImage){ showToast('تعذّر تجهيز الصورة، حاول تاني'); return; }
+  }
+  await shareOrderImage();
+  // shareOrderImage بيعلّم state.orderSentToWa — بنزامنها مع waSent عشان الزرار
+  if(state.orderSentToWa){ state.waSent = true; render(); }
+}
+
 async function shareOrderImage(){
   const q = state.orderImage;
   if(!q || !q.imgBlob){ showToast('جهّز الصورة الأول'); return; }
@@ -5027,6 +5052,13 @@ function render(){
     const viewKey = state.view + '|' + (state.successOrderId ? 'success' : '') + '|' + (state.adminUnlocked ? 'a' : '');
     restoreUiState_(snap, viewKey === lastViewKey);
     restoreGridScroll_(gridScroll);
+    // ✅ أول ما شاشة النجاح تظهر (انتقال من الفورم ليها)، نثبّت الصفحة فوق
+    // عشان الموزع يشوف رسالة النجاح وزرار الواتساب — مش يفضل نازل تحت زي
+    // ما كان في الفورم. بنعملها بس عند الدخول للشاشة، مش مع كل رسم.
+    if(state.successOrderId && viewKey !== lastViewKey){
+      scrollTo_(0);
+      requestAnimationFrame(()=>{ scrollTo_(0); });
+    }
     lastViewKey = viewKey;
     requestAnimationFrame(()=>{ unlock(); restoreGridScroll_(gridScroll); });
   }catch(err){
@@ -5518,6 +5550,7 @@ async function onActionInner(act, el){
       handleShortageImage(el.getAttribute('data-id') || null, el.getAttribute('data-group'));
       break;
     case 'send-order-wa': openOrderWhatsApp(state.lastOrder); break;
+    case 'send-order-img': await sendOrderAsImage(); break;
     case 'make-docs': if(state.lastOrder) generateBothQuotes(state.lastOrder); break;
     case 'clear-save-error': state.saveError=''; render(); break;
     case 'notify-dist': notifyDistributorManually(el.getAttribute('data-id')); break;
