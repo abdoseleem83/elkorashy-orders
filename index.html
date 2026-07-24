@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
 <title>القرشي | طلبات الموزعين</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1F3050">
+<meta name="theme-color" content="#1C6E9E">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -20,9 +20,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{
-  --navy:#1F3050;
-  --navy-deep:#152238;
-  --navy-soft:#2C4368;
+  --navy:#2B8CC4;        /* سماوي أساسي */
+  --navy-deep:#1C6E9E;   /* سماوي غامق (للتباين مع الأبيض) */
+  --navy-soft:#63B8E4;   /* سماوي فاتح */
   --gold:#C9A227;
   --gold-light:#E4C766;
   --bg:#F5F3EE;
@@ -105,7 +105,7 @@ header.top .logoimg{
   background:#fff;object-fit:contain;padding:3px;flex-shrink:0;
 }
 header.top h1{font-size:15px;margin:0;font-weight:800;letter-spacing:.1px;line-height:1.25;}
-header.top p.sub{margin:1px 0 0;font-size:10.5px;color:#C7D0DE;font-weight:500;}
+header.top p.sub{margin:1px 0 0;font-size:10.5px;color:#DCEEF9;font-weight:500;}
 
 nav.tabs{
   display:flex;
@@ -122,7 +122,7 @@ nav.tabs{
 }
 .extradiscwrap{display:inline-flex;align-items:center;gap:4px;margin-right:6px;vertical-align:middle;direction:rtl;}
 .extradiscwrap label{font-size:12px;color:var(--gold);font-weight:800;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.4);}
-.extradiscwrap input{width:52px;padding:3px 5px;border:2px solid var(--gold);border-radius:6px;font-size:14px;font-weight:800;text-align:center;background:var(--gold);color:#1F3050;}
+.extradiscwrap input{width:52px;padding:3px 5px;border:2px solid var(--gold);border-radius:6px;font-size:14px;font-weight:800;text-align:center;background:var(--gold);color:var(--navy-deep);}
 .extradiscwrap .pctsign{font-size:13px;font-weight:800;color:var(--gold);}
 .discounttogglebtn.on{
   background:var(--gold) !important;
@@ -131,15 +131,15 @@ nav.tabs{
 }
 nav.tabs button{
   flex:1 1 auto;
-  min-width:68px;
+  min-width:62px;
   background:rgba(255,255,255,.08);
   border:1px solid rgba(255,255,255,.16);
-  color:#DCE3EE;
-  padding:7px 4px;
+  color:#EAF6FD;
+  padding:6px 4px;
   border-radius:8px;
   font-family:'Cairo',sans-serif;
   font-weight:700;
-  font-size:10.8px;
+  font-size:10.4px;
   cursor:pointer;
   transition:.15s;
 }
@@ -450,17 +450,17 @@ textarea{resize:vertical;min-height:60px;}
 .submitrow .savebtn{
   flex:1;
   border-radius:12px;
-  padding:10px 6px;
+  padding:7px 5px;
   font-family:'Cairo',sans-serif;
   font-weight:800;
-  font-size:12.9px;
+  font-size:11.4px;
   cursor:pointer;
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
   gap:2px;
-  min-height:66px;
+  min-height:50px;
   border:1.5px solid var(--navy);
 }
 .submitbtn{
@@ -474,7 +474,10 @@ textarea{resize:vertical;min-height:60px;}
   background:#fff;
   color:var(--navy);
 }
-.savebtn .ic{font-size:20.2px;}
+/* توحيد كل الأيقونات (الإيموجي) في التطبيق: نفس المقاس ونفس المحاذاة */
+.ic{display:inline-flex;align-items:center;justify-content:center;line-height:1;font-style:normal;}
+.submitbtn .ic,.savebtn .ic{font-size:16px;height:18px;}
+.iconbtn{line-height:1.2;}
 .savebtn.saved{background:var(--success);border-color:var(--success);color:#fff;}
 .previewfoot .savebtn{width:100%;min-height:auto;flex-direction:row;}
 
@@ -517,9 +520,12 @@ textarea{resize:vertical;min-height:60px;}
 .iconbtnrow{display:flex;gap:8px;}
 .iconbtn{
   flex:1;background:#fff;border:1.5px solid var(--line);border-radius:10px;
-  padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;
-  font-size:11.8px;font-weight:700;color:var(--ink);cursor:pointer;font-family:'Cairo',sans-serif;
+  padding:7px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;
+  font-size:10.6px;font-weight:700;color:var(--ink);cursor:pointer;font-family:'Cairo',sans-serif;
 }
+.iconbtn>span{line-height:1.25;text-align:center;}
+.iconbtn .ic{font-size:15px;height:17px;}
+.iconbtn.wa{background:#E9F7EF;border-color:#2F7D5A;color:#1E5B40;}
 .iconbtn:active{background:#F0EDE4;}
 .receiptbtns{display:flex;flex-direction:column;gap:8px;max-width:280px;margin:0 auto;}
 .receiptbtns .newbtn{margin-top:8px;width:100%;}
@@ -726,7 +732,7 @@ textarea{resize:vertical;min-height:60px;}
   line-height:1.2;white-space:normal;
 }
 .productgrid .ptile .stocktag.out{background:var(--danger);color:#fff;}
-.productgrid .ptile .stocktag.low{background:var(--gold);color:#1F3050;}
+.productgrid .ptile .stocktag.low{background:var(--gold);color:var(--navy-deep);}
 .productgrid .ptile .stocktag.in{background:var(--success);color:#fff;}
 .productgrid .ptile .stocktag.black{background:var(--danger);color:#fff;font-weight:900;}
 
@@ -924,7 +930,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v112';
+const APP_BUILD = 'v113';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -2340,6 +2346,13 @@ async function actuallySubmit(){
   render();
   // ✅ نولّد عرض السعر تلقائياً بعد ما الطلب يتبعت
   if(state.lastOrder && state.successOrderId) generateBothQuotes(state.lastOrder);
+  // 📲 بعد ما الطلب يتسجل فعلاً ويرجع رقمه من السيرفر، بنفتح واتساب
+  // بالرسالة جاهزة والمستخدم يختار يبعتها لمين. لو المتصفح منع الفتح
+  // التلقائي، زرار "ابعت الطلب واتساب" في شاشة النجاح بيعمل نفس الحاجة.
+  if(state.lastOrder && state.successOrderId){
+    const waOrder = state.lastOrder;
+    setTimeout(function(){ try{ openOrderWhatsApp(waOrder); }catch(e){} }, 500);
+  }
   // ⛔ مابقناش نولّد الـ PDF تلقائيًا هنا. html2canvas بيجمّد الشاشة وهو شغال،
   // فكانت شاشة النجاح متظهرش والمستخدم يفتكر إن الحفظ فشل — مع إنه نجح فعلاً.
   // دلوقتي شاشة النجاح بتظهر فورًا، والملفات بتتولّد بضغطة زرار وقت ما تحتاجها.
@@ -3865,6 +3878,12 @@ function renderOrderView(){
         <h2>${state.successMode==='updated' ? 'تم تحديث الطلب بنجاح' : 'تم إرسال الطلب بنجاح'}</h2>
         <p>هيتم مراجعة طلبك والتواصل معاك لتأكيد التنفيذ</p>
         <div class="ordid">#${esc(state.successOrderId)}</div>
+        <div class="docsection">
+          <div class="docsectiontitle">📲 إرسال الطلب</div>
+          <div class="iconbtnrow">
+            <button class="iconbtn wa" data-act="send-order-wa"><span class="ic">📲</span><span>ابعت الطلب واتساب</span></button>
+          </div>
+        </div>
         <!-- ✂️ بناءً على طلب صريح: المستندات بقت "عرض السعر" بس، بأيقوناته
              التلاتة (واتساب صورة / تنزيل PDF / معاينة). باقي المستندات
              (صورة الطلب العامة، أمر صرف المخزن، طلبية النواقص) اتشالت. -->
@@ -3874,9 +3893,9 @@ function renderOrderView(){
             ${state.quotePdfGenerating ? `
               <div class="loading" style="padding:10px 20px;">جارٍ التجهيز...</div>
             ` : state.quotePdfPlain ? `
-              <button class="iconbtn" data-act="preview-quote-plain">👁️<span>معاينة</span></button>
-              <button class="iconbtn" data-act="share-quote-plain">📤<span>واتساب</span></button>
-              <button class="iconbtn" data-act="download-quote-plain">⬇️<span>تنزيل PDF</span></button>
+              <button class="iconbtn" data-act="preview-quote-plain"><span class="ic">👁️</span><span>معاينة</span></button>
+              <button class="iconbtn" data-act="share-quote-plain"><span class="ic">📤</span><span>واتساب</span></button>
+              <button class="iconbtn" data-act="download-quote-plain"><span class="ic">⬇️</span><span>تنزيل PDF</span></button>
             ` : `
               <div class="loading" style="padding:10px 20px;">جارٍ التجهيز...</div>
             `}
@@ -3886,8 +3905,8 @@ function renderOrderView(){
         <div class="docsection">
           <div class="docsectiontitle">📦 طلبية النواقص</div>
           <div class="iconbtnrow">
-            <button class="iconbtn" data-act="shortage-img" data-group="kraft_new" ${state.shortageImgBusy==='last|kraft_new'?'disabled':''}>🖼️<span>${state.shortageImgBusy==='last|kraft_new'?'جارٍ...':'نواقص كرافت ونيو'}</span></button>
-            <button class="iconbtn" data-act="shortage-img" data-group="combin_acc" ${state.shortageImgBusy==='last|combin_acc'?'disabled':''}>🖼️<span>${state.shortageImgBusy==='last|combin_acc'?'جارٍ...':'نواقص كومبن واكسسوارات'}</span></button>
+            <button class="iconbtn" data-act="shortage-img" data-group="kraft_new" ${state.shortageImgBusy==='last|kraft_new'?'disabled':''}><span class="ic">🖼️</span><span>${state.shortageImgBusy==='last|kraft_new'?'جارٍ...':'نواقص كرافت ونيو'}</span></button>
+            <button class="iconbtn" data-act="shortage-img" data-group="combin_acc" ${state.shortageImgBusy==='last|combin_acc'?'disabled':''}><span class="ic">🖼️</span><span>${state.shortageImgBusy==='last|combin_acc'?'جارٍ...':'نواقص كومبن واكسسوارات'}</span></button>
           </div>
         </div>
         <br>
@@ -4419,6 +4438,49 @@ function notifyMessageText_(ord){
   msg += 'المخزن: ' + (asText(ord.warehouse) || '-') + '\n';
   msg += 'شكرًا لتعاملك مع القرشي لأبواب وشبابيك الـ UPVC';
   return msg;
+}
+
+// ===== إرسال الطلب على واتساب (نص) =====
+// اسم الصنف كامل: اسم الكتالوج + اللون كلمة واحدة متصلة
+// مثال: "ضلفة باب مفصلي فتح للخارج كرافت بيج"
+function itemFullName_(it){
+  const base = asText(it.name || it.product).trim();
+  const col  = asText(it.color).trim();
+  if(!col) return base;
+  return base.indexOf(col) === -1 ? (base + ' ' + col) : base;
+}
+
+function buildOrderWaText_(o){
+  const d = new Date(o && o.ts ? o.ts : Date.now());
+  const dateStr = d.toLocaleDateString('ar-EG-u-nu-latn',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const timeStr = d.toLocaleTimeString('ar-EG-u-nu-latn',{hour:'2-digit',minute:'2-digit'});
+  const line = '\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501';
+  let m = '\ud83d\udeaa *\u0627\u0644\u0642\u0631\u0634\u064a \u0644\u0623\u0628\u0648\u0627\u0628 \u0648\u0634\u0628\u0627\u0628\u064a\u0643 \u0627\u0644\u0640 UPVC*\n';
+  m += '\u0637\u0644\u0628 \u062c\u062f\u064a\u062f\n' + line + '\n';
+  m += '\ud83d\udc64 \u0627\u0644\u0645\u0648\u0632\u0639: ' + (asText(o.distName) || '-') + '\n';
+  m += '\ud83d\udd22 \u0631\u0642\u0645 \u0627\u0644\u0637\u0644\u0628: #' + orderNoDisplay_(o) + '\n';
+  m += '\ud83c\udfec \u0645\u062e\u0632\u0646 \u0627\u0644\u062a\u062d\u0645\u064a\u0644: ' + (asText(o.warehouse) || '-') + '\n';
+  m += '\ud83d\udd50 \u0648\u0642\u062a \u0627\u0644\u0637\u0644\u0628: ' + dateStr + ' - ' + timeStr + '\n';
+  m += line + '\n\ud83d\udce6 *\u0627\u0644\u0623\u0635\u0646\u0627\u0641*\n';
+  const items = (o && o.items) ? o.items : [];
+  items.forEach(function(it, i){
+    m += (i+1) + ') ' + itemFullName_(it) + '\n';
+    m += '    \u0627\u0644\u0643\u0645\u064a\u0629: ' + (it.qty || 0) + ' ' + (asText(it.unitType) || '') + '\n';
+  });
+  m += line + '\n';
+  if(asText(o.note).trim()) m += '\ud83d\udcdd \u0645\u0644\u0627\u062d\u0638\u0627\u062a: ' + asText(o.note).trim() + '\n';
+  m += '\u0625\u062c\u0645\u0627\u0644\u064a \u0639\u062f\u062f \u0627\u0644\u0623\u0635\u0646\u0627\u0641: ' + items.length;
+  return m;
+}
+
+// من غير رقم في اللينك -> واتساب بيفتح شاشة "اختار المرسل إليه"
+// فالموزع هو اللي يقرر يبعتها لمين (شخص أو جروب).
+function openOrderWhatsApp(order){
+  const o = order || state.lastOrder;
+  if(!o){ showToast('\u0645\u0641\u064a\u0634 \u0637\u0644\u0628'); return; }
+  const url = 'https://wa.me/?text=' + encodeURIComponent(buildOrderWaText_(o));
+  const w = window.open(url, '_blank');
+  if(!w) showToast('\u0644\u0648 \u0627\u0644\u0648\u0627\u062a\u0633\u0627\u0628 \u0645\u0627\u0641\u062a\u062d\u0634\u060c \u0627\u0636\u063a\u0637 \u0632\u0631\u0627\u0631 "\u0627\u0628\u0639\u062a \u0627\u0644\u0637\u0644\u0628 \u0648\u0627\u062a\u0633\u0627\u0628"', 5000);
 }
 
 function notifyDistributorManually(id){
@@ -5207,6 +5269,7 @@ async function onActionInner(act, el){
     case 'shortage-img':
       handleShortageImage(el.getAttribute('data-id') || null, el.getAttribute('data-group'));
       break;
+    case 'send-order-wa': openOrderWhatsApp(state.lastOrder); break;
     case 'make-docs': if(state.lastOrder) generateBothQuotes(state.lastOrder); break;
     case 'clear-save-error': state.saveError=''; render(); break;
     case 'notify-dist': notifyDistributorManually(el.getAttribute('data-id')); break;
