@@ -1021,7 +1021,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v120';
+const APP_BUILD = 'v122';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -4447,14 +4447,32 @@ function renderMyOrdersView(){
 // نفس منطق الفلترة اللي المتابعة بتعرضه (بحث بالاسم + حالة الطلب)، بنستخدمه
 // هنا وكمان في تجهيز PDF النواقص عشان الأصناف اللي بتتجمّع تكون مطابقة
 // بالظبط لللي ظاهر على الشاشة في لحظة الضغط على الزرار.
+// وقت الطلب كرقم قابل للمقارنة. بنعدّيه على Date عشان لو السيرفر رجّع
+// نص أو تاريخ بدل رقم برضه يشتغل، ولو الوقت باظ (صفر/غير صالح) بنرجع صفر.
+function orderTimeKey_(o){
+  const t = new Date(o && o.ts != null ? o.ts : 0).getTime();
+  return isFinite(t) ? t : 0;
+}
+// رقم الطلب كعدد — بنستخدمه كمرجّح احتياطي لو الأوقات متساوية أو ضايعة.
+function orderNoKey_(o){
+  const n = parseInt(String((o && o.orderNo) || '').replace(/[^0-9]/g, ''), 10);
+  return isFinite(n) ? n : 0;
+}
+
 function filteredAdminOrders_(){
   const q = state.adminFilter.trim().toLowerCase();
   return state.orders.filter(o=>{
     if(state.adminStatusFilter!=='all' && o.status!==state.adminStatusFilter) return false;
     if(q && !(o.distName||'').toLowerCase().includes(q)) return false;
     return true;
-  // ترتيب تنازلي: الأحدث فوق دايمًا
-  }).sort((a,b)=> (b.ts||0) - (a.ts||0));
+  // ⚠️ الترتيب المطلوب: الأقدم فوق والأحدث تحت (المستخدم بيسمّيه "تنازلي").
+  // بنرتّب بالوقت تصاعديًا، ولو الوقت متساوي أو مش موجود بنرجع لرقم الطلب،
+  // عشان الترتيب مايعتمدش على ترتيب الصفوف الراجع من الشيت خالص.
+  }).slice().sort((a,b)=>{
+    const d = orderTimeKey_(a) - orderTimeKey_(b);
+    if(d !== 0) return d;
+    return orderNoKey_(a) - orderNoKey_(b);
+  });
 }
 
 function renderAdminView(){
