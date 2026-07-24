@@ -1017,7 +1017,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v118';
+const APP_BUILD = 'v119';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -3281,7 +3281,7 @@ async function buildQuotePDF(order){
                   html += `
                   <tr style="background:${rowBg};">
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;color:#8A8470;">${serialCounter}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;">${esc(it.name||it.product)}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${pct>0?pct+'%':'—'}</td>
@@ -3298,7 +3298,7 @@ async function buildQuotePDF(order){
                   html += `
                   <tr style="background:${rowBg};">
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;color:#8A8470;">${serialCounter}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;">${esc(it.name||it.product)}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">${net==null?'—':Math.round(net).toLocaleString('en-US')}</td>
@@ -3311,6 +3311,10 @@ async function buildQuotePDF(order){
           })()}
         </tbody>
       </table>
+      ${rows.some(r=>itemUnavailable_(r)) ? `
+      <div style="margin-top:12px;padding:9px 12px;background:#FDECEA;border:1.5px solid #C0392B;border-radius:8px;color:#C0392B;font-weight:800;font-size:13px;">
+        ● الأصناف المعلّمة بالأحمر غير متاحة حاليًا في المخزن — محتاجة تأكيد قبل التحميل.
+      </div>` : ''}
 
       <div style="display:flex;justify-content:flex-end;margin-top:18px;">
         <div style="width:280px;">
@@ -4579,6 +4583,18 @@ function computeUnavailable_(main, product, color){
     const lvl = c ? colorStockLevel(c) : productStockLevel(main, product);
     return lvl === 'out';
   }catch(e){ return false; }
+}
+
+// شارة "غير متاح" الحمرا اللي بتتحط جنب اسم الصنف جوه المستندات.
+// هنا (على عكس الواتساب) إحنا بنبني HTML، فالألوان متاحة عادي.
+function unavailBadgeHTML_(it){
+  if(!itemUnavailable_(it)) return '';
+  return ' <span style="display:inline-block;background:#C0392B;color:#FFFFFF;' +
+         'font-weight:800;font-size:10.5px;padding:1px 8px;border-radius:9px;' +
+         'vertical-align:middle;white-space:nowrap;">\u25cf \u063a\u064a\u0631 \u0645\u062a\u0627\u062d</span>';
+}
+function unavailNameStyle_(it){
+  return itemUnavailable_(it) ? 'color:#C0392B;font-weight:800;' : '';
 }
 
 // وقت بناء رسالة الواتساب: بنعتمد على اللقطة المخزّنة وقت الإضافة للسلة،
