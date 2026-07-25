@@ -1050,7 +1050,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v127';
+const APP_BUILD = 'v128';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1850,10 +1850,17 @@ async function loadOrders(){
     if(Array.isArray(data)){
       // توحيد الحالات القديمة ('تحت التنفيذ') على النظام الجديد قبل أي فلترة
       data.forEach(function(o){ o.status = normStatus_(o.status); });
-      state.orders = data;
-      state.adminMetaCount = data.length;
+      // 🛡️ شبكة أمان: لو الشيت فيه صفوف مكررة بنفس الـ id (من قبل إصلاح
+      // السيرفر)، مانعرضهاش مرتين. بنسيب أول ظهور لكل id.
+      const seenIds = {};
+      state.orders = data.filter(function(o){
+        if(!o || o.id == null) return true;
+        if(seenIds[o.id]) return false;
+        seenIds[o.id] = true; return true;
+      });
+      state.adminMetaCount = state.orders.length;
       // لو الأدمن شايف القايمة دلوقتي، اعتبر كل ده "متشاف" وصفّر العداد
-      if(state.view === 'admin'){ setAdminSeenCount_(data.length); state.adminNewCount = 0; }
+      if(state.view === 'admin'){ setAdminSeenCount_(state.orders.length); state.adminNewCount = 0; }
     } else if(data && data.error === 'unauthorized'){
       // التوكن خلص أو مش صالح — نرجّع الأدمن لشاشة الرقم
       setAdminToken('');
