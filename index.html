@@ -260,6 +260,17 @@ textarea{resize:vertical;min-height:60px;}
   border-radius:999px;min-width:18px;height:18px;font-size:10.5px;font-weight:800;
   display:flex;align-items:center;justify-content:center;padding:0 4px;
 }
+.navbadge{
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--danger);color:#fff;border-radius:999px;
+  min-width:20px;height:20px;font-size:11px;font-weight:800;padding:0 5px;
+  margin-right:5px;vertical-align:middle;
+  animation:navbadgepulse 1.2s ease-in-out infinite;
+}
+@keyframes navbadgepulse{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.18);}
+}
 .whtile{
   border:1.5px solid var(--line);background:#FCFBF8;border-radius:12px;
   padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;
@@ -1039,7 +1050,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v126';
+const APP_BUILD = 'v127';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1178,6 +1189,8 @@ const state = {
   myOrdersPhone:'',
 
   adminUnlocked:false,
+  adminNewCount:0,        // عدد الطلبات الجديدة اللي لسه الأدمن ماشافهاش
+  adminMetaCount:null,    // آخر عدد طلبات معروف من السيرفر (للمقارنة)
   pinInput:'',
   pinError:false,
   orders:[],
@@ -1648,6 +1661,100 @@ function chambersHtml(n=4){
   return s + '</div>';
 }
 
+// ===== إشعار الأدمن بالطلبات الجديدة (طول ما التطبيق مفتوح) =====
+// ⚠️ ده إشعار "داخل التطبيق" — بيشتغل بس والتطبيق فاتح على الشاشة أو في
+// الخلفية القريبة. الإشعار وانت قافل التطبيق خالص محتاج سيرفر Web Push
+// منفصل (مش متاح على Apps Script)، فده الحل العملي المضمون.
+const LS_ADMIN_SEEN = 'elkAdminSeenCount';
+let adminPollTimer = null;
+
+function adminSeenCount_(){
+  const n = parseInt(localStorage.getItem(LS_ADMIN_SEEN) || '', 10);
+  return isFinite(n) ? n : null;
+}
+function setAdminSeenCount_(n){
+  try{ localStorage.setItem(LS_ADMIN_SEEN, String(n)); }catch(e){}
+}
+
+// صوت تنبيه بسيط (beep) من غير أي ملف صوت خارجي
+function playNotifyBeep_(){
+  try{
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    const ctx = new AC();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = 880;
+    o.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    o.start(); o.stop(ctx.currentTime + 0.36);
+    setTimeout(()=>{ try{ ctx.close(); }catch(e){} }, 600);
+  }catch(e){}
+}
+
+// بيتنادى لما نكتشف طلب/طلبات جديدة
+function onNewOrders_(newCount, lastOrder){
+  playNotifyBeep_();
+  const who = lastOrder && lastOrder.distName ? (' من ' + lastOrder.distName) : '';
+  const txt = newCount === 1
+    ? ('📦 طلب جديد' + who)
+    : ('📦 ' + newCount + ' طلبات جديدة');
+  showToast('🔔 ' + txt, 6000);
+  // إشعار نظام لو المستخدم مسموح (بيبان حتى لو التطبيق في الخلفية القريبة)
+  try{
+    if('Notification' in window && Notification.permission === 'granted'){
+      new Notification('🔔 القرشي — متابعة المخزن', { body: txt, tag: 'elk-admin-new', renotify: true });
+    }
+  }catch(e){}
+}
+
+// نداء خفيف كل فترة يجيب العدد بس (مش كل الطلبات)
+async function adminPollNewOrders_(){
+  if(!state.adminUnlocked || !getAdminToken()) return;
+  try{
+    const res = await fetch(APPS_SCRIPT_URL + '?action=ordersMeta&token=' + encodeURIComponent(getAdminToken()));
+    const d = await res.json();
+    if(!d || typeof d.count !== 'number') return;
+    const seen = adminSeenCount_();
+    // أول مرة بعد الدخول: نثبّت العدد الحالي كخط أساس، من غير إشعار
+    if(seen === null){ setAdminSeenCount_(d.count); state.adminMetaCount = d.count; return; }
+    if(d.count > seen){
+      const delta = d.count - seen;
+      // لو الأدمن واقف على شاشة المتابعة أصلاً، بنحدّث القايمة ونصفّر العداد
+      if(state.view === 'admin'){
+        setAdminSeenCount_(d.count);
+        state.adminNewCount = 0;
+        loadOrders();
+      }else{
+        state.adminNewCount = d.count - (adminSeenCount_() || 0);
+        onNewOrders_(delta, d.last);
+        render();
+      }
+    }
+    state.adminMetaCount = d.count;
+  }catch(e){ /* نت — نتجاهل بصمت ونجرّب المرة الجاية */ }
+}
+
+function startAdminPoll_(){
+  if(adminPollTimer) return;
+  // نطلب إذن الإشعارات مرة (للأدمن) عشان إشعار النظام يشتغل
+  try{ if('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); }catch(e){}
+  adminPollNewOrders_();                         // نداء أولي فوري
+  adminPollTimer = setInterval(adminPollNewOrders_, 45000);  // كل 45 ثانية
+}
+function stopAdminPoll_(){
+  if(adminPollTimer){ clearInterval(adminPollTimer); adminPollTimer = null; }
+}
+
+// لما الأدمن يفتح شاشة المتابعة أو يحمّل الطلبات: نصفّر العداد ونثبّت الأساس
+function markAdminOrdersSeen_(){
+  const c = (state.adminMetaCount != null) ? state.adminMetaCount
+          : (Array.isArray(state.orders) ? state.orders.length : 0);
+  setAdminSeenCount_(c);
+  state.adminNewCount = 0;
+}
+
 // ===== safety net: never let a promise hang the UI forever =====
 // لو أي عملية (نت بطيء، سيرفر واقف، مكتبة PDF اتعلقت...) ماخلصتش خلال المهلة دي،
 // نرفض الـ Promise يدويًا عشان الزرار يرجع لحالته الطبيعية بدل ما يفضل يلف لحد الأبد.
@@ -1744,10 +1851,14 @@ async function loadOrders(){
       // توحيد الحالات القديمة ('تحت التنفيذ') على النظام الجديد قبل أي فلترة
       data.forEach(function(o){ o.status = normStatus_(o.status); });
       state.orders = data;
+      state.adminMetaCount = data.length;
+      // لو الأدمن شايف القايمة دلوقتي، اعتبر كل ده "متشاف" وصفّر العداد
+      if(state.view === 'admin'){ setAdminSeenCount_(data.length); state.adminNewCount = 0; }
     } else if(data && data.error === 'unauthorized'){
       // التوكن خلص أو مش صالح — نرجّع الأدمن لشاشة الرقم
       setAdminToken('');
       state.adminUnlocked = false;
+      stopAdminPoll_();
       showToast('انتهت جلسة الأدمن، ادخل الرقم تاني');
     } else {
       showToast('السيرفر مردش صح — الطلبات المعروضة ممكن تكون قديمة');
@@ -1871,6 +1982,7 @@ async function submitAdminPin(){
       state.pinChecking = false;
       render();
       loadOrders();
+      startAdminPoll_();
       return;
     }
     state.pinError = true;
@@ -3845,7 +3957,7 @@ function renderHeader(){
         🛒${(()=>{ const n = (state.cart && state.cart.length) || (state.pendingDraft && state.pendingDraft.cart && state.pendingDraft.cart.length) || 0; return n ? `<span class="cartbadge">${n}</span>` : ''; })()}
       </button>` : ''}
       <button class="${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">طلباتي</button>
-      <button class="${state.view==='admin'?'active':''}" data-act="goto" data-view="admin">متابعة المخزن</button>
+      <button class="${state.view==='admin'?'active':''}" data-act="goto" data-view="admin">متابعة المخزن${state.adminNewCount>0 ? `<span class="navbadge">${state.adminNewCount}</span>` : ''}</button>
       ${isWebAuthnSupported() ? (
         isBiometricEnabledForCurrentUser()
           ? `<button data-act="disable-biometric" title="إلغاء الدخول بالبصمة من الجهاز ده">🔓 إلغاء البصمة</button>`
@@ -5403,6 +5515,7 @@ async function onActionInner(act, el){
       state.currentUser = null;
       setAdminToken('');
       state.adminUnlocked = false;
+      stopAdminPoll_();
       try{ sessionStorage.removeItem(LS_USER_KEY); }catch(e){}
       state.authView='login'; state.authUsername=''; state.authPassword='';
       state.showBiometricGate = isBiometricEnabledForThisDevice();
@@ -5411,7 +5524,7 @@ async function onActionInner(act, el){
     case 'goto':{
       const v = el.getAttribute('data-view');
       state.view = v; render();
-      if(v==='admin' && state.adminUnlocked) loadOrders();
+      if(v==='admin' && state.adminUnlocked){ loadOrders(); markAdminOrdersSeen_(); }
       if(v==='myorders' && !state.myOrdersSearched && getSavedOrderRefs().length) refreshMyOrders();
       break;
     }
@@ -5715,6 +5828,7 @@ restoreAdminSession();
 loadProfile();
 loadCatalog().then(()=>{ checkForResumableDraft(); render(); });
 render();
+if(state.adminUnlocked && getAdminToken()) startAdminPoll_();
 
 </script>
 </body>
