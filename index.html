@@ -260,6 +260,15 @@ textarea{resize:vertical;min-height:60px;}
   border-radius:999px;min-width:18px;height:18px;font-size:10.5px;font-weight:800;
   display:flex;align-items:center;justify-content:center;padding:0 4px;
 }
+.polldiag{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  font-size:11.5px;color:var(--muted);font-weight:700;
+  background:#F4F1E8;border-radius:8px;padding:6px 10px;margin-bottom:10px;
+}
+.polldiag button{
+  background:var(--navy);color:#fff;border:none;border-radius:7px;
+  padding:5px 12px;font-family:'Cairo',sans-serif;font-weight:800;font-size:11px;cursor:pointer;
+}
 .navbadge{
   display:inline-flex;align-items:center;justify-content:center;
   background:var(--danger);color:#fff;border-radius:999px;
@@ -965,14 +974,38 @@ textarea{resize:vertical;min-height:60px;}
    ولا نبعت الموزع لقسم "حدد التفاصيل" البعيد؛ وحدة+كمية+سعر+زرار إضافة
    وخلاص. */
 .inlineqtyrow{
-  grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  grid-column:1/-1;
   background:#F7F5F0;border:1.3px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:-4px;
 }
-.inlineqtyrow .cqprice{width:auto;flex:1;text-align:left;}
-/* ⚠️ السعر مخفي وقت اختيار الصنف بطلب صريح — بيبان بعد الإضافة في السلة
-   وفي المستندات عادي، فمفيش داعي يزحم صف الكمية. */
-.cqprice,
-.cqheader .cqcol-price{display:none;}
+/* ===== صف الكمية 3 أسطر (قطاعات + اكسسوارات) ===== */
+.qty3{display:flex;flex-direction:column;gap:8px;}
+.qty3-line{display:flex;align-items:center;gap:8px;}
+.qty3-unitqty{justify-content:flex-start;}
+.qty3-price{
+  justify-content:space-between;gap:8px;
+  background:#fff;border:1.2px solid var(--line);border-radius:8px;padding:7px 10px;
+}
+.qty3-cell{font-size:12.6px;font-weight:700;color:var(--ink);}
+.qty3-cell b{color:var(--muted);font-weight:800;font-size:11px;}
+.qty3-total{color:var(--navy);}
+.qty3-total b{color:var(--navy-soft);}
+.qty3-btns{gap:8px;}
+.qty3-btns .confirmbtn{flex:1;}
+.qty3-btns .cancelbtn{flex:1;}
+/* صفوف الاكسسوارات المكدّسة (لون + سطر وحدة/كمية + سطر سعر/إجمالي) */
+.colorqtytable.stacked{margin-top:8px;display:flex;flex-direction:column;gap:8px;}
+.cqrow2{
+  background:#F7F5F0;border:1.3px solid var(--line);border-radius:10px;padding:9px 10px;
+  display:flex;flex-direction:column;gap:8px;
+}
+.cqrow2-color{font-size:13px;font-weight:800;color:var(--navy);}
+.cqrow2-line{display:flex;align-items:center;gap:8px;}
+.cqrow2-price{
+  justify-content:space-between;
+  background:#fff;border:1.2px solid var(--line);border-radius:8px;padding:7px 10px;
+}
+.chipwrap.chipgrid3{display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:7px;}
+.chipwrap.chipgrid3 .chip{padding:9px 6px;text-align:center;}
 
 /* cart grouped by sector */
 .cartgroup{margin-bottom:14px;}
@@ -1050,7 +1083,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v128';
+const APP_BUILD = 'v130';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1191,6 +1224,7 @@ const state = {
   adminUnlocked:false,
   adminNewCount:0,        // عدد الطلبات الجديدة اللي لسه الأدمن ماشافهاش
   adminMetaCount:null,    // آخر عدد طلبات معروف من السيرفر (للمقارنة)
+  pollDiag:'',            // نتيجة آخر فحص للإشعار (تشخيص يظهر في شريط الأدمن)
   pinInput:'',
   pinError:false,
   orders:[],
@@ -1714,11 +1748,23 @@ async function adminPollNewOrders_(){
   if(!state.adminUnlocked || !getAdminToken()) return;
   try{
     const res = await fetch(APPS_SCRIPT_URL + '?action=ordersMeta&token=' + encodeURIComponent(getAdminToken()));
-    const d = await res.json();
-    if(!d || typeof d.count !== 'number') return;
+    const raw = await res.text();
+    let d = null;
+    try{ d = JSON.parse(raw); }catch(e){ d = null; }
+    // تشخيص: بنسجّل نتيجة آخر فحص عشان تبان في شريط الأدمن لو حصلت مشكلة
+    if(Array.isArray(d)){
+      state.pollDiag = '⚠️ نسخة السيرفر قديمة — اعمل New version للـ Apps Script';
+    }else if(d && typeof d.count === 'number'){
+      state.pollDiag = 'آخر فحص: ' + d.count + ' طلب · ' + new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    }else if(d && d.error){
+      state.pollDiag = '⚠️ ' + (d.error==='unauthorized' ? 'الجلسة انتهت — ادخل الرقم تاني' : d.error);
+    }else{
+      state.pollDiag = '⚠️ رد غير متوقع من السيرفر';
+    }
+    if(!d || typeof d.count !== 'number'){ render(); return; }
     const seen = adminSeenCount_();
     // أول مرة بعد الدخول: نثبّت العدد الحالي كخط أساس، من غير إشعار
-    if(seen === null){ setAdminSeenCount_(d.count); state.adminMetaCount = d.count; return; }
+    if(seen === null){ setAdminSeenCount_(d.count); state.adminMetaCount = d.count; render(); return; }
     if(d.count > seen){
       const delta = d.count - seen;
       // لو الأدمن واقف على شاشة المتابعة أصلاً، بنحدّث القايمة ونصفّر العداد
@@ -1733,7 +1779,11 @@ async function adminPollNewOrders_(){
       }
     }
     state.adminMetaCount = d.count;
-  }catch(e){ /* نت — نتجاهل بصمت ونجرّب المرة الجاية */ }
+    render();
+  }catch(e){
+    state.pollDiag = '⚠️ تعذّر الاتصال بالسيرفر';
+    render();
+  }
 }
 
 function startAdminPoll_(){
@@ -3996,25 +4046,44 @@ function renderHeader(){
 // الشبكة (state.selectedColor)، مفيش داعي نعيد عرض اختيار اللون تاني ولا
 // نودّي الموزع لقسم "حدد التفاصيل" البعيد — بنعرضله بس وحدة+كمية+سعر
 // وزرار "ضيف للسلة" مباشرة تحت الصنف، عشان يقدر يضيف أصناف كتير بسرعة.
-function renderInlineQtyRow(s, color){
+// صف الكمية بشكل 3 أسطر (بطلب صريح):
+//  سطر 1: الوحدة (لفة...) + الكمية (- عدد +)
+//  سطر 2: سعر الوحدة + الإجمالي
+//  سطر 3: ضيف للسلة + إلغاء
+// بيتستخدم في القطاعات (اللون متحدد) وفي الاكسسوارات (بعد اختيار اللون).
+function render3LineQty(s, color, opts){
+  opts = opts || {};
   const unitType = s.units[color] || s.unitOptions[0];
   const qty = s.qtys[color] ?? 1;
   const price = calcUnitPrice(s.main, s.product, color, unitType);
   const lineTotal = price==null ? null : price*qty;
+  const fmt = n => n==null ? '—' : Math.round(n).toLocaleString('en-US');
   return `
-  <div class="inlineqtyrow">
-    ${s.unitOptions.length>1 ? `
-    <select class="cqselect" data-act="set-color-unit" data-key="${esc(s.key)}" data-val="${esc(color)}">
-      ${s.unitOptions.map(u=>`<option value="${esc(u)}" ${s.units[color]===u?'selected':''}>${esc(u)}</option>`).join('')}
-    </select>` : `<span class="cqunitfixed">${esc(s.unitOptions[0])}</span>`}
-    <div class="qtystepper small">
-      <button data-act="staged-qty-dec" data-key="${esc(s.key)}" data-val="${esc(color)}" type="button">−</button>
-      <input type="text" inputmode="numeric" pattern="[0-9]*" min="1" value="${qty}" data-act="staged-qty-input" data-key="${esc(s.key)}" data-val="${esc(color)}">
-      <button data-act="staged-qty-inc" data-key="${esc(s.key)}" data-val="${esc(color)}" type="button">+</button>
+  <div class="qty3">
+    <div class="qty3-line qty3-unitqty">
+      ${s.unitOptions.length>1 ? `
+      <select class="cqselect" data-act="set-color-unit" data-key="${esc(s.key)}" data-val="${esc(color)}">
+        ${s.unitOptions.map(u=>`<option value="${esc(u)}" ${s.units[color]===u?'selected':''}>${esc(u)}</option>`).join('')}
+      </select>` : `<span class="cqunitfixed">${esc(s.unitOptions[0])}</span>`}
+      <div class="qtystepper small">
+        <button data-act="staged-qty-dec" data-key="${esc(s.key)}" data-val="${esc(color)}" type="button">−</button>
+        <input type="text" inputmode="numeric" pattern="[0-9]*" min="1" value="${qty}" data-act="staged-qty-input" data-key="${esc(s.key)}" data-val="${esc(color)}">
+        <button data-act="staged-qty-inc" data-key="${esc(s.key)}" data-val="${esc(color)}" type="button">+</button>
+      </div>
     </div>
-    <span class="cqprice">${lineTotal==null?'—':Math.round(lineTotal).toLocaleString('en-US')}</span>
-    <button class="confirmbtn small" data-act="confirm-staged" data-key="${esc(s.key)}">✓ ضيف للسلة</button>
+    <div class="qty3-line qty3-price">
+      <span class="qty3-cell"><b>السعر:</b> ${fmt(price)}</span>
+      <span class="qty3-cell qty3-total"><b>الإجمالي:</b> ${fmt(lineTotal)}</span>
+    </div>
+    <div class="qty3-line qty3-btns">
+      <button class="confirmbtn" data-act="confirm-staged" data-key="${esc(s.key)}">✓ ضيف للسلة</button>
+      <button class="cancelbtn" data-act="cancel-staged" data-key="${esc(s.key)}">✖ إلغاء</button>
+    </div>
   </div>`;
+}
+
+function renderInlineQtyRow(s, color){
+  return `<div class="inlineqtyrow">${render3LineQty(s, color)}</div>`;
 }
 
 function renderStagedBlock(s){
@@ -4077,31 +4146,31 @@ function renderStagedBlock(s){
       return html;
     })()}` : ''}
     ${s.selectedColors.length>0 ? `
-    <div class="colorqtytable">
-      <div class="cqheader">
-        <span class="cqcol-color">اللون</span>
-        <span class="cqcol-unit">${esc(unitColumnLabel(s.main))}</span>
-        <span class="cqcol-qty">الكمية</span>
-        <span class="cqcol-price">السعر*</span>
-      </div>
+    <div class="colorqtytable stacked">
       ${s.selectedColors.map(c=>{
         const unitType = s.units[c] || s.unitOptions[0];
         const qty = s.qtys[c] ?? 1;
         const price = calcUnitPrice(s.main, s.product, c, unitType);
         const lineTotal = price==null ? null : price*qty;
+        const fmt = n => n==null ? '—' : Math.round(n).toLocaleString('en-US');
         return `
-        <div class="cqrow">
-          <span class="cqcolor">${c?esc(c):s.product}</span>
-          ${s.unitOptions.length>1 ? `
-          <select class="cqselect" data-act="set-color-unit" data-key="${esc(s.key)}" data-val="${esc(c)}">
-            ${s.unitOptions.map(u=>`<option value="${esc(u)}" ${s.units[c]===u?'selected':''}>${esc(u)}</option>`).join('')}
-          </select>` : `<span class="cqunitfixed">${esc(s.unitOptions[0])}</span>`}
-          <div class="qtystepper small">
-            <button data-act="staged-qty-dec" data-key="${esc(s.key)}" data-val="${esc(c)}" type="button">−</button>
-            <input type="text" inputmode="numeric" pattern="[0-9]*" min="1" value="${qty}" data-act="staged-qty-input" data-key="${esc(s.key)}" data-val="${esc(c)}">
-            <button data-act="staged-qty-inc" data-key="${esc(s.key)}" data-val="${esc(c)}" type="button">+</button>
+        <div class="cqrow2">
+          <div class="cqrow2-color">${c?esc(c):esc(s.product)}</div>
+          <div class="cqrow2-line">
+            ${s.unitOptions.length>1 ? `
+            <select class="cqselect" data-act="set-color-unit" data-key="${esc(s.key)}" data-val="${esc(c)}">
+              ${s.unitOptions.map(u=>`<option value="${esc(u)}" ${s.units[c]===u?'selected':''}>${esc(u)}</option>`).join('')}
+            </select>` : `<span class="cqunitfixed">${esc(s.unitOptions[0])}</span>`}
+            <div class="qtystepper small">
+              <button data-act="staged-qty-dec" data-key="${esc(s.key)}" data-val="${esc(c)}" type="button">−</button>
+              <input type="text" inputmode="numeric" pattern="[0-9]*" min="1" value="${qty}" data-act="staged-qty-input" data-key="${esc(s.key)}" data-val="${esc(c)}">
+              <button data-act="staged-qty-inc" data-key="${esc(s.key)}" data-val="${esc(c)}" type="button">+</button>
+            </div>
           </div>
-          <span class="cqprice">${lineTotal==null?'—':Math.round(lineTotal).toLocaleString('en-US')}</span>
+          <div class="cqrow2-line cqrow2-price">
+            <span class="qty3-cell"><b>السعر:</b> ${fmt(price)}</span>
+            <span class="qty3-cell qty3-total"><b>الإجمالي:</b> ${fmt(lineTotal)}</span>
+          </div>
         </div>`;
       }).join('')}
     </div>` : ''}
@@ -4205,7 +4274,7 @@ function renderOrderView(){
         subSection = `
         <div class="card">
           <h2><span class="num">4</span>اختار التصنيف الفرعي</h2>
-          <div class="chipwrap">
+          <div class="chipwrap chipgrid3">
             ${subs.map(s=>`<button class="chip ${state.subGroup===s?'active':''}" data-act="set-sub" data-val="${esc(s)}">${esc(s)}</button>`).join('')}
           </div>
         </div>`;
@@ -4253,7 +4322,13 @@ function renderOrderView(){
           `}
         </div>
         <div class="productgrid listmode ${state.mainGroup && state.mainGroup.includes('اكسسوارات') ? 'compact' : ''}">
-          ${names.length ? names.map(n=>{
+          ${(()=>{
+            // 🔽 لو فيه صنف متحدد دلوقتي في القطاع ده، نعرضه هو بس ونخفي الباقي.
+            // أول ما يلغي اختياره (يدوس عليه تاني أو يدوس إلغاء)، كل الأصناف
+            // بترجع تظهر. بطلب صريح من المستخدم.
+            const stagedNames = names.filter(n => state.staged.some(s=>s.key===stagedKey(state.mainGroup,n)));
+            const visibleNames = stagedNames.length ? stagedNames : names;
+            return visibleNames.length ? visibleNames.map(n=>{
             const stagedEntry = state.staged.find(s=>s.key===stagedKey(state.mainGroup,n));
             const isStaged = !!stagedEntry;
             const inCart = state.cart.some(it=>it.main===state.mainGroup && it.product===n);
@@ -4306,7 +4381,8 @@ function renderOrderView(){
               inlineStagedKeys_.push(stagedEntry.key);
             }
             return tile + inlineRow;
-          }).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>'}
+          }).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>';
+          })()}
         </div>
       </div>`;
     }
@@ -4692,6 +4768,10 @@ function renderAdminView(){
       <button class="exportbtn" data-act="export-excel-delivered">تصدير Excel (${STATUS_DONE})</button>
       <button class="exportbtn" data-act="show-pwreq">🔑 طلبات الباسورد${state.pwRequestsCount ? ' ('+state.pwRequestsCount+')' : ''}</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُنفَّذ</button>
+    </div>
+    <div class="polldiag">
+      <span>${state.pollDiag ? esc(state.pollDiag) : 'الإشعار شغّال — بيفحص كل 45 ثانية'}</span>
+      <button data-act="test-notify">🔔 اختبار</button>
     </div>
     <div class="statuschips">
       <button class="chip ${state.adminStatusFilter==='all'?'active':''}" data-act="admin-status" data-val="all">الكل (${state.orders.length})</button>
@@ -5738,6 +5818,15 @@ async function onActionInner(act, el){
       const id = el.getAttribute('data-id');
       if(state.adminOpenIds[id]) delete state.adminOpenIds[id]; else state.adminOpenIds[id] = true;
       render(); break;
+    }
+    case 'test-notify':{
+      // بيتنادى من ضغطة حقيقية — فطلب الإذن والصوت هيشتغلوا (على عكس التلقائي)
+      try{ if('Notification' in window && Notification.permission === 'default') await Notification.requestPermission(); }catch(e){}
+      playNotifyBeep_();
+      onNewOrders_(1, { distName: 'تجربة' });
+      // نفحص السيرفر فورًا عشان يظهر التشخيص المحدّث
+      adminPollNewOrders_();
+      break;
     }
     case 'admin-status': state.adminStatusFilter = el.getAttribute('data-val'); render(); break;
     case 'export-excel-received': exportExcel(STATUS_RECEIVED); break;
