@@ -733,6 +733,7 @@ textarea{resize:vertical;min-height:60px;}
 .statusbadge.pending{background:#FBEBD1;color:#8A5A00;}
 .statusbadge.received{background:#E7EEFB;color:#1F4E9C;}
 .statusbadge.done{background:var(--success-bg);color:var(--success);}
+.statusbadge.edited{background:#ECECEC;color:#6B6B6B;}
 .ordercard .oheadmain{flex:1;cursor:pointer;user-select:none;padding:2px 0;}
 .ordercard .oheadmain .dmeta{margin-top:2px;}
 .ordercard .ochev{color:var(--navy-soft);font-weight:800;}
@@ -1083,7 +1084,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v132';
+const APP_BUILD = 'v133';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1096,16 +1097,24 @@ const OTHER_SECTOR = 'أصناف أخرى';
 const STATUS_LEGACY_PENDING = 'تحت التنفيذ';
 const STATUS_RECEIVED = 'تم استلام الطلب';
 const STATUS_DONE = 'تم تنفيذ الطلب';
+const STATUS_EDITED = 'مُعدّل';   // الطلب القديم اللي اتعمله تعديل — بيفضل ظاهر للأدمن
 const STATUS_PENDING = STATUS_RECEIVED;   // اسم قديم — سايبينه عشان أي كود بيناديه
 const STATUS_ORDER = [STATUS_RECEIVED, STATUS_DONE];
 function normStatus_(st){
-  return String(st == null ? '' : st).trim() === STATUS_DONE ? STATUS_DONE : STATUS_RECEIVED;
+  const v = String(st == null ? '' : st).trim();
+  if(v === STATUS_DONE) return STATUS_DONE;
+  if(v === STATUS_EDITED) return STATUS_EDITED;   // نحافظ عليها زي ما هي
+  return STATUS_RECEIVED;
 }
 function statusInfo_(status){
-  if(normStatus_(status)===STATUS_DONE) return {cls:'done', icon:'✅', label:STATUS_DONE};
+  const s = normStatus_(status);
+  if(s===STATUS_DONE) return {cls:'done', icon:'✅', label:STATUS_DONE};
+  if(s===STATUS_EDITED) return {cls:'edited', icon:'✏️', label:'مُعدّل (نسخة قديمة)'};
   return {cls:'received', icon:'📦', label:STATUS_RECEIVED};
 }
 function nextStatus_(status){
+  // الطلب المُعدّل (نسخة قديمة) مالوش مراحل — بيفضل ثابت
+  if(normStatus_(status)===STATUS_EDITED) return STATUS_EDITED;
   const i = STATUS_ORDER.indexOf(normStatus_(status));
   return STATUS_ORDER[(i<0?0:i+1) % STATUS_ORDER.length];
 }
@@ -2321,6 +2330,11 @@ function saveOrderRef(id, distName){
   list.unshift({id, distName, ts:Date.now()});
   try{ localStorage.setItem(LS_ORDERS_KEY, JSON.stringify(list.slice(0,30))); }catch(e){}
 }
+// بيشيل مرجع طلب من "طلباتي" (بنستخدمه لما نعدّل طلب — القديم يتشال ويحل محله الجديد)
+function removeOrderRef(id){
+  const list = getSavedOrderRefs().filter(x=>String(x.id)!==String(id));
+  try{ localStorage.setItem(LS_ORDERS_KEY, JSON.stringify(list)); }catch(e){}
+}
 
 // ===== draft (save for later / auto-save) =====
 function saveDraft(){
@@ -2602,9 +2616,14 @@ async function actuallySubmit(){
   state.submitting = true; render();
 
   const isUpdate = !!state.editingOrderId;
-  const id = isUpdate ? state.editingOrderId : (Date.now().toString(36) + Math.random().toString(36).slice(2,6));
+  // ⚠️ التعديل بقى بيعمل طلب *جديد* برقم وتاريخ جديد (id/ts جديدين)، والطلب
+  // القديم بيتعلّم "مُعدّل" ويفضل ظاهر للأدمن. فبنبعت oldId عشان السيرفر
+  // يعلّم القديم، و id جديد للطلب الجديد. (قبل كده كان بيحدّث نفس الصف.)
+  const oldId = isUpdate ? state.editingOrderId : null;
+  const id = (Date.now().toString(36) + Math.random().toString(36).slice(2,6));
   const order = {
     id, ts: Date.now(),
+    oldId: oldId || undefined,
     username: state.currentUser ? state.currentUser.username : '',
     distName: asText(state.distName).trim(),
     distRegion: asText(state.distRegion).trim(),
@@ -2621,11 +2640,12 @@ async function actuallySubmit(){
     state.successOrderId = orderNo;
     state.successMode = isUpdate ? 'updated' : 'new';
     state.lastOrder = order;
-    if(!isUpdate){
-      saveOrderRef(id, order.distName);
-      localStorage.setItem(LS_LAST_DATE_KEY, todayStr());
-      localStorage.setItem(LS_LAST_ID_KEY, id.toUpperCase());
-    }
+    // الطلب الجديد (سواء جديد أو ناتج عن تعديل) بيتسجّل في "طلباتي" برقمه الجديد،
+    // والمرجع القديم بيتشال عشان مايفضلش الطلب القديم ظاهر عند الموزع.
+    if(oldId) removeOrderRef(oldId);
+    saveOrderRef(id, order.distName);
+    localStorage.setItem(LS_LAST_DATE_KEY, todayStr());
+    localStorage.setItem(LS_LAST_ID_KEY, id.toUpperCase());
     state.cart=[]; state.staged=[]; state.distName=''; state.distRegion=''; state.distPhone=''; state.note=''; state.warehouse=''; state.editingOrderId=null;
     loadProfile();
     clearDraft();
@@ -4210,7 +4230,8 @@ function renderOrderView(){
     <main>
       <div class="card success">
         <div class="ic">✓</div>
-        <h2>${state.successMode==='updated' ? 'تم تحديث الطلب بنجاح' : 'تم إرسال الطلب بنجاح'}</h2>
+        <h2>${state.successMode==='updated' ? 'تم عمل طلب جديد بالتعديل ✅' : 'تم إرسال الطلب بنجاح'}</h2>
+        ${state.successMode==='updated' ? '<p style="color:#6B6B6B;font-size:13px;margin-top:-4px;">الطلب القديم اتعلّم «مُعدّل» عند المخزن، وده رقمه الجديد.</p>' : ''}
         <p>هيتم مراجعة طلبك والتواصل معاك لتأكيد التنفيذ</p>
         <div class="ordid">#${esc(state.successOrderId)}</div>
         <div class="wanote">
