@@ -94,6 +94,7 @@ header.top{
   color:#fff;
   padding:12px 14px 10px;
   overflow:hidden;
+  position:relative;
 }
 header.top .brand{
   display:flex;
@@ -107,27 +108,93 @@ header.top .logoimg{
 header.top h1{font-size:15px;margin:0;font-weight:800;letter-spacing:.1px;line-height:1.25;}
 header.top p.sub{margin:1px 0 0;font-size:10.5px;color:#DCEEF9;font-weight:500;}
 
+header.top.has-cart{padding-left:46px;}
+
+/* السلة — أيقونة صغيرة عائمة أعلى الشمال بعيدة عن باقي الأزرار */
+.cartbtn-float{
+  position:absolute;
+  top:10px;left:10px;
+  z-index:5;
+  width:32px;height:32px;
+  border-radius:50%;
+  background:rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.3);
+  color:#fff;
+  font-size:14.5px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  padding:0;
+}
+
 nav.tabs{
   display:flex;
   flex-wrap:wrap;
   gap:6px;
   margin-top:10px;
+  align-items:stretch;
+}
+/* "طلب جديد" و"متابعة الطلب" في عمود واحد تحت بعض */
+nav.tabs .tabcol{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  flex:1 1 auto;
+  min-width:62px;
+}
+/* البصمة وزرار الخصم مع نسبة التسعير — عمود صغير مضغوط */
+nav.tabs .miscol{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:5px;
+  flex:0 0 auto;
+}
+.fingerbtn{
+  width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;padding:0;
+  border:1px solid rgba(255,255,255,.22);
+  background:rgba(255,255,255,.06);
+  color:rgba(255,255,255,.4);
+  filter:grayscale(1);
+  opacity:.65;
+  transition:.2s;
+}
+.fingerbtn.on{
+  background:var(--gold);
+  border-color:var(--gold);
+  color:var(--navy-deep);
+  filter:none;
+  opacity:1;
+  box-shadow:0 0 9px rgba(255,255,255,.55);
 }
 .discounttogglebtn{
-  background:#3B7A57 !important;
-  border-color:#3B7A57 !important;
-  color:#fff !important;
+  background:rgba(255,255,255,.1) !important;
+  border-color:rgba(255,255,255,.24) !important;
+  color:#EAF6FD !important;
   font-weight:800;
   border-radius:999px !important;
 }
-.extradiscwrap{display:inline-flex;align-items:center;gap:4px;margin-right:6px;vertical-align:middle;direction:rtl;}
+.discounttogglebtn.small{
+  padding:3px 12px !important;
+  font-size:10.6px !important;
+  min-width:0 !important;
+  flex:0 0 auto !important;
+}
+.discounttogglebtn.off{ text-decoration:line-through; opacity:.7; }
+.extradiscwrap{display:inline-flex;align-items:center;gap:4px;vertical-align:middle;direction:rtl;}
+.extradiscwrap.mini{margin:0;}
 .extradiscwrap label{font-size:12px;color:var(--gold);font-weight:800;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.4);}
 .extradiscwrap input{width:52px;padding:3px 5px;border:2px solid var(--gold);border-radius:6px;font-size:14px;font-weight:800;text-align:center;background:var(--gold);color:var(--navy-deep);}
+.extradiscwrap.mini input{width:38px;padding:2px 4px;font-size:11.5px;}
 .extradiscwrap .pctsign{font-size:13px;font-weight:800;color:var(--gold);}
 .discounttogglebtn.on{
   background:var(--gold) !important;
   border-color:var(--gold) !important;
   color:var(--navy-deep) !important;
+  text-decoration:none;
+  opacity:1;
+  box-shadow:0 0 8px rgba(255,255,255,.45);
 }
 nav.tabs button{
   flex:1 1 auto;
@@ -1090,7 +1157,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v135';
+const APP_BUILD = 'v137';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1209,6 +1276,12 @@ const state = {
   stockSearch:'',
   stockPdfBusy:false,
   showPwRequests:false,
+  showCatalogUpload:false,
+  catalogUploadMode:'full',       // 'full' أو 'stock'
+  catalogUploadRows:null,         // الصفوف اللي اتقرت من الملف، جاهزة للرفع
+  catalogUploadFileName:'',
+  catalogUploadBusy:false,
+  catalogUploadResult:null,       // {updated, added, notFound} أو {error}
   showCartReview:false,
   waSent:false,
   waImgPreparing:false,
@@ -3082,6 +3155,50 @@ function renderStockModal(){
   </div>`;
 }
 
+function renderCatalogUploadModal(){
+  if(!state.showCatalogUpload) return '';
+  const r = state.catalogUploadResult;
+  const rowsCount = state.catalogUploadRows ? state.catalogUploadRows.length : 0;
+  return `
+  <div class="modalbg" data-act="close-catalog-upload">
+    <div class="previewmodal" data-act="noop" style="max-width:520px;">
+      <div class="previewhead">
+        <span>📥 رفع الأصناف / الرصيد</span>
+        <button class="previewclose" data-act="close-catalog-upload">✕</button>
+      </div>
+      <div class="previewbody" style="background:#fff;">
+        <div class="chipwrap" style="margin-bottom:10px;">
+          <button class="chip ${state.catalogUploadMode==='full'?'active':''}" data-act="catalog-upload-mode" data-val="full">تحديث كامل (كل الأعمدة)</button>
+          <button class="chip ${state.catalogUploadMode==='stock'?'active':''}" data-act="catalog-upload-mode" data-val="stock">الرصيد بس</button>
+        </div>
+        <div style="font-size:12.6px;color:var(--muted);margin-bottom:10px;line-height:1.8;">
+          ${state.catalogUploadMode==='full'
+            ? 'ملف إكسل (xlsx) بالأعمدة: اسم الصنف، القطاع، التصنيف الفرعي، الوحدة، اسم المنتج، اللون، السعر، الرصيد، تعطيل. أي صنف اسمه (عمود "اسم الصنف") موجود بالظبط في الشيت هيتحدّث بكل بياناته، وأي اسم جديد هيتضاف كصف جديد. اكتب "لا" في عمود تعطيل عشان توقف الصنف.'
+            : 'ملف إكسل (xlsx) بعمودين بس: اسم الصنف، الرصيد. أي اسم مش موجود بالظبط في الشيت هيتجاهل ومش هيتضاف — من غير ما يلمس أي عمود تاني.'
+          }
+        </div>
+        <button class="chip" data-act="download-catalog-template">⬇️ تحميل نموذج فاضي</button>
+        <div style="margin:14px 0 6px;">
+          <input type="file" accept=".xlsx" data-act="catalog-file-input">
+        </div>
+        ${state.catalogUploadFileName ? `<div style="font-size:12.5px;color:var(--navy);font-weight:700;">📄 ${esc(state.catalogUploadFileName)} — ${rowsCount} صنف اتقروا</div>` : ''}
+        ${r ? (r.error
+            ? `<div class="err" style="margin-top:10px;">${esc(r.error)}</div>`
+            : `<div style="margin-top:10px;background:#EAF7EC;border:1px solid var(--success);border-radius:8px;padding:10px;font-size:13px;line-height:1.8;">
+                 ✅ اتحدّث: ${r.updated} · اتضاف: ${r.added}
+                 ${r.notFound && r.notFound.length ? `<br>⚠️ ${r.notFound.length} اسم مش موجود في الشيت اتجاهل: ${esc(r.notFound.slice(0,8).join('، '))}${r.notFound.length>8?' ...':''}` : ''}
+               </div>`
+          ) : ''}
+      </div>
+      <div class="previewfoot">
+        <button class="savebtn" data-act="submit-catalog-upload" ${(!rowsCount || state.catalogUploadBusy) ? 'disabled' : ''}>
+          ${state.catalogUploadBusy ? '⏳ جارٍ الرفع...' : '⬆️ رفع الملف (' + rowsCount + ' صنف)'}
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
 async function loadPwRequests(){
   state.showPwRequests = true; state.pwRequestsLoading = true; render();
   try{
@@ -3939,6 +4056,125 @@ async function shareWarehouseImages(){
 }
 
 // ===== excel export (admin) =====
+// ===== رفع الأصناف/الرصيد من إكسل (الأدمن) =====
+async function handleCatalogFileSelected(act, file){
+  if(typeof ExcelJS === 'undefined'){ showToast('حصل خطأ في تحميل أداة قراءة الإكسل، حاول تاني'); return; }
+  state.catalogUploadFileName = file.name;
+  state.catalogUploadResult = null;
+  state.catalogUploadRows = null;
+  render();
+  try{
+    const buffer = await file.arrayBuffer();
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buffer);
+    const ws = wb.worksheets[0];
+    if(!ws) throw new Error('الملف فاضي');
+    const headerRow = ws.getRow(1);
+    const headerMap = {}; // نص العنوان (متريم) → رقم العمود
+    headerRow.eachCell((cell, colNumber)=>{
+      const h = String(cell.value==null ? '' : cell.value).trim();
+      if(h) headerMap[h] = colNumber;
+    });
+    const nameCol = headerMap['اسم الصنف'];
+    const stockCol = headerMap['الرصيد'];
+    if(!nameCol || !stockCol){
+      throw new Error('لازم يكون في عمودين اسمهم بالظبط "اسم الصنف" و"الرصيد" — استخدم النموذج الجاهز');
+    }
+    const getCell = (row, colName)=>{
+      const idx = headerMap[colName];
+      if(!idx) return '';
+      const v = row.getCell(idx).value;
+      if(v && typeof v==='object' && v.text!=null) return v.text; // نص غني/رابط
+      return v==null ? '' : v;
+    };
+    const rows = [];
+    ws.eachRow((row, rowNumber)=>{
+      if(rowNumber===1) return;
+      const name = String(getCell(row,'اسم الصنف')||'').trim();
+      if(!name) return;
+      if(state.catalogUploadMode==='stock'){
+        rows.push({ name, stock: getCell(row,'الرصيد') });
+      } else {
+        rows.push({
+          name,
+          main: String(getCell(row,'القطاع')||'').trim(),
+          sub: String(getCell(row,'التصنيف الفرعي')||'').trim(),
+          unit: getCell(row,'الوحدة'),
+          product: String(getCell(row,'اسم المنتج')||'').trim(),
+          color: String(getCell(row,'اللون')||'').trim(),
+          price: getCell(row,'السعر'),
+          stock: getCell(row,'الرصيد'),
+          disabled: String(getCell(row,'تعطيل')||'').trim()==='لا'
+        });
+      }
+    });
+    if(!rows.length) throw new Error('مفيش صفوف فيها اسم صنف في الملف');
+    state.catalogUploadRows = rows;
+  }catch(e){
+    state.catalogUploadResult = { error: 'تعذّر قراءة الملف: ' + (e && e.message ? e.message : 'خطأ غير معروف') };
+    state.catalogUploadRows = null;
+  }
+  render();
+}
+
+async function downloadCatalogTemplate(){
+  if(typeof ExcelJS === 'undefined'){ showToast('حصل خطأ في تحميل أداة الإكسل، حاول تاني'); return; }
+  const wb = new ExcelJS.Workbook();
+  const isStock = state.catalogUploadMode==='stock';
+  const ws = wb.addWorksheet('نموذج', { views:[{ rightToLeft:true }] });
+  if(isStock){
+    ws.columns = [
+      { header:'اسم الصنف', key:'name', width:34 },
+      { header:'الرصيد', key:'stock', width:12 },
+    ];
+    ws.addRow({ name:'مثال: حلق مفصلي بدون بار كومبن - ابيض', stock:25 });
+  } else {
+    ws.columns = [
+      { header:'اسم الصنف', key:'name', width:34 },
+      { header:'القطاع', key:'main', width:20 },
+      { header:'التصنيف الفرعي', key:'sub', width:20 },
+      { header:'الوحدة', key:'unit', width:10 },
+      { header:'اسم المنتج', key:'product', width:28 },
+      { header:'اللون', key:'color', width:14 },
+      { header:'السعر', key:'price', width:10 },
+      { header:'الرصيد', key:'stock', width:10 },
+      { header:'تعطيل', key:'disabled', width:10 },
+    ];
+    ws.addRow({ name:'مثال: حلق مفصلي بدون بار كومبن - ابيض', main:'قطاعات PVC كومبن', sub:'', unit:4, product:'حلق مفصلي بدون بار كومبن', color:'ابيض', price:250, stock:25, disabled:'' });
+  }
+  ws.getRow(1).font = { bold:true };
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type:'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = isStock ? 'نموذج_تحديث_الرصيد.xlsx' : 'نموذج_رفع_الأصناف.xlsx';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function submitCatalogUpload(){
+  if(!state.catalogUploadRows || !state.catalogUploadRows.length) return;
+  state.catalogUploadBusy = true; state.catalogUploadResult = null; render();
+  try{
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action:'uploadCatalog', token:getAdminToken(), mode:state.catalogUploadMode, rows:state.catalogUploadRows })
+    });
+    const data = await res.json();
+    if(data && data.ok){
+      state.catalogUploadResult = { updated:data.updated||0, added:data.added||0, notFound:data.notFound||[] };
+      showToast('تم رفع الملف بنجاح ✅');
+    } else {
+      state.catalogUploadResult = { error: (data && data.error) ? data.error : 'حصل خطأ في الرفع' };
+    }
+  }catch(e){
+    state.catalogUploadResult = { error: 'تعذّر الاتصال بالسيرفر، حاول تاني' };
+  }
+  state.catalogUploadBusy = false;
+  render();
+}
+
 async function exportExcel(statusFilter){
   // statusFilter: واحدة من المراحل التلاتة بالظبط — كل زرار بيصدّر ملف مستقل بطلباته بس
   const ordersForFile = state.orders.filter(o=>o.status===statusFilter);
@@ -4035,9 +4271,16 @@ async function exportExcel(statusFilter){
 
 // ===== render: header =====
 function renderHeader(){
+  const bioOn = isBiometricEnabledForCurrentUser();
+  const cartShown = (state.view==='order' && state.currentUser && state.currentUser.username!=='admin');
+  const cartCount = (state.cart && state.cart.length) || (state.pendingDraft && state.pendingDraft.cart && state.pendingDraft.cart.length) || 0;
   return `
   <div class="fixedhead-outer"><div class="fixedhead-inner">
-  <header class="top">
+  <header class="top ${cartShown?'has-cart':''}">
+    ${cartShown ? `
+    <button class="cartbtn-float" data-act="open-cart-review" title="السلة">
+      🛒${cartCount ? `<span class="cartbadge">${cartCount}</span>` : ''}
+    </button>` : ''}
     <div class="brand">
       <img class="logoimg" src="data:image/jpeg;base64,${LOGO_B64}" alt="القرشي">
       <div>
@@ -4046,30 +4289,24 @@ function renderHeader(){
       </div>
     </div>
     <nav class="tabs">
-      <button class="${state.view==='order'?'active':''}" data-act="goto" data-view="order">طلب جديد</button>
-      ${(state.view==='order' && state.currentUser && state.currentUser.username!=='admin') ? `
-      <button class="cartbtn" data-act="open-cart-review" title="السلة">
-        🛒${(()=>{ const n = (state.cart && state.cart.length) || (state.pendingDraft && state.pendingDraft.cart && state.pendingDraft.cart.length) || 0; return n ? `<span class="cartbadge">${n}</span>` : ''; })()}
-      </button>` : ''}
-      <button class="${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">طلباتي</button>
+      <div class="tabcol">
+        <button class="${state.view==='order'?'active':''}" data-act="goto" data-view="order">طلب جديد</button>
+        <button class="${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">متابعة الطلب</button>
+      </div>
       <button class="${state.view==='admin'?'active':''}" data-act="goto" data-view="admin">متابعة المخزن${state.adminNewCount>0 ? `<span class="navbadge">${state.adminNewCount}</span>` : ''}</button>
-      ${isWebAuthnSupported() ? (
-        isBiometricEnabledForCurrentUser()
-          ? `<button data-act="disable-biometric" title="إلغاء الدخول بالبصمة من الجهاز ده">🔓 إلغاء البصمة</button>`
-          : `<button data-act="enable-biometric" title="فعّل الدخول بالبصمة على الجهاز ده">👆 تفعيل البصمة</button>`
-      ) : ''}
-      ${isDiscountEligible() ? `
-      <button class="discounttogglebtn ${state.discountVisible?'on':''}" data-act="toggle-discount" title="دوس تغيّر — النص بيوصف الحالة الحالية">
-        ${state.discountVisible ? '💰 الخصم ظاهر دلوقتي' : '🙈 الخصم مخفي دلوقتي'}
-      </button>
-      <span class="extradiscwrap" title="خصم مخصص % — يحل محل خصم القطاع لو كتبت قيمة">
-        <label for="extraDiscInput">💲 خصم للتسعير</label>
-        <span class="pctsign">%</span>
-        <input id="extraDiscInput" type="number" min="0" max="100" step="0.5"
-          value="${state.extraDiscount||''}" placeholder="0"
-          data-extradiscount>
-      </span>` : ''}
-      <button data-act="force-update" title="تحديث إجباري">🔄 تحديث</button>
+      <div class="miscol">
+        ${isWebAuthnSupported() ? `
+        <button class="fingerbtn ${bioOn?'on':'off'}" data-act="${bioOn?'disable-biometric':'enable-biometric'}" title="${bioOn?'البصمة مفعّلة — دوس عشان تلغيها':'البصمة غير مفعّلة — دوس عشان تفعّلها'}">👆</button>
+        ` : ''}
+        ${isDiscountEligible() ? `
+        <button class="discounttogglebtn small ${state.discountVisible?'on':'off'}" data-act="toggle-discount" title="دوس تغيّر — خط فوق الكلمة يعني الخصم مخفي عن الموزع">خصم</button>
+        <span class="extradiscwrap mini" title="خصم مخصص % — يحل محل خصم القطاع لو كتبت قيمة">
+          <span class="pctsign">%</span>
+          <input id="extraDiscInput" type="number" min="0" max="100" step="0.5"
+            value="${state.extraDiscount||''}" placeholder="0"
+            data-extradiscount>
+        </span>` : ''}
+      </div>
       <button data-act="logout" title="تسجيل خروج">🚪 خروج</button>
     </nav>
   </header>
@@ -4809,6 +5046,7 @@ function renderAdminView(){
       <button class="exportbtn" data-act="export-excel-received">تصدير Excel (${STATUS_RECEIVED})</button>
       <button class="exportbtn" data-act="export-excel-delivered">تصدير Excel (${STATUS_DONE})</button>
       <button class="exportbtn" data-act="show-pwreq">🔑 طلبات الباسورد${state.pwRequestsCount ? ' ('+state.pwRequestsCount+')' : ''}</button>
+      <button class="exportbtn" data-act="open-catalog-upload">📥 رفع الأصناف/الرصيد</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُنفَّذ</button>
     </div>
     <div class="polldiag">
@@ -5284,7 +5522,7 @@ function render(){
     else if(state.view==='myorders') view = renderMyOrdersView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
-    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCartReviewModal() + renderGlobalError();
+    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderCartReviewModal() + renderGlobalError();
     bindEvents();
     applyFixedHeaderSpacing_();
     applyFixedFooterSpacing_();
@@ -5472,6 +5710,13 @@ function bindEvents(){
 
   document.querySelectorAll('[data-act]').forEach(el=>{
     const act = el.getAttribute('data-act');
+    if(el.tagName==='INPUT' && el.type==='file'){
+      el.addEventListener('change', e=>{
+        const file = e.target.files && e.target.files[0];
+        if(file) handleCatalogFileSelected(act, file);
+      });
+      return;
+    }
     if(el.tagName==='INPUT' || el.tagName==='TEXTAREA'){
       el.addEventListener('input', e=>onInputChange(act, e.target, e.target.value));
       el.addEventListener('keydown', e=>{
@@ -5627,6 +5872,23 @@ async function onActionInner(act, el){
     case 'show-stock': state.showStock=true; state.stockSearch=''; render(); break;
     case 'show-pwreq': await loadPwRequests(); break;
     case 'close-pwreq': state.showPwRequests=false; render(); break;
+    case 'open-catalog-upload':
+      state.showCatalogUpload = true;
+      state.catalogUploadRows = null;
+      state.catalogUploadFileName = '';
+      state.catalogUploadResult = null;
+      render();
+      break;
+    case 'close-catalog-upload': state.showCatalogUpload=false; render(); break;
+    case 'catalog-upload-mode':
+      state.catalogUploadMode = el.getAttribute('data-val');
+      state.catalogUploadRows = null;
+      state.catalogUploadFileName = '';
+      state.catalogUploadResult = null;
+      render();
+      break;
+    case 'download-catalog-template': await downloadCatalogTemplate(); break;
+    case 'submit-catalog-upload': await submitCatalogUpload(); break;
     case 'approve-pwreq': await decidePwRequest(el.getAttribute('data-val'), true); break;
     case 'reject-pwreq': await decidePwRequest(el.getAttribute('data-val'), false); break;
     case 'close-stock': state.showStock=false; render(); break;
