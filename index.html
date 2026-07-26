@@ -1083,7 +1083,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v131';
+const APP_BUILD = 'v132';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -3512,7 +3512,7 @@ async function buildQuotePDF(order){
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">${net==null?'—':Math.round(net).toLocaleString('en-US')}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">${lineAmt==null?'—':Math.round(lineAmt).toLocaleString('en-US')}</td>
                   </tr>`;
                 }
                 rowIndex++;
@@ -3541,7 +3541,7 @@ async function buildQuotePDF(order){
           </div>
           ` : `
           <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#1F3050;color:#fff;border-radius:8px;font-size:17px;font-weight:800;margin-top:8px;">
-            <span>الإجمالي</span><span>${Math.round(netTotal).toLocaleString('en-US')} ج.م</span>
+            <span>الإجمالي</span><span>${Math.round(subtotal).toLocaleString('en-US')} ج.م</span>
           </div>
           `}
           ${hasMissing ? '<div style="font-size:11.8px;color:#8A5A00;margin-top:6px;text-align:left;">⚠️ فيه أصناف بدون سعر متاح مش داخلة في الإجمالي</div>' : ''}
