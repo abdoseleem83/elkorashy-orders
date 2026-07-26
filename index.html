@@ -734,6 +734,12 @@ textarea{resize:vertical;min-height:60px;}
 .statusbadge.received{background:#E7EEFB;color:#1F4E9C;}
 .statusbadge.done{background:var(--success-bg);color:var(--success);}
 .statusbadge.edited{background:#ECECEC;color:#6B6B6B;}
+.oheadside{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+.delquick{
+  background:#FDECEA;color:#C0392B;border:1.3px solid #C0392B;border-radius:999px;
+  padding:4px 12px;font-family:'Cairo',sans-serif;font-weight:800;font-size:11px;cursor:pointer;white-space:nowrap;
+}
+.delquick:active{background:#F8D7D2;}
 .ordercard .oheadmain{flex:1;cursor:pointer;user-select:none;padding:2px 0;}
 .ordercard .oheadmain .dmeta{margin-top:2px;}
 .ordercard .ochev{color:var(--navy-soft);font-weight:800;}
@@ -1084,7 +1090,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v133';
+const APP_BUILD = 'v134';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -4760,9 +4766,12 @@ function renderAdminView(){
             <div class="dmeta">🕐 ${dateStr}</div>
             <div class="oid">#${esc(orderNoDisplay_(o))} · ${nItems} صنف</div>
           </div>
-          <button class="statusbadge ${si.cls}" data-act="toggle-status" data-id="${esc(o.id)}" title="دوس عشان تتقدّم للمرحلة الجاية">
-            ${si.icon} ${esc(si.label)}
-          </button>
+          <div class="oheadside">
+            <button class="statusbadge ${si.cls}" data-act="toggle-status" data-id="${esc(o.id)}" title="دوس عشان تتقدّم للمرحلة الجاية">
+              ${si.icon} ${esc(si.label)}
+            </button>
+            ${normStatus_(o.status)===STATUS_EDITED ? `<button class="delquick" data-act="delete-order" data-id="${esc(o.id)}" title="حذف النسخة القديمة">🗑 حذف</button>` : ''}
+          </div>
         </div>
         ${!isOpen ? '' : `
         <div class="dmeta" style="margin:2px 0 6px;">${esc(o.distRegion||'')} · ${esc(o.distPhone||'بدون رقم')}</div>
