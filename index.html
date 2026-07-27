@@ -25,11 +25,11 @@
   --navy-soft:#3E6B9E;   /* أزرق أفتح شوية للتفاصيل الثانوية */
   --gold:#C9A227;
   --gold-light:#E4C766;
-  --bg:#F5F3EE;
+  --bg:#FAFAF8;
   --card:#FFFFFF;
   --ink:#20242B;
   --muted:#6E7480;
-  --line:#E4E0D6;
+  --line:#E7E7E2;
   --success:#2F7D5A;
   --success-bg:#E7F3EC;
   --danger:#B3261E;
@@ -214,6 +214,12 @@ nav.tabs button.active{
   background:var(--gold);
   border-color:var(--gold);
   color:var(--navy-deep);
+}
+nav.tabs button.navbtn-sm{
+  flex:0 0 auto;
+  min-width:0;
+  padding:5px 9px;
+  font-size:9.6px;
 }
 
 main{flex:1;padding:18px 16px 100px;}
@@ -770,12 +776,12 @@ textarea{resize:vertical;min-height:60px;}
 .authlinks .muted{color:var(--muted);}
 .authcard .err{color:var(--danger);font-size:14px;margin:6px 0 0;text-align:center;}
 
-.adminbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+.adminbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
 .adminbar input{flex:1 1 100%;}
-.adminbar .exportbtn{flex:1;padding:10px 8px;}
+.adminbar .exportbtn{flex:1 1 auto;padding:7px 6px;}
 .exportbtn{
-  background:var(--navy);color:#fff;border:none;border-radius:10px;padding:0 14px;
-  font-family:'Cairo',sans-serif;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;
+  background:var(--navy);color:#fff;border:none;border-radius:8px;padding:0 10px;
+  font-family:'Cairo',sans-serif;font-weight:700;font-size:11.6px;cursor:pointer;white-space:nowrap;
 }
 .exportbtn.danger{background:var(--danger);}
 .delbtn{
@@ -1157,7 +1163,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v138';
+const APP_BUILD = 'v139';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -4375,7 +4381,7 @@ function renderHeader(){
         <button class="${state.view==='order'?'active':''}" data-act="goto" data-view="order">طلب جديد</button>
         <button class="${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">متابعة الطلب</button>
       </div>
-      <button class="${state.view==='admin'?'active':''}" data-act="goto" data-view="admin">متابعة المخزن${state.adminNewCount>0 ? `<span class="navbadge">${state.adminNewCount}</span>` : ''}</button>
+      <button class="navbtn-sm ${state.view==='admin'?'active':''}" data-act="goto" data-view="admin">متابعة المخزن${state.adminNewCount>0 ? `<span class="navbadge">${state.adminNewCount}</span>` : ''}</button>
       <div class="miscol">
         ${isWebAuthnSupported() ? `
         <button class="fingerbtn ${bioOn?'on':'off'}" data-act="${bioOn?'disable-biometric':'enable-biometric'}" title="${bioOn?'البصمة مفعّلة — دوس عشان تلغيها':'البصمة غير مفعّلة — دوس عشان تفعّلها'}">👆</button>
@@ -4389,7 +4395,8 @@ function renderHeader(){
             data-extradiscount>
         </span>` : ''}
       </div>
-      <button data-act="logout" title="تسجيل خروج">🚪 خروج</button>
+      <button class="navbtn-sm" data-act="force-update" title="تحديث إجباري">🔄 تحديث</button>
+      <button class="navbtn-sm" data-act="logout" title="تسجيل خروج">🚪 خروج</button>
     </nav>
   </header>
   <div class="profile-bar"><span></span><span></span><span></span><span></span><span></span></div>
