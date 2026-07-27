@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
 <title>القرشي | طلبات الموزعين</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1C6E9E">
+<meta name="theme-color" content="#0B2038">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -20,9 +20,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{
-  --navy:#2B8CC4;        /* سماوي أساسي */
-  --navy-deep:#1C6E9E;   /* سماوي غامق (للتباين مع الأبيض) */
-  --navy-soft:#63B8E4;   /* سماوي فاتح */
+  --navy:#173A63;        /* أزرق غامق أساسي */
+  --navy-deep:#0B2038;   /* أزرق غامق جدًا (للتباين مع الأبيض) */
+  --navy-soft:#3E6B9E;   /* أزرق أفتح شوية للتفاصيل الثانوية */
   --gold:#C9A227;
   --gold-light:#E4C766;
   --bg:#F5F3EE;
@@ -1157,7 +1157,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v137';
+const APP_BUILD = 'v138';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1276,6 +1276,10 @@ const state = {
   stockSearch:'',
   stockPdfBusy:false,
   showPwRequests:false,
+  showArchive:false,
+  archivedOrders:[],
+  archiveLoading:false,
+  archiveCount:0,
   showCatalogUpload:false,
   catalogUploadMode:'full',       // 'full' أو 'stock'
   catalogUploadRows:null,         // الصفوف اللي اتقرت من الملف، جاهزة للرفع
@@ -2065,17 +2069,13 @@ async function updateOrderStatus(id, status){
     const r = await fetch(APPS_SCRIPT_URL + '?action=updateStatus&token=' + encodeURIComponent(getAdminToken()) + '&id=' + encodeURIComponent(id) + '&status=' + encodeURIComponent(status));
     let d = {};
     try{ d = await r.json(); }catch(e){}
-    if(status===STATUS_DONE){
-      if(d.notified){
-        showToast('اتحدّثت ✅ واتبعت إشعار للموزع تلقائيًا');
-      } else {
-        // الموزع مش مفعّل الإشعار التلقائي — نسأل الأدمن يبعتها بإيده فورًا.
-        // لازم تبقى ضغطة مباشرة من المستخدم عشان واتساب يفتح (المتصفح بيمنع
-        // فتح نافذة بعد await من غير ضغطة).
-        state.notifyPromptId = id;
-      }
+    if(d.notified){
+      showToast('اتحدّثت ✅ واتبعت إشعار للموزع تلقائيًا');
     } else {
-      showToast('تم تحديث حالة الطلب');
+      // الموزع مش مفعّل الإشعار التلقائي — نسأل الأدمن يبعتها بإيده فورًا،
+      // في الحالتين (استلام أو تنفيذ). لازم تبقى ضغطة مباشرة من المستخدم
+      // عشان واتساب يفتح (المتصفح بيمنع فتح نافذة بعد await من غير ضغطة).
+      state.notifyPromptId = id;
     }
   }catch(e){ showToast('حصل خطأ، حاول تاني'); }
   render();
@@ -2098,6 +2098,57 @@ async function deleteDeliveredOrders(){
     state.orders = state.orders.filter(o=>o.status!==STATUS_DONE);
     showToast('تم مسح ' + count + ' طلب منفَّذ');
   }catch(e){ showToast('حصل خطأ في الحذف، حاول تاني'); }
+  render();
+}
+
+// ===== أرشفة الطلبات المنفَّذة =====
+async function archiveDoneOrders(){
+  const count = state.orders.filter(o=>o.status===STATUS_DONE).length;
+  if(count===0){ showToast('مفيش طلبات "' + STATUS_DONE + '" حاليًا عشان تتأرشف'); return; }
+  if(!confirm('هيتم نقل ' + count + ' طلب "' + STATUS_DONE + '" للأرشيف (مش هيتمسحوا، بس هيختفوا من القايمة الرئيسية). متأكد؟')) return;
+  try{
+    const res = await fetch(APPS_SCRIPT_URL + '?action=archiveDone&token=' + encodeURIComponent(getAdminToken()));
+    const d = await res.json();
+    if(d && d.ok){
+      state.orders = state.orders.filter(o=>o.status!==STATUS_DONE);
+      showToast('اتأرشف ' + (d.archived||count) + ' طلب ✅');
+    } else {
+      showToast('حصل خطأ في الأرشفة، حاول تاني');
+    }
+  }catch(e){ showToast('تعذّر الاتصال بالسيرفر، حاول تاني'); }
+  render();
+}
+
+async function loadArchivedOrders(){
+  state.showArchive = true;
+  state.archiveLoading = true;
+  render();
+  try{
+    const res = await fetch(APPS_SCRIPT_URL + '?action=archivedOrders&token=' + encodeURIComponent(getAdminToken()));
+    const data = await res.json();
+    state.archivedOrders = Array.isArray(data) ? data : [];
+    state.archiveCount = state.archivedOrders.length;
+  }catch(e){
+    showToast('تعذّر تحميل الأرشيف — النت');
+  }
+  state.archiveLoading = false;
+  render();
+}
+
+async function restoreArchivedOrder(id){
+  if(!confirm('هيرجع الطلب ده لقايمة "متابعة المخزن" تاني. متأكد؟')) return;
+  try{
+    const res = await fetch(APPS_SCRIPT_URL + '?action=restoreArchived&token=' + encodeURIComponent(getAdminToken()) + '&id=' + encodeURIComponent(id));
+    const d = await res.json();
+    if(d && d.ok){
+      state.archivedOrders = state.archivedOrders.filter(o=>o.id!==id);
+      state.archiveCount = state.archivedOrders.length;
+      showToast('تم استرجاع الطلب — هيظهر تاني في القايمة الرئيسية بعد أول تحديث');
+      loadOrders();
+    } else {
+      showToast('حصل خطأ في الاسترجاع');
+    }
+  }catch(e){ showToast('تعذّر الاتصال بالسيرفر'); }
   render();
 }
 
@@ -2971,7 +3022,7 @@ function renderNotifyPrompt(){
   <div class="modalbg">
     <div class="modalcard">
       <div class="modalic">📲</div>
-      <h3>تبلّغ الموزع بالاستلام؟</h3>
+      <h3>تبلّغ الموزع بتحديث الطلب؟</h3>
       <p>هيفتح واتساب برسالة جاهزة عن طلب <b>${esc(ord.distName)}</b> — تختار المستلم بنفسك</p>
       <div class="modalbtns">
         <button class="modalbtn primary" data-act="do-notify-dist">📲 ابعت على واتساب</button>
@@ -3124,6 +3175,37 @@ function renderPwRequestsModal(){
       </div>
       <div class="previewbody" style="background:#fff;">
         ${state.pwRequestsLoading ? '<div class="loading">جارٍ التحميل...</div>' : body}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderArchiveModal(){
+  if(!state.showArchive) return '';
+  const list = state.archivedOrders || [];
+  const body = list.length ? list.map(o=>{
+    const dateStr = new Date(o.ts).toLocaleDateString('ar-EG',{day:'numeric',month:'short'});
+    return `
+    <div style="padding:10px;border-bottom:1px solid var(--line);">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div>
+          <div style="font-weight:800;color:var(--navy);font-size:13.5px;">${esc(o.distName)}</div>
+          <div style="font-size:11.3px;color:var(--muted);">${esc(o.distRegion||'')} · ${dateStr} · #${esc(orderNoDisplay_(o))}</div>
+        </div>
+        <button class="chip" data-act="restore-archived" data-val="${esc(o.id)}">↩️ استرجاع</button>
+      </div>
+    </div>`;
+  }).join('') : '<div class="loading">الأرشيف فاضي حاليًا</div>';
+
+  return `
+  <div class="modalbg" data-act="close-archive">
+    <div class="previewmodal" data-act="noop" style="max-width:560px;">
+      <div class="previewhead">
+        <span>📦 أرشيف الطلبات (${list.length})</span>
+        <button class="previewclose" data-act="close-archive">✕</button>
+      </div>
+      <div class="previewbody" style="background:#fff;">
+        ${state.archiveLoading ? '<div class="loading">جارٍ التحميل...</div>' : body}
       </div>
     </div>
   </div>`;
@@ -4958,13 +5040,13 @@ function filteredAdminOrders_(){
     if(state.adminStatusFilter!=='all' && o.status!==state.adminStatusFilter) return false;
     if(q && !(o.distName||'').toLowerCase().includes(q)) return false;
     return true;
-  // ⚠️ الترتيب المطلوب: الأقدم فوق والأحدث تحت (المستخدم بيسمّيه "تنازلي").
-  // بنرتّب بالوقت تصاعديًا، ولو الوقت متساوي أو مش موجود بنرجع لرقم الطلب،
-  // عشان الترتيب مايعتمدش على ترتيب الصفوف الراجع من الشيت خالص.
+  // الأحدث فوق والأقدم تحت. بنرتّب بالوقت تنازليًا، ولو الوقت متساوي أو مش
+  // موجود بنرجع لرقم الطلب، عشان الترتيب مايعتمدش على ترتيب الصفوف الراجع
+  // من الشيت خالص.
   }).slice().sort((a,b)=>{
-    const d = orderTimeKey_(a) - orderTimeKey_(b);
+    const d = orderTimeKey_(b) - orderTimeKey_(a);
     if(d !== 0) return d;
-    return orderNoKey_(a) - orderNoKey_(b);
+    return orderNoKey_(b) - orderNoKey_(a);
   });
 }
 
@@ -5047,6 +5129,8 @@ function renderAdminView(){
       <button class="exportbtn" data-act="export-excel-delivered">تصدير Excel (${STATUS_DONE})</button>
       <button class="exportbtn" data-act="show-pwreq">🔑 طلبات الباسورد${state.pwRequestsCount ? ' ('+state.pwRequestsCount+')' : ''}</button>
       <button class="exportbtn" data-act="open-catalog-upload">📥 رفع الأصناف/الرصيد</button>
+      <button class="exportbtn" data-act="archive-done">🗄 أرشفة المنفَّذ</button>
+      <button class="exportbtn" data-act="open-archive">📦 عرض الأرشيف${state.archiveCount ? ' ('+state.archiveCount+')' : ''}</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُنفَّذ</button>
     </div>
     <div class="polldiag">
@@ -5082,7 +5166,12 @@ function isIOSDevice(){
 // نص رسالة تبليغ الموزع — مكان واحد بس عشان الرسالة النصية وصورة الإشعار
 // يفضلوا متطابقين، ولو النص اتغير تاني نغيّره من هنا وبس.
 function notifyMessageText_(ord){
-  let msg = '✅ تم استلام الطلب الخاص بكم وجاري تنفيذه حسب المتاح بالمخزن وسيتم اعلامكم برساله بالمتاح\n';
+  let msg;
+  if(ord.status===STATUS_DONE){
+    msg = '✅ تم تنفيذ طلبكم بالكامل وجاهز — يمكنكم التواصل معنا للاستلام\n';
+  } else {
+    msg = '✅ تم استلام الطلب الخاص بكم وجاري تنفيذه حسب المتاح بالمخزن وسيتم اعلامكم برساله بالمتاح\n';
+  }
   msg += 'نشكر صبركم\n';
   msg += 'رقم الطلب: #' + orderNoDisplay_(ord) + '\n';
   msg += 'الموزع: ' + (asText(ord.distName) || '-') + '\n';
@@ -5522,7 +5611,7 @@ function render(){
     else if(state.view==='myorders') view = renderMyOrdersView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
-    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderCartReviewModal() + renderGlobalError();
+    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderGlobalError();
     bindEvents();
     applyFixedHeaderSpacing_();
     applyFixedFooterSpacing_();
@@ -5887,6 +5976,10 @@ async function onActionInner(act, el){
       state.catalogUploadResult = null;
       render();
       break;
+    case 'archive-done': await archiveDoneOrders(); break;
+    case 'open-archive': await loadArchivedOrders(); break;
+    case 'close-archive': state.showArchive=false; render(); break;
+    case 'restore-archived': await restoreArchivedOrder(el.getAttribute('data-val')); break;
     case 'download-catalog-template': await downloadCatalogTemplate(); break;
     case 'submit-catalog-upload': await submitCatalogUpload(); break;
     case 'approve-pwreq': await decidePwRequest(el.getAttribute('data-val'), true); break;
