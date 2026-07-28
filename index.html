@@ -20,16 +20,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{
-  --navy:#173A63;        /* أزرق غامق أساسي */
-  --navy-deep:#0B2038;   /* أزرق غامق جدًا (للتباين مع الأبيض) */
-  --navy-soft:#3E6B9E;   /* أزرق أفتح شوية للتفاصيل الثانوية */
-  --gold:#C9A227;
-  --gold-light:#E4C766;
-  --bg:#FAFAF8;
+  --navy:#0E6D7C;        /* تركوازي غامق أساسي */
+  --navy-deep:#0A4A55;   /* تركوازي غامق جدًا (للتباين مع الأبيض) */
+  --navy-soft:#3E97A6;   /* تركوازي أفتح للتفاصيل الثانوية */
+  --gold:#E08A3C;        /* برتقالي دافئ للأزرار النشطة */
+  --gold-light:#F0B274;
+  --bg:#F6F8F8;
   --card:#FFFFFF;
-  --ink:#20242B;
-  --muted:#6E7480;
-  --line:#E7E7E2;
+  --ink:#1B2B2E;
+  --muted:#67787C;
+  --line:#E3EAEA;
   --success:#2F7D5A;
   --success-bg:#E7F3EC;
   --danger:#B3261E;
@@ -119,8 +119,8 @@ header.top.has-cart{padding-left:46px;}
   z-index:5;
   width:32px;height:32px;
   border-radius:50%;
-  background:rgba(23,58,99,.08);
-  border:1px solid rgba(23,58,99,.22);
+  background:rgba(14,109,124,.08);
+  border:1px solid rgba(14,109,124,.22);
   color:var(--navy-deep);
   font-size:14.5px;
   display:flex;align-items:center;justify-content:center;
@@ -130,56 +130,48 @@ header.top.has-cart{padding-left:46px;}
 
 nav.tabs{
   display:flex;
-  flex-wrap:wrap;
-  gap:6px;
+  flex-direction:column;
+  gap:7px;
   margin-top:10px;
-  align-items:stretch;
 }
-/* "طلب جديد" و"متابعة الطلب" في عمود واحد تحت بعض */
-nav.tabs .tabcol{
-  display:flex;
-  flex-direction:column;
-  gap:5px;
-  flex:1 1 auto;
-  min-width:62px;
+/* التبويبات الأربعة الرئيسية — شبكة عمودين، كل الأزرار نفس المقاس بالظبط */
+nav.tabs .tabgrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
 }
-/* البصمة وزرار الخصم مع نسبة التسعير — عمود صغير مضغوط */
-nav.tabs .miscol{
+/* صف الأدوات الصغيرة (بصمة / خصم / خروج) — كلها دواير متساوية */
+nav.tabs .toolrow{
   display:flex;
-  flex-direction:column;
   align-items:center;
-  gap:5px;
-  flex:0 0 auto;
+  justify-content:flex-end;
+  gap:7px;
+  flex-wrap:wrap;
 }
 .fingerbtn{
-  width:28px;height:28px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:14px;padding:0;
-  border:1px solid rgba(23,58,99,.18);
-  background:rgba(23,58,99,.05);
-  color:rgba(23,58,99,.4);
   filter:grayscale(1);
-  opacity:.65;
-  transition:.2s;
+  opacity:.6;
 }
 .fingerbtn.on{
   background:var(--gold);
   border-color:var(--gold);
-  color:var(--navy-deep);
+  color:#fff;
   filter:none;
   opacity:1;
-  box-shadow:0 0 8px rgba(201,162,39,.55);
+  box-shadow:0 0 8px rgba(224,138,60,.5);
 }
 .discounttogglebtn{
-  background:rgba(23,58,99,.07) !important;
-  border-color:rgba(23,58,99,.2) !important;
+  background:#fff !important;
+  border-color:var(--line) !important;
   color:var(--navy-deep) !important;
   font-weight:800;
   border-radius:999px !important;
 }
 .discounttogglebtn.small{
-  padding:3px 12px !important;
-  font-size:10.6px !important;
+  width:auto !important;
+  height:34px !important;
+  padding:0 14px !important;
+  font-size:11px !important;
   min-width:0 !important;
   flex:0 0 auto !important;
 }
@@ -196,33 +188,60 @@ nav.tabs .miscol{
   color:var(--navy-deep) !important;
   text-decoration:none;
   opacity:1;
-  box-shadow:0 0 8px rgba(201,162,39,.45);
+  box-shadow:0 0 8px rgba(224,138,60,.45);
 }
-nav.tabs button{
-  flex:1 1 auto;
-  min-width:62px;
-  background:rgba(23,58,99,.06);
-  border:1px solid rgba(23,58,99,.16);
+/* زرار التبويب الرئيسي — كل الأربعة نفس المقاس والشكل */
+nav.tabs .tabbtn{
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  width:100%;
+  min-height:44px;
+  background:#fff;
+  border:1.5px solid var(--line);
   color:var(--navy-deep);
-  padding:6px 4px;
-  border-radius:8px;
+  padding:9px 6px;
+  border-radius:11px;
   font-family:'Cairo',sans-serif;
-  font-weight:700;
-  font-size:10.4px;
+  font-weight:800;
+  font-size:12.4px;
   cursor:pointer;
   transition:.15s;
+  position:relative;
 }
-nav.tabs button.active{
-  background:var(--gold);
-  border-color:var(--gold);
+nav.tabs .tabbtn.active{
+  background:var(--navy);
+  border-color:var(--navy);
+  color:#fff;
+  box-shadow:0 3px 10px rgba(14,109,124,.28);
+}
+/* أزرار الأدوات الصغيرة — كلها دواير متساوية 34px */
+nav.tabs .toolbtn{
+  width:34px;height:34px;
+  min-width:34px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;
+  padding:0;
+  border:1.5px solid var(--line);
+  background:#fff;
   color:var(--navy-deep);
+  cursor:pointer;
+  transition:.2s;
+  font-family:'Cairo',sans-serif;font-weight:800;
 }
-nav.tabs button.navbtn-sm{
-  flex:0 0 auto;
+nav.tabs .toolbtn.logoutbtn{border-color:rgba(179,38,30,.3);color:var(--danger);}
+/* زرار الخروج — باب + كلمة exit، أوسع من الدواير عشان الكلمة تبان */
+nav.tabs .toolbtn.exitbtn{
+  width:auto;
   min-width:0;
-  padding:5px 9px;
-  font-size:9.6px;
+  border-radius:999px;
+  padding:0 14px;
+  gap:5px;
+  font-size:12px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.5px;
 }
+nav.tabs .toolbtn.exitbtn span{font-size:15px;}
 
 main{flex:1;padding:18px 16px 100px;}
 
@@ -663,7 +682,7 @@ textarea{resize:vertical;min-height:60px;}
   background:var(--gold);
   color:var(--navy-deep);
   border-color:var(--gold);
-  box-shadow:0 6px 18px rgba(201,162,39,.35);
+  box-shadow:0 6px 18px rgba(224,138,60,.35);
 }
 .submitbtn:disabled{background:#D9D2BC;box-shadow:none;cursor:not-allowed;color:#8A8470;border-color:#D9D2BC;}
 .savebtn{
@@ -872,7 +891,7 @@ textarea{resize:vertical;min-height:60px;}
 .gatebtn{
   background:var(--gold);color:var(--navy-deep);border:none;border-radius:12px;
   padding:15px 30px;font-family:'Cairo',sans-serif;font-weight:800;font-size:16.8px;cursor:pointer;
-  box-shadow:0 8px 22px rgba(201,162,39,.4);
+  box-shadow:0 8px 22px rgba(224,138,60,.4);
 }
 .gatehint{font-size:12.3px;color:#9FAAC0;margin-top:14px;max-width:280px;line-height:1.6;}
 .gatesteps{max-width:320px;width:100%;margin-bottom:10px;}
@@ -1165,7 +1184,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v140';
+const APP_BUILD = 'v142';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -4401,26 +4420,26 @@ function renderHeader(){
       </div>
     </div>
     <nav class="tabs">
-      <div class="tabcol">
-        <button class="${state.view==='order'?'active':''}" data-act="goto" data-view="order">طلب جديد</button>
-        <button class="${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">متابعة الطلب</button>
+      <div class="tabgrid">
+        <button class="tabbtn ${state.view==='order'?'active':''}" data-act="goto" data-view="order">🧾 طلب جديد</button>
+        <button class="tabbtn ${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">📦 تابع طلبيتك</button>
+        <button class="tabbtn ${state.view==='admin'?'active':''}" data-act="goto" data-view="admin">🏬 متابعة المخزن${state.adminNewCount>0 ? `<span class="navbadge">${state.adminNewCount}</span>` : ''}</button>
+        <button class="tabbtn" data-act="force-update" title="تحديث إجباري">🔄 تحديث</button>
       </div>
-      <button class="navbtn-sm ${state.view==='admin'?'active':''}" data-act="goto" data-view="admin">متابعة المخزن${state.adminNewCount>0 ? `<span class="navbadge">${state.adminNewCount}</span>` : ''}</button>
-      <div class="miscol">
+      <div class="toolrow">
         ${isWebAuthnSupported() ? `
-        <button class="fingerbtn ${bioOn?'on':'off'}" data-act="${bioOn?'disable-biometric':'enable-biometric'}" title="${bioOn?'البصمة مفعّلة — دوس عشان تلغيها':'البصمة غير مفعّلة — دوس عشان تفعّلها'}">👆</button>
+        <button class="toolbtn fingerbtn ${bioOn?'on':'off'}" data-act="${bioOn?'disable-biometric':'enable-biometric'}" title="${bioOn?'البصمة مفعّلة — دوس عشان تلغيها':'البصمة غير مفعّلة — دوس عشان تفعّلها'}">👆</button>
         ` : ''}
         ${isDiscountEligible() ? `
-        <button class="discounttogglebtn small ${state.discountVisible?'on':'off'}" data-act="toggle-discount" title="دوس تغيّر — خط فوق الكلمة يعني الخصم مخفي عن الموزع">خصم</button>
+        <button class="toolbtn discounttogglebtn small ${state.discountVisible?'on':'off'}" data-act="toggle-discount" title="دوس تغيّر — خط فوق الكلمة يعني الخصم مخفي عن الموزع">خصم</button>
         <span class="extradiscwrap mini" title="خصم مخصص % — يحل محل خصم القطاع لو كتبت قيمة">
           <span class="pctsign">%</span>
           <input id="extraDiscInput" type="number" min="0" max="100" step="0.5"
             value="${state.extraDiscount||''}" placeholder="0"
             data-extradiscount>
         </span>` : ''}
+        <button class="toolbtn logoutbtn exitbtn" data-act="logout" title="تسجيل خروج"><span>🚪</span> exit</button>
       </div>
-      <button class="navbtn-sm" data-act="force-update" title="تحديث إجباري">🔄 تحديث</button>
-      <button class="navbtn-sm" data-act="logout" title="تسجيل خروج">🚪 خروج</button>
     </nav>
   </header>
   <div class="profile-bar"><span></span><span></span><span></span><span></span><span></span></div>
