@@ -140,6 +140,20 @@ nav.tabs .tabgrid{
   grid-template-columns:1fr 1fr;
   gap:7px;
 }
+/* سهم الرجوع بين صفحات التطبيق — يظهر بس لما يكون فيه صفحة سابقة */
+nav.tabs .backnav{
+  width:100%;
+  background:var(--navy-soft);
+  color:#fff;
+  border:none;
+  border-radius:10px;
+  padding:8px;
+  font-family:'Cairo',sans-serif;
+  font-weight:800;
+  font-size:12px;
+  cursor:pointer;
+}
+nav.tabs .backnav:active{background:var(--navy);}
 /* صف الأدوات الصغيرة (بصمة / خصم / خروج) — كلها دواير متساوية */
 nav.tabs .toolrow{
   display:flex;
@@ -1155,6 +1169,12 @@ textarea{resize:vertical;min-height:60px;}
 .previewclose{
   background:transparent;border:none;color:#fff;font-size:20.2px;cursor:pointer;line-height:1;
 }
+.previewback{
+  background:rgba(255,255,255,.16);border:none;color:#fff;
+  font-family:'Cairo',sans-serif;font-weight:800;font-size:13px;
+  padding:6px 13px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:4px;
+}
+.previewback:active{background:rgba(255,255,255,.3);}
 .previewbody{overflow:auto;padding:10px;background:#F5F3EE;flex:1;}
 .previewfoot{padding:10px 14px;border-top:1px solid var(--line);}
 .previewfoot .savebtn{width:100%;}
@@ -1184,7 +1204,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v142';
+const APP_BUILD = 'v144';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1247,6 +1267,7 @@ const ADMIN_WHATSAPP = '201067765483';
 // ===== state =====
 const state = {
   view:'order',                // order | myorders | admin
+  viewHistory:[],              // تاريخ الصفحات لسهم الرجوع
 
   // auth
   currentUser:null,            // {username, distName, distRegion, distPhone}
@@ -1961,8 +1982,15 @@ function canvasToPngBlob_(canvas){
 function pdfScale_(itemCount){
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
   const n = Number(itemCount) || 0;
-  if(isMobile) return n > 25 ? 1 : 1.5;
-  return n > 40 ? 1.5 : 2;
+  // ⚠️ الدقة كانت بتنزل لـ 1 على الموبايل لو الأصناف > 25، فالصورة بتطلع
+  // مش واضحة (باهتة/مزحومة). رفعناها عشان تفضل مقروءة حتى مع أصناف كتير،
+  // من غير ما نبالغ في مقاس الصورة على الأجهزة الضعيفة.
+  if(isMobile){
+    if(n > 45) return 1.4;
+    if(n > 25) return 1.7;
+    return 2;
+  }
+  return n > 40 ? 2 : 2.5;
 }
 
 // ===== storage (Google Sheet via Apps Script) =====
@@ -3502,6 +3530,7 @@ function renderPreviewModal(){
   <div class="modalbg" data-act="close-preview">
     <div class="previewmodal" data-act="noop">
       <div class="previewhead">
+        <button class="previewback" data-act="close-preview" title="رجوع للصفحة السابقة">→ رجوع</button>
         <span>${isImage ? 'معاينة الصورة' : 'معاينة المستند'}</span>
         <button class="previewclose" data-act="close-preview">✕</button>
       </div>
@@ -4420,6 +4449,8 @@ function renderHeader(){
       </div>
     </div>
     <nav class="tabs">
+      ${(state.viewHistory && state.viewHistory.length) ? `
+      <button class="backnav" data-act="go-back" title="رجوع للصفحة السابقة">→ رجوع للصفحة السابقة</button>` : ''}
       <div class="tabgrid">
         <button class="tabbtn ${state.view==='order'?'active':''}" data-act="goto" data-view="order">🧾 طلب جديد</button>
         <button class="tabbtn ${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">📦 تابع طلبيتك</button>
@@ -6080,9 +6111,20 @@ async function onActionInner(act, el){
       break;
     case 'goto':{
       const v = el.getAttribute('data-view');
+      // نحفظ الصفحة الحالية في التاريخ عشان سهم الرجوع يرجّعنا ليها
+      if(v !== state.view){ state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view); }
       state.view = v; render();
       if(v==='admin' && state.adminUnlocked){ loadOrders(); markAdminOrdersSeen_(); }
       if(v==='myorders' && !state.myOrdersSearched && getSavedOrderRefs().length) refreshMyOrders();
+      break;
+    }
+    case 'go-back':{
+      // سهم الرجوع بين صفحات التطبيق — يرجّع لآخر صفحة كان فيها المستخدم
+      const hist = state.viewHistory || [];
+      const prev = hist.pop();
+      if(prev){ state.view = prev; render();
+        if(prev==='admin' && state.adminUnlocked){ loadOrders(); markAdminOrdersSeen_(); }
+      }
       break;
     }
     case 'set-group':{
