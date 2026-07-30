@@ -1198,7 +1198,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v146';
+const APP_BUILD = 'v147';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -3646,7 +3646,12 @@ async function buildQuotePDF(order){
       dispPrice = raw==null ? null : raw*content;   // سعر الكرتونة كاملة
     }
     const lineRaw = dispPrice==null ? null : dispPrice*dispQty;
-    return Object.assign({}, it, { normQty: dispQty, normUnit: dispUnit, rawPrice: dispPrice, lineRaw });
+    // ⚠️ الشارة "غير متاح" لازم تتحسب على مخزن الطلب نفسه (order.warehouse)
+    // والرصيد الحالي — مش نعتمد على اللقطة القديمة المخزّنة وقت الإضافة (اللي
+    // ممكن تكون false لو الرصيد اتغيّر بعد كده، أو لو state.warehouse وقت
+    // الطباعة مش نفس مخزن الطلب). ده اللي كان بيخلي الملاحظات ماتظهرش للأدمن.
+    const unavailNow = unavailableForWarehouse_(it.main, it.product, it.color, asText(order.warehouse));
+    return Object.assign({}, it, { normQty: dispQty, normUnit: dispUnit, rawPrice: dispPrice, lineRaw, unavailable: unavailNow });
   });
   const subtotal = rows.reduce((s,r)=> s + (r.lineRaw||0), 0);
   // ⚠️ فرّقنا بين حاجتين هنا: "الخصم موجود أصلاً" (بيتحسب دايمًا لو موزع،
@@ -5284,6 +5289,45 @@ function itemFullName_(it){
 
 // بيحسب لو الصنف ده مش متاح: يا إما موقوف من الأدمن، يا إما رصيده صفر
 // في المخزن المختار (سواء لون بعينه أو الصنف كله).
+// بتحسب هل الصنف غير متاح في مخزن معيّن بالظبط (مش معتمدة على state.warehouse).
+// بنستخدمها في عرض السعر عشان الشارة تتحسب على مخزن الطلب نفسه والرصيد الحالي،
+// مهما كان state.warehouse وقت الطباعة.
+function unavailableForWarehouse_(main, product, color, warehouse){
+  try{
+    const c = color ? findCatalogItem(main, product, color) : null;
+    if(c && c.available === false) return true;
+    if(!color && isProductFullyUnavailable(main, product)) return true;
+    // المخزن ده أصلاً مش بيتتبّع فيه رصيد → كله متاح
+    if(!STOCK_TRACKED_WAREHOUSES_.includes(asText(warehouse))) return false;
+    // نحسب مستوى الرصيد يدويًا (نفس منطق colorStockLevel بس من غير ما نعتمد
+    // على warehouseAffectsStock اللي بيبص على state.warehouse)
+    const item = c || firstCatalogItem_(main, product);
+    if(!item || item.available===false) return true;
+    if(item.inStock === false) return true;
+    const n = Number(item.stock);
+    if(!isFinite(n) || n <= 0) return true;          // صفر رصيد
+    const content = Number(item.unit) || 1;
+    if(n < content) return true;                      // أقل من لفة كاملة
+    return false;
+  }catch(e){ return false; }
+}
+// أول صنف مطابق (لو مفيش لون محدّد) — للاستخدام في حساب الرصيد على مستوى المنتج
+function firstCatalogItem_(main, product){
+  try{
+    const opts = colorsForProduct(main, product).filter(c=>c.available!==false);
+    if(!opts.length) return null;
+    // نرجّع الصنف صاحب أقل رصيد عشان لو أي لون ناقص نعلّمه
+    let worst = null, worstN = Infinity;
+    for(const o of opts){
+      const ci = findCatalogItem(main, product, o.color);
+      const n = Number(ci && ci.stock);
+      const v = isFinite(n) ? n : 0;
+      if(v < worstN){ worstN = v; worst = ci; }
+    }
+    return worst;
+  }catch(e){ return null; }
+}
+
 function computeUnavailable_(main, product, color){
   try{
     const c = color ? findCatalogItem(main, product, color) : null;
@@ -5291,7 +5335,11 @@ function computeUnavailable_(main, product, color){
     if(!color && isProductFullyUnavailable(main, product)) return true;
     if(!warehouseAffectsStock()) return false;
     const lvl = c ? colorStockLevel(c) : productStockLevel(main, product);
-    return lvl === 'out';
+    // ⚠️ 'out' = رصيد صفر · 'crit' = فيه شوية عيدان بس أقل من لفة كاملة.
+    // الاتنين لازم يتعلّموا "غير متاح" في عرض السعر، لأن الموزّع بيطلب باللفة
+    // والرصيد مايكفيش لفة. قبل كده كنا بنعلّم 'out' بس، فالبنود اللي رصيدها
+    // أقل من لفة (بس مش صفر) كانت بتعدّي من غير ملاحظة.
+    return lvl === 'out' || lvl === 'crit';
   }catch(e){ return false; }
 }
 
