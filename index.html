@@ -159,7 +159,7 @@ nav.tabs .tabgrid{
 nav.tabs .toolrow{
   display:flex;
   align-items:center;
-  justify-content:flex-end;
+  justify-content:space-between;
   gap:7px;
   flex-wrap:wrap;
 }
@@ -461,6 +461,7 @@ textarea{resize:vertical;min-height:60px;}
 
 .searchbox{position:relative;margin-bottom:10px;}
 .searchbox input{padding-left:14px;}
+.accsearchhint{font-size:11.5px;color:var(--navy-soft);background:#EEF0FA;border-radius:8px;padding:7px 10px;margin-bottom:8px;font-weight:700;}
 
 .productgrid{
   display:grid;
@@ -1198,7 +1199,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v147';
+const APP_BUILD = 'v149';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1288,6 +1289,7 @@ const state = {
   subGroup:null,
   selectedColor:null,
   productSearch:'',
+  accGlobalSearch:'',          // بحث عام في كل الاكسسوارات بدون تحديد تصنيف فرعي
   staged:[],                   // [{key, main, product, colorRequired, availableColors, selectedColors:[], qtys:{color:n}, unitType, cancelling:false}]
 
   // other-items form
@@ -4707,16 +4709,26 @@ function renderOrderView(){
     let subToUse = null;
     if(needsSub){
       const subs = subGroupsForMain(state.mainGroup);
+      const isAcc = state.mainGroup.includes('اكسسوارات');
+      const accQ = isAcc ? asText(state.accGlobalSearch).trim() : '';
       if(subs.length>1){
         subSection = `
         <div class="card">
           <h2><span class="num">4</span>اختار التصنيف الفرعي</h2>
+          ${isAcc ? `
+          <div class="searchbox accglobalsearch">
+            <input type="text" placeholder="🔍 ابحث في كل الاكسسوارات (من غير ما تختار تصنيف)..." value="${esc(state.accGlobalSearch)}" data-act="acc-global-search">
+          </div>
+          ${accQ ? `<div class="accsearchhint">🔎 بتدوّر في كل الاكسسوارات على «${esc(accQ)}» — امسح البحث عشان ترجع للتصنيفات.</div>` : ''}
+          ` : ''}
+          ${accQ ? '' : `
           <div class="chipwrap chipgrid3">
             ${subs.map(s=>`<button class="chip ${state.subGroup===s?'active':''}" data-act="set-sub" data-val="${esc(s)}">${esc(s)}</button>`).join('')}
-          </div>
+          </div>`}
         </div>`;
       }
-      subToUse = state.subGroup;
+      // لو فيه بحث عام في الاكسسوارات، نعرض من كل التصنيفات (sub=null) ونتخطى إجبار اختيار تصنيف
+      subToUse = accQ ? null : state.subGroup;
     } else if(colorsAvail.length){
       // خطوة "اختار اللون" — بتظهر بعد القطاع مباشرة لأي قطاع فيه ألوان حقيقية
       subSection = `
@@ -4728,10 +4740,12 @@ function renderOrderView(){
       </div>`;
     }
     const colorToUse = colorsAvail.length ? state.selectedColor : null;
-    const showProducts = needsSub ? !!subToUse : (colorsAvail.length ? !!colorToUse : true);
+    const accGlobalQ = (needsSub && state.mainGroup.includes('اكسسوارات')) ? asText(state.accGlobalSearch).trim() : '';
+    const showProducts = needsSub ? (!!subToUse || !!accGlobalQ) : (colorsAvail.length ? !!colorToUse : true);
     if(showProducts){
       const prodMap = productsForGroup(state.mainGroup, subToUse);
-      const q = state.productSearch.trim().toLowerCase();
+      // البحث: لو فيه بحث عام في الاكسسوارات بنستخدمه، وإلا بنستخدم البحث العادي جوه التصنيف
+      const q = (accGlobalQ || state.productSearch.trim()).toLowerCase();
       // ترتيب الأصناف رجع زي ما كان — بترتيب الكاتالوج الأصلي، من غير ترتيب حسب التوفر
       let names = [...prodMap.keys()].filter(n => !q || n.toLowerCase().includes(q));
       // لو دخلنا من خطوة "اختار اللون"، بنفلتر الأصناف على اللي فعلاً متاحة
@@ -6001,6 +6015,7 @@ function onInputChange(act, el, val){
 
   switch(act){
     case 'search-product': state.productSearch = val; break;
+    case 'acc-global-search': state.accGlobalSearch = val; break;
     case 'set-distname': state.distName = val; autoSaveDraft(); saveProfile(); break;
     case 'set-distregion': state.distRegion = val; autoSaveDraft(); saveProfile(); break;
     case 'set-distphone': state.distPhone = val; autoSaveDraft(); saveProfile(); break;
@@ -6169,6 +6184,7 @@ async function onActionInner(act, el){
     case 'set-group':{
       state.mainGroup = el.getAttribute('data-val');
       state.productSearch='';
+      state.accGlobalSearch='';
       state.selectedColor = null;
       if(sectorNeedsSubFilter(state.mainGroup)){
         const subs = subGroupsForMain(state.mainGroup);
