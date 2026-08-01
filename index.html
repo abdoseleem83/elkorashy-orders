@@ -984,6 +984,18 @@ textarea{resize:vertical;min-height:60px;}
 }
 .stocklegend span{display:flex;align-items:center;gap:4px;}
 .stocklegend i{width:10px;height:10px;border-radius:3px;display:inline-block;}
+.currentctx{
+  background:#EEF0FA;
+  color:var(--navy-deep);
+  border:1.3px solid var(--line);
+  border-radius:10px;
+  padding:8px 12px;
+  font-size:12.6px;
+  font-weight:700;
+  margin-bottom:10px;
+  display:flex;flex-wrap:wrap;align-items:center;gap:4px;
+}
+.currentctx b{color:var(--navy);font-weight:800;}
 .chip.disabled{
   opacity:.5;cursor:not-allowed;
   background:#EDEBE4;border-color:var(--line);color:var(--muted);
@@ -1199,7 +1211,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v149';
+const APP_BUILD = 'v150';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -4773,6 +4785,10 @@ function renderOrderView(){
       productSection = `
       <div class="card">
         <h2><span class="num">5</span>اختار الأصناف (تقدر تختار أكتر من واحد)</h2>
+        <div class="currentctx">
+          📍 إنت الآن في:
+          <b>${esc(state.mainGroup)}</b>${subToUse ? ` — <b>${esc(subToUse)}</b>` : ''}${colorToUse ? ` — <b>${esc(colorToUse)}</b>` : ''}
+        </div>
         <div class="searchbox">
           <input type="text" placeholder="ابحث عن اسم الصنف..." value="${esc(state.productSearch)}" data-act="search-product">
         </div>
