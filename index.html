@@ -1211,7 +1211,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v151';
+const APP_BUILD = 'v152';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -2839,16 +2839,14 @@ async function actuallySubmit(){
     showToast(isUpdate
       ? '✅ تم استلام تعديلك — جاري المراجعة والتأكيد بالمتاح'
       : '✅ تم استلام طلبك — جاري المراجعة والتأكيد بالمتاح', 5000);
-    // 📲 طلب صريح من صاحب العمل: بعض الموزّعين مش بيرضوا يبعتوا واتساب،
-    // فدلوقتي بنحاول نفتح شاشة المشاركة (واتساب) تلقائيًا فور نجاح الطلب،
-    // من غير ما نستنى الموزع يدوس على حاجة. لسه بنسيب الزرار في شاشة
-    // النجاح موجود كخط دفاع تاني (لو المتصفح رفض المشاركة التلقائية لأي
-    // سبب — بعض المتصفحات بترفض navigator.share لو معدّاش وقت من ضغطة
-    // المستخدم، خصوصًا لو النت بطيء وقت الحفظ).
+    // 📲 مابقناش نبعت واتساب تلقائيًا ولا إجباري — بطلب صريح من المستخدم.
+    // بس بنعرض في شاشة النجاح ملاحظة + سهم بيشاور على زرار واتساب،
+    // والموزع هو اللي يدوس بنفسه.
+    // (v151 كانت جربت فتح تلقائي فور الحفظ، بس المتصفح مش دايمًا بيسمح بيه
+    // من غير ضغطة مستخدم قريبة، فرجعنا للوضع اليدوي بطلب المستخدم.)
     state.waSent = false;
     state.waImgPreparing = false;
     state.orderImage = null;   // صورة الطلب الجديد بتتجهّز أول ما يدوس ابعت
-    sendOrderAsImage().catch(()=>{});
   }catch(e){
     // صندوق خطأ ثابت (مش toast بيختفي) فيه السبب الخام — عشان نعرف السبب الحقيقي
     state.saveError = 'نوع العملية: ' + (isUpdate ? 'تعديل' : 'جديد')
@@ -4657,7 +4655,7 @@ function renderOrderView(){
         <p>هيتم مراجعة طلبك والتواصل معاك لتأكيد التنفيذ</p>
         <div class="ordid">#${esc(state.successOrderId)}</div>
         <div class="wanote">
-          <p class="wanote-t">📲 <b>لازم تبعت صورة الطلب واتساب للمخزن</b> — لو الشاشة فتحت قدامك دلوقتي اختار الجروب وابعت. لو مافتحتش، اضغط الزرار تحت.</p>
+          <p class="wanote-t">📲 لو سمحت اضغط <b>«ابعت الطلب واتساب»</b> عشان المخزن يستلم طلبك.</p>
           <button class="wanote-btn ${state.waSent?'sent':''}" data-act="send-order-img" ${state.waImgPreparing?'disabled':''}>
             <span class="ic">📲</span> ${state.waImgPreparing ? 'جارٍ التجهيز...' : (state.waSent ? 'تم — ابعت تاني' : 'ابعت الطلب واتساب')}
           </button>
