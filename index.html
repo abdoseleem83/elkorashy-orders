@@ -1117,13 +1117,15 @@ textarea{resize:vertical;min-height:60px;}
 .inlinecolorname{
   justify-content:space-between !important;font-size:12.9px;font-weight:800;color:var(--navy);
 }
+.inlinecolorname-actions{display:flex;align-items:center;gap:6px;}
 .removecolorbtn{
   background:none;border:1.3px solid var(--danger);color:var(--danger);border-radius:7px;
-  width:22px;height:22px;font-size:12px;font-weight:800;cursor:pointer;line-height:1;
+  width:22px;height:22px;font-size:12px;font-weight:800;cursor:pointer;line-height:1;flex:none;
 }
 .addcolorbtn{
-  align-self:flex-start;background:none;border:1.5px dashed var(--gold);color:var(--navy-deep);
-  border-radius:8px;padding:6px 12px;font-family:'Cairo',sans-serif;font-weight:800;font-size:12px;cursor:pointer;
+  background:none;border:1.5px dashed var(--gold);color:var(--navy-deep);
+  border-radius:8px;padding:5px 10px;font-family:'Cairo',sans-serif;font-weight:800;font-size:11.3px;cursor:pointer;
+  white-space:nowrap;flex:none;
 }
 .addcolorpanel{margin-bottom:0;}
 /* ===== صف الكمية 3 أسطر (قطاعات + اكسسوارات) ===== */
@@ -4565,8 +4567,10 @@ function renderInlineQtyRow(s, color){
 
 // ⚠️ صف كمية/سعر لكل لون مضاف بالفعل، بس من غير أزرار تأكيد/إلغاء خاصة بيه
 // (دي بقت مشتركة لكل الألوان تحت في renderInlineMultiColorBlock). فيه زرار
-// ✕ صغير لشيل اللون ده بس لو فيه أكتر من لون مضاف.
-function renderInlineColorRow(s, color){
+// ✕ صغير لشيل اللون ده بس لو فيه أكتر من لون مضاف، وزرار "أضف ألوان أخرى"
+// جنب اسم أول لون (لو الصنف عنده ألوان تانية أصلاً) عشان يفتح كل ألوان
+// الصنف مرة واحدة ويختار منها أكتر من لون في نفس الوقت.
+function renderInlineColorRow(s, color, showAddBtn){
   const unitType = s.units[color] || s.unitOptions[0];
   const qty = s.qtys[color] ?? 1;
   const price = calcUnitPrice(s.main, s.product, color, unitType);
@@ -4576,7 +4580,10 @@ function renderInlineColorRow(s, color){
   <div class="qty3 inlinecolorrow">
     <div class="qty3-line inlinecolorname">
       <b>${esc(color)}</b>
-      ${s.selectedColors.length>1 ? `<button class="removecolorbtn" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(color)}" title="شيل اللون ده">✕</button>` : ''}
+      <div class="inlinecolorname-actions">
+        ${showAddBtn ? `<button class="addcolorbtn" data-act="toggle-more-colors" data-key="${esc(s.key)}" type="button">${s.showMoreColors?'▲ اخفاء الألوان':'+ أضف ألوان أخرى'}</button>` : ''}
+        ${s.selectedColors.length>1 ? `<button class="removecolorbtn" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(color)}" title="شيل اللون ده">✕</button>` : ''}
+      </div>
     </div>
     <div class="qty3-line qty3-unitqty">
       ${s.unitOptions.length>1 ? `
@@ -4597,28 +4604,30 @@ function renderInlineColorRow(s, color){
 }
 
 // ⚠️ ده اللي بيظهر تحت الصنف مباشرة لما يكون متضاف (بدل الصف المختصر القديم
-// اللي كان بيعرض لون واحد بس). بيعرض كل الألوان المضافة فعلاً، وتحتهم زرار
-// "+ لون تاني" لو فيه ألوان تانية متاحة للصنف ده لسه مش مضافة — بيفتح
-// شرائح الألوان الباقية عشان يختار منها من غير ما يمسح اللي مضاف قبل كده.
+// اللي كان بيعرض لون واحد بس). بيعرض كل الألوان المضافة فعلاً، وجنب اسم أول
+// لون زرار "+ أضف ألوان أخرى" — بيفتح كل ألوان الصنف (مش بس اللي لسه مش
+// مضافة) كشرائح قابلة للاختيار المتعدد، فيقدر يضيف أكتر من لون في نفس
+// الوقت من غير ما يمسح اللي مضاف قبل كده.
 function renderInlineMultiColorBlock(s){
-  const remaining = (s.availableColors||[]).filter(c => c && !s.selectedColors.includes(c) && !isColorUnavailable(s.main, s.product, c));
-  const addColorsPanel = (s.showMoreColors && remaining.length) ? `
-    <div class="chipwrap chipgrid4 chipsquares addcolorpanel" style="margin:8px 0;grid-template-columns:repeat(${Math.min(Math.max(remaining.length,1),5)}, minmax(0,1fr));">
-      ${remaining.map(c=>{
+  const allColors = (s.availableColors||[]).filter(c => c && !isColorUnavailable(s.main, s.product, c));
+  const showAddBtn = allColors.length > 1;
+  const addColorsPanel = (s.showMoreColors && showAddBtn) ? `
+    <div class="chipwrap chipgrid4 chipsquares addcolorpanel" style="margin:8px 0;grid-template-columns:repeat(${Math.min(Math.max(allColors.length,1),5)}, minmax(0,1fr));">
+      ${allColors.map(c=>{
+        const sel = s.selectedColors.includes(c) ? 'active' : '';
         if(!warehouseAffectsStock()){
-          return `<button class="chip" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
+          return `<button class="chip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
         }
         const lvl = colorStockLevel(findCatalogItem(s.main, s.product, c));
-        if(lvl==='out') return `<button class="chip nostockchip" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متاح رصيد</small></button>`;
-        if(lvl==='crit') return `<button class="chip outstockchip" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>متاح اعواد</small></button>`;
-        if(lvl==='low') return `<button class="chip gold lowstockchip" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
-        return `<button class="chip greenchip" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
+        if(lvl==='out') return `<button class="chip nostockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متاح رصيد</small></button>`;
+        if(lvl==='crit') return `<button class="chip outstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>متاح اعواد</small></button>`;
+        if(lvl==='low') return `<button class="chip gold lowstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
+        return `<button class="chip greenchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
       }).join('')}
     </div>` : '';
   return `
   <div class="inlinestaged inlinemulticolor">
-    ${s.selectedColors.map(c=>renderInlineColorRow(s,c)).join('')}
-    ${remaining.length ? `<button class="addcolorbtn" data-act="toggle-more-colors" data-key="${esc(s.key)}" type="button">${s.showMoreColors?'▲ اخفاء الألوان':'+ لون تاني'}</button>` : ''}
+    ${s.selectedColors.map((c,i)=>renderInlineColorRow(s,c,i===0 && showAddBtn)).join('')}
     ${addColorsPanel}
     <div class="qty3-line qty3-btns" style="margin-top:8px;">
       <button class="confirmbtn" data-act="confirm-staged" data-key="${esc(s.key)}">✓ ضيف للسلة</button>
