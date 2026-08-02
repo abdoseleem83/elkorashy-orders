@@ -1105,6 +1105,27 @@ textarea{resize:vertical;min-height:60px;}
   grid-column:1/-1;
   background:#F7F5F0;border:1.3px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:-4px;
 }
+/* ===== بلوك الألوان المتعددة تحت الصنف (+ لون تاني) ===== */
+.inlinemulticolor{
+  grid-column:1/-1;
+  background:#F7F5F0;border:1.3px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:-4px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.inlinecolorrow{
+  background:#fff;border:1.2px solid var(--line);border-radius:9px;padding:8px;
+}
+.inlinecolorname{
+  justify-content:space-between !important;font-size:12.9px;font-weight:800;color:var(--navy);
+}
+.removecolorbtn{
+  background:none;border:1.3px solid var(--danger);color:var(--danger);border-radius:7px;
+  width:22px;height:22px;font-size:12px;font-weight:800;cursor:pointer;line-height:1;
+}
+.addcolorbtn{
+  align-self:flex-start;background:none;border:1.5px dashed var(--gold);color:var(--navy-deep);
+  border-radius:8px;padding:6px 12px;font-family:'Cairo',sans-serif;font-weight:800;font-size:12px;cursor:pointer;
+}
+.addcolorpanel{margin-bottom:0;}
 /* ===== صف الكمية 3 أسطر (قطاعات + اكسسوارات) ===== */
 .qty3{display:flex;flex-direction:column;gap:8px;}
 .qty3-line{display:flex;align-items:center;gap:8px;}
@@ -2635,7 +2656,11 @@ function toggleStagedProduct(main, product){
       unitOptions: units,
       cancelling:false,
       isEditingExisting: existing.length>0,
-      extractedCartItems: existing
+      extractedCartItems: existing,
+      // ⚠️ بيتحول true لما الموزع يدوس "+ لون تاني" تحت الصنف — بيفتح باقي
+      // الألوان المتاحة للصنف ده عشان يقدر يضيف أكتر من لون من غير ما يمسح
+      // اللي مضافين قبل كده (طلب صريح من الموزع).
+      showMoreColors:false
     });
   }
   render();
@@ -4538,6 +4563,70 @@ function renderInlineQtyRow(s, color){
   return `<div class="inlineqtyrow">${render3LineQty(s, color)}</div>`;
 }
 
+// ⚠️ صف كمية/سعر لكل لون مضاف بالفعل، بس من غير أزرار تأكيد/إلغاء خاصة بيه
+// (دي بقت مشتركة لكل الألوان تحت في renderInlineMultiColorBlock). فيه زرار
+// ✕ صغير لشيل اللون ده بس لو فيه أكتر من لون مضاف.
+function renderInlineColorRow(s, color){
+  const unitType = s.units[color] || s.unitOptions[0];
+  const qty = s.qtys[color] ?? 1;
+  const price = calcUnitPrice(s.main, s.product, color, unitType);
+  const lineTotal = price==null ? null : price*qty;
+  const fmt = n => n==null ? '—' : Math.round(n).toLocaleString('en-US');
+  return `
+  <div class="qty3 inlinecolorrow">
+    <div class="qty3-line inlinecolorname">
+      <b>${esc(color)}</b>
+      ${s.selectedColors.length>1 ? `<button class="removecolorbtn" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(color)}" title="شيل اللون ده">✕</button>` : ''}
+    </div>
+    <div class="qty3-line qty3-unitqty">
+      ${s.unitOptions.length>1 ? `
+      <select class="cqselect" data-act="set-color-unit" data-key="${esc(s.key)}" data-val="${esc(color)}">
+        ${s.unitOptions.map(u=>`<option value="${esc(u)}" ${s.units[color]===u?'selected':''}>${esc(u)}</option>`).join('')}
+      </select>` : `<span class="cqunitfixed">${esc(s.unitOptions[0])}</span>`}
+      <div class="qtystepper small">
+        <button data-act="staged-qty-dec" data-key="${esc(s.key)}" data-val="${esc(color)}" type="button">−</button>
+        <input type="text" inputmode="numeric" pattern="[0-9]*" min="1" value="${qty}" data-act="staged-qty-input" data-key="${esc(s.key)}" data-val="${esc(color)}">
+        <button data-act="staged-qty-inc" data-key="${esc(s.key)}" data-val="${esc(color)}" type="button">+</button>
+      </div>
+    </div>
+    <div class="qty3-line qty3-price">
+      <span class="qty3-cell"><b>السعر:</b> ${fmt(price)}</span>
+      <span class="qty3-cell qty3-total"><b>الإجمالي:</b> ${fmt(lineTotal)}</span>
+    </div>
+  </div>`;
+}
+
+// ⚠️ ده اللي بيظهر تحت الصنف مباشرة لما يكون متضاف (بدل الصف المختصر القديم
+// اللي كان بيعرض لون واحد بس). بيعرض كل الألوان المضافة فعلاً، وتحتهم زرار
+// "+ لون تاني" لو فيه ألوان تانية متاحة للصنف ده لسه مش مضافة — بيفتح
+// شرائح الألوان الباقية عشان يختار منها من غير ما يمسح اللي مضاف قبل كده.
+function renderInlineMultiColorBlock(s){
+  const remaining = (s.availableColors||[]).filter(c => c && !s.selectedColors.includes(c) && !isColorUnavailable(s.main, s.product, c));
+  const addColorsPanel = (s.showMoreColors && remaining.length) ? `
+    <div class="chipwrap chipgrid4 chipsquares addcolorpanel" style="margin:8px 0;grid-template-columns:repeat(${Math.min(Math.max(remaining.length,1),5)}, minmax(0,1fr));">
+      ${remaining.map(c=>{
+        if(!warehouseAffectsStock()){
+          return `<button class="chip" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
+        }
+        const lvl = colorStockLevel(findCatalogItem(s.main, s.product, c));
+        if(lvl==='out') return `<button class="chip nostockchip" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متاح رصيد</small></button>`;
+        if(lvl==='crit') return `<button class="chip outstockchip" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>متاح اعواد</small></button>`;
+        if(lvl==='low') return `<button class="chip gold lowstockchip" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
+        return `<button class="chip greenchip" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
+      }).join('')}
+    </div>` : '';
+  return `
+  <div class="inlinestaged inlinemulticolor">
+    ${s.selectedColors.map(c=>renderInlineColorRow(s,c)).join('')}
+    ${remaining.length ? `<button class="addcolorbtn" data-act="toggle-more-colors" data-key="${esc(s.key)}" type="button">${s.showMoreColors?'▲ اخفاء الألوان':'+ لون تاني'}</button>` : ''}
+    ${addColorsPanel}
+    <div class="qty3-line qty3-btns" style="margin-top:8px;">
+      <button class="confirmbtn" data-act="confirm-staged" data-key="${esc(s.key)}">✓ ضيف للسلة</button>
+      <button class="cancelbtn" data-act="cancel-staged" data-key="${esc(s.key)}">✖ إلغاء</button>
+    </div>
+  </div>`;
+}
+
 function renderStagedBlock(s){
   return `
   <div class="stagedblock ${s.cancelling?'cancelling':''}" data-stagedkey="${esc(s.key)}">
@@ -4855,9 +4944,11 @@ function renderOrderView(){
             // التفاصيل" البعيد ولا نعيد سؤاله عن اللون تاني.
             let inlineRow = '';
             if(isStaged){
-              if(colorToUse && stagedEntry.selectedColors.includes(colorToUse)){
-                // اللون متحدد أصلاً من فوق -> صف مختصر (وحدة+كمية+سعر+ضيف للسلة)
-                inlineRow = renderInlineQtyRow(stagedEntry, colorToUse);
+              if(stagedEntry.colorRequired){
+                // ⚠️ بيعرض كل الألوان المضافة فعلاً للصنف ده (مش بس اللون
+                // اللي جاي منه دلوقتي)، وتحتهم "+ لون تاني" لو حابب يضيف
+                // لون تاني للصنف نفسه من غير ما يمسح اللي مضاف قبل كده.
+                inlineRow = renderInlineMultiColorBlock(stagedEntry);
               }else{
                 // ⚠️ قبل كده كان بلوك التفاصيل بيروح لقسم "حدد التفاصيل" بعيد
                 // تحت الشبكة. دلوقتي بيتفتح مكانه بالظبط تحت الصنف المضغوط،
@@ -6224,7 +6315,22 @@ async function onActionInner(act, el){
     case 'toggle-product':{
       const name = el.getAttribute('data-val');
       const key = stagedKey(state.mainGroup, name);
-      const wasStaged = state.staged.some(x=>x.key===key);
+      const existingStaged = state.staged.find(x=>x.key===key);
+      const wasStaged = !!existingStaged;
+
+      // ⚠️ لو الصنف متضاف بالفعل وفيه لون واضح جاي من خطوة "اختار اللون"،
+      // الدوسة هنا بقت تعني "ضيفلي اللون ده للصنف" مش "امسح الصنف كله".
+      // الإلغاء الكامل بقاله زرار "✖ إلغاء" صريح تحت الصنف، وشيل لون واحد
+      // بس بقاله زرار "✕" جنب اللون — كده الموزع میقدرش يمسح طلب كامل
+      // بالغلط وهو بس بيحاول يضيف لون تاني.
+      if(wasStaged && state.selectedColor && existingStaged.colorRequired &&
+         existingStaged.availableColors.includes(state.selectedColor)){
+        if(!existingStaged.selectedColors.includes(state.selectedColor)){
+          toggleStagedColor(key, state.selectedColor);
+        }
+        break;
+      }
+
       // بنمسك مكان الصنف اللي دوس عليه بالظبط، وبعد ما الألوان تتفتح تحته
       // ويحصل أي تحريك للأصناف التانية، برجّعه لنفس المكان على الشاشة —
       // فيفضل شايفه هو والصنف اللي بعده من غير ما الشاشة "تنط".
@@ -6250,6 +6356,16 @@ async function onActionInner(act, el){
     }
     case 'noop-unavailable': showToast('الصنف ده غير متوفر حاليًا'); break;
     case 'toggle-color': toggleStagedColor(el.getAttribute('data-key'), el.getAttribute('data-val')); break;
+    case 'toggle-more-colors':{
+      const s = state.staged.find(x=>x.key===el.getAttribute('data-key'));
+      if(s){
+        withPositionAnchor_(`[data-act="toggle-more-colors"][data-key="${CSS.escape(s.key)}"]`, ()=>{
+          s.showMoreColors = !s.showMoreColors;
+          render();
+        });
+      }
+      break;
+    }
     case 'set-staged-unit': setStagedUnit(el.getAttribute('data-key'), el.getAttribute('data-val')); break;
     case 'staged-qty-dec':{
       const s = state.staged.find(x=>x.key===el.getAttribute('data-key'));
