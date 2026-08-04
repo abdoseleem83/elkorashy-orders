@@ -35,6 +35,12 @@
   --danger:#B3261E;
   --radius:14px;
 }
+.ico-svg{vertical-align:middle;flex-shrink:0;position:relative;top:-1px;}
+.warehousewarn{
+  background:#FBEBD1;color:#8A5A00;border-radius:8px;
+  padding:8px 11px;font-size:11.8px;font-weight:700;line-height:1.6;
+  margin-bottom:10px;
+}
 *{box-sizing:border-box;}
 /* ⚠️ ده كان السبب الحقيقي إن الهيدر لسه بيتحرك مع التمرير رغم
    position:sticky: overflow-x:hidden من غير overflow-y مكتوب — قاعدة CSS
@@ -1214,7 +1220,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v154';
+const APP_BUILD = 'v155';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1416,6 +1422,17 @@ const ICONS_ = {
   editIcon: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
   checkPlain: '<path d="M20 6 9 17l-5-5"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+  eyeIcon: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+  trashIcon: '<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/>',
+  clockIcon: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
+  shareIcon: '<circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="m8.3 10.6 7.4-4.2"/><path d="m8.3 13.4 7.4 4.2"/>',
+  downloadIcon: '<path d="M12 3v13"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/>',
+  copyIcon: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  bellIcon: '<path d="M6 8a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  fileIcon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/>',
+  installIcon: '<path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/>',
+  sendIcon: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+  imageIcon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',
 };
 function ico_(name, size){
   size = size || 17;
@@ -3312,7 +3329,7 @@ function renderStockModal(){
       </div>
       <div class="previewfoot">
         <button class="savebtn" data-act="export-stock-pdf" ${state.stockPdfBusy?'disabled':''}>
-          ${state.stockPdfBusy ? '⏳ جارٍ التجهيز...' : '📄 تصدير الأرصدة PDF'}
+          ${state.stockPdfBusy ? '⏳ جارٍ التجهيز...' : ico_('fileIcon',14) + ' تصدير الأرصدة PDF'}
         </button>
       </div>
     </div>
@@ -3327,7 +3344,7 @@ function renderCatalogUploadModal(){
   <div class="modalbg" data-act="close-catalog-upload">
     <div class="previewmodal" data-act="noop" style="max-width:520px;">
       <div class="previewhead">
-        <span>📥 رفع الأصناف / الرصيد</span>
+        <span>${ico_('downloadIcon',14)} رفع الأصناف / الرصيد</span>
         <button class="previewclose" data-act="close-catalog-upload">✕</button>
       </div>
       <div class="previewbody" style="background:#fff;">
@@ -3345,7 +3362,7 @@ function renderCatalogUploadModal(){
         <div style="margin:14px 0 6px;">
           <input type="file" accept=".xlsx" data-act="catalog-file-input">
         </div>
-        ${state.catalogUploadFileName ? `<div style="font-size:12.5px;color:var(--navy);font-weight:700;">📄 ${esc(state.catalogUploadFileName)} — ${rowsCount} صنف اتقروا</div>` : ''}
+        ${state.catalogUploadFileName ? `<div style="font-size:12.5px;color:var(--navy);font-weight:700;">${ico_('fileIcon',13)} ${esc(state.catalogUploadFileName)} — ${rowsCount} صنف اتقروا</div>` : ''}
         ${r ? (r.error
             ? `<div class="err" style="margin-top:10px;">${esc(r.error)}</div>`
             : `<div style="margin-top:10px;background:#EAF7EC;border:1px solid var(--success);border-radius:8px;padding:10px;font-size:13px;line-height:1.8;">
@@ -3565,7 +3582,7 @@ function renderPreviewModal(){
                    : '<div class="loading">مش قادر أعرض المعاينة — نزّل الملف</div>'}
       </div>
       <div class="previewfoot" style="display:flex;gap:8px;">
-        ${isImage ? `<button class="savebtn" style="flex:1;" data-act="share-preview">📤 مشاركة</button>` : ''}
+        ${isImage ? `<button class="savebtn" style="flex:1;" data-act="share-preview">${ico_('shareIcon',14)} مشاركة</button>` : ''}
         <button class="savebtn" style="flex:1;" data-act="download-preview">${isImage ? '⬇️ تنزيل الصورة' : '⬇️ تنزيل PDF'}</button>
       </div>
     </div>
@@ -3804,7 +3821,7 @@ async function buildQuotePDF(order){
                   html += `
                   <tr style="background:${rowBg};">
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;color:#8A8470;">${serialCounter}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${pct>0?pct+'%':'—'}</td>
@@ -3821,7 +3838,7 @@ async function buildQuotePDF(order){
                   html += `
                   <tr style="background:${rowBg};">
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;color:#8A8470;">${serialCounter}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">${lineAmt==null?'—':Math.round(lineAmt).toLocaleString('en-US')}</td>
@@ -3881,6 +3898,7 @@ async function buildQuotePDF(order){
       <div style="margin-top:16px;padding:10px 14px;background:#FBEBD1;border-radius:8px;font-size:11.8px;color:#8A5A00;line-height:1.7;">
         هذه الأسعار سارية ما لم يحدث تعديل في القوائم والأسعار قبل التنفيذ.<br>
         الكميات وفقًا لرصيد المخزن وقت التنفيذ.
+        ${!STOCK_TRACKED_WAREHOUSES_.includes(asText(order.warehouse)) ? `<br><b>⚠ الأصناف في مخزن "${esc(asText(order.warehouse))}" غير معتمدة إلا وقت التحميل فقط، نظرًا لعدم حجز بضاعة مسبقًا.</b>` : ''}
       </div>
 
       <div style="margin-top:26px;padding-top:14px;border-top:1px solid #E4E0D6;text-align:center;font-size:11.2px;color:#6E7480;">
@@ -4689,13 +4707,13 @@ function renderOrderView(){
              التلاتة (واتساب صورة / تنزيل PDF / معاينة). باقي المستندات
              (صورة الطلب العامة، أمر صرف المخزن، طلبية النواقص) اتشالت. -->
         <div class="docsection">
-          <div class="docsectiontitle">📄 عرض السعر</div>
+          <div class="docsectiontitle">${ico_('fileIcon',15)} عرض السعر</div>
           <div class="iconbtnrow">
             ${state.quotePdfGenerating ? `
               <div class="loading" style="padding:10px 20px;">جارٍ التجهيز...</div>
             ` : state.quotePdfPlain ? `
-              <button class="iconbtn" data-act="preview-quote-plain"><span class="ic">👁️</span><span>معاينة</span></button>
-              <button class="iconbtn" data-act="share-quote-plain"><span class="ic">📤</span><span>واتساب</span></button>
+              <button class="iconbtn" data-act="preview-quote-plain"><span class="ic">${ico_('eyeIcon',16)}</span><span>معاينة</span></button>
+              <button class="iconbtn" data-act="share-quote-plain"><span class="ic">${ico_('shareIcon',16)}</span><span>واتساب</span></button>
               <button class="iconbtn" data-act="download-quote-plain"><span class="ic">⬇️</span><span>تنزيل PDF</span></button>
             ` : `
               <div class="loading" style="padding:10px 20px;">جارٍ التجهيز...</div>
@@ -4982,7 +5000,10 @@ function renderOrderView(){
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <span style="font-size:12px;color:var(--muted);">${warehouseIcon_(state.warehouse)} المخزن: <b style="color:var(--navy);">${esc(state.warehouse)}</b></span>
         <button class="chip" style="padding:3px 10px;font-size:11px;" data-act="pick-warehouse-inline" data-val="">غيّر</button>
-      </div>`}
+      </div>
+      ${(state.warehouse && !STOCK_TRACKED_WAREHOUSES_.includes(state.warehouse)) ? `
+      <div class="warehousewarn">⚠ الأصناف في مخزن "${esc(state.warehouse)}" غير معتمدة إلا وقت التحميل فقط، نظرًا لعدم حجز بضاعة مسبقًا.</div>
+      ` : ''}`}
       <h2><span class="num">2</span>بيانات الموزع</h2>
       <div class="row3">
         <div class="field">
@@ -5041,14 +5062,14 @@ function renderOrderView(){
       </div>` : ''}
       <div class="submitrow">
         <button class="submitbtn" data-act="request-submit" ${state.submitting?'disabled':''}>
-          <span class="ic">${state.submitting ? '⏳' : '📨'}</span>${state.submitting ? 'جارٍ الإرسال...' : (state.editingOrderId ? 'حفظ التعديلات' : 'إرسال الطلب')}
+          <span class="ic">${state.submitting ? '⏳' : ico_('sendIcon',15)}</span>${state.submitting ? 'جارٍ الإرسال...' : (state.editingOrderId ? 'حفظ التعديلات' : 'إرسال الطلب')}
         </button>
         ${!state.editingOrderId ? `
         <button class="savebtn ${state.draftJustSaved?'saved':''}" data-act="save-draft" type="button">
           <span class="ic">${state.draftJustSaved?'✓':'🛒'}</span>${state.draftJustSaved?'اتحفظ':'حفظ للسلة'}
         </button>` : ''}
         <button class="savebtn" data-act="preview-cart-invoice" type="button" ${state.previewGenerating?'disabled':''}>
-          <span class="ic">${state.previewGenerating?'⏳':'👁️'}</span>معاينة
+          <span class="ic">${state.previewGenerating?'⏳':ico_('eyeIcon',15)}</span>معاينة
         </button>
       </div>
       </div>
@@ -5148,7 +5169,7 @@ function renderMyOrdersView(){
         ${renderOrderTotalLine(o)}
         <div class="adminbtnrow">
           <button class="delbtn pdf" data-act="preview-myorder-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
-            ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : '📄 عرض PDF'}
+            ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('fileIcon',14) + ' عرض PDF'}
           </button>
           ${!isDone ? `<button class="delbtn edit" data-act="edit-order" data-id="${esc(o.id)}">✏️ تعديل الطلب</button>` : ''}
         </div>
@@ -5234,14 +5255,14 @@ function renderAdminView(){
           <div class="oheadmain" data-act="toggle-order" data-id="${esc(o.id)}" title="دوس عشان تفتح/تقفل الأصناف">
             <div class="dname"><span class="ochev">${isOpen?'▾':'▸'}</span> ${esc(o.distName)}</div>
             <div class="dmeta">🏬 ${esc(o.warehouse||'—')}</div>
-            <div class="dmeta">🕐 ${dateStr}</div>
+            <div class="dmeta">${ico_('clockIcon',12)} ${dateStr}</div>
             <div class="oid">#${esc(orderNoDisplay_(o))} · ${nItems} صنف</div>
           </div>
           <div class="oheadside">
             <button class="statusbadge ${si.cls}" data-act="toggle-status" data-id="${esc(o.id)}" title="دوس عشان تتقدّم للمرحلة الجاية">
               ${si.icon} ${esc(si.label)}
             </button>
-            ${normStatus_(o.status)===STATUS_EDITED ? `<button class="delquick" data-act="delete-order" data-id="${esc(o.id)}" title="حذف النسخة القديمة">🗑 حذف</button>` : ''}
+            ${normStatus_(o.status)===STATUS_EDITED ? `<button class="delquick" data-act="delete-order" data-id="${esc(o.id)}" title="حذف النسخة القديمة">${ico_('trashIcon',12)} حذف</button>` : ''}
           </div>
         </div>
         ${!isOpen ? '' : `
@@ -5254,21 +5275,21 @@ function renderAdminView(){
         ${renderOrderTotalLine(o)}
         ${o.note ? `<div class="note">${esc(o.note)}</div>` : ''}
         <div class="adminbtnrow">
-          ${isDone ? `<button class="delbtn pdf" data-act="notify-dist" data-id="${esc(o.id)}">📲 بلّغ الموزع</button>` : ''}
+          ${isDone ? `<button class="delbtn pdf" data-act="notify-dist" data-id="${esc(o.id)}">${ico_('bellIcon',14)} بلّغ الموزع</button>` : ''}
           <button class="delbtn pdf" data-act="preview-order-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
-            ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : '📄 معاينة'}
+            ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('eyeIcon',14) + ' معاينة'}
           </button>
           <button class="delbtn pdf" data-act="download-order-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
-            ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : '⬇️ تصدير PDF'}
+            ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('downloadIcon',14) + ' تصدير PDF'}
           </button>
           <button class="delbtn pdf" data-act="shortage-img" data-id="${esc(o.id)}" data-group="kraft_new" ${state.shortageImgBusy===(o.id+'|kraft_new')?'disabled':''}>
-            ${state.shortageImgBusy===(o.id+'|kraft_new') ? '⏳ جارٍ...' : '🖼️ نواقص كرافت ونيو'}
+            ${state.shortageImgBusy===(o.id+'|kraft_new') ? '⏳ جارٍ...' : ico_('imageIcon',14) + ' نواقص كرافت ونيو'}
           </button>
           <button class="delbtn pdf" data-act="shortage-img" data-id="${esc(o.id)}" data-group="combin_acc" ${state.shortageImgBusy===(o.id+'|combin_acc')?'disabled':''}>
-            ${state.shortageImgBusy===(o.id+'|combin_acc') ? '⏳ جارٍ...' : '🖼️ نواقص كومبن واكسسوارات'}
+            ${state.shortageImgBusy===(o.id+'|combin_acc') ? '⏳ جارٍ...' : ico_('imageIcon',14) + ' نواقص كومبن واكسسوارات'}
           </button>
         </div>
-        <button class="delbtn" data-act="delete-order" data-id="${esc(o.id)}">🗑 حذف الطلب</button>`}
+        <button class="delbtn" data-act="delete-order" data-id="${esc(o.id)}">${ico_('trashIcon',14)} حذف الطلب</button>`}
       </div>`;
     }).join('');
 
@@ -5280,7 +5301,7 @@ function renderAdminView(){
       <button class="exportbtn" data-act="export-excel-received">تصدير Excel (${STATUS_RECEIVED})</button>
       <button class="exportbtn" data-act="export-excel-delivered">تصدير Excel (${STATUS_DONE})</button>
       <button class="exportbtn" data-act="show-pwreq">🔑 طلبات الباسورد${state.pwRequestsCount ? ' ('+state.pwRequestsCount+')' : ''}</button>
-      <button class="exportbtn" data-act="open-catalog-upload">📥 رفع الأصناف/الرصيد</button>
+      <button class="exportbtn" data-act="open-catalog-upload">${ico_('downloadIcon',13)} رفع الأصناف/الرصيد</button>
       <button class="exportbtn" data-act="archive-done">🗄 أرشفة المنفَّذ</button>
       <button class="exportbtn" data-act="open-archive">📦 عرض الأرشيف${state.archiveCount ? ' ('+state.archiveCount+')' : ''}</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُنفَّذ</button>
@@ -5406,6 +5427,17 @@ function unavailBadgeHTML_(it){
   return ' <span style="display:inline-block;background:#C0392B;color:#FFFFFF;' +
          'font-weight:800;font-size:10.5px;padding:1px 8px;border-radius:9px;' +
          'vertical-align:middle;white-space:nowrap;">\u25cf \u063a\u064a\u0631 \u0645\u062a\u0627\u062d</span>';
+}
+// ⚠️ المخازن برّه STOCK_TRACKED_WAREHOUSES_ (يعني كل حاجة غير طنطا حاليًا)
+// مفيهاش رصيد متتبَّع صنف بصنف — يعني مفيش حجز بضاعة فعلي وقت الطلب، والكمية
+// بتتأكد فعليًا بس وقت التحميل. عشان الموزّع يبقى فاهم ده وهو شايف عرض
+// السعر، بنحط شارة برتقالية جنب كل صنف (مش حمرا زي "غير متاح" — دي معلومة
+// عادية مش تحذير من نقص فعلي).
+function unconfirmedBadgeHTML_(order){
+  if(STOCK_TRACKED_WAREHOUSES_.includes(asText(order && order.warehouse))) return '';
+  return ' <span style="display:inline-block;background:#FBEBD1;color:#8A5A00;' +
+         'font-weight:800;font-size:10px;padding:1px 7px;border-radius:9px;' +
+         'vertical-align:middle;white-space:nowrap;">\u26a0 \u063a\u064a\u0631 \u0645\u0639\u062a\u0645\u062f \u0625\u0644\u0627 \u0648\u0642\u062a \u0627\u0644\u062a\u062d\u0645\u064a\u0644</span>';
 }
 function unavailNameStyle_(it){
   return itemUnavailable_(it) ? 'color:#C0392B;font-weight:800;' : '';
@@ -5955,9 +5987,9 @@ function renderInstallGate(){
       <div class="gatestep"><b>1</b> دوس زرار المشاركة <span class="shareicon">⬆️</span> واختار "فتح في Safari"<br><span style="color:var(--muted);font-size:12.9px;">أو افتح Safari وانسخ اللينك فيه</span></div>
       <div class="gatestep"><b>2</b> ومن Safari دوس المشاركة ⬆️ واختار "إضافة إلى الشاشة الرئيسية"</div>
     </div>
-    <button class="gatebtn" data-act="copy-app-link">📋 نسخ لينك التطبيق</button>
+    <button class="gatebtn" data-act="copy-app-link">${ico_('copyIcon',15)} نسخ لينك التطبيق</button>
     `) : `
-    <button class="gatebtn" data-act="install-app">📲 تثبيت التطبيق الآن</button>
+    <button class="gatebtn" data-act="install-app">${ico_('installIcon',15)} تثبيت التطبيق الآن</button>
     <p class="gatehint">لو الزرار مش شغال، افتح قايمة المتصفح (⋮) واختار "تثبيت التطبيق" أو "Add to Home screen"</p>
     `}
     <button class="gateskip" data-act="bypass-install">متابعة بدون تثبيت الآن</button>
