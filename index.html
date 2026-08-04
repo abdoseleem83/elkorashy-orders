@@ -255,7 +255,8 @@ nav.tabs .toolbtn.exitbtn{
   text-transform:uppercase;
   letter-spacing:.5px;
 }
-nav.tabs .toolbtn.exitbtn span{font-size:15px;}
+nav.tabs .toolbtn.exitbtn{gap:5px;}
+.discounttogglebtn.small{gap:5px;}
 
 main{flex:1;padding:18px 16px 100px;}
 
@@ -818,6 +819,7 @@ textarea{resize:vertical;min-height:60px;}
 .exportbtn{
   background:var(--navy);color:#fff;border:none;border-radius:8px;padding:0 10px;
   font-family:'Cairo',sans-serif;font-weight:700;font-size:11.6px;cursor:pointer;white-space:nowrap;
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
 }
 .exportbtn.danger{background:var(--danger);}
 .delbtn{
@@ -838,6 +840,7 @@ textarea{resize:vertical;min-height:60px;}
 .statusbadge{
   font-size:12.3px;font-weight:800;padding:5px 10px;border-radius:999px;white-space:nowrap;cursor:pointer;
   border:none;font-family:'Cairo',sans-serif;
+  display:inline-flex;align-items:center;gap:5px;
 }
 .statusbadge.pending{background:#FBEBD1;color:#8A5A00;}
 .statusbadge.received{background:#E7EEFB;color:#1F4E9C;}
@@ -1105,29 +1108,6 @@ textarea{resize:vertical;min-height:60px;}
   grid-column:1/-1;
   background:#F7F5F0;border:1.3px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:-4px;
 }
-/* ===== بلوك الألوان المتعددة تحت الصنف (+ لون تاني) ===== */
-.inlinemulticolor{
-  grid-column:1/-1;
-  background:#F7F5F0;border:1.3px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:-4px;
-  display:flex;flex-direction:column;gap:10px;
-}
-.inlinecolorrow{
-  background:#fff;border:1.2px solid var(--line);border-radius:9px;padding:8px;
-}
-.inlinecolorname{
-  justify-content:space-between !important;font-size:12.9px;font-weight:800;color:var(--navy);
-}
-.inlinecolorname-actions{display:flex;align-items:center;gap:6px;}
-.removecolorbtn{
-  background:none;border:1.3px solid var(--danger);color:var(--danger);border-radius:7px;
-  width:22px;height:22px;font-size:12px;font-weight:800;cursor:pointer;line-height:1;flex:none;
-}
-.addcolorbtn{
-  background:none;border:1.5px dashed var(--gold);color:var(--navy-deep);
-  border-radius:8px;padding:5px 10px;font-family:'Cairo',sans-serif;font-weight:800;font-size:11.3px;cursor:pointer;
-  white-space:nowrap;flex:none;
-}
-.addcolorpanel{margin-bottom:0;}
 /* ===== صف الكمية 3 أسطر (قطاعات + اكسسوارات) ===== */
 .qty3{display:flex;flex-direction:column;gap:8px;}
 .qty3-line{display:flex;align-items:center;gap:8px;}
@@ -1234,7 +1214,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v152';
+const APP_BUILD = 'v154';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1258,9 +1238,9 @@ function normStatus_(st){
 }
 function statusInfo_(status){
   const s = normStatus_(status);
-  if(s===STATUS_DONE) return {cls:'done', icon:'✅', label:STATUS_DONE};
-  if(s===STATUS_EDITED) return {cls:'edited', icon:'✏️', label:'مُعدّل (نسخة قديمة)'};
-  return {cls:'received', icon:'📦', label:STATUS_RECEIVED};
+  if(s===STATUS_DONE) return {cls:'done', icon:ico_('checkCircle',14), label:STATUS_DONE};
+  if(s===STATUS_EDITED) return {cls:'edited', icon:ico_('editIcon',14), label:'مُعدّل (نسخة قديمة)'};
+  return {cls:'received', icon:ico_('boxIcon',14), label:STATUS_RECEIVED};
 }
 function nextStatus_(status){
   // الطلب المُعدّل (نسخة قديمة) مالوش مراحل — بيفضل ثابت
@@ -1420,6 +1400,27 @@ let SECTOR_CHIPS = [];
 // ===== helpers =====
 const $ = sel => document.querySelector(sel);
 const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// مكتبة أيقونات SVG موحّدة الأسلوب (خط واحد، stroke=currentColor) — بدل الإيموجي
+// في الأماكن اللي شكلها بيبان كتير (الهيدر أساسًا)، عشان تبقى ثابتة الشكل على
+// كل الأجهزة (الإيموجي بيختلف شكله من نظام لنظام) وشكلها أنضف واحترافي أكتر.
+const ICONS_ = {
+  newOrder: '<path d="M9 2h6a2 2 0 0 1 2 2v16l-4-2-4 2V4a2 2 0 0 1 2-2Z"/><path d="M9 8h6"/><path d="M9 12h6"/>',
+  track: '<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73Z"/><path d="M3.27 7 12 12l8.73-5"/><path d="M12 22V12"/>',
+  warehouse: '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>',
+  refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+  door: '<path d="M13 4.56v14.88a1 1 0 0 1-1.24.97L5 18.5V5.5a2 2 0 0 1 1.5-1.94l4-1A2 2 0 0 1 13 4.56Z"/><path d="M13 5h3a2 2 0 0 1 2 2v13"/><path d="M2 20h20"/><path d="M10 12v.01"/>',
+  percent: '<line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.3"/><circle cx="17.5" cy="17.5" r="2.3"/>',
+  checkCircle: '<path d="M21.8 10A10 10 0 1 1 17 3.34"/><path d="M9 11 12 14 22 4"/>',
+  boxIcon: '<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73Z"/><path d="M3.27 7 12 12l8.73-5"/><path d="M12 22V12"/>',
+  editIcon: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
+  checkPlain: '<path d="M20 6 9 17l-5-5"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+};
+function ico_(name, size){
+  size = size || 17;
+  return `<svg class="ico-svg" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS_[name]||''}</svg>`;
+}
 const todayStr = () => new Date().toDateString();
 
 function productsForGroup(main, sub){
@@ -2658,11 +2659,7 @@ function toggleStagedProduct(main, product){
       unitOptions: units,
       cancelling:false,
       isEditingExisting: existing.length>0,
-      extractedCartItems: existing,
-      // ⚠️ بيتحول true لما الموزع يدوس "+ لون تاني" تحت الصنف — بيفتح باقي
-      // الألوان المتاحة للصنف ده عشان يقدر يضيف أكتر من لون من غير ما يمسح
-      // اللي مضافين قبل كده (طلب صريح من الموزع).
-      showMoreColors:false
+      extractedCartItems: existing
     });
   }
   render();
@@ -4493,24 +4490,24 @@ function renderHeader(){
       ${(state.viewHistory && state.viewHistory.length) ? `
       <button class="backnav" data-act="go-back" title="رجوع للصفحة السابقة">→ رجوع للصفحة السابقة</button>` : ''}
       <div class="tabgrid">
-        <button class="tabbtn ${state.view==='order'?'active':''}" data-act="goto" data-view="order">🧾 طلب جديد</button>
-        <button class="tabbtn ${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">📦 تابع طلبيتك</button>
-        <button class="tabbtn ${state.view==='admin'?'active':''}" data-act="goto" data-view="admin">🏬 متابعة المخزن${state.adminNewCount>0 ? `<span class="navbadge">${state.adminNewCount}</span>` : ''}</button>
-        <button class="tabbtn" data-act="force-update" title="تحديث إجباري">🔄 تحديث</button>
+        <button class="tabbtn ${state.view==='order'?'active':''}" data-act="goto" data-view="order">${ico_('newOrder')} طلب جديد</button>
+        <button class="tabbtn ${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">${ico_('track')} تابع طلبيتك</button>
+        <button class="tabbtn ${state.view==='admin'?'active':''}" data-act="goto" data-view="admin">${ico_('warehouse')} متابعة المخزن${state.adminNewCount>0 ? `<span class="navbadge">${state.adminNewCount}</span>` : ''}</button>
+        <button class="tabbtn" data-act="force-update" title="تحديث إجباري">${ico_('refresh')} تحديث</button>
       </div>
       <div class="toolrow">
         ${isWebAuthnSupported() ? `
         <button class="toolbtn fingerbtn ${bioOn?'on':'off'}" data-act="${bioOn?'disable-biometric':'enable-biometric'}" title="${bioOn?'البصمة مفعّلة — دوس عشان تلغيها':'البصمة غير مفعّلة — دوس عشان تفعّلها'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></svg></button>
         ` : ''}
         ${isDiscountEligible() ? `
-        <button class="toolbtn discounttogglebtn small ${state.discountVisible?'on':'off'}" data-act="toggle-discount" title="دوس تغيّر — خط فوق الكلمة يعني الخصم مخفي عن الموزع">خصم</button>
+        <button class="toolbtn discounttogglebtn small ${state.discountVisible?'on':'off'}" data-act="toggle-discount" title="دوس تغيّر — خط فوق الكلمة يعني الخصم مخفي عن الموزع">${ico_('percent',13)} خصم</button>
         <span class="extradiscwrap mini" title="خصم مخصص % — يحل محل خصم القطاع لو كتبت قيمة">
           <span class="pctsign">%</span>
           <input id="extraDiscInput" type="number" min="0" max="100" step="0.5"
             value="${state.extraDiscount||''}" placeholder="0"
             data-extradiscount>
         </span>` : ''}
-        <button class="toolbtn logoutbtn exitbtn" data-act="logout" title="تسجيل خروج"><span>🚪</span> exit</button>
+        <button class="toolbtn logoutbtn exitbtn" data-act="logout" title="تسجيل خروج">${ico_('door',15)} exit</button>
       </div>
     </nav>
   </header>
@@ -4563,77 +4560,6 @@ function render3LineQty(s, color, opts){
 
 function renderInlineQtyRow(s, color){
   return `<div class="inlineqtyrow">${render3LineQty(s, color)}</div>`;
-}
-
-// ⚠️ صف كمية/سعر لكل لون مضاف بالفعل، بس من غير أزرار تأكيد/إلغاء خاصة بيه
-// (دي بقت مشتركة لكل الألوان تحت في renderInlineMultiColorBlock). فيه زرار
-// ✕ صغير لشيل اللون ده بس لو فيه أكتر من لون مضاف، وزرار "أضف ألوان أخرى"
-// جنب اسم أول لون (لو الصنف عنده ألوان تانية أصلاً) عشان يفتح كل ألوان
-// الصنف مرة واحدة ويختار منها أكتر من لون في نفس الوقت.
-function renderInlineColorRow(s, color, showAddBtn){
-  const unitType = s.units[color] || s.unitOptions[0];
-  const qty = s.qtys[color] ?? 1;
-  const price = calcUnitPrice(s.main, s.product, color, unitType);
-  const lineTotal = price==null ? null : price*qty;
-  const fmt = n => n==null ? '—' : Math.round(n).toLocaleString('en-US');
-  return `
-  <div class="qty3 inlinecolorrow">
-    <div class="qty3-line inlinecolorname">
-      <b>${esc(color)}</b>
-      <div class="inlinecolorname-actions">
-        ${showAddBtn ? `<button class="addcolorbtn" data-act="toggle-more-colors" data-key="${esc(s.key)}" type="button">${s.showMoreColors?'▲ اخفاء الألوان':'+ أضف ألوان أخرى'}</button>` : ''}
-        ${s.selectedColors.length>1 ? `<button class="removecolorbtn" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(color)}" title="شيل اللون ده">✕</button>` : ''}
-      </div>
-    </div>
-    <div class="qty3-line qty3-unitqty">
-      ${s.unitOptions.length>1 ? `
-      <select class="cqselect" data-act="set-color-unit" data-key="${esc(s.key)}" data-val="${esc(color)}">
-        ${s.unitOptions.map(u=>`<option value="${esc(u)}" ${s.units[color]===u?'selected':''}>${esc(u)}</option>`).join('')}
-      </select>` : `<span class="cqunitfixed">${esc(s.unitOptions[0])}</span>`}
-      <div class="qtystepper small">
-        <button data-act="staged-qty-dec" data-key="${esc(s.key)}" data-val="${esc(color)}" type="button">−</button>
-        <input type="text" inputmode="numeric" pattern="[0-9]*" min="1" value="${qty}" data-act="staged-qty-input" data-key="${esc(s.key)}" data-val="${esc(color)}">
-        <button data-act="staged-qty-inc" data-key="${esc(s.key)}" data-val="${esc(color)}" type="button">+</button>
-      </div>
-    </div>
-    <div class="qty3-line qty3-price">
-      <span class="qty3-cell"><b>السعر:</b> ${fmt(price)}</span>
-      <span class="qty3-cell qty3-total"><b>الإجمالي:</b> ${fmt(lineTotal)}</span>
-    </div>
-  </div>`;
-}
-
-// ⚠️ ده اللي بيظهر تحت الصنف مباشرة لما يكون متضاف (بدل الصف المختصر القديم
-// اللي كان بيعرض لون واحد بس). بيعرض كل الألوان المضافة فعلاً، وجنب اسم أول
-// لون زرار "+ أضف ألوان أخرى" — بيفتح كل ألوان الصنف (مش بس اللي لسه مش
-// مضافة) كشرائح قابلة للاختيار المتعدد، فيقدر يضيف أكتر من لون في نفس
-// الوقت من غير ما يمسح اللي مضاف قبل كده.
-function renderInlineMultiColorBlock(s){
-  const allColors = (s.availableColors||[]).filter(c => c && !isColorUnavailable(s.main, s.product, c));
-  const showAddBtn = allColors.length > 1;
-  const addColorsPanel = (s.showMoreColors && showAddBtn) ? `
-    <div class="chipwrap chipgrid4 chipsquares addcolorpanel" style="margin:8px 0;grid-template-columns:repeat(${Math.min(Math.max(allColors.length,1),5)}, minmax(0,1fr));">
-      ${allColors.map(c=>{
-        const sel = s.selectedColors.includes(c) ? 'active' : '';
-        if(!warehouseAffectsStock()){
-          return `<button class="chip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
-        }
-        const lvl = colorStockLevel(findCatalogItem(s.main, s.product, c));
-        if(lvl==='out') return `<button class="chip nostockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متاح رصيد</small></button>`;
-        if(lvl==='crit') return `<button class="chip outstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>متاح اعواد</small></button>`;
-        if(lvl==='low') return `<button class="chip gold lowstockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
-        return `<button class="chip greenchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
-      }).join('')}
-    </div>` : '';
-  return `
-  <div class="inlinestaged inlinemulticolor">
-    ${s.selectedColors.map((c,i)=>renderInlineColorRow(s,c,i===0 && showAddBtn)).join('')}
-    ${addColorsPanel}
-    <div class="qty3-line qty3-btns" style="margin-top:8px;">
-      <button class="confirmbtn" data-act="confirm-staged" data-key="${esc(s.key)}">✓ ضيف للسلة</button>
-      <button class="cancelbtn" data-act="cancel-staged" data-key="${esc(s.key)}">✖ إلغاء</button>
-    </div>
-  </div>`;
 }
 
 function renderStagedBlock(s){
@@ -4747,7 +4673,7 @@ function renderOrderView(){
     return `
     <main>
       <div class="card success">
-        <div class="ic">✓</div>
+        <div class="ic">${ico_('checkCircle',36)}</div>
         <h2>${state.successMode==='updated' ? 'تم عمل طلب جديد بالتعديل ✅' : 'تم إرسال الطلب بنجاح'}</h2>
         ${state.successMode==='updated' ? '<p style="color:#6B6B6B;font-size:13px;margin-top:-4px;">الطلب القديم اتعلّم «مُعدّل» عند المخزن، وده رقمه الجديد.</p>' : ''}
         <p>هيتم مراجعة طلبك والتواصل معاك لتأكيد التنفيذ</p>
@@ -4953,11 +4879,9 @@ function renderOrderView(){
             // التفاصيل" البعيد ولا نعيد سؤاله عن اللون تاني.
             let inlineRow = '';
             if(isStaged){
-              if(stagedEntry.colorRequired){
-                // ⚠️ بيعرض كل الألوان المضافة فعلاً للصنف ده (مش بس اللون
-                // اللي جاي منه دلوقتي)، وتحتهم "+ لون تاني" لو حابب يضيف
-                // لون تاني للصنف نفسه من غير ما يمسح اللي مضاف قبل كده.
-                inlineRow = renderInlineMultiColorBlock(stagedEntry);
+              if(colorToUse && stagedEntry.selectedColors.includes(colorToUse)){
+                // اللون متحدد أصلاً من فوق -> صف مختصر (وحدة+كمية+سعر+ضيف للسلة)
+                inlineRow = renderInlineQtyRow(stagedEntry, colorToUse);
               }else{
                 // ⚠️ قبل كده كان بلوك التفاصيل بيروح لقسم "حدد التفاصيل" بعيد
                 // تحت الشبكة. دلوقتي بيتفتح مكانه بالظبط تحت الصنف المضغوط،
@@ -5235,12 +5159,12 @@ function renderMyOrdersView(){
   return `
   <main>
     <div class="card">
-      <h2><span class="num">🔍</span>دوّر عن طلباتك برقم الهاتف</h2>
+      <h2><span class="num">${ico_('search',13)}</span>دوّر عن طلباتك برقم الهاتف</h2>
       <div class="adminbar">
         <input type="tel" placeholder="01xxxxxxxxx" value="${esc(state.myOrdersPhone)}" data-act="myorders-phone">
         <button class="exportbtn" data-act="myorders-search">دوّر</button>
       </div>
-      ${saved.length ? `<button class="exportbtn" style="width:100%;" data-act="myorders-refresh">🔄 عرض طلبات هذا الجهاز</button>` : ''}
+      ${saved.length ? `<button class="exportbtn" style="width:100%;" data-act="myorders-refresh">${ico_('refresh',14)} عرض طلبات هذا الجهاز</button>` : ''}
     </div>
     ${content}
   </main>`;
@@ -6324,22 +6248,7 @@ async function onActionInner(act, el){
     case 'toggle-product':{
       const name = el.getAttribute('data-val');
       const key = stagedKey(state.mainGroup, name);
-      const existingStaged = state.staged.find(x=>x.key===key);
-      const wasStaged = !!existingStaged;
-
-      // ⚠️ لو الصنف متضاف بالفعل وفيه لون واضح جاي من خطوة "اختار اللون"،
-      // الدوسة هنا بقت تعني "ضيفلي اللون ده للصنف" مش "امسح الصنف كله".
-      // الإلغاء الكامل بقاله زرار "✖ إلغاء" صريح تحت الصنف، وشيل لون واحد
-      // بس بقاله زرار "✕" جنب اللون — كده الموزع میقدرش يمسح طلب كامل
-      // بالغلط وهو بس بيحاول يضيف لون تاني.
-      if(wasStaged && state.selectedColor && existingStaged.colorRequired &&
-         existingStaged.availableColors.includes(state.selectedColor)){
-        if(!existingStaged.selectedColors.includes(state.selectedColor)){
-          toggleStagedColor(key, state.selectedColor);
-        }
-        break;
-      }
-
+      const wasStaged = state.staged.some(x=>x.key===key);
       // بنمسك مكان الصنف اللي دوس عليه بالظبط، وبعد ما الألوان تتفتح تحته
       // ويحصل أي تحريك للأصناف التانية، برجّعه لنفس المكان على الشاشة —
       // فيفضل شايفه هو والصنف اللي بعده من غير ما الشاشة "تنط".
@@ -6365,16 +6274,6 @@ async function onActionInner(act, el){
     }
     case 'noop-unavailable': showToast('الصنف ده غير متوفر حاليًا'); break;
     case 'toggle-color': toggleStagedColor(el.getAttribute('data-key'), el.getAttribute('data-val')); break;
-    case 'toggle-more-colors':{
-      const s = state.staged.find(x=>x.key===el.getAttribute('data-key'));
-      if(s){
-        withPositionAnchor_(`[data-act="toggle-more-colors"][data-key="${CSS.escape(s.key)}"]`, ()=>{
-          s.showMoreColors = !s.showMoreColors;
-          render();
-        });
-      }
-      break;
-    }
     case 'set-staged-unit': setStagedUnit(el.getAttribute('data-key'), el.getAttribute('data-val')); break;
     case 'staged-qty-dec':{
       const s = state.staged.find(x=>x.key===el.getAttribute('data-key'));
