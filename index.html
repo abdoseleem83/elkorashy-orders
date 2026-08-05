@@ -1191,7 +1191,7 @@ textarea{resize:vertical;min-height:60px;}
 .previewclose{
   background:transparent;border:none;color:#fff;font-size:20.2px;cursor:pointer;line-height:1;
 }
-.previewbody{overflow:auto;padding:10px;background:#F5F3EE;flex:1;}
+.previewbody{overflow:auto;padding:10px;background:#F5F6FB;flex:1;}
 .previewfoot{padding:10px 14px;border-top:1px solid var(--line);}
 .previewfoot .savebtn{width:100%;}
 
@@ -1220,7 +1220,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v155';
+const APP_BUILD = 'v156';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -3193,9 +3193,9 @@ function fmtRolls_(v){
 function stockTableHTML_(forPdf){
   const mats = stockMatrix_();
   if(!mats.length) return '';
-  const line = forPdf ? '#E4E0D6' : 'var(--line)';
-  const navy = forPdf ? '#1F3050' : 'var(--navy)';
-  const gold = forPdf ? '#E4C766' : 'var(--gold-light)';
+  const line = forPdf ? '#E6E7F1' : 'var(--line)';
+  const navy = forPdf ? '#26265A' : 'var(--navy)';
+  const gold = forPdf ? '#F9A183' : 'var(--gold-light)';
 
   return mats.map(m=>`
     <div style="margin-bottom:16px;">
@@ -3211,7 +3211,7 @@ function stockTableHTML_(forPdf){
         </thead>
         <tbody>
           ${m.rows.map(([prod, byColor], i)=>`
-            <tr style="background:${i%2===0 ? '#FFFFFF' : '#F5F3EE'};">
+            <tr style="background:${i%2===0 ? '#FFFFFF' : '#F5F6FB'};">
               <td style="padding:7px 6px;border-bottom:1px solid ${line};">${esc(prod)}</td>
               ${m.colors.map(c=>{
                 const v = fmtRolls_(byColor[c]);
@@ -3432,13 +3432,13 @@ async function exportStockPDF(){
   const dateStr = new Date().toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
   wrap.innerHTML = `
     <div style="padding:28px 34px;">
-      <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #C9A227;padding-bottom:14px;margin-bottom:16px;">
-        <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
+      <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #F2724B;padding-bottom:14px;margin-bottom:16px;">
+        <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E6E7F1;padding:4px;">
         <div style="flex:1;">
-          <div style="font-size:21.3px;font-weight:800;color:#1F3050;">تقرير الأرصدة المتاحة</div>
-          <div style="font-size:12.9px;color:#6E7480;margin-top:2px;">الكميات باللفة · المتاح = الرصيد − المحجوز</div>
+          <div style="font-size:21.3px;font-weight:800;color:#26265A;">تقرير الأرصدة المتاحة</div>
+          <div style="font-size:12.9px;color:#6B6E82;margin-top:2px;">الكميات باللفة · المتاح = الرصيد − المحجوز</div>
         </div>
-        <div style="font-size:13.4px;color:#6E7480;">${esc(dateStr)}</div>
+        <div style="font-size:13.4px;color:#6B6E82;">${esc(dateStr)}</div>
       </div>
       ${tables}
       ${CREDIT_LINE ? `<div style="margin-top:14px;text-align:center;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
@@ -3744,43 +3744,43 @@ async function buildQuotePDF(order){
   const hasMissing = rows.some(r=>r.lineRaw==null);
 
   wrap.innerHTML = `
-    <div style="padding:30px 36px;">
+    <div style="padding:30px 36px;background:#FFFFFF;">
       <div style="display:flex;justify-content:center;margin-bottom:14px;">
-        <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:88px;height:88px;border-radius:14px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:6px;">
+        <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:88px;height:88px;border-radius:16px;object-fit:contain;background:#fff;border:1px solid #E6E7F1;padding:6px;box-shadow:0 4px 14px rgba(58,59,124,.12);">
       </div>
-      <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #C9A227;padding-bottom:18px;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #F2724B;padding-bottom:18px;margin-bottom:20px;">
         <div style="flex:1;">
-          <div style="font-size:22.4px;font-weight:800;color:#1F3050;">القرشي لأبواب وشبابيك الـ UPVC</div>
-          <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">وكيل AXA مصر</div>
+          <div style="font-size:22.4px;font-weight:800;color:#26265A;">القرشي لأبواب وشبابيك الـ UPVC</div>
+          <div style="font-size:13.4px;color:#6B6E82;margin-top:2px;">وكيل AXA مصر</div>
         </div>
         <div style="text-align:left;">
-          <div style="font-size:16.8px;font-weight:800;color:#C9A227;">عرض سعر</div>
-          <div style="font-size:12.3px;color:#6E7480;">#${esc(orderNoDisplay_(order))}</div>
+          <div style="font-size:16.8px;font-weight:800;color:#F2724B;">عرض سعر</div>
+          <div style="font-size:12.3px;color:#6B6E82;">#${esc(orderNoDisplay_(order))}</div>
         </div>
       </div>
 
       <div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:14px;">
         <div>
-          <div style="color:#6E7480;">الموزع</div>
-          <div style="font-weight:800;color:#1F3050;">${esc(order.distName)}</div>
+          <div style="color:#6B6E82;">الموزع</div>
+          <div style="font-weight:800;color:#26265A;">${esc(order.distName)}</div>
         </div>
         <div>
-          <div style="color:#6E7480;">المنطقة</div>
-          <div style="font-weight:800;color:#1F3050;">${esc(order.distRegion||'')}</div>
+          <div style="color:#6B6E82;">المنطقة</div>
+          <div style="font-weight:800;color:#26265A;">${esc(order.distRegion||'')}</div>
         </div>
         <div>
-          <div style="color:#6E7480;">المخزن</div>
-          <div style="font-weight:800;color:#C9A227;">${esc(asText(order.warehouse) || '—')}</div>
+          <div style="color:#6B6E82;">المخزن</div>
+          <div style="font-weight:800;color:#F2724B;">${esc(asText(order.warehouse) || '—')}</div>
         </div>
         <div>
-          <div style="color:#6E7480;">التاريخ</div>
-          <div style="font-weight:800;color:#1F3050;">${esc(dateStr)}</div>
+          <div style="color:#6B6E82;">التاريخ</div>
+          <div style="font-weight:800;color:#26265A;">${esc(dateStr)}</div>
         </div>
       </div>
 
       <table style="width:100%;border-collapse:collapse;font-size:12.3px;">
         <thead>
-          <tr style="background:#1F3050;color:#fff;">
+          <tr style="background:#26265A;color:#fff;">
             <th style="padding:9px 5px;text-align:center;width:26px;">م</th>
             <th style="padding:9px 5px;text-align:right;">اسم الصنف</th>
             <th style="padding:9px 5px;text-align:center;">الكمية</th>
@@ -3807,26 +3807,26 @@ async function buildQuotePDF(order){
             orderedMains.forEach(main=>{
               html += `
                 <tr>
-                  <td colspan="${colspan}" style="padding:7px 6px;background:#E4C766;color:#1F3050;font-weight:800;font-size:12.3px;">${esc(main)}</td>
+                  <td colspan="${colspan}" style="padding:7px 6px;background:#F9A183;color:#26265A;font-weight:800;font-size:12.3px;">${esc(main)}</td>
                 </tr>`;
               groupsMap.get(main).forEach(it=>{
                 const qty = it.normQty;
                 const lineAmt = it.rawPrice==null ? null : it.rawPrice*qty;
                 serialCounter++;
-                const rowBg = rowIndex%2===0?'#FFFFFF':'#F5F3EE';
+                const rowBg = rowIndex%2===0?'#FFFFFF':'#F5F6FB';
                 if(showDiscount){
                   const pct = getDiscount(it.main);
                   const discAmt = (lineAmt!=null && pct>0) ? lineAmt*(pct/100) : 0;
                   const net = lineAmt==null ? null : lineAmt - discAmt;
                   html += `
                   <tr style="background:${rowBg};">
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;color:#8A8470;">${serialCounter}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${pct>0?pct+'%':'—'}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;color:#C9A227;">${discAmt>0?Math.round(discAmt).toLocaleString('en-US'):'—'}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">${net==null?'—':Math.round(net).toLocaleString('en-US')}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;color:#8A8470;">${serialCounter}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;">${pct>0?pct+'%':'—'}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;color:#F2724B;">${discAmt>0?Math.round(discAmt).toLocaleString('en-US'):'—'}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;font-weight:800;color:#26265A;">${net==null?'—':Math.round(net).toLocaleString('en-US')}</td>
                   </tr>`;
                 } else {
                   // لو موزع بس الزرار مخفي، لسه بيتحسب خصمه فعليًا — بنوري
@@ -3837,11 +3837,11 @@ async function buildQuotePDF(order){
                   const net = lineAmt==null ? null : lineAmt - discAmt;
                   html += `
                   <tr style="background:${rowBg};">
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;color:#8A8470;">${serialCounter}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">${lineAmt==null?'—':Math.round(lineAmt).toLocaleString('en-US')}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;color:#8A8470;">${serialCounter}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;font-weight:800;color:#26265A;">${lineAmt==null?'—':Math.round(lineAmt).toLocaleString('en-US')}</td>
                   </tr>`;
                 }
                 rowIndex++;
@@ -3862,14 +3862,14 @@ async function buildQuotePDF(order){
           <div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:16px;font-weight:800;color:#20242B;">
             <span>الإجمالي قبل الخصم</span><span>${Math.round(subtotal).toLocaleString('en-US')} ج.م</span>
           </div>
-          ${discountTotal>0?`<div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:16px;color:#C9A227;font-weight:800;">
+          ${discountTotal>0?`<div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:16px;color:#F2724B;font-weight:800;">
             <span>${customPct>0 ? 'خصم مخصص ('+customPct+'%)' : 'خصم القطاع'}</span><span>- ${Math.round(discountTotal).toLocaleString('en-US')} ج.م</span>
           </div>`:''}
-          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#1F3050;color:#fff;border-radius:8px;font-size:17px;font-weight:800;margin-top:4px;">
+          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#26265A;color:#fff;border-radius:8px;font-size:17px;font-weight:800;margin-top:4px;">
             <span>الإجمالي بعد الخصم</span><span>${Math.round(netTotal).toLocaleString('en-US')} ج.م</span>
           </div>
           ` : `
-          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#1F3050;color:#fff;border-radius:8px;font-size:17px;font-weight:800;margin-top:8px;">
+          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#26265A;color:#fff;border-radius:8px;font-size:17px;font-weight:800;margin-top:8px;">
             <span>الإجمالي</span><span>${Math.round(subtotal).toLocaleString('en-US')} ج.م</span>
           </div>
           `}
@@ -3879,8 +3879,8 @@ async function buildQuotePDF(order){
 
       ${rollSummary.length ? `
       <div style="margin-top:14px;display:flex;justify-content:flex-end;">
-        <div style="width:280px;background:#F5F3EE;border-radius:8px;padding:10px 14px;">
-          <div style="font-size:12.3px;font-weight:800;color:#1F3050;margin-bottom:6px;">عدد اللفات حسب القطاع</div>
+        <div style="width:280px;background:#F5F6FB;border-radius:8px;padding:10px 14px;">
+          <div style="font-size:12.3px;font-weight:800;color:#26265A;margin-bottom:6px;">عدد اللفات حسب القطاع</div>
           ${rollSummary.map(r=>{
             const parts = [];
             if(r.rolls>0) parts.push((r.rolls % 1 === 0 ? r.rolls : r.rolls.toFixed(1)) + ' لفة');
@@ -3893,7 +3893,7 @@ async function buildQuotePDF(order){
         </div>
       </div>` : ''}
 
-      ${order.note ? `<div style="margin-top:18px;padding-top:12px;border-top:1px dashed #E4E0D6;font-size:12.9px;color:#6E7480;">ملاحظات: ${esc(order.note)}</div>` : ''}
+      ${order.note ? `<div style="margin-top:18px;padding-top:12px;border-top:1px dashed #E6E7F1;font-size:12.9px;color:#6B6E82;">ملاحظات: ${esc(order.note)}</div>` : ''}
 
       <div style="margin-top:16px;padding:10px 14px;background:#FBEBD1;border-radius:8px;font-size:11.8px;color:#8A5A00;line-height:1.7;">
         هذه الأسعار سارية ما لم يحدث تعديل في القوائم والأسعار قبل التنفيذ.<br>
@@ -3901,7 +3901,7 @@ async function buildQuotePDF(order){
         ${!STOCK_TRACKED_WAREHOUSES_.includes(asText(order.warehouse)) ? `<br><b>⚠ الأصناف في مخزن "${esc(asText(order.warehouse))}" غير معتمدة إلا وقت التحميل فقط، نظرًا لعدم حجز بضاعة مسبقًا.</b>` : ''}
       </div>
 
-      <div style="margin-top:26px;padding-top:14px;border-top:1px solid #E4E0D6;text-align:center;font-size:11.2px;color:#6E7480;">
+      <div style="margin-top:26px;padding-top:14px;border-top:1px solid #E6E7F1;text-align:center;font-size:11.2px;color:#6B6E82;">
         المستند ده تم إنشاؤه تلقائيًا وقت إرسال الطلب — القرشي لأبواب وشبابيك الـ UPVC
         ${CREDIT_LINE ? `<div style="margin-top:5px;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
       </div>
@@ -4014,16 +4014,16 @@ async function buildShortageImageGroup(order, groupKey){
     let html = '';
     list.forEach((it,i)=>{
       if(it.sectionStart && SHORTAGE_IMG_GROUPS_[groupKey].mains.length>1){
-        html += `<div style="padding:7px 10px;background:#E4C766;color:#1F3050;font-weight:800;font-size:15px;border-radius:6px;margin:${i===0?'0':'10px'} 0 6px 0;">${esc(it.sectionLabel)}</div>`;
+        html += `<div style="padding:7px 10px;background:#F9A183;color:#26265A;font-weight:800;font-size:15px;border-radius:6px;margin:${i===0?'0':'10px'} 0 6px 0;">${esc(it.sectionLabel)}</div>`;
       }
-      const bg = i%2===0 ? '#FFFFFF' : '#F5F3EE';
+      const bg = i%2===0 ? '#FFFFFF' : '#F5F6FB';
       html += `
-      <div style="display:flex;align-items:baseline;gap:8px;background:${bg};padding:9px 8px;border-bottom:1px solid #E4E0D6;border-radius:4px;">
+      <div style="display:flex;align-items:baseline;gap:8px;background:${bg};padding:9px 8px;border-bottom:1px solid #E6E7F1;border-radius:4px;">
         <span style="color:#8A8470;font-weight:800;font-size:14px;min-width:20px;">${startIndex+i+1}.</span>
-        <span style="flex:1;font-weight:800;font-size:20px;color:#1F3050;line-height:1.25;">
-          ${esc(it.name || it.product)}${it.color?` <span style="color:#6E7480;font-size:15px;font-weight:700;">- ${esc(it.color)}</span>`:''}
+        <span style="flex:1;font-weight:800;font-size:20px;color:#26265A;line-height:1.25;">
+          ${esc(it.name || it.product)}${it.color?` <span style="color:#6B6E82;font-size:15px;font-weight:700;">- ${esc(it.color)}</span>`:''}
         </span>
-        <span style="font-weight:800;font-size:20px;color:#C9A227;white-space:nowrap;">${it.dispQty} ${esc(it.dispUnit||'')}</span>
+        <span style="font-weight:800;font-size:20px;color:#F2724B;white-space:nowrap;">${it.dispQty} ${esc(it.dispUnit||'')}</span>
       </div>`;
     });
     return html;
@@ -4038,15 +4038,15 @@ async function buildShortageImageGroup(order, groupKey){
 
   wrap.innerHTML = `
     <div style="padding:28px 34px;">
-      <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #C9A227;padding-bottom:14px;margin-bottom:16px;">
-        <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
+      <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #F2724B;padding-bottom:14px;margin-bottom:16px;">
+        <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E6E7F1;padding:4px;">
         <div style="flex:1;">
-          <div style="font-size:22px;font-weight:800;color:#1F3050;">طلبية نواقص ${esc(asText(order.distName))}${order.warehouse ? ` <span style="color:#C9A227;">— مخزن ${esc(asText(order.warehouse))}</span>` : ''}</div>
-          <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">${esc(asText(order.distRegion))} · ${esc(group.label)}</div>
+          <div style="font-size:22px;font-weight:800;color:#26265A;">طلبية نواقص ${esc(asText(order.distName))}${order.warehouse ? ` <span style="color:#F2724B;">— مخزن ${esc(asText(order.warehouse))}</span>` : ''}</div>
+          <div style="font-size:13.4px;color:#6B6E82;margin-top:2px;">${esc(asText(order.distRegion))} · ${esc(group.label)}</div>
         </div>
         <div style="text-align:left;">
-          <div style="font-size:14.6px;font-weight:800;color:#C9A227;">#${esc(orderNoDisplay_(order))}</div>
-          <div style="font-size:12.3px;color:#6E7480;">${esc(dateStr)}</div>
+          <div style="font-size:14.6px;font-weight:800;color:#F2724B;">#${esc(orderNoDisplay_(order))}</div>
+          <div style="font-size:12.3px;color:#6B6E82;">${esc(dateStr)}</div>
         </div>
       </div>
 
@@ -4056,8 +4056,8 @@ async function buildShortageImageGroup(order, groupKey){
       </div>
 
       ${totals.length ? `
-        <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #E4E0D6;display:flex;gap:22px;flex-wrap:wrap;">
-          ${totals.map(t=>`<div style="font-size:13.4px;"><span style="color:#6E7480;">إجمالي ${esc(t.main)}: </span><b style="color:#1F3050;">${esc(t.text)}</b></div>`).join('')}
+        <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #E6E7F1;display:flex;gap:22px;flex-wrap:wrap;">
+          ${totals.map(t=>`<div style="font-size:13.4px;"><span style="color:#6B6E82;">إجمالي ${esc(t.main)}: </span><b style="color:#26265A;">${esc(t.text)}</b></div>`).join('')}
         </div>
       ` : ''}
       ${CREDIT_LINE ? `<div style="margin-top:14px;text-align:center;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
@@ -4126,31 +4126,31 @@ async function buildWarehouseImage(order, mainGroup, rows, pageNo, pageCount){
 
   wrap.innerHTML = `
     <div style="padding:28px 34px;">
-      <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #C9A227;padding-bottom:14px;margin-bottom:16px;">
-        <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E4E0D6;padding:4px;">
+      <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #F2724B;padding-bottom:14px;margin-bottom:16px;">
+        <img src="data:image/jpeg;base64,${LOGO_B64}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #E6E7F1;padding:4px;">
         <div style="flex:1;">
-          <div style="font-size:21.3px;font-weight:800;color:#1F3050;">أمر صرف مخزن</div>
-          <div style="font-size:13.4px;color:#6E7480;margin-top:2px;">القرشي لأبواب وشبابيك الـ UPVC</div>
+          <div style="font-size:21.3px;font-weight:800;color:#26265A;">أمر صرف مخزن</div>
+          <div style="font-size:13.4px;color:#6B6E82;margin-top:2px;">القرشي لأبواب وشبابيك الـ UPVC</div>
         </div>
         <div style="text-align:left;">
-          <div style="font-size:14.6px;font-weight:800;color:#C9A227;">#${esc(orderNoDisplay_(order))}</div>
-          <div style="font-size:12.3px;color:#6E7480;">${esc(dateStr)}</div>
+          <div style="font-size:14.6px;font-weight:800;color:#F2724B;">#${esc(orderNoDisplay_(order))}</div>
+          <div style="font-size:12.3px;color:#6B6E82;">${esc(dateStr)}</div>
         </div>
       </div>
 
       <div style="display:flex;justify-content:space-between;margin-bottom:14px;font-size:14.6px;">
-        <div><span style="color:#6E7480;">العميل: </span><b style="color:#1F3050;">${esc(asText(order.distName))}</b></div>
-        <div><span style="color:#6E7480;">المخزن: </span><b style="color:#C9A227;">${esc(asText(order.warehouse) || '—')}</b></div>
-        <div><span style="color:#6E7480;">صفحة </span><b style="color:#1F3050;">${pageNo} / ${pageCount}</b></div>
+        <div><span style="color:#6B6E82;">العميل: </span><b style="color:#26265A;">${esc(asText(order.distName))}</b></div>
+        <div><span style="color:#6B6E82;">المخزن: </span><b style="color:#F2724B;">${esc(asText(order.warehouse) || '—')}</b></div>
+        <div><span style="color:#6B6E82;">صفحة </span><b style="color:#26265A;">${pageNo} / ${pageCount}</b></div>
       </div>
 
-      <div style="background:#E4C766;color:#1F3050;font-weight:800;font-size:15.7px;padding:8px 12px;border-radius:8px 8px 0 0;">
+      <div style="background:#F9A183;color:#26265A;font-weight:800;font-size:15.7px;padding:8px 12px;border-radius:8px 8px 0 0;">
         ${esc(mainGroup)}
       </div>
 
       <table style="width:100%;border-collapse:collapse;font-size:14.6px;">
         <thead>
-          <tr style="background:#1F3050;color:#fff;">
+          <tr style="background:#26265A;color:#fff;">
             <th style="padding:9px 6px;text-align:center;width:44px;">م</th>
             <th style="padding:9px 6px;text-align:right;">الصنف</th>
             <th style="padding:9px 6px;text-align:center;width:130px;">الكمية</th>
@@ -4159,14 +4159,14 @@ async function buildWarehouseImage(order, mainGroup, rows, pageNo, pageCount){
         <tbody>
           ${rows.map((it, i)=>{
             const n = warehouseUnitDisplay(it);
-            const bg = i%2===0 ? '#FFFFFF' : '#F5F3EE';
+            const bg = i%2===0 ? '#FFFFFF' : '#F5F6FB';
             return `
             <tr style="background:${bg};">
-              <td style="padding:10px 6px;border-bottom:1px solid #E4E0D6;text-align:center;color:#8A8470;">${i+1}</td>
-              <td style="padding:10px 6px;border-bottom:1px solid #E4E0D6;">
-                ${esc(it.name || it.product)}${it.color?` <span style="color:#6E7480;">- ${esc(it.color)}</span>`:''}
+              <td style="padding:10px 6px;border-bottom:1px solid #E6E7F1;text-align:center;color:#8A8470;">${i+1}</td>
+              <td style="padding:10px 6px;border-bottom:1px solid #E6E7F1;">
+                ${esc(it.name || it.product)}${it.color?` <span style="color:#6B6E82;">- ${esc(it.color)}</span>`:''}
               </td>
-              <td style="padding:10px 6px;border-bottom:1px solid #E4E0D6;text-align:center;font-weight:800;color:#1F3050;">
+              <td style="padding:10px 6px;border-bottom:1px solid #E6E7F1;text-align:center;font-weight:800;color:#26265A;">
                 ${n.qty} ${esc(n.unitLabel||'')}
               </td>
             </tr>`;
@@ -4174,9 +4174,9 @@ async function buildWarehouseImage(order, mainGroup, rows, pageNo, pageCount){
         </tbody>
       </table>
 
-      ${asText(order.note).trim() && pageNo===1 ? `<div style="margin-top:14px;padding-top:10px;border-top:1px dashed #E4E0D6;font-size:13.4px;color:#6E7480;">ملاحظات: ${esc(asText(order.note))}</div>` : ''}
+      ${asText(order.note).trim() && pageNo===1 ? `<div style="margin-top:14px;padding-top:10px;border-top:1px dashed #E6E7F1;font-size:13.4px;color:#6B6E82;">ملاحظات: ${esc(asText(order.note))}</div>` : ''}
 
-      <div style="margin-top:22px;display:flex;justify-content:space-between;font-size:12.3px;color:#6E7480;">
+      <div style="margin-top:22px;display:flex;justify-content:space-between;font-size:12.3px;color:#6B6E82;">
         <div>توقيع أمين المخزن: ....................</div>
         <div>توقيع المستلم: ....................</div>
       </div>
