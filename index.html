@@ -328,9 +328,10 @@ textarea{resize:vertical;min-height:60px;}
 .inlinemulticolor{margin-top:8px;}
 .inlinecolorlabel{font-size:12px;font-weight:800;color:var(--navy);margin:8px 0 3px;}
 .addcolorbtn{
-  width:100%;margin-top:8px;background:#fff;border:1.5px dashed var(--navy-soft);
-  color:var(--navy);border-radius:10px;padding:9px;font-family:'Cairo',sans-serif;
-  font-weight:800;font-size:12.6px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  width:auto;margin-top:8px;background:#fff;border:1.5px dashed var(--navy-soft);
+  color:var(--navy);border-radius:999px;padding:6px 14px;font-family:'Cairo',sans-serif;
+  font-weight:800;font-size:11.6px;cursor:pointer;
 }
 .addcolorbtn:active{background:#EEF0FA;}
 /* 4 في الصف — للقطاعات والألوان بالظبط زي ما طلب */
@@ -1228,7 +1229,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v159';
+const APP_BUILD = 'v160';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1440,6 +1441,9 @@ const ICONS_ = {
   bellIcon: '<path d="M6 8a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
   fileIcon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/>',
   installIcon: '<path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/>',
+  paletteIcon: '<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2Z"/>',
+  plusCircle: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8"/><path d="M8 12h8"/>',
+  xCircle: '<circle cx="12" cy="12" r="9"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
   sendIcon: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
   imageIcon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',
 };
@@ -4930,7 +4934,7 @@ function renderOrderView(){
                   `).join('') +
                   (extraColors.length ? `
                   <button class="addcolorbtn" data-act="toggle-color-picker" data-key="${esc(stagedEntry.key)}">
-                    ${pickerOpen ? '✕ اقفل' : '+ أضف لون تاني'}
+                    ${pickerOpen ? ico_('xCircle',14) + ' اقفل' : ico_('paletteIcon',14) + ' أضف لون تاني'}
                   </button>
                   ${pickerOpen ? `
                   <div class="chipwrap chipgrid4 chipsquares" style="margin-top:8px;">
