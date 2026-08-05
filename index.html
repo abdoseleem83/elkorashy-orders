@@ -325,6 +325,14 @@ textarea{resize:vertical;min-height:60px;}
 
 /* chips */
 .chipwrap{display:flex;flex-wrap:wrap;gap:8px;}
+.inlinemulticolor{margin-top:8px;}
+.inlinecolorlabel{font-size:12px;font-weight:800;color:var(--navy);margin:8px 0 3px;}
+.addcolorbtn{
+  width:100%;margin-top:8px;background:#fff;border:1.5px dashed var(--navy-soft);
+  color:var(--navy);border-radius:10px;padding:9px;font-family:'Cairo',sans-serif;
+  font-weight:800;font-size:12.6px;cursor:pointer;
+}
+.addcolorbtn:active{background:#EEF0FA;}
 /* 4 في الصف — للقطاعات والألوان بالظبط زي ما طلب */
 .chipwrap.chipgrid4{display:grid;grid-template-columns:repeat(4, minmax(0,1fr));gap:7px;}
 .chipwrap.chipgrid4 .chip{padding:9px 6px;text-align:center;}
@@ -1220,7 +1228,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v158';
+const APP_BUILD = 'v159';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1311,6 +1319,7 @@ const state = {
   selectedColor:null,
   productSearch:'',
   accGlobalSearch:'',          // بحث عام في كل الاكسسوارات بدون تحديد تصنيف فرعي
+  colorPickerOpenKey:null,     // مفتاح الصنف اللي فاتح شرائح "أضف لون تاني" له دلوقتي
   staged:[],                   // [{key, main, product, colorRequired, availableColors, selectedColors:[], qtys:{color:n}, unitType, cancelling:false}]
 
   // other-items form
@@ -4903,11 +4912,41 @@ function renderOrderView(){
             // وده الصنف ده كان متضاف بلونه، بنعرض صف مختصر (وحدة+كمية+سعر+
             // زرار إضافة) على طول تحت الصنف — من غير ما نبعته لقسم "حدد
             // التفاصيل" البعيد ولا نعيد سؤاله عن اللون تاني.
+            //
+            // 🎨 ميزة إضافة ألوان تانية لنفس الصنف من غير ما تخرج من الشاشة:
+            // بنعرض صف كمية/سعر منفصل لكل لون اختاره (colorToUse + أي لون
+            // زوّده يدويًا)، وتحتهم زرار "+ أضف لون تاني" يفتح شرائح باقي
+            // الألوان المتاحة لنفس الصنف. تفعيله من نفس toggleStagedColor
+            // اللي بتستخدمها شرائح الألوان العادية.
             let inlineRow = '';
             if(isStaged){
               if(colorToUse && stagedEntry.selectedColors.includes(colorToUse)){
-                // اللون متحدد أصلاً من فوق -> صف مختصر (وحدة+كمية+سعر+ضيف للسلة)
-                inlineRow = renderInlineQtyRow(stagedEntry, colorToUse);
+                const extraColors = stagedEntry.availableColors.filter(c=>c!==colorToUse);
+                const pickerOpen = state.colorPickerOpenKey === stagedEntry.key;
+                inlineRow = `<div class="inlinemulticolor">` +
+                  stagedEntry.selectedColors.map(c=>`
+                    ${stagedEntry.selectedColors.length>1 ? `<div class="inlinecolorlabel">${esc(c)}</div>` : ''}
+                    ${renderInlineQtyRow(stagedEntry, c)}
+                  `).join('') +
+                  (extraColors.length ? `
+                  <button class="addcolorbtn" data-act="toggle-color-picker" data-key="${esc(stagedEntry.key)}">
+                    ${pickerOpen ? '✕ اقفل' : '+ أضف لون تاني'}
+                  </button>
+                  ${pickerOpen ? `
+                  <div class="chipwrap chipgrid4 chipsquares" style="margin-top:8px;">
+                    ${extraColors.map(c=>{
+                      const unavailable = isColorUnavailable(stagedEntry.main, stagedEntry.product, c);
+                      if(unavailable) return `<button class="chip disabled" data-act="noop-unavailable" disabled>${esc(c)}<small>موقوف</small></button>`;
+                      if(!warehouseAffectsStock()) return `<button class="chip" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
+                      const lvl = colorStockLevel(findCatalogItem(stagedEntry.main, stagedEntry.product, c));
+                      if(lvl==='out') return `<button class="chip nostockchip" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متاح رصيد</small></button>`;
+                      if(lvl==='crit') return `<button class="chip outstockchip" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>متاح اعواد</small></button>`;
+                      if(lvl==='low') return `<button class="chip gold lowstockchip" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
+                      return `<button class="chip greenchip" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
+                    }).join('')}
+                  </div>` : ''}
+                  ` : '') +
+                `</div>`;
               }else{
                 // ⚠️ قبل كده كان بلوك التفاصيل بيروح لقسم "حدد التفاصيل" بعيد
                 // تحت الشبكة. دلوقتي بيتفتح مكانه بالظبط تحت الصنف المضغوط،
@@ -6268,6 +6307,7 @@ async function onActionInner(act, el){
       state.productSearch='';
       state.accGlobalSearch='';
       state.selectedColor = null;
+      state.colorPickerOpenKey = null;
       if(sectorNeedsSubFilter(state.mainGroup)){
         const subs = subGroupsForMain(state.mainGroup);
         state.subGroup = subs.length===1 ? subs[0] : null;
@@ -6314,6 +6354,12 @@ async function onActionInner(act, el){
     }
     case 'noop-unavailable': showToast('الصنف ده غير متوفر حاليًا'); break;
     case 'toggle-color': toggleStagedColor(el.getAttribute('data-key'), el.getAttribute('data-val')); break;
+    case 'toggle-color-picker':{
+      const key = el.getAttribute('data-key');
+      state.colorPickerOpenKey = (state.colorPickerOpenKey===key) ? null : key;
+      render();
+      break;
+    }
     case 'set-staged-unit': setStagedUnit(el.getAttribute('data-key'), el.getAttribute('data-val')); break;
     case 'staged-qty-dec':{
       const s = state.staged.find(x=>x.key===el.getAttribute('data-key'));
