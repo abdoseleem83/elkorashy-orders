@@ -1220,7 +1220,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v156';
+const APP_BUILD = 'v158';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -2427,9 +2427,17 @@ async function submitLogin(){
     }
     state.currentUser = { username, distName: data.distName||'', distRegion: data.distRegion||'', distPhone: data.distPhone||'', distType: data.distType||'موزع' };
     try{ sessionStorage.setItem(LS_USER_KEY, JSON.stringify(state.currentUser)); }catch(e){}
-    if(!state.distName) state.distName = asText(data.distName);
-    if(!state.distRegion) state.distRegion = asText(data.distRegion);
-    if(!state.distPhone) state.distPhone = asText(data.distPhone);
+    // ⚠️ إصلاح جذري لمشكلة "اسم الموزّع غلط في الطلبات": لو الموزّع كتب اسم
+    // غلط/مختصر مرة واحدة قبل كده، كان بيتحفظ محليًا على جهازه (localStorage)
+    // للأبد، وبما إن الشرط القديم كان "لو فيه اسم موجود، سيبه"، الاسم الصحيح
+    // المسجّل في حسابه (اللي إنت بتصححه في شيت المستخدمين) كان مايكسبش أبدًا
+    // — فالاسم الغلط كان بيتكرر تلقائيًا في كل طلب جديد للأبد. دلوقتي اسم
+    // الحساب (من السيرفر) بيفوز دايمًا وقت الدخول، ونحدّث النسخة المحفوظة
+    // محليًا بيه كمان عشان الغلط ده يتصحح تلقائيًا ومايرجعش تاني.
+    if(asText(data.distName)) state.distName = asText(data.distName);
+    else if(!state.distName) state.distName = '';
+    if(asText(data.distRegion)) state.distRegion = asText(data.distRegion);
+    if(asText(data.distPhone)) state.distPhone = asText(data.distPhone);
     saveProfile();
     state.authPassword='';
     checkForResumableDraft(); // 🛒 لو في مسودة محفوظة، نعرض إشعار بعد الدخول مباشرة
@@ -3255,8 +3263,8 @@ function renderPwRequestsModal(){
   const body = list.length ? list.map(r=>`
     <div style="padding:10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px;">
       <div>
-        <div style="font-weight:800;color:var(--navy);font-size:13px;">${esc(r.username)}</div>
-        <div style="font-size:11px;color:var(--muted);">${esc(r.date||'')}</div>
+        <div style="font-weight:800;color:var(--navy);font-size:13px;">${esc(r.distName || r.username)}</div>
+        <div style="font-size:11px;color:var(--muted);">${r.distName ? `اسم الدخول: ${esc(r.username)} · ` : ''}${esc(r.date||'')}</div>
       </div>
       <div style="display:flex;gap:6px;">
         <button class="chip" style="background:var(--success);color:#fff;border-color:var(--success);" data-act="approve-pwreq" data-val="${esc(r.id)}">✅ موافقة</button>
