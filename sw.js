@@ -1,6 +1,6 @@
 // ⚠️ مهم: غيّر رقم النسخة دي في كل مرة ترفع تحديث جديد.
 // ده اللي بيخلي المتصفح يرمي الكاش القديم ويجيب الملفات الجديدة.
-const CACHE_VERSION = 'v168';
+const CACHE_VERSION = 'v169';
 const CACHE_NAME = 'elkorashy-' + CACHE_VERSION;
 
 const PRECACHE = [
@@ -16,7 +16,11 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(PRECACHE).catch(() => {}))
+      .then(cache => Promise.all(
+        PRECACHE.map(u => fetch(u, { cache: 'no-store' })
+          .then(r => (r && r.ok) ? cache.put(u, r) : null)
+          .catch(() => null))
+      ))
   );
 });
 
@@ -95,11 +99,26 @@ self.addEventListener('fetch', (event) => {
                  (req.headers.get('accept') || '').includes('text/html');
 
   if (isHTML) {
-    // ✅ Network-first للـ HTML: ده اللي يضمن إن أي تحديث بترفعه يوصل للناس فورًا.
-    // (المشكلة القديمة: الكاش كان بيرجّع نسخة index.html القديمة على طول.)
+    // ✅ Network-first للـ HTML: ده اللي يضمن إن أي تحديث بترفعه يوصل للناس فورًا
+    // (بدل ما الكاش يرجّع نسخة index.html قديمة).
     event.respondWith((async () => {
       try {
-        const fresh = await fetch(req);
+        // 🔑 طبقتين لازم نتخطاهم مع بعض عشان التحديث يوصل:
+        //  ١) كاش المتصفح المحلي  → بنتخطاه بـ cache:'no-store'
+        //  ٢) كاش CDN بتاع GitHub Pages (Fastly) → ده مابيتأثرش بـ no-store لأنه
+        //     بره الجهاز أصلًا، وبيفضل يرجّع النسخة القديمة لحد ما مدته تخلص.
+        //     الحل الوحيد المضمون: نضيف باراميتر فريد للرابط، فيبقى "رابط جديد"
+        //     مالوش نسخة مخزّنة عند الـ CDN فيجيبه من السيرفر مباشرة.
+        //     (نفس الحل المجرّب في تطبيق الأبواب — كان ناقص هنا وده كان سبب
+        //     بطء وصول التحديثات.)
+        const bust = url.pathname + '?_v=' + Date.now();
+        let fresh;
+        try {
+          fresh = await fetch(bust, { cache: 'no-store' });
+          if (!fresh || !fresh.ok) throw new Error('bad');
+        } catch (e1) {
+          fresh = await fetch(req, { cache: 'no-store' });   // احتياطي
+        }
         const cache = await caches.open(CACHE_NAME);
         cache.put(req, fresh.clone()).catch(() => {});
         return fresh;
