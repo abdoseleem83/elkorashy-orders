@@ -1229,7 +1229,7 @@ const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
-const APP_BUILD = 'v160';
+const APP_BUILD = 'v162';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -3830,7 +3830,26 @@ async function buildQuotePDF(order){
                 <tr>
                   <td colspan="${colspan}" style="padding:7px 6px;background:#F9A183;color:#26265A;font-weight:800;font-size:12.3px;">${esc(main)}</td>
                 </tr>`;
+              // 🎨 تقسيم فرعي بالألوان جوه كل قطاع — بدل ما كل ألوان الصنف
+              // (أبيض/بيج...) يتلموا تحت بعض من غير فصل، بنجمعهم في مجموعات
+              // بلون واحد وبنحط عنوان فرعي رفيع فوق كل مجموعة لون (أخف من
+              // عنوان القطاع البرتقالي). بنحافظ على ترتيب أول ظهور للون.
+              const colorOrder = [];
+              const byColor = new Map();
               groupsMap.get(main).forEach(it=>{
+                const c = asText(it.color);
+                if(!byColor.has(c)){ byColor.set(c, []); colorOrder.push(c); }
+                byColor.get(c).push(it);
+              });
+              const multiColor = colorOrder.filter(c=>c).length > 1 || (colorOrder.length>1 && colorOrder.some(c=>c));
+              colorOrder.forEach(colorKey=>{
+                if(colorKey && multiColor){
+                  html += `
+                  <tr>
+                    <td colspan="${colspan}" style="padding:5px 6px 5px 16px;background:#EEF0FA;color:#3A3B7C;font-weight:800;font-size:11.3px;">◂ ${esc(colorKey)}</td>
+                  </tr>`;
+                }
+                byColor.get(colorKey).forEach(it=>{
                 const qty = it.normQty;
                 const lineAmt = it.rawPrice==null ? null : it.rawPrice*qty;
                 serialCounter++;
@@ -3842,7 +3861,7 @@ async function buildQuotePDF(order){
                   html += `
                   <tr style="background:${rowBg};">
                     <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;color:#8A8470;">${serialCounter}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;font-weight:600;color:#26265A;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;">${pct>0?pct+'%':'—'}</td>
@@ -3859,13 +3878,14 @@ async function buildQuotePDF(order){
                   html += `
                   <tr style="background:${rowBg};">
                     <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;color:#8A8470;">${serialCounter}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;font-weight:600;color:#26265A;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #E6E7F1;text-align:center;font-weight:800;color:#26265A;">${lineAmt==null?'—':Math.round(lineAmt).toLocaleString('en-US')}</td>
                   </tr>`;
                 }
                 rowIndex++;
+              });
               });
             });
             return html;
