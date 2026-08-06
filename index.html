@@ -786,6 +786,41 @@ textarea{resize:vertical;min-height:60px;}
 }
 .pingate .err{color:var(--danger);font-size:14px;margin-top:8px;}
 
+/* ===== تبويب "إدارة" الجديد ===== */
+nav.tabs .tabbtn.managetab{background:#EEF0FA;border-color:var(--navy-soft);font-size:12px;}
+nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(--navy-soft);}
+.managesubtabs{display:flex;gap:8px;}
+.managesubtab{
+  flex:1;background:#fff;border:1.5px solid var(--line);border-radius:10px;
+  padding:9px 6px;font-family:'Cairo',sans-serif;font-weight:800;font-size:12.4px;
+  color:var(--navy-deep);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;
+}
+.managesubtab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+.managelist{display:flex;flex-direction:column;gap:8px;}
+.managerow{
+  display:flex;align-items:center;gap:8px;background:#fff;border:1.3px solid var(--line);
+  border-radius:10px;padding:9px 11px;
+}
+.managerow-info{flex:1;min-width:0;}
+.managerow-name{font-size:13px;font-weight:800;color:var(--ink);}
+.managerow-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.managerow-vals{text-align:center;font-size:13px;font-weight:800;color:var(--navy);white-space:nowrap;}
+.managerow-edit{
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:#EEF0FA;color:var(--navy);border:none;cursor:pointer;
+}
+.managehint{text-align:center;color:var(--muted);font-size:12px;margin-top:10px;}
+.managereadonly{
+  background:#F5F6FB;border-radius:10px;padding:10px 12px;font-weight:800;color:var(--navy-deep);font-size:13.4px;
+}
+.managereqrow{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:#fff;border:1.3px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;
+}
+.managereqbtns{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
+.managereqbtns .exportbtn{padding:6px 12px;}
+
 /* auth screen (login/register/forgot) */
 .authwrap{
   min-height:100dvh;
@@ -1136,6 +1171,10 @@ textarea{resize:vertical;min-height:60px;}
 .qty3-total{color:var(--navy);}
 .qty3-total b{color:var(--navy-soft);}
 .qty3-btns{gap:8px;}
+.qty3-shortage{
+  background:#FDECEA;color:#C0392B;border:1.3px solid #C0392B;border-radius:8px;
+  padding:6px 10px;font-size:11.6px;font-weight:800;line-height:1.5;
+}
 .qty3-btns .confirmbtn{flex:1;}
 .qty3-btns .cancelbtn{flex:1;}
 /* صفوف الاكسسوارات المكدّسة (لون + سطر وحدة/كمية + سطر سعر/إجمالي) */
@@ -1226,6 +1265,7 @@ const LOGO_B64 = "/9j/4QFCRXhpZgAATU0AKgAAAAgABQEAAAMAAAABA/4AAAEBAAMAAAABAtsAAA
 // 🔒 رقم الأدمن مابقاش هنا خالص — بقى متخزن على السيرفر (Script Properties).
 // الملف ده عام على GitHub، فأي حاجة سرية فيه بتبقى مكشوفة للكل.
 const LS_ADMIN_TOKEN_KEY = 'qurashi_admin_token';
+const LS_MANAGE_TOKEN_KEY = 'qurashi_manage_token';
 // ===== سطر الاعتماد (تصميم وتنفيذ) =====
 // عايز تشيل الرقم؟ امسحه من السطر ده بس. عايز تشيل السطر خالص؟ خليه ''.
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
@@ -1250,7 +1290,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v163';
+const APP_BUILD = 'v167';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1342,6 +1382,21 @@ const state = {
   productSearch:'',
   accGlobalSearch:'',          // بحث عام في كل الاكسسوارات بدون تحديد تصنيف فرعي
   colorPickerOpenKey:null,     // مفتاح الصنف اللي فاتح شرائح "أضف لون تاني" له دلوقتي
+  // ===== تبويب "إدارة" الجديد (PIN منفصل 311984) =====
+  manageUnlocked:false,
+  manageToken:null,
+  managePinInput:'',
+  manageTab:'items',           // items | approvals
+  manageSearch:'',
+  manageMainFilter:'',
+  manageEditingName:null,      // اسم الصنف (المفتاح الفريد) اللي بيتعدّل دلوقتي، أو 'NEW' لصنف جديد
+  manageEditDraft:{},          // {name, main, sub, product, color, unit, price, stock, available}
+  manageSaving:false,
+  manageRegRequests:[],
+  managePwRequests:[],
+  manageApprovalsLoaded:false,
+  manageApprovalsLoading:false,
+  manageExportBusy:false,
   staged:[],                   // [{key, main, product, colorRequired, availableColors, selectedColors:[], qtys:{color:n}, unitType, cancelling:false}]
 
   // other-items form
@@ -1378,6 +1433,7 @@ const state = {
   archiveCount:0,
   showCatalogUpload:false,
   catalogUploadMode:'full',       // 'full' أو 'stock'
+  catalogUploadContext:'admin',   // 'admin' (متابعة المخزن) أو 'manage' (تبويب الإدارة) — بيحدد أنهي توكن نستخدم
   catalogUploadRows:null,         // الصفوف اللي اتقرت من الملف، جاهزة للرفع
   catalogUploadFileName:'',
   catalogUploadBusy:false,
@@ -1465,6 +1521,9 @@ const ICONS_ = {
   paletteIcon: '<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2Z"/>',
   plusCircle: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8"/><path d="M8 12h8"/>',
   xCircle: '<circle cx="12" cy="12" r="9"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
+  manageIcon: '<path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+  checkSquare: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+  boxesIcon: '<path d="M4 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><path d="M4 7h6v6H4z"/><path d="M14 7v-3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><path d="M14 7h6v6h-6z"/><path d="M9 13v7"/><path d="M15 13v7"/><path d="M4 20h16"/>',
   sendIcon: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
   imageIcon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',
 };
@@ -2322,6 +2381,40 @@ async function submitAdminPin(){
 
 function restoreAdminSession(){
   if(getAdminToken()) state.adminUnlocked = true;
+}
+
+// ===== تبويب "إدارة" الجديد — نفس آلية توكن الأدمن بالظبط، بس منفصلة =====
+function getManageToken(){
+  try{ return sessionStorage.getItem(LS_MANAGE_TOKEN_KEY) || ''; }catch(e){ return ''; }
+}
+function setManageToken(t){
+  try{ t ? sessionStorage.setItem(LS_MANAGE_TOKEN_KEY, t) : sessionStorage.removeItem(LS_MANAGE_TOKEN_KEY); }catch(e){}
+}
+async function submitManagePin(){
+  const pin = asText(state.managePinInput).trim();
+  if(!pin){ state.managePinError = true; render(); return; }
+  state.managePinChecking = true; state.managePinError = false; render();
+  try{
+    const r = await fetch(APPS_SCRIPT_URL + '?action=manageLogin&pin=' + encodeURIComponent(pin));
+    const d = await r.json();
+    if(d && d.ok && d.token){
+      setManageToken(d.token);
+      state.manageUnlocked = true;
+      state.managePinError = false;
+      state.managePinInput = '';
+      state.managePinChecking = false;
+      render();
+      return;
+    }
+    state.managePinError = true;
+  }catch(e){
+    state.managePinError = true;
+  }
+  state.managePinChecking = false;
+  render();
+}
+function restoreManageSession(){
+  if(getManageToken()) state.manageUnlocked = true;
 }
 
 function loadUserSession(){
@@ -4377,6 +4470,49 @@ async function handleCatalogFileSelected(act, file){
   render();
 }
 
+// بيسحب كل الأصناف الحقيقية من السيرفر (مش الكاش المحلي) ويصدّرهم بنفس شكل
+// عمود "رفع الأصناف" بالظبط — عشان تقدر تعدّل الملف وترفعه تاني على طول.
+async function manageExportCatalog(){
+  if(typeof ExcelJS === 'undefined'){ showToast('حصل خطأ في تحميل أداة التصدير، حاول تاني'); return; }
+  state.manageExportBusy = true; render();
+  try{
+    const res = await fetch(APPS_SCRIPT_URL + '?action=manageExportCatalog&token=' + encodeURIComponent(getManageToken()));
+    const rows = await res.json();
+    if(!Array.isArray(rows)) throw new Error('bad response');
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('الأصناف', { views:[{ rightToLeft:true }] });
+    ws.columns = [
+      { header:'اسم الصنف', key:'name', width:34 },
+      { header:'القطاع', key:'main', width:20 },
+      { header:'التصنيف الفرعي', key:'sub', width:20 },
+      { header:'الوحدة', key:'unit', width:10 },
+      { header:'اسم المنتج', key:'product', width:28 },
+      { header:'اللون', key:'color', width:14 },
+      { header:'السعر', key:'price', width:10 },
+      { header:'الرصيد', key:'stock', width:10 },
+      { header:'تعطيل', key:'disabled', width:10 },
+    ];
+    rows.forEach(r=>ws.addRow({
+      name:r.name||'', main:r.main||'', sub:r.sub||'', unit:r.unit||1,
+      product:r.product||r.name||'', color:r.color||'',
+      price: r.price===''||r.price==null ? '' : r.price,
+      stock: r.stock===''||r.stock==null ? '' : r.stock,
+      disabled: r.disabled ? 'لا' : ''
+    }));
+    ws.getRow(1).font = { bold:true };
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type:'application/octet-stream' });
+    const dateStr = todayStr();
+    downloadBlob(blob, 'الأصناف_والأسعار_' + dateStr + '.xlsx');
+    showToast('اتصدّر ✓ (' + rows.length + ' صنف)');
+  }catch(e){
+    showToast('تعذّر التصدير، حاول تاني');
+  }
+  state.manageExportBusy = false;
+  render();
+}
+
 async function downloadCatalogTemplate(){
   if(typeof ExcelJS === 'undefined'){ showToast('حصل خطأ في تحميل أداة الإكسل، حاول تاني'); return; }
   const wb = new ExcelJS.Workbook();
@@ -4437,11 +4573,16 @@ async function downloadCatalogTemplate(){
 async function submitCatalogUpload(){
   if(!state.catalogUploadRows || !state.catalogUploadRows.length) return;
   state.catalogUploadBusy = true; state.catalogUploadResult = null; render();
+  const isManageCtx = state.catalogUploadContext==='manage';
   try{
     const res = await fetch(APPS_SCRIPT_URL, {
       method:'POST',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({ action:'uploadCatalog', token:getAdminToken(), mode:state.catalogUploadMode, rows:state.catalogUploadRows })
+      body: JSON.stringify({
+        action: isManageCtx ? 'manageUploadCatalog' : 'uploadCatalog',
+        token: isManageCtx ? getManageToken() : getAdminToken(),
+        mode: state.catalogUploadMode, rows: state.catalogUploadRows
+      })
     });
     const data = await res.json();
     if(data && data.ok){
@@ -4585,6 +4726,7 @@ function renderHeader(){
         <button class="tabbtn ${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">${ico_('track')} تابع طلبيتك</button>
         <button class="tabbtn ${state.view==='admin'?'active':''}" data-act="goto" data-view="admin">${ico_('warehouse')} متابعة المخزن${state.adminNewCount>0 ? `<span class="navbadge">${state.adminNewCount}</span>` : ''}</button>
         <button class="tabbtn" data-act="force-update" title="تحديث إجباري">${ico_('refresh')} تحديث</button>
+        <button class="tabbtn managetab ${state.view==='manage'?'active':''}" data-act="goto" data-view="manage" style="grid-column:1 / -1;">${ico_('manageIcon')} إدارة (الأصناف والأسعار وطلبات الموافقة)</button>
       </div>
       <div class="toolrow">
         ${isWebAuthnSupported() ? `
@@ -4618,6 +4760,27 @@ function renderHeader(){
 //  سطر 2: سعر الوحدة + الإجمالي
 //  سطر 3: ضيف للسلة + إلغاء
 // بيتستخدم في القطاعات (اللون متحدد) وفي الاكسسوارات (بعد اختيار اللون).
+// ⚠️ بتتأكد إن الكمية اللي الموزّع طالبها (مهما كانت الوحدة: عود/لفة/كرتونة)
+// ماتتجاوزش الرصيد الفعلي المتاح في المخزن. بترجع نص التحذير لو فيه تجاوز،
+// أو '' لو الكمية سليمة. بتشتغل بس في المخازن اللي رصيدها متتبَّع فعليًا
+// (طنطا حاليًا) — المخازن التانية مالهاش رصيد دقيق أصلاً فمفيش داعي نقارن.
+function stockShortageWarning_(main, product, color, unitType, qty){
+  if(!warehouseAffectsStock()) return '';
+  const item = findCatalogItem(main, product, color);
+  if(!item) return '';
+  const stock = Number(item.stock);
+  if(!isFinite(stock)) return '';
+  const bigUnits = ['لفة','كرتونة'];
+  const content = Number(item.unit) || 1;
+  const requestedBase = bigUnits.includes(unitType) ? qty * content : qty;
+  if(requestedBase > stock){
+    // بنوري المتاح دايمًا بالوحدة الأساسية (عود/قطعة) عشان الرقم يبقى دقيق
+    // ومالوش لبس، بدل ما نحاول نحوّله للفة/كرتونة وممكن يبقى كسر مربك.
+    return `⚠ الكمية أكبر من المتاح في المخزن — المتاح فعليًا: ${stock} (المطلوب: ${requestedBase})`;
+  }
+  return '';
+}
+
 function render3LineQty(s, color, opts){
   opts = opts || {};
   const unitType = s.units[color] || s.unitOptions[0];
@@ -4625,6 +4788,7 @@ function render3LineQty(s, color, opts){
   const price = calcUnitPrice(s.main, s.product, color, unitType);
   const lineTotal = price==null ? null : price*qty;
   const fmt = n => n==null ? '—' : Math.round(n).toLocaleString('en-US');
+  const shortageMsg = stockShortageWarning_(s.main, s.product, color, unitType, qty);
   return `
   <div class="qty3">
     <div class="qty3-line qty3-unitqty">
@@ -4638,6 +4802,7 @@ function render3LineQty(s, color, opts){
         <button data-act="staged-qty-inc" data-key="${esc(s.key)}" data-val="${esc(color)}" type="button">+</button>
       </div>
     </div>
+    ${shortageMsg ? `<div class="qty3-shortage">${esc(shortageMsg)}</div>` : ''}
     <div class="qty3-line qty3-price">
       <span class="qty3-cell"><b>السعر:</b> ${fmt(price)}</span>
       <span class="qty3-cell qty3-total"><b>الإجمالي:</b> ${fmt(lineTotal)}</span>
@@ -4720,6 +4885,7 @@ function renderStagedBlock(s){
         const price = calcUnitPrice(s.main, s.product, c, unitType);
         const lineTotal = price==null ? null : price*qty;
         const fmt = n => n==null ? '—' : Math.round(n).toLocaleString('en-US');
+        const shortageMsg = stockShortageWarning_(s.main, s.product, c, unitType, qty);
         return `
         <div class="cqrow2">
           <div class="cqrow2-color">${c?esc(c):esc(s.product)}</div>
@@ -4734,6 +4900,7 @@ function renderStagedBlock(s){
               <button data-act="staged-qty-inc" data-key="${esc(s.key)}" data-val="${esc(c)}" type="button">+</button>
             </div>
           </div>
+          ${shortageMsg ? `<div class="qty3-shortage">${esc(shortageMsg)}</div>` : ''}
           <div class="cqrow2-line cqrow2-price">
             <span class="qty3-cell"><b>السعر:</b> ${fmt(price)}</span>
             <span class="qty3-cell qty3-total"><b>الإجمالي:</b> ${fmt(lineTotal)}</span>
@@ -5324,6 +5491,253 @@ function filteredAdminOrders_(){
     if(d !== 0) return d;
     return orderNoKey_(b) - orderNoKey_(a);
   });
+}
+
+// ============================================================
+// تبويب "إدارة" الجديد — الأصناف والأسعار والأرصدة + طلبات الموافقة
+// ============================================================
+function renderManageView(){
+  if(!state.manageUnlocked){
+    return `
+    <div class="card pingate">
+      <div class="ic">${ico_('manageIcon',34)}</div>
+      <h2>تبويب الإدارة</h2>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:10px;">الأصناف والأسعار والأرصدة وطلبات الموافقة — محمي برقم سري خاص منفصل عن الأدمن</p>
+      <input type="password" inputmode="numeric" placeholder="الرقم السري" value="${esc(state.managePinInput)}" data-act="set-manage-pin">
+      <button data-act="submit-manage-pin" ${state.managePinChecking?'disabled':''}>${state.managePinChecking?'جارٍ التحقق...':'دخول'}</button>
+      ${state.managePinError ? '<div class="err">رقم غلط، حاول تاني</div>' : ''}
+    </div>`;
+  }
+
+  if(state.manageTab==='approvals' && !state.manageApprovalsLoaded && !state.manageApprovalsLoading){
+    loadManageApprovals();
+  }
+
+  const totalApprovals = (state.manageRegRequests.length + state.managePwRequests.length);
+  return `
+  <div class="card" style="padding-bottom:10px;">
+    <div class="managesubtabs">
+      <button class="managesubtab ${state.manageTab==='items'?'active':''}" data-act="manage-set-tab" data-val="items">${ico_('boxesIcon',15)} الأصناف والأسعار</button>
+      <button class="managesubtab ${state.manageTab==='approvals'?'active':''}" data-act="manage-set-tab" data-val="approvals">${ico_('checkSquare',15)} طلبات الموافقة${totalApprovals ? ` <span class="navbadge" style="position:static;margin-right:4px;">${totalApprovals}</span>` : ''}</button>
+    </div>
+  </div>
+  ${state.manageTab==='items' ? renderManageItemsTab() : renderManageApprovalsTab()}
+  `;
+}
+
+function manageCatalogSource_(){
+  return (typeof CATALOG!=='undefined' && CATALOG.length) ? CATALOG : FALLBACK_CATALOG;
+}
+
+function renderManageItemsTab(){
+  if(state.manageEditingName!==null){
+    return renderManageEditForm_();
+  }
+  const q = asText(state.manageSearch).trim().toLowerCase();
+  const mainFilter = state.manageMainFilter;
+  let items = manageCatalogSource_();
+  if(mainFilter) items = items.filter(it=>it.main===mainFilter);
+  if(q) items = items.filter(it=>(it.product||it.name||'').toLowerCase().includes(q) || (it.color||'').toLowerCase().includes(q));
+  items = items.slice(0, 150); // حماية من رسم آلاف الصفوف مرة واحدة — البحث بيضيّق أكتر
+
+  return `
+  <div class="card">
+    <button class="savebtn" style="width:100%;margin-bottom:12px;" data-act="manage-new-item">${ico_('plusCircle',15)} إضافة صنف جديد</button>
+    <button class="exportbtn" style="width:100%;margin-bottom:12px;" data-act="show-stock">${ico_('boxesIcon',14)} عرض الأرصدة المتاحة (بحث + تصدير PDF)</button>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="exportbtn" style="flex:1;" data-act="manage-export-catalog" ${state.manageExportBusy?'disabled':''}>${state.manageExportBusy ? '⏳ جارٍ التصدير...' : ico_('downloadIcon',13) + ' تصدير Excel'}</button>
+      <button class="exportbtn" style="flex:1;" data-act="manage-open-catalog-upload">${ico_('installIcon',13)} رفع Excel</button>
+    </div>
+    <div class="searchbox">
+      <input type="text" placeholder="ابحث عن اسم الصنف أو اللون..." value="${esc(state.manageSearch)}" data-act="manage-search-item">
+    </div>
+    <div class="chipwrap" style="margin-bottom:12px;">
+      <button class="chip ${!mainFilter?'active':''}" data-act="manage-filter-main" data-val="">الكل</button>
+      ${SECTOR_CHIPS.map(m=>`<button class="chip ${mainFilter===m?'active':''}" data-act="manage-filter-main" data-val="${esc(m)}">${esc(m)}</button>`).join('')}
+    </div>
+    <div class="managelist">
+      ${items.length ? items.map(it=>`
+        <div class="managerow">
+          <div class="managerow-info">
+            <div class="managerow-name">${esc(it.product||it.name)}${it.color?` — ${esc(it.color)}`:''} ${it.available===false?'<span class="stocktag out" style="margin-right:4px;">موقوف</span>':''}</div>
+            <div class="managerow-sub">${esc(it.main)}${it.sub?' — '+esc(it.sub):''}</div>
+          </div>
+          <div class="managerow-vals">
+            <div>${it.price==null?'—':Math.round(it.price).toLocaleString('en-US')} ج.م</div>
+            <div style="color:var(--muted);font-size:11px;">رصيد: ${it.stock==null?'—':it.stock}</div>
+          </div>
+          <button class="managerow-edit" data-act="manage-edit-item" data-val="${esc(it.name||it.product)}">${ico_('editIcon',15)}</button>
+        </div>
+      `).join('') : '<div class="empty">مفيش نتائج</div>'}
+    </div>
+    ${items.length>=150 ? '<div class="managehint">في نتائج أكتر — ضيّق البحث عشان تشوفهم كلهم</div>' : ''}
+  </div>`;
+}
+
+function renderManageEditForm_(){
+  const isNew = state.manageEditingName==='NEW';
+  const d = state.manageEditDraft || {};
+  return `
+  <div class="card">
+    <h2>${isNew ? '➕ إضافة صنف جديد' : '✏️ تعديل: ' + esc(d.name||'')}</h2>
+    <label>القطاع *</label>
+    <select class="cqselect" style="width:100%;margin-bottom:10px;" data-act="manage-draft-main" ${!isNew?'disabled':''}>
+      <option value="">اختار القطاع</option>
+      ${SECTOR_CHIPS.map(m=>`<option value="${esc(m)}" ${d.main===m?'selected':''}>${esc(m)}</option>`).join('')}
+    </select>
+    ${isNew ? `
+    <label>التصنيف الفرعي (لو موجود)</label>
+    <input type="text" value="${esc(d.sub||'')}" data-act="manage-draft-sub" placeholder="مثلاً: اكسسوارات فورناكس">
+    <label>اسم الصنف *</label>
+    <input type="text" value="${esc(d.product||'')}" data-act="manage-draft-product" placeholder="اسم الصنف">
+    <label>اللون (لو الصنف بيتلوّن)</label>
+    <input type="text" value="${esc(d.color||'')}" data-act="manage-draft-color" placeholder="مثلاً: بيج">
+    ` : `
+    <div class="managereadonly">${esc(d.product||d.name)}${d.color?' — '+esc(d.color):''} <span style="color:var(--muted);">(${esc(d.main)}${d.sub?' — '+esc(d.sub):''})</span></div>
+    `}
+    <div class="row3" style="margin-top:10px;">
+      <div class="field">
+        <label>السعر (ج.م)</label>
+        <input type="number" inputmode="decimal" value="${d.price??''}" data-act="manage-draft-price">
+      </div>
+      <div class="field">
+        <label>الرصيد</label>
+        <input type="number" inputmode="numeric" value="${d.stock??''}" data-act="manage-draft-stock">
+      </div>
+      <div class="field">
+        <label>المحتوى (لفة/كرتونة)</label>
+        <input type="number" inputmode="numeric" value="${d.unit??1}" data-act="manage-draft-unit">
+      </div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;">
+      <input type="checkbox" ${d.available!==false?'checked':''} data-act="manage-draft-available" style="width:18px;height:18px;">
+      <span>الصنف متاح (لو مفعّلة، الصنف يظهر للموزّعين)</span>
+    </label>
+    <div class="qty3-line qty3-btns" style="margin-top:16px;">
+      <button class="confirmbtn" data-act="manage-save-item" ${state.manageSaving?'disabled':''}>${state.manageSaving?'جارٍ الحفظ...':(ico_('checkPlain',14)+' حفظ')}</button>
+      <button class="cancelbtn" data-act="manage-cancel-edit">✖ إلغاء</button>
+    </div>
+  </div>`;
+}
+
+function renderManageApprovalsTab(){
+  if(state.manageApprovalsLoading){
+    return `<div class="card"><div class="loading">جارٍ التحميل...</div></div>`;
+  }
+  return `
+  <div class="card">
+    <h2><span class="num">1</span>طلبات تسجيل حسابات جديدة (${state.manageRegRequests.length})</h2>
+    ${state.manageRegRequests.length ? state.manageRegRequests.map(r=>`
+      <div class="managereqrow">
+        <div>
+          <div class="managerow-name">${esc(r.distName||r.username)}</div>
+          <div class="managerow-sub">${esc(r.distRegion||'')} · ${esc(r.distPhone||'بدون رقم')} · ${esc(r.distType||'موزع')}</div>
+          <div class="managerow-sub" style="color:var(--muted);">اسم الدخول: ${esc(r.username)} · ${esc(r.date||'')}</div>
+        </div>
+        <div class="managereqbtns">
+          <button class="exportbtn" data-act="manage-approve-reg" data-val="${esc(r.username)}">${ico_('checkPlain',13)} موافقة</button>
+          <button class="exportbtn danger" data-act="manage-reject-reg" data-val="${esc(r.username)}">${ico_('xCircle',13)} رفض</button>
+        </div>
+      </div>
+    `).join('') : '<div class="empty">مفيش طلبات تسجيل جديدة</div>'}
+  </div>
+  <div class="card">
+    <h2><span class="num">2</span>طلبات إعادة تعيين كلمة السر (${state.managePwRequests.length})</h2>
+    ${state.managePwRequests.length ? state.managePwRequests.map(r=>`
+      <div class="managereqrow">
+        <div>
+          <div class="managerow-name">${esc(r.distName || r.username)}</div>
+          <div class="managerow-sub">${r.distName ? `اسم الدخول: ${esc(r.username)} · ` : ''}${esc(r.date||'')}</div>
+        </div>
+        <div class="managereqbtns">
+          <button class="exportbtn" data-act="manage-approve-pw" data-val="${esc(r.id)}">${ico_('checkPlain',13)} موافقة</button>
+          <button class="exportbtn danger" data-act="manage-reject-pw" data-val="${esc(r.id)}">${ico_('xCircle',13)} رفض</button>
+        </div>
+      </div>
+    `).join('') : '<div class="empty">مفيش طلبات إعادة تعيين كلمة سر</div>'}
+  </div>`;
+}
+
+async function loadManageApprovals(){
+  state.manageApprovalsLoading = true; render();
+  try{
+    const token = getManageToken();
+    const [regRes, pwRes] = await Promise.all([
+      fetch(APPS_SCRIPT_URL + '?action=manageRegRequests&token=' + encodeURIComponent(token)).then(r=>r.json()),
+      fetch(APPS_SCRIPT_URL + '?action=managePasswordRequests&token=' + encodeURIComponent(token)).then(r=>r.json())
+    ]);
+    state.manageRegRequests = Array.isArray(regRes) ? regRes : [];
+    state.managePwRequests = Array.isArray(pwRes) ? pwRes : [];
+    state.manageApprovalsLoaded = true;
+  }catch(e){
+    showToast('تعذّر تحميل طلبات الموافقة');
+  }
+  state.manageApprovalsLoading = false;
+  render();
+}
+
+async function manageDecideReg(username, approve){
+  try{
+    const action = approve ? 'manageApproveReg' : 'manageRejectReg';
+    await fetch(APPS_SCRIPT_URL + '?action=' + action + '&token=' + encodeURIComponent(getManageToken()) + '&username=' + encodeURIComponent(username));
+    state.manageRegRequests = state.manageRegRequests.filter(x=>x.username!==username);
+    showToast(approve ? 'تمت الموافقة ✓' : 'اترفض الطلب');
+    render();
+  }catch(e){ showToast('حصل خطأ، حاول تاني'); }
+}
+async function manageDecidePw(id, approve){
+  try{
+    const action = approve ? 'manageApprovePasswordReset' : 'manageRejectPasswordReset';
+    await fetch(APPS_SCRIPT_URL + '?action=' + action + '&token=' + encodeURIComponent(getManageToken()) + '&id=' + encodeURIComponent(id));
+    state.managePwRequests = state.managePwRequests.filter(x=>String(x.id)!==String(id));
+    showToast(approve ? 'تمت الموافقة ✓' : 'اترفض الطلب');
+    render();
+  }catch(e){ showToast('حصل خطأ، حاول تاني'); }
+}
+
+function manageOpenEdit_(name){
+  const items = manageCatalogSource_();
+  const item = items.find(it=>(it.name||it.product)===name);
+  if(!item){ showToast('الصنف ده مش موجود'); return; }
+  state.manageEditingName = name;
+  state.manageEditDraft = {
+    name: item.name||item.product, main: item.main, sub: item.sub||'', product: item.product,
+    color: item.color||'', unit: item.unit||1, price: item.price, stock: item.stock, available: item.available!==false
+  };
+  render();
+}
+function manageOpenNew_(){
+  state.manageEditingName = 'NEW';
+  state.manageEditDraft = { name:'', main:'', sub:'', product:'', color:'', unit:1, price:'', stock:'', available:true };
+  render();
+}
+async function manageSaveItem(){
+  const d = state.manageEditDraft;
+  const isNew = state.manageEditingName==='NEW';
+  if(isNew){
+    if(!d.main || !asText(d.product).trim()){ showToast('لازم تحدد القطاع واسم الصنف'); return; }
+    d.name = asText(d.product).trim() + (d.color ? ' - ' + asText(d.color).trim() : '');
+  }
+  state.manageSaving = true; render();
+  try{
+    const action = isNew ? 'manageAddCatalogItem' : 'manageUpdateCatalogItem';
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method:'POST',
+      body: JSON.stringify({ action, token:getManageToken(), item:d })
+    });
+    const r = await res.json();
+    if(r && r.ok){
+      showToast(isNew ? 'اتضاف الصنف ✓' : 'اتحفظ التعديل ✓');
+      state.manageEditingName = null;
+      state.manageEditDraft = {};
+    } else {
+      showToast(isNew ? 'الاسم ده موجود بالفعل — جرّب اسم مختلف' : 'تعذّر الحفظ، حاول تاني');
+    }
+  }catch(e){
+    showToast('حصل خطأ، حاول تاني');
+  }
+  state.manageSaving = false;
+  render();
 }
 
 function renderAdminView(){
@@ -5939,6 +6353,7 @@ function render(){
     let view;
     if(state.view==='order') view = renderOrderView();
     else if(state.view==='myorders') view = renderMyOrdersView();
+    else if(state.view==='manage') view = renderManageView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
     app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderGlobalError();
@@ -6142,6 +6557,12 @@ function bindEvents(){
       });
       return;
     }
+    if(el.tagName==='INPUT' && el.type==='checkbox'){
+      el.addEventListener('change', e=>{
+        if(act==='manage-draft-available'){ state.manageEditDraft.available = e.target.checked; }
+      });
+      return;
+    }
     if(el.tagName==='INPUT' || el.tagName==='TEXTAREA'){
       el.addEventListener('input', e=>onInputChange(act, e.target, e.target.value));
       el.addEventListener('keydown', e=>{
@@ -6182,6 +6603,9 @@ function onSelectChange(act, el, val){
   if(act==='set-color-unit'){
     setStagedColorUnit(el.getAttribute('data-key'), el.getAttribute('data-val'), val);
   }
+  if(act==='manage-draft-main'){
+    state.manageEditDraft.main = val;
+  }
 }
 
 function onInputChange(act, el, val){
@@ -6193,6 +6617,14 @@ function onInputChange(act, el, val){
   switch(act){
     case 'search-product': state.productSearch = val; break;
     case 'acc-global-search': state.accGlobalSearch = val; break;
+    case 'set-manage-pin': state.managePinInput = val; break;
+    case 'manage-search-item': state.manageSearch = val; break;
+    case 'manage-draft-sub': state.manageEditDraft.sub = val; break;
+    case 'manage-draft-product': state.manageEditDraft.product = val; break;
+    case 'manage-draft-color': state.manageEditDraft.color = val; break;
+    case 'manage-draft-price': state.manageEditDraft.price = val===''?'':Number(val); break;
+    case 'manage-draft-stock': state.manageEditDraft.stock = val===''?'':Number(val); break;
+    case 'manage-draft-unit': state.manageEditDraft.unit = val===''?1:Number(val); break;
     case 'set-distname': state.distName = val; autoSaveDraft(); saveProfile(); break;
     case 'set-distregion': state.distRegion = val; autoSaveDraft(); saveProfile(); break;
     case 'set-distphone': state.distPhone = val; autoSaveDraft(); saveProfile(); break;
@@ -6300,6 +6732,15 @@ async function onActionInner(act, el){
     case 'close-pwreq': state.showPwRequests=false; render(); break;
     case 'open-catalog-upload':
       state.showCatalogUpload = true;
+      state.catalogUploadContext = 'admin';
+      state.catalogUploadRows = null;
+      state.catalogUploadFileName = '';
+      state.catalogUploadResult = null;
+      render();
+      break;
+    case 'manage-open-catalog-upload':
+      state.showCatalogUpload = true;
+      state.catalogUploadContext = 'manage';
       state.catalogUploadRows = null;
       state.catalogUploadFileName = '';
       state.catalogUploadResult = null;
@@ -6416,6 +6857,33 @@ async function onActionInner(act, el){
       render();
       break;
     }
+    // ===== تبويب "إدارة" الجديد =====
+    case 'submit-manage-pin': submitManagePin(); break;
+    case 'manage-set-tab':
+      state.manageTab = el.getAttribute('data-val');
+      render();
+      break;
+    case 'manage-filter-main':
+      state.manageMainFilter = el.getAttribute('data-val');
+      render();
+      break;
+    case 'manage-new-item': manageOpenNew_(); break;
+    case 'manage-export-catalog': manageExportCatalog(); break;
+    case 'manage-edit-item': manageOpenEdit_(el.getAttribute('data-val')); break;
+    case 'manage-cancel-edit':
+      state.manageEditingName = null;
+      state.manageEditDraft = {};
+      render();
+      break;
+    case 'manage-save-item': manageSaveItem(); break;
+    case 'manage-approve-reg': manageDecideReg(el.getAttribute('data-val'), true); break;
+    case 'manage-reject-reg':
+      if(confirm('متأكد إنك عايز ترفض طلب التسجيل ده؟')) manageDecideReg(el.getAttribute('data-val'), false);
+      break;
+    case 'manage-approve-pw': manageDecidePw(el.getAttribute('data-val'), true); break;
+    case 'manage-reject-pw':
+      if(confirm('متأكد إنك عايز ترفض طلب إعادة تعيين كلمة السر ده؟')) manageDecidePw(el.getAttribute('data-val'), false);
+      break;
     case 'set-staged-unit': setStagedUnit(el.getAttribute('data-key'), el.getAttribute('data-val')); break;
     case 'staged-qty-dec':{
       const s = state.staged.find(x=>x.key===el.getAttribute('data-key'));
@@ -6672,6 +7140,7 @@ if('serviceWorker' in navigator){
 // ===== init =====
 loadUserSession();
 restoreAdminSession();
+restoreManageSession();
 loadProfile();
 loadCatalog().then(()=>{ checkForResumableDraft(); render(); });
 render();
