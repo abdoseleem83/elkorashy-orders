@@ -1290,7 +1290,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v169';
+const APP_BUILD = 'v170';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -7099,9 +7099,13 @@ if('serviceWorker' in navigator){
   }
 
   window.addEventListener('load', ()=>{
-    // updateViaCache:'none' يضمن إن ملف sw.js نفسه يتفحص من السيرفر
-    // كل مرة، بدل ما يفضل المتصفح محتفظ بنسخة قديمة منه لحد 24 ساعة
-    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg=>{
+    // ⚠️ updateViaCache:'none' بس مش كفاية — ده بيمنع *كاش المتصفح* بس، لكن
+    // كاش الـCDN بتاع GitHub Pages (Fastly) قدّام السيرفر برضه ممكن يرجّع
+    // نسخة قديمة من sw.js نفسه من غير ما المتصفح يعرف إن فيه جديد — يعني
+    // التحديثات تفضل "عالقة" حتى لو رفعناها على GitHub. الحل: نضيف رقم فريد
+    // لرابط sw.js نفسه (زي ما بنعمل مع index.html)، فيبقى "رابط جديد" كل
+    // مرة ويتخطى كاش الـCDN تمامًا.
+    navigator.serviceWorker.register('sw.js?_v=' + Date.now(), { updateViaCache: 'none' }).then(reg=>{
       swReg = reg;
       activateWaiting(reg);
       reg.addEventListener('updatefound', ()=>{
