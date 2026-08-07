@@ -1290,7 +1290,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v170';
+const APP_BUILD = 'v171';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -7099,13 +7099,13 @@ if('serviceWorker' in navigator){
   }
 
   window.addEventListener('load', ()=>{
-    // ⚠️ updateViaCache:'none' بس مش كفاية — ده بيمنع *كاش المتصفح* بس، لكن
-    // كاش الـCDN بتاع GitHub Pages (Fastly) قدّام السيرفر برضه ممكن يرجّع
-    // نسخة قديمة من sw.js نفسه من غير ما المتصفح يعرف إن فيه جديد — يعني
-    // التحديثات تفضل "عالقة" حتى لو رفعناها على GitHub. الحل: نضيف رقم فريد
-    // لرابط sw.js نفسه (زي ما بنعمل مع index.html)، فيبقى "رابط جديد" كل
-    // مرة ويتخطى كاش الـCDN تمامًا.
-    navigator.serviceWorker.register('sw.js?_v=' + Date.now(), { updateViaCache: 'none' }).then(reg=>{
+    // ⚠️ لازم الرابط ده يبقى *ثابت* لنفس النسخة، ويتغيّر بس لما نرفع نسخة
+    // جديدة. لو حطينا Date.now() هنا، المتصفح هيشوف "service worker جديد"
+    // في كل مرة تفتح فيها الصفحة → يثبّته → controllerchange → reload →
+    // ويرجع يعمل نفس الحاجة تاني = التطبيق يفضل عالق في حلقة تحديث
+    // لا نهائية. استخدام APP_BUILD بيدينا أحسن الاتنين: يتخطى كاش الـCDN
+    // لما نرفع تحديث فعلي، ويفضل ثابت طول ما النسخة هي هي.
+    navigator.serviceWorker.register('sw.js?v=' + APP_BUILD, { updateViaCache: 'none' }).then(reg=>{
       swReg = reg;
       activateWaiting(reg);
       reg.addEventListener('updatefound', ()=>{
@@ -7132,10 +7132,15 @@ if('serviceWorker' in navigator){
     if(swReg) swReg.update().then(()=>activateWaiting(swReg)).catch(()=>{});
   }, 60000);
 
-  let reloadedOnce = false;
+  // ⚠️ حماية ضد حلقة التحديث اللانهائية: المتغير العادي بيتصفّر مع كل
+  // reload، فمكانش بيمنع الحلقة لو حصل controllerchange تاني بعد التحميل.
+  // بنستخدم sessionStorage عشان الحماية تفضل شغالة عبر الـreload نفسه،
+  // وبنسمح بإعادة تحميل واحدة بس لكل نسخة (APP_BUILD).
   navigator.serviceWorker.addEventListener('controllerchange', ()=>{
-    if(reloadedOnce) return;
-    reloadedOnce = true;
+    let last = '';
+    try{ last = sessionStorage.getItem('elk_sw_reloaded') || ''; }catch(e){}
+    if(last === APP_BUILD) return;   // اتعمل reload قبل كده لنفس النسخة → بلاش تكرار
+    try{ sessionStorage.setItem('elk_sw_reloaded', APP_BUILD); }catch(e){}
     showToast('🔄 في تحديث جديد للتطبيق، جارٍ التحديث...');
     setTimeout(()=>window.location.reload(), 700);
   });
