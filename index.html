@@ -4361,10 +4361,33 @@ async function buildShortageImageGroup(order, groupKey){
   });
   const orderedMains = group.mains.filter(m=>groupsMap.has(m));
 
-  // صف واحد مسطّح لكل الأصناف، مع علم يوضّح بداية قطاع جديد (لعرض هيدر فرعي)
+  // صف واحد مسطّح لكل الأصناف، بالقطاع الأول وبعدين باللون جوه القطاع —
+  // زي عرض السعر بالظبط: كل مجموعة لون بتاخد هيدر فرعي لوحدها بدل ما اللون
+  // يتكرر مكتوب جنب كل صنف صنف.
   const flat = [];
   orderedMains.forEach(main=>{
-    groupsMap.get(main).forEach((it,i)=> flat.push(Object.assign({}, it, { sectionStart: i===0, sectionLabel: main })));
+    const items = groupsMap.get(main);
+    const colorOrder = [];
+    const byColor = new Map();
+    items.forEach(it=>{
+      const c = asText(it.color);
+      if(!byColor.has(c)){ byColor.set(c, []); colorOrder.push(c); }
+      byColor.get(c).push(it);
+    });
+    const multiColor = colorOrder.filter(c=>c).length > 1 || (colorOrder.length>1 && colorOrder.some(c=>c));
+    let firstInMain = true;
+    colorOrder.forEach(colorKey=>{
+      let firstInColor = true;
+      byColor.get(colorKey).forEach(it=>{
+        flat.push(Object.assign({}, it, {
+          sectionStart: firstInMain,
+          sectionLabel: main,
+          colorStart: multiColor && !!colorKey && firstInColor,
+          colorLabel: multiColor ? colorKey : null
+        }));
+        firstInMain = false; firstInColor = false;
+      });
+    });
   });
 
   // إجمالي كل قطاع من القطاعات المحسوبة باللفة (كرافت/نيو/كومبن) — ممكن
@@ -4401,12 +4424,15 @@ async function buildShortageImageGroup(order, groupKey){
       if(it.sectionStart && SHORTAGE_IMG_GROUPS_[groupKey].mains.length>1){
         html += `<div style="padding:7px 10px;background:#4FA8DC;color:#002050;font-weight:800;font-size:15px;border-radius:6px;margin:${i===0?'0':'10px'} 0 6px 0;">${esc(it.sectionLabel)}</div>`;
       }
+      if(it.colorStart){
+        html += `<div style="padding:5px 10px 5px 18px;background:#EEF0FA;color:#002050;font-weight:800;font-size:13px;border-radius:4px;margin:${(i===0||it.sectionStart)?'0':'8px'} 0 5px 0;">◂ ${esc(it.colorLabel)}</div>`;
+      }
       const bg = i%2===0 ? '#FFFFFF' : '#F3F6FA';
       html += `
       <div style="display:flex;align-items:baseline;gap:8px;background:${bg};padding:9px 8px;border-bottom:1px solid #DCE4EC;border-radius:4px;">
         <span style="color:#8A8470;font-weight:800;font-size:14px;min-width:20px;">${startIndex+i+1}.</span>
         <span style="flex:1;font-weight:800;font-size:20px;color:#002050;line-height:1.25;">
-          ${esc(it.name || it.product)}${it.color?` <span style="color:#6B7A8C;font-size:15px;font-weight:700;">- ${esc(it.color)}</span>`:''}
+          ${esc(it.name || it.product)}${(it.color && !it.colorLabel)?` <span style="color:#6B7A8C;font-size:15px;font-weight:700;">- ${esc(it.color)}</span>`:''}
         </span>
         <span style="font-weight:800;font-size:20px;color:#1080C0;white-space:nowrap;">${it.dispQty} ${esc(it.dispUnit||'')}</span>
       </div>`;
