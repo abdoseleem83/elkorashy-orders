@@ -4425,7 +4425,7 @@ async function buildShortageImageGroup(order, groupKey){
         html += `<div style="padding:7px 10px;background:#4FA8DC;color:#002050;font-weight:800;font-size:15px;border-radius:6px;margin:${i===0?'0':'10px'} 0 6px 0;">${esc(it.sectionLabel)}</div>`;
       }
       if(it.colorStart){
-        html += `<div style="padding:5px 10px 5px 18px;background:#EEF0FA;color:#002050;font-weight:800;font-size:13px;border-radius:4px;margin:${(i===0||it.sectionStart)?'0':'8px'} 0 5px 0;">◂ ${esc(it.colorLabel)}</div>`;
+        html += `<div style="padding:5px 10px 5px 18px;background:#D6E7F8;border-right:3px solid #1080C0;color:#002050;font-weight:800;font-size:13px;border-radius:4px;margin:${(i===0||it.sectionStart)?'0':'8px'} 0 5px 0;">◂ ${esc(it.colorLabel)}</div>`;
       }
       const bg = i%2===0 ? '#FFFFFF' : '#F3F6FA';
       html += `
