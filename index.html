@@ -1290,7 +1290,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v171';
+const APP_BUILD = 'v173';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -2363,6 +2363,7 @@ async function submitAdminPin(){
     if(d && d.ok && d.token){
       setAdminToken(d.token);
       state.adminUnlocked = true;
+      state.manageUnlocked = true;   // رقم واحد يفتح كل حاجة
       state.pinError = false;
       state.pinInput = '';
       state.pinChecking = false;
@@ -2413,8 +2414,20 @@ async function submitManagePin(){
   state.managePinChecking = false;
   render();
 }
+// ⚠️ ملاحظة أمنية: مابنحطش أي رقم سري في الكود ده (الملف عام على GitHub وأي
+// حد يقدر يقراه). بدل كده، بما إن الأدمن دخل بالفعل بالرقم بتاعه، بنستخدم
+// *توكن الأدمن* نفسه في نداءات الإدارة — والسيرفر بيقبله لأن الأدمن ليه نفس
+// الصلاحية أو أعلى.
+async function ensureManageToken_(){
+  if(getManageToken()) return true;
+  const adminTok = getAdminToken();
+  if(adminTok){ setManageToken(adminTok); return true; }
+  return false;
+}
+
 function restoreManageSession(){
-  if(getManageToken()) state.manageUnlocked = true;
+  // لو الأدمن داخل بالفعل، الإدارة مفتوحة له تلقائيًا (رقم واحد يفتح كل حاجة)
+  if(getManageToken() || getAdminToken()) state.manageUnlocked = true;
 }
 
 function loadUserSession(){
@@ -4168,11 +4181,17 @@ async function buildShortageImageGroup(order, groupKey){
     })
     .filter(t=>t.text);
 
-  // الصفحة دايمًا مقسومة نصين: العمود الأول ياخد النص الأول من الأصناف،
-  // والزيادة كلها بتكمل في العمود التاني — زي ورقتين اتلزقوا في واحدة.
-  const half = Math.ceil(flat.length/2) || 1;
-  const colA = flat.slice(0, half);
-  const colB = flat.slice(half);
+  // 📄 الورقة دلوقتي ليها شكل ثابت: عمودين، كل عمود 15 سطر بالظبط
+  // (= 30 صنف للصفحة). الزيادة بتروح لصفحة/صورة جديدة بنفس المقاس بالظبط،
+  // بدل ما الورقة تتمدّد وتطول والخط يصغّر عشان يدخل فيها (اللي كان بيخلي
+  // كل صورة بحجم وشكل مختلف حسب عدد الأصناف).
+  const ROWS_PER_COL_ = 15;
+  const PER_PAGE_ = ROWS_PER_COL_ * 2;
+  const pages = [];
+  for(let i=0; i<flat.length; i+=PER_PAGE_){
+    pages.push(flat.slice(i, i+PER_PAGE_));
+  }
+  if(!pages.length) pages.push([]);
 
   function rowsHTML(list, startIndex){
     let html = '';
@@ -4193,14 +4212,22 @@ async function buildShortageImageGroup(order, groupKey){
     return html;
   }
 
-  const wrap = document.createElement('div');
-  wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
-  wrap.style.width = '1180px';
-  wrap.style.fontFamily = "'Cairo', sans-serif";
-  wrap.style.direction='rtl';
-  wrap.style.background='#FFFFFF';
+  const blobs = [];
+  for(let p=0; p<pages.length; p++){
+    const pageItems = pages[p];
+    const pageStart = p * PER_PAGE_;
+    const colA = pageItems.slice(0, ROWS_PER_COL_);
+    const colB = pageItems.slice(ROWS_PER_COL_);
+    const isLast = (p === pages.length - 1);
 
-  wrap.innerHTML = `
+    const wrap = document.createElement('div');
+    wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
+    wrap.style.width = '1180px';
+    wrap.style.fontFamily = "'Cairo', sans-serif";
+    wrap.style.direction='rtl';
+    wrap.style.background='#FFFFFF';
+
+    wrap.innerHTML = `
     <div style="padding:28px 34px;">
       <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #1080C0;padding-bottom:14px;margin-bottom:16px;">
         <img src="data:image/png;base64,${LOGO_B64}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #DCE4EC;padding:4px;">
@@ -4211,15 +4238,16 @@ async function buildShortageImageGroup(order, groupKey){
         <div style="text-align:left;">
           <div style="font-size:14.6px;font-weight:800;color:#1080C0;">#${esc(orderNoDisplay_(order))}</div>
           <div style="font-size:12.3px;color:#6B7A8C;">${esc(dateStr)}</div>
+          ${pages.length>1 ? `<div style="font-size:12.3px;color:#6B7A8C;font-weight:800;">صفحة ${p+1} من ${pages.length}</div>` : ''}
         </div>
       </div>
 
-      <div style="display:flex;gap:28px;align-items:flex-start;">
-        <div style="flex:1;">${rowsHTML(colA, 0)}</div>
-        <div style="flex:1;">${colB.length ? rowsHTML(colB, colA.length) : ''}</div>
+      <div style="display:flex;gap:28px;align-items:flex-start;min-height:640px;">
+        <div style="flex:1;">${rowsHTML(colA, pageStart)}</div>
+        <div style="flex:1;">${colB.length ? rowsHTML(colB, pageStart + colA.length) : ''}</div>
       </div>
 
-      ${totals.length ? `
+      ${(isLast && totals.length) ? `
         <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #DCE4EC;display:flex;gap:22px;flex-wrap:wrap;">
           ${totals.map(t=>`<div style="font-size:13.4px;"><span style="color:#6B7A8C;">إجمالي ${esc(t.main)}: </span><b style="color:#002050;">${esc(t.text)}</b></div>`).join('')}
         </div>
@@ -4228,18 +4256,22 @@ async function buildShortageImageGroup(order, groupKey){
       ${CREDIT_LINE ? `<div style="margin-top:4px;text-align:center;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
     </div>
   `;
-  document.body.appendChild(wrap);
+    document.body.appendChild(wrap);
 
-  let blob = null;
-  try{
-    const canvas = await withTimeout(
-      html2canvas(wrap, {scale: pdfScale_(flat.length), backgroundColor:'#ffffff', useCORS:true, allowTaint:true}),
-      20000, 'shortage-img-' + groupKey
-    );
-    blob = await canvasToPngBlob_(canvas);
-  }catch(e){ console.error('buildShortageImageGroup failed:', e); }
-  try{ document.body.removeChild(wrap); }catch(e){}
-  return blob;
+    try{
+      // ⚠️ الدقة بقت ثابتة (2) لكل الصفحات — قبل كده كانت بتتغيّر حسب عدد
+      // الأصناف، فالصور كانت بتطلع بأحجام ووضوح مختلف. دلوقتي كل صفحة
+      // فيها 30 صنف كحد أقصى، فالحجم متحكوم فيه أصلاً.
+      const canvas = await withTimeout(
+        html2canvas(wrap, {scale: 2, backgroundColor:'#ffffff', useCORS:true, allowTaint:true}),
+        20000, 'shortage-img-' + groupKey + '-p' + (p+1)
+      );
+      const blob = await canvasToPngBlob_(canvas);
+      if(blob) blobs.push(blob);
+    }catch(e){ console.error('buildShortageImageGroup failed (page ' + (p+1) + '):', e); }
+    try{ document.body.removeChild(wrap); }catch(e){}
+  }
+  return blobs;
 }
 
 // بيدوّر على الطلب بمعرّفه (لو موجود) وإلا بيرجع لآخر طلب اتبعت (state.lastOrder) —
@@ -4258,10 +4290,19 @@ async function handleShortageImage(id, groupKey){
   const busyKey = id || 'last';
   state.shortageImgBusy = busyKey + '|' + groupKey; render();
   try{
-    const blob = await buildShortageImageGroup(order, groupKey);
-    if(blob){
+    const blobs = await buildShortageImageGroup(order, groupKey);
+    if(blobs && blobs.length){
       const label = SHORTAGE_IMG_GROUPS_[groupKey].label;
-      previewImageBlob(blob, 'نواقص_' + label.replace(/\s+/g,'_') + '_' + orderNoDisplay_(order) + '.png');
+      const base = 'نواقص_' + label.replace(/\s+/g,'_') + '_' + orderNoDisplay_(order);
+      if(blobs.length === 1){
+        previewImageBlob(blobs[0], base + '.png');
+      } else {
+        // أكتر من صفحة: بنعرض الأولى ونحمّل الباقي، وبنقول للمستخدم صراحةً
+        // إن فيه صفحات زيادة عشان مايفتكرش إن الباقي ضاع.
+        previewImageBlob(blobs[0], base + '_1.png');
+        blobs.slice(1).forEach((b,i)=> downloadBlob(b, base + '_' + (i+2) + '.png'));
+        showToast('الطلب اتقسم ' + blobs.length + ' صفحات — الباقي اتحمّل عندك');
+      }
     } else {
       showToast('مفيش أصناف من "' + SHORTAGE_IMG_GROUPS_[groupKey].label + '" في الطلب ده');
     }
@@ -4724,9 +4765,8 @@ function renderHeader(){
       <div class="tabgrid">
         <button class="tabbtn ${state.view==='order'?'active':''}" data-act="goto" data-view="order">${ico_('newOrder')} طلب جديد</button>
         <button class="tabbtn ${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">${ico_('track')} تابع طلبيتك</button>
-        <button class="tabbtn ${state.view==='admin'?'active':''}" data-act="goto" data-view="admin">${ico_('warehouse')} متابعة المخزن${state.adminNewCount>0 ? `<span class="navbadge">${state.adminNewCount}</span>` : ''}</button>
+        <button class="tabbtn ${(state.view==='admin'||state.view==='manage')?'active':''}" data-act="goto" data-view="admin">${ico_('warehouse')} الإدارة${state.adminNewCount>0 ? `<span class="navbadge">${state.adminNewCount}</span>` : ''}</button>
         <button class="tabbtn" data-act="force-update" title="تحديث إجباري">${ico_('refresh')} تحديث</button>
-        <button class="tabbtn managetab ${state.view==='manage'?'active':''}" data-act="goto" data-view="manage" style="grid-column:1 / -1;">${ico_('manageIcon')} إدارة (الأصناف والأسعار وطلبات الموافقة)</button>
       </div>
       <div class="toolrow">
         ${isWebAuthnSupported() ? `
@@ -5812,6 +5852,7 @@ function renderAdminView(){
 
   return `
   <main>
+    <button class="exportbtn" style="width:100%;margin-bottom:10px;padding:11px;font-size:13px;" data-act="goto-manage-inline">${ico_('manageIcon',15)} إدارة الأصناف والأسعار وطلبات الموافقة</button>
     <div class="adminbar">
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
       <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
@@ -6858,6 +6899,18 @@ async function onActionInner(act, el){
       break;
     }
     // ===== تبويب "إدارة" الجديد =====
+    case 'goto-manage-inline':{
+      // الأدمن دخل بالفعل بالرقم السري، فمفيش داعي نطلب رقم تاني.
+      // بنفتح شاشة إدارة الأصناف على طول، وبنجيب توكن الإدارة في الخلفية
+      // عشان النداءات اللي محتاجاه (تعديل صنف/موافقات) تشتغل عادي.
+      state.viewHistory = state.viewHistory || [];
+      state.viewHistory.push(state.view);
+      state.view = 'manage';
+      state.manageUnlocked = true;
+      render();
+      if(!getManageToken()) ensureManageToken_();
+      break;
+    }
     case 'submit-manage-pin': submitManagePin(); break;
     case 'manage-set-tab':
       state.manageTab = el.getAttribute('data-val');
