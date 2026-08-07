@@ -1419,7 +1419,7 @@ const state = {
   notifyPromptId:null,
   pinChecking:false,
   orderSentToWa:false,
-  orderImage:null,
+  orderImages:null,
   orderImgPreparing:false,
   warehouseImages:[],
   whImgPreparing:false,
@@ -3035,7 +3035,7 @@ async function actuallySubmit(){
     // من غير ضغطة مستخدم قريبة، فرجعنا للوضع اليدوي بطلب المستخدم.)
     state.waSent = false;
     state.waImgPreparing = false;
-    state.orderImage = null;   // صورة الطلب الجديد بتتجهّز أول ما يدوس ابعت
+    state.orderImages = null;   // صور الطلب الجديدة بتتجهّز أول ما يدوس ابعت
   }catch(e){
     // صندوق خطأ ثابت (مش toast بيختفي) فيه السبب الخام — عشان نعرف السبب الحقيقي
     state.saveError = 'نوع العملية: ' + (isUpdate ? 'تعديل' : 'جديد')
@@ -3057,7 +3057,7 @@ function resetOrderForm(){
   state.waSent = false;
   state.waImgPreparing = false;
   state.orderSentToWa = false;
-  state.orderImage = null;
+  state.orderImages = null;
   state.warehouseImages = [];
   state.successOrderId = null;
   state.lastOrder = null;
@@ -3813,21 +3813,12 @@ async function shareQuotePDF(){
 }
 
 // ===== quote PDF (عرض سعر) =====
-async function buildQuotePDF(order){
-  if(typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') return null;
-  if(!order || !order.items || !order.items.length){ showToast('الطلب مفيهوش أصناف — مش هينفع نطلع عرض سعر'); return null; }
-
-  const wrap = document.createElement('div');
-  wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
-  wrap.style.width='760px';
-  wrap.style.fontFamily = "'Cairo', sans-serif";
-  wrap.style.direction='rtl';
-  wrap.style.background='#FFFFFF';
-
-  const date = new Date(order.ts);
-  const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
-
-  // ⚠️ عرض السعر (PDF) بيتعرض باللفة لأصناف القطاعات لو الكمية لفة كاملة
+// ⚠️ حساب صفوف عرض السعر (الكميات المعروضة/الأسعار/الخصومات/ملخص اللفات)
+// اتفصل هنا في دالة واحدة عشان يتشارك فيها أكتر من مكان (PDF عرض السعر،
+// وصور الطلب المتعددة اللي بتتبعت واتساب) من غير ما نكرر نفس المنطق المالي
+// الحساس ده في أكتر من نسخة (لو غيّرناه، هيتغيّر في الاتنين مع بعض تلقائيًا).
+function computeQuoteRows_(order){
+  // ⚠️ عرض السعر بيتعرض باللفة لأصناف القطاعات لو الكمية لفة كاملة
   // أو أكتر — لكن لو الكمية أقل من لفة، بتتعرض بالعود عشان متبقاش كسر لفة
   // (زي 0.3 لفة) — بعكس تصدير الإكسيل اللي فضل بالعود زي ما هو (متلمسناهوش).
   // السعر بيتحوّل لسعر اللفة (سعر العود × محتوى اللفة) بس لما تكون العرض
@@ -3894,6 +3885,25 @@ async function buildQuotePDF(order){
     if(totalRolls>0 || totalRods>0) rollSummary.push({ sector, rolls: totalRolls, rods: totalRods });
   });
   const hasMissing = rows.some(r=>r.lineRaw==null);
+
+  return { rows, subtotal, eligible, customPct, showDiscount, discountTotal, netTotal, rollSummary, hasMissing };
+}
+
+async function buildQuotePDF(order){
+  if(typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') return null;
+  if(!order || !order.items || !order.items.length){ showToast('الطلب مفيهوش أصناف — مش هينفع نطلع عرض سعر'); return null; }
+
+  const wrap = document.createElement('div');
+  wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
+  wrap.style.width='760px';
+  wrap.style.fontFamily = "'Cairo', sans-serif";
+  wrap.style.direction='rtl';
+  wrap.style.background='#FFFFFF';
+
+  const date = new Date(order.ts);
+  const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  const { rows, subtotal, eligible, customPct, showDiscount, discountTotal, netTotal, rollSummary, hasMissing } = computeQuoteRows_(order);
 
   wrap.innerHTML = `
     <div style="padding:30px 36px;background:#FFFFFF;">
@@ -4113,6 +4123,198 @@ async function buildQuotePDF(order){
   }catch(e){ console.error('buildQuotePDF failed:', e); result = null; }
   try{ document.body.removeChild(wrap); }catch(e){}
   return result;
+}
+
+// ===== صورة الطلب (بتتبعت واتساب) — مقسّمة صفحات زي عرض السعر =====
+// نفس بيانات وأسعار عرض السعر بالظبط، بس بدل ما تطلع PDF واحد بيتقسم لصفحات
+// جوه الملف، هنا كل صفحة صورة PNG لوحدها (لأن واتساب بيبعت صور منفصلة مش
+// PDF واحد طويل). العدد بيتحدد حسب عدد الأصناف تلقائيًا.
+const ORDER_IMG_ROWS_PER_PAGE_ = 14;
+
+async function buildOrderImagePages(order){
+  if(typeof html2canvas === 'undefined') return null;
+  if(!order || !order.items || !order.items.length) return null;
+
+  const date = new Date(order.ts);
+  const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  const { rows, subtotal, eligible, customPct, showDiscount, discountTotal, netTotal, rollSummary, hasMissing } = computeQuoteRows_(order);
+
+  // نفس ترتيب عرض السعر: بالقطاع، وجوه القطاع بالألوان — بس هنا كصفوف مسطّحة
+  // عشان نقدر نقسّمها على صفحات بعدد ثابت من الأصناف للصفحة.
+  const groupsMap = new Map();
+  rows.forEach(r=>{ if(!groupsMap.has(r.main)) groupsMap.set(r.main, []); groupsMap.get(r.main).push(r); });
+  const orderedMains = orderGroups_(groupsMap);
+  const flat = [];
+  let serial = 0;
+  orderedMains.forEach(main=>{
+    const colorOrder = [];
+    const byColor = new Map();
+    groupsMap.get(main).forEach(it=>{
+      const c = asText(it.color);
+      if(!byColor.has(c)){ byColor.set(c, []); colorOrder.push(c); }
+      byColor.get(c).push(it);
+    });
+    const multiColor = colorOrder.filter(c=>c).length > 1 || (colorOrder.length>1 && colorOrder.some(c=>c));
+    let firstInMain = true;
+    colorOrder.forEach(colorKey=>{
+      let firstInColor = true;
+      byColor.get(colorKey).forEach(it=>{
+        serial++;
+        flat.push({
+          it, serial,
+          sectionLabel: firstInMain ? main : null,
+          colorLabel: (colorKey && multiColor && firstInColor) ? colorKey : null
+        });
+        firstInMain = false; firstInColor = false;
+      });
+    });
+  });
+
+  const pages = [];
+  for(let i=0;i<flat.length;i+=ORDER_IMG_ROWS_PER_PAGE_) pages.push(flat.slice(i, i+ORDER_IMG_ROWS_PER_PAGE_));
+  if(!pages.length) pages.push([]);
+
+  const colspan = showDiscount ? 7 : 5;
+
+  function rowsHTML(list){
+    let html = '';
+    list.forEach(entry=>{
+      const it = entry.it;
+      if(entry.sectionLabel){
+        html += `<tr><td colspan="${colspan}" style="padding:7px 6px;background:#4FA8DC;color:#002050;font-weight:800;font-size:13.5px;">${esc(entry.sectionLabel)}</td></tr>`;
+      }
+      if(entry.colorLabel){
+        html += `<tr><td colspan="${colspan}" style="padding:5px 6px 5px 16px;background:#EEF0FA;color:#002050;font-weight:800;font-size:11.8px;">◂ ${esc(entry.colorLabel)}</td></tr>`;
+      }
+      const qty = it.normQty;
+      const lineAmt = it.rawPrice==null ? null : it.rawPrice*qty;
+      const rowBg = entry.serial%2===0?'#FFFFFF':'#F3F6FA';
+      if(showDiscount){
+        const pct = getDiscount(it.main);
+        const discAmt = (lineAmt!=null && pct>0) ? lineAmt*(pct/100) : 0;
+        const net = lineAmt==null ? null : lineAmt - discAmt;
+        html += `
+        <tr style="background:${rowBg};">
+          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;color:#8A8470;font-size:12.5px;">${entry.serial}</td>
+          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;font-weight:700;color:#002050;font-size:14.3px;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
+          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:700;font-size:13.5px;">${qty} ${esc(it.normUnit||'')}</td>
+          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-size:12.5px;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
+          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-size:12.5px;">${pct>0?pct+'%':'—'}</td>
+          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;color:#1080C0;font-size:12.5px;">${discAmt>0?Math.round(discAmt).toLocaleString('en-US'):'—'}</td>
+          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;font-size:13.5px;">${net==null?'—':Math.round(net).toLocaleString('en-US')}</td>
+        </tr>`;
+      } else {
+        const pct = getDiscount(it.main);
+        const discAmt = (eligible && lineAmt!=null && pct>0) ? lineAmt*(pct/100) : 0;
+        const net = lineAmt==null ? null : lineAmt - discAmt;
+        html += `
+        <tr style="background:${rowBg};">
+          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;color:#8A8470;font-size:12.5px;">${entry.serial}</td>
+          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;font-weight:700;color:#002050;font-size:14.3px;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
+          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:700;font-size:13.5px;">${qty} ${esc(it.normUnit||'')}</td>
+          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-size:12.5px;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
+          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;font-size:13.5px;">${lineAmt==null?'—':Math.round(lineAmt).toLocaleString('en-US')}</td>
+        </tr>`;
+      }
+    });
+    return html;
+  }
+
+  const blobs = [];
+  for(let p=0; p<pages.length; p++){
+    const isLast = p === pages.length - 1;
+    const wrap = document.createElement('div');
+    wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
+    wrap.style.width='760px';
+    wrap.style.fontFamily = "'Cairo', sans-serif";
+    wrap.style.direction='rtl';
+    wrap.style.background='#FFFFFF';
+
+    wrap.innerHTML = `
+      <div style="padding:26px 30px;background:#FFFFFF;">
+        <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #1080C0;padding-bottom:14px;margin-bottom:16px;">
+          <img src="data:image/png;base64,${LOGO_B64}" style="width:52px;height:52px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #DCE4EC;padding:4px;">
+          <div style="flex:1;">
+            <div style="font-size:18px;font-weight:800;color:#002050;">طلب ${esc(asText(order.distName))}</div>
+            <div style="font-size:12px;color:#6B7A8C;margin-top:2px;">${esc(asText(order.distRegion))}${order.warehouse?' · مخزن '+esc(asText(order.warehouse)):''}</div>
+          </div>
+          <div style="text-align:left;">
+            <div style="font-size:13px;font-weight:800;color:#1080C0;">#${esc(orderNoDisplay_(order))}</div>
+            <div style="font-size:11px;color:#6B7A8C;">${esc(dateStr)}</div>
+            ${pages.length>1 ? `<div style="font-size:11px;color:#6B7A8C;font-weight:800;">صفحة ${p+1} من ${pages.length}</div>` : ''}
+          </div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11.8px;">
+          <thead>
+            <tr style="background:#002050;color:#fff;">
+              <th style="padding:8px 5px;text-align:center;width:24px;">م</th>
+              <th style="padding:8px 5px;text-align:right;">اسم الصنف</th>
+              <th style="padding:8px 5px;text-align:center;">الكمية</th>
+              <th style="padding:8px 5px;text-align:center;">سعر الوحدة</th>
+              ${showDiscount ? `
+              <th style="padding:8px 5px;text-align:center;">نسبة الخصم</th>
+              <th style="padding:8px 5px;text-align:center;">خصم مبلغ</th>
+              <th style="padding:8px 5px;text-align:center;">الصافي</th>
+              ` : `<th style="padding:8px 5px;text-align:center;">الإجمالي</th>`}
+            </tr>
+          </thead>
+          <tbody>${rowsHTML(pages[p])}</tbody>
+        </table>
+        ${isLast ? `
+        ${rows.some(r=>itemUnavailable_(r)) ? `
+        <div style="margin-top:12px;padding:9px 12px;background:#FDECEA;border:1.5px solid #C0392B;border-radius:8px;color:#C0392B;font-weight:800;font-size:11.8px;">
+          ● الأصناف المعلّمة بالأحمر غير متاحة حاليًا في المخزن — محتاجة تأكيد قبل التحميل.
+        </div>` : ''}
+        <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+          <div style="width:250px;">
+            ${showDiscount && discountTotal>0 ? `
+            <div style="display:flex;justify-content:space-between;padding:7px 12px;font-size:13.5px;font-weight:800;color:#20242B;">
+              <span>الإجمالي قبل الخصم</span><span>${Math.round(subtotal).toLocaleString('en-US')} ج.م</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:7px 12px;font-size:13.5px;color:#1080C0;font-weight:800;">
+              <span>${customPct>0 ? 'خصم مخصص ('+customPct+'%)' : 'خصم القطاع'}</span><span>- ${Math.round(discountTotal).toLocaleString('en-US')} ج.م</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:9px 12px;background:#002050;color:#fff;border-radius:8px;font-size:14.6px;font-weight:800;margin-top:4px;">
+              <span>الإجمالي بعد الخصم</span><span>${Math.round(netTotal).toLocaleString('en-US')} ج.م</span>
+            </div>
+            ` : `
+            <div style="display:flex;justify-content:space-between;padding:9px 12px;background:#002050;color:#fff;border-radius:8px;font-size:14.6px;font-weight:800;margin-top:6px;">
+              <span>الإجمالي</span><span>${Math.round(subtotal).toLocaleString('en-US')} ج.م</span>
+            </div>
+            `}
+            ${hasMissing ? '<div style="font-size:10.7px;color:#8A5A00;margin-top:6px;text-align:left;">⚠️ فيه أصناف بدون سعر متاح مش داخلة في الإجمالي</div>' : ''}
+          </div>
+        </div>
+        ${rollSummary.length ? `
+        <div style="margin-top:12px;display:flex;justify-content:flex-end;">
+          <div style="width:250px;background:#F3F6FA;border-radius:8px;padding:9px 12px;">
+            <div style="font-size:11px;font-weight:800;color:#002050;margin-bottom:5px;">عدد اللفات حسب القطاع</div>
+            ${rollSummary.map(r=>{
+              const parts = [];
+              if(r.rolls>0) parts.push((r.rolls % 1 === 0 ? r.rolls : r.rolls.toFixed(1)) + ' لفة');
+              if(r.rods>0) parts.push((r.rods % 1 === 0 ? r.rods : r.rods.toFixed(1)) + ' عود');
+              return `<div style="display:flex;justify-content:space-between;font-size:11px;color:#20242B;padding:3px 0;"><span>${esc(r.sector)}</span><span style="font-weight:700;">${esc(parts.join(' + '))}</span></div>`;
+            }).join('')}
+          </div>
+        </div>` : ''}
+        ${order.note ? `<div style="margin-top:14px;padding-top:10px;border-top:1px dashed #DCE4EC;font-size:11.3px;color:#6B7A8C;">ملاحظات: ${esc(order.note)}</div>` : ''}
+        ` : ''}
+        <div style="margin-top:16px;text-align:center;color:#A8A498;font-size:9.2px;">${esc(PREPARED_BY_LINE)}</div>
+        ${CREDIT_LINE ? `<div style="margin-top:4px;text-align:center;color:#A8A498;font-size:9.2px;">${esc(CREDIT_LINE)}</div>` : ''}
+      </div>`;
+    document.body.appendChild(wrap);
+    try{
+      const canvas = await withTimeout(
+        html2canvas(wrap, {scale: 2, backgroundColor:'#ffffff', useCORS:true, allowTaint:true}),
+        20000, 'order-img-p' + (p+1)
+      );
+      const blob = await canvasToPngBlob_(canvas);
+      if(blob) blobs.push(blob);
+    }catch(e){ console.error('buildOrderImagePages failed (page ' + (p+1) + '):', e); }
+    try{ document.body.removeChild(wrap); }catch(e){}
+  }
+  return blobs;
 }
 
 // ===== طلبية نواقص (صور، مش PDF): زرارين — كرافت ونيو / كومبن واكسسوارات =====
@@ -5852,16 +6054,11 @@ function renderAdminView(){
 
   return `
   <main>
-    <button class="exportbtn" style="width:100%;margin-bottom:10px;padding:11px;font-size:13px;" data-act="goto-manage-inline">${ico_('manageIcon',15)} إدارة الأصناف والأسعار وطلبات الموافقة</button>
     <div class="adminbar">
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
       <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
-      <button class="exportbtn" data-act="export-excel-received">تصدير Excel (${STATUS_RECEIVED})</button>
+      <button class="exportbtn" data-act="goto-manage-inline">${ico_('manageIcon',13)} إدارة الأصناف</button>
       <button class="exportbtn" data-act="export-excel-delivered">تصدير Excel (${STATUS_DONE})</button>
-      <button class="exportbtn" data-act="show-pwreq">🔑 طلبات الباسورد${state.pwRequestsCount ? ' ('+state.pwRequestsCount+')' : ''}</button>
-      <button class="exportbtn" data-act="open-catalog-upload">${ico_('downloadIcon',13)} رفع الأصناف/الرصيد</button>
-      <button class="exportbtn" data-act="archive-done">🗄 أرشفة المنفَّذ</button>
-      <button class="exportbtn" data-act="open-archive">📦 عرض الأرشيف${state.archiveCount ? ' ('+state.archiveCount+')' : ''}</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُنفَّذ</button>
     </div>
     <div class="polldiag">
@@ -6104,32 +6301,32 @@ async function prepareOrderImage(){
   if(!o){ showToast('مفيش طلب'); return; }
   state.orderImgPreparing = true; render();
   try{
-    const res = await buildQuotePDF(o);
-    state.orderImage = (res && res.imgBlob) ? res : null;
-    if(!state.orderImage) showToast('تعذّر تجهيز الصورة، حاول تاني');
+    const blobs = await buildOrderImagePages(o);
+    state.orderImages = (blobs && blobs.length) ? blobs : null;
+    if(!state.orderImages) showToast('تعذّر تجهيز الصورة، حاول تاني');
   }catch(e){
-    state.orderImage = null;
+    state.orderImages = null;
     showToast('تعذّر تجهيز الصورة: ' + (e && e.message ? e.message : e));
   }
   state.orderImgPreparing = false;
   render();
 }
 
-// إرسال الطلب كصورة (نفس صورة عرض السعر، اللي فيها علامات "غير متاح" الحمرا).
-// بيجهّز الصورة الأول لو مش متجهّزة، وبعدين يفتح شاشة مشاركة واتساب والموزع
-// يختار المستلم. لو الجهاز مبيدعمش مشاركة الملفات، بينزّل الصورة.
+// إرسال الطلب كصور (نفس أصناف وأسعار عرض السعر، مقسّمة صفحات — كل صفحة صورة
+// لوحدها، لأن واتساب بيبعت صور منفصلة مش PDF واحد طويل). بيجهّز الصور الأول
+// لو مش متجهّزة، وبعدين يفتح شاشة مشاركة واتساب والموزع يختار المستلم.
+// لو الجهاز مبيدعمش مشاركة الملفات، بينزّل الصور واحدة واحدة.
 async function sendOrderAsImage(){
   const o = state.lastOrder;
   if(!o){ showToast('مفيش طلب'); return; }
-  // نجهّز الصورة لو لسه
-  if(!state.orderImage || !state.orderImage.imgBlob){
+  if(!state.orderImages || !state.orderImages.length){
     state.waImgPreparing = true; render();
     try{
-      const res = await buildQuotePDF(o);
-      state.orderImage = (res && res.imgBlob) ? res : null;
-    }catch(e){ state.orderImage = null; }
+      const blobs = await buildOrderImagePages(o);
+      state.orderImages = (blobs && blobs.length) ? blobs : null;
+    }catch(e){ state.orderImages = null; }
     state.waImgPreparing = false; render();
-    if(!state.orderImage){ showToast('تعذّر تجهيز الصورة، حاول تاني'); return; }
+    if(!state.orderImages){ showToast('تعذّر تجهيز الصورة، حاول تاني'); return; }
   }
   await shareOrderImage();
   // shareOrderImage بيعلّم state.orderSentToWa — بنزامنها مع waSent عشان الزرار
@@ -6137,15 +6334,15 @@ async function sendOrderAsImage(){
 }
 
 async function shareOrderImage(){
-  const q = state.orderImage;
-  if(!q || !q.imgBlob){ showToast('جهّز الصورة الأول'); return; }
+  const blobs = state.orderImages;
+  if(!blobs || !blobs.length){ showToast('جهّز الصور الأول'); return; }
   const o = state.lastOrder;
-  const name = 'طلب_' + String(o ? o.id : 'order').toUpperCase();
+  const base = 'طلب_' + String(o ? o.id : 'order').toUpperCase();
+  const files = blobs.map((b,i)=> new File([b], base + (blobs.length>1 ? '_'+(i+1) : '') + '.png', {type:'image/png'}));
   try{
-    const img = new File([q.imgBlob], name + '.png', {type:'image/png'});
-    if(navigator.canShare && navigator.canShare({files:[img]})){
+    if(navigator.canShare && navigator.canShare({files})){
       // مفيش رقم — شاشة المشاركة هتفتح وهو يختار الجروب أو الشخص
-      await navigator.share({ files:[img], title:'طلبية', text:'طلب #' + (o ? orderNoDisplay_(o) : '') });
+      await navigator.share({ files, title:'طلبية', text:'طلب #' + (o ? orderNoDisplay_(o) : '') });
       state.orderSentToWa = true;
       render();
       return;
@@ -6154,9 +6351,9 @@ async function shareOrderImage(){
     // المستخدم لغى المشاركة — مش خطأ
     if(e && e.name === 'AbortError') return;
   }
-  // احتياطي: ننزّل الصورة وهو يرفعها بإيده
-  downloadBlob(q.imgBlob, name + '.png');
-  showToast('اتحملت الصورة — افتح واتساب وابعتها من المعرض');
+  // احتياطي: ننزّل الصور واحدة واحدة وهو يرفعهم بإيده
+  blobs.forEach((b,i)=> downloadBlob(b, base + (blobs.length>1 ? '_'+(i+1) : '') + '.png'));
+  showToast(blobs.length>1 ? ('اتحملت ' + blobs.length + ' صور — افتح واتساب وابعتها من المعرض') : 'اتحملت الصورة — افتح واتساب وابعتها من المعرض');
   state.orderSentToWa = true;
   render();
 }
