@@ -98,7 +98,7 @@ body{
 header.top{
   background:linear-gradient(155deg,#FFFFFF 0%,#EEF0FA 100%);
   color:var(--ink);
-  padding:12px 14px 10px;
+  padding:9px 12px 8px;
   overflow:visible;
   position:relative;
   border-bottom:1px solid var(--line);
@@ -106,15 +106,15 @@ header.top{
 header.top .brand{
   display:flex;
   align-items:center;
-  gap:9px;
+  gap:8px;
 }
 header.top .logoimg{
-  width:34px;height:34px;border-radius:8px;
-  background:#fff;object-fit:contain;padding:3px;flex-shrink:0;
+  width:27px;height:27px;border-radius:7px;
+  background:#fff;object-fit:contain;padding:2px;flex-shrink:0;
   border:1px solid #E7DFC9;
 }
-header.top h1{font-size:15px;margin:0;font-weight:800;letter-spacing:.1px;line-height:1.25;color:var(--navy-deep);}
-header.top p.sub{margin:1px 0 0;font-size:10.5px;color:var(--muted);font-weight:600;}
+header.top h1{font-size:13px;margin:0;font-weight:800;letter-spacing:.1px;line-height:1.2;color:var(--navy-deep);}
+header.top p.sub{margin:0;font-size:9.3px;color:var(--muted);font-weight:600;}
 
 header.top.has-cart{padding-left:46px;}
 
@@ -137,8 +137,8 @@ header.top.has-cart{padding-left:46px;}
 nav.tabs{
   display:flex;
   flex-direction:column;
-  gap:7px;
-  margin-top:10px;
+  gap:6px;
+  margin-top:8px;
 }
 /* سهم الرجوع بين صفحات التطبيق — جوه الهيدر فوق التبويبات، يظهر لما فيه صفحة سابقة */
 nav.tabs .backnav{
@@ -155,12 +155,12 @@ nav.tabs .backnav{
   box-shadow:0 2px 8px rgba(108,108,224,.3);
 }
 nav.tabs .backnav:active{background:var(--navy);}
-/* التبويبات الأربعة — شبكة عمودين، كلهم نفس المقاس بالظبط */
+/* التبويبات الأربعة — صف واحد، أزرار مصغّرة كلهم نفس المقاس بالظبط */
 nav.tabs .tabgrid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:7px;
+  display:flex;
+  gap:5px;
 }
+nav.tabs .tabgrid .tabbtn{ flex:1 1 0; min-width:0; }
 /* صف الأدوات الصغيرة (بصمة / خصم / خروج) */
 nav.tabs .toolrow{
   display:flex;
@@ -212,20 +212,23 @@ nav.tabs .toolrow{
 }
 /* زرار التبويب الرئيسي — كل الأربعة نفس المقاس والشكل */
 nav.tabs .tabbtn{
-  display:flex;align-items:center;justify-content:center;gap:5px;
+  display:flex;align-items:center;justify-content:center;gap:3px;
   width:100%;
-  min-height:44px;
+  min-height:34px;
   background:#fff;
   border:1.5px solid var(--line);
   color:var(--navy-deep);
-  padding:9px 6px;
-  border-radius:11px;
+  padding:6px 3px;
+  border-radius:9px;
   font-family:'Cairo',sans-serif;
   font-weight:800;
-  font-size:12.4px;
+  font-size:9.6px;
   cursor:pointer;
   transition:.15s;
   position:relative;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 nav.tabs .tabbtn.active{
   background:var(--navy);
@@ -1518,6 +1521,7 @@ const ICONS_ = {
   bellIcon: '<path d="M6 8a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
   fileIcon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/>',
   installIcon: '<path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/>',
+  cloudRefresh: '<path d="M12 13v8l-4-4"/><path d="m12 21 4-4"/><path d="M4.393 15.269A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.436 8.284"/>',
   paletteIcon: '<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2Z"/>',
   plusCircle: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8"/><path d="M8 12h8"/>',
   xCircle: '<circle cx="12" cy="12" r="9"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
@@ -5018,10 +5022,10 @@ function renderHeader(){
       ${(state.viewHistory && state.viewHistory.length) ? `
       <button class="backnav" data-act="go-back" title="رجوع للصفحة السابقة">→ رجوع للصفحة السابقة</button>` : ''}
       <div class="tabgrid">
-        <button class="tabbtn ${state.view==='order'?'active':''}" data-act="goto" data-view="order">${ico_('newOrder')} طلب جديد</button>
-        <button class="tabbtn ${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">${ico_('track')} تابع طلبيتك</button>
-        <button class="tabbtn ${(state.view==='admin'||state.view==='manage')?'active':''}" data-act="goto" data-view="admin">${ico_('warehouse')} الإدارة${state.adminNewCount>0 ? `<span class="navbadge">${state.adminNewCount}</span>` : ''}</button>
-        <button class="tabbtn" data-act="force-update" title="تحديث إجباري">${ico_('refresh')} تحديث</button>
+        <button class="tabbtn ${state.view==='order'?'active':''}" data-act="goto" data-view="order">${ico_('newOrder',14)} طلب جديد</button>
+        <button class="tabbtn ${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">${ico_('track',14)} تابع طلبيتك</button>
+        <button class="tabbtn ${(state.view==='admin'||state.view==='manage')?'active':''}" data-act="goto" data-view="admin">${ico_('warehouse',14)} الإدارة${state.adminNewCount>0 ? `<span class="navbadge">${state.adminNewCount}</span>` : ''}</button>
+        <button class="tabbtn" data-act="force-update" title="تحديث إجباري">${ico_('cloudRefresh',14)} تحديث</button>
       </div>
       <div class="toolrow">
         ${isWebAuthnSupported() ? `
@@ -6115,7 +6119,7 @@ function renderAdminView(){
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
       <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
       <button class="exportbtn" data-act="goto-manage-inline">${ico_('manageIcon',13)} إدارة الأصناف</button>
-      <button class="exportbtn" data-act="export-excel-delivered">تصدير Excel (${STATUS_DONE})</button>
+      <button class="exportbtn" data-act="export-excel-received">تصدير Excel (${STATUS_RECEIVED})</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُنفَّذ</button>
     </div>
     <div class="polldiag">
