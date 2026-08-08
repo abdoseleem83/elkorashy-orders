@@ -2835,7 +2835,15 @@ function toggleStagedColor(key, color){
   if(!s) return;
   const i = s.selectedColors.indexOf(color);
   if(i>=0){ s.selectedColors.splice(i,1); delete s.qtys[color]; delete s.units[color]; }
-  else{ s.selectedColors.push(color); s.qtys[color] = s.qtys[color] || 1; s.units[color] = s.units[color] || s.unitOptions[0]; }
+  else{
+    s.selectedColors.push(color);
+    // ⚠️ قبل كده كنا بنحط كمية افتراضية = 1 هنا تلقائيًا أول ما اللون
+    // يتضاف، وده كان بيخلي الموزع يضيف اللون التاني للسلة بكمية 1 من غير
+    // قصد لو دوس "ضيف للسلة" على طول من غير ما يحدد كمية بنفسه. دلوقتي
+    // بنسيبها فاضية (0) لحد ما هو يكتبها بنفسه، وconfirmStaged هيرفض
+    // الإضافة لو فيه لون من غير كمية محددة.
+    s.units[color] = s.units[color] || s.unitOptions[0];
+  }
   render();
 }
 
@@ -2870,6 +2878,15 @@ function confirmStaged(key){
   const s = state.staged.find(x=>x.key===key);
   if(!s) return;
   if(s.colorRequired && s.selectedColors.length===0){ showToast('اختار لون واحد على الأقل'); return; }
+  // ⚠️ لازم كل لون متحدد يكون له كمية مكتوبة بالفعل — من غير ما نفترض 1
+  // تلقائيًا. لو فيه لون (أول أو تاني) لسه من غير كمية، بنوقف الإضافة كلها
+  // ونوريه بالظبط أي لون ناقصه الكمية، بدل ما نضيف بكمية افتراضية غلط.
+  const missingQty = s.selectedColors.filter(c => !(s.qtys[c] > 0));
+  if(missingQty.length){
+    const names = missingQty.map(c=> c || 'بدون لون').join(' و ');
+    showToast('حدد كمية ' + (missingQty.length>1 ? 'الألوان: ' : 'اللون: ') + names);
+    return;
+  }
   // ⚠️ كنا بنمسك مكان الشبكة كلها (.productgrid) قبل كده — بس دلوقتي التفاصيل
   // بتتحط جوه الشبكة نفسها (مش برّاها)، فحافة الشبكة العلوية ممكن ما تتحركش
   // خالص حتى لو المحتوى اللي إنت شايفه اتزحلق. بنمسك الصنف نفسه بدل الشبكة.
@@ -2877,7 +2894,7 @@ function confirmStaged(key){
   const doConfirm = ()=>{
   s.selectedColors.forEach(color=>{
     const unitType = s.units[color] || s.unitOptions[0];
-    const qty = s.qtys[color]||1;
+    const qty = s.qtys[color];
     const catItem = findCatalogItem(s.main, s.product, color);
     const unitPrice = calcUnitPrice(s.main, s.product, color, unitType);
     // ⚠️ بنصوّر حالة التوفر في نفس لحظة الإضافة للسلة، ونخزّنها جوه الصنف.
@@ -5062,11 +5079,13 @@ function stockShortageWarning_(main, product, color, unitType, qty){
 function render3LineQty(s, color, opts){
   opts = opts || {};
   const unitType = s.units[color] || s.unitOptions[0];
-  const qty = s.qtys[color] ?? 1;
+  const rawQty = s.qtys[color];
+  const hasQty = rawQty != null && rawQty > 0;
+  const qty = hasQty ? rawQty : 0;
   const price = calcUnitPrice(s.main, s.product, color, unitType);
-  const lineTotal = price==null ? null : price*qty;
+  const lineTotal = (price==null || !hasQty) ? null : price*qty;
   const fmt = n => n==null ? '—' : Math.round(n).toLocaleString('en-US');
-  const shortageMsg = stockShortageWarning_(s.main, s.product, color, unitType, qty);
+  const shortageMsg = hasQty ? stockShortageWarning_(s.main, s.product, color, unitType, qty) : '';
   return `
   <div class="qty3">
     <div class="qty3-line qty3-unitqty">
@@ -5076,7 +5095,7 @@ function render3LineQty(s, color, opts){
       </select>` : `<span class="cqunitfixed">${esc(s.unitOptions[0])}</span>`}
       <div class="qtystepper small">
         <button data-act="staged-qty-dec" data-key="${esc(s.key)}" data-val="${esc(color)}" type="button">−</button>
-        <input type="text" inputmode="numeric" pattern="[0-9]*" min="1" value="${qty}" data-act="staged-qty-input" data-key="${esc(s.key)}" data-val="${esc(color)}">
+        <input type="text" inputmode="numeric" pattern="[0-9]*" min="1" placeholder="حدد الكمية" value="${hasQty ? qty : ''}" data-act="staged-qty-input" data-key="${esc(s.key)}" data-val="${esc(color)}">
         <button data-act="staged-qty-inc" data-key="${esc(s.key)}" data-val="${esc(color)}" type="button">+</button>
       </div>
     </div>
@@ -5159,11 +5178,13 @@ function renderStagedBlock(s){
     <div class="colorqtytable stacked">
       ${s.selectedColors.map(c=>{
         const unitType = s.units[c] || s.unitOptions[0];
-        const qty = s.qtys[c] ?? 1;
+        const rawQty = s.qtys[c];
+        const hasQty = rawQty != null && rawQty > 0;
+        const qty = hasQty ? rawQty : 0;
         const price = calcUnitPrice(s.main, s.product, c, unitType);
-        const lineTotal = price==null ? null : price*qty;
+        const lineTotal = (price==null || !hasQty) ? null : price*qty;
         const fmt = n => n==null ? '—' : Math.round(n).toLocaleString('en-US');
-        const shortageMsg = stockShortageWarning_(s.main, s.product, c, unitType, qty);
+        const shortageMsg = hasQty ? stockShortageWarning_(s.main, s.product, c, unitType, qty) : '';
         return `
         <div class="cqrow2">
           <div class="cqrow2-color">${c?esc(c):esc(s.product)}</div>
@@ -5174,7 +5195,7 @@ function renderStagedBlock(s){
             </select>` : `<span class="cqunitfixed">${esc(s.unitOptions[0])}</span>`}
             <div class="qtystepper small">
               <button data-act="staged-qty-dec" data-key="${esc(s.key)}" data-val="${esc(c)}" type="button">−</button>
-              <input type="text" inputmode="numeric" pattern="[0-9]*" min="1" value="${qty}" data-act="staged-qty-input" data-key="${esc(s.key)}" data-val="${esc(c)}">
+              <input type="text" inputmode="numeric" pattern="[0-9]*" min="1" placeholder="حدد الكمية" value="${hasQty ? qty : ''}" data-act="staged-qty-input" data-key="${esc(s.key)}" data-val="${esc(c)}">
               <button data-act="staged-qty-inc" data-key="${esc(s.key)}" data-val="${esc(c)}" type="button">+</button>
             </div>
           </div>
@@ -6360,7 +6381,10 @@ async function sendOrderAsImage(){
     try{
       const blobs = await buildOrderImagePages(o);
       state.orderImages = (blobs && blobs.length) ? blobs : null;
-    }catch(e){ state.orderImages = null; }
+    }catch(e){
+      state.orderImages = null;
+      showToast('تعذّر تجهيز الصورة: ' + (e && e.message ? e.message : e));
+    }
     state.waImgPreparing = false; render();
     if(!state.orderImages){ showToast('تعذّر تجهيز الصورة، حاول تاني'); return; }
   }
@@ -6375,8 +6399,16 @@ async function shareOrderImage(){
   const o = state.lastOrder;
   const base = 'طلب_' + String(o ? o.id : 'order').toUpperCase();
   const files = blobs.map((b,i)=> new File([b], base + (blobs.length>1 ? '_'+(i+1) : '') + '.png', {type:'image/png'}));
+  // ⚠️ وضع تشخيص مؤقت: عشان نعرف بالظبط فين المشكلة عند الموزع (المتصفح
+  // مش بيدعم مشاركة الملفات؟ ولا الدعم موجود بس المشاركة نفسها بترفض؟)
+  // بنجمع السبب في متغيّر واحد ونوريه في التوست الأخير (مش توست منفصل،
+  // عشان التوستات بتستبدل بعض على طول ومش بتتراكم).
+  let fallbackReason = '';
+  const canShareFiles = !!(navigator.canShare && navigator.canShare({files}));
+  if(!navigator.share) fallbackReason = ' (المتصفح مبيدعمش المشاركة خالص)';
+  else if(!canShareFiles) fallbackReason = ' (المتصفح مبيدعمش مشاركة الصور)';
   try{
-    if(navigator.canShare && navigator.canShare({files})){
+    if(canShareFiles){
       // مفيش رقم — شاشة المشاركة هتفتح وهو يختار الجروب أو الشخص
       await navigator.share({ files, title:'طلبية', text:'طلب #' + (o ? orderNoDisplay_(o) : '') });
       state.orderSentToWa = true;
@@ -6386,10 +6418,11 @@ async function shareOrderImage(){
   }catch(e){
     // المستخدم لغى المشاركة — مش خطأ
     if(e && e.name === 'AbortError') return;
+    fallbackReason = ' (فشلت المشاركة: ' + (e && e.name ? e.name : 'خطأ') + ')';
   }
   // احتياطي: ننزّل الصور واحدة واحدة وهو يرفعهم بإيده
   blobs.forEach((b,i)=> downloadBlob(b, base + (blobs.length>1 ? '_'+(i+1) : '') + '.png'));
-  showToast(blobs.length>1 ? ('اتحملت ' + blobs.length + ' صور — افتح واتساب وابعتها من المعرض') : 'اتحملت الصورة — افتح واتساب وابعتها من المعرض');
+  showToast((blobs.length>1 ? ('اتحملت ' + blobs.length + ' صور') : 'اتحملت الصورة') + ' — افتح واتساب وابعتها من المعرض' + fallbackReason, 5000);
   state.orderSentToWa = true;
   render();
 }
@@ -6858,13 +6891,10 @@ function bindEvents(){
           if(!state.otherQty || state.otherQty<1){ state.otherQty=1; render(); }
         });
       }
-      if(act==='staged-qty-input'){
-        el.addEventListener('blur', ()=>{
-          const key = el.getAttribute('data-key'), color = el.getAttribute('data-val');
-          const s = state.staged.find(x=>x.key===key);
-          if(s && (!s.qtys[color] || s.qtys[color]<1)){ s.qtys[color]=1; render(); }
-        });
-      }
+      // ⚠️ خانات كمية اللون: من قبل كنا بنرجّعها 1 تلقائيًا لو فضلت فاضية
+      // بعد ما يسيب الخانة (blur) — وده كان بيتسبب في نفس مشكلة "لون
+      // اتضاف للسلة بكمية 1 من غير ما الموزع يقصد". دلوقتي بنسيبها فاضية
+      // فعلًا، وconfirmStaged هو اللي بيمنع الإضافة ويطلب منه يحدد الكمية.
     } else if(el.tagName==='SELECT'){
       el.addEventListener('change', e=>onSelectChange(act, el, e.target.value));
     } else {
@@ -7174,13 +7204,13 @@ async function onActionInner(act, el){
     case 'staged-qty-dec':{
       const s = state.staged.find(x=>x.key===el.getAttribute('data-key'));
       const c = el.getAttribute('data-val');
-      if(s) setStagedQty(s.key, c, (s.qtys[c]||1)-1);
+      if(s) setStagedQty(s.key, c, (s.qtys[c]||0)-1);
       break;
     }
     case 'staged-qty-inc':{
       const s = state.staged.find(x=>x.key===el.getAttribute('data-key'));
       const c = el.getAttribute('data-val');
-      if(s) setStagedQty(s.key, c, (s.qtys[c]||1)+1);
+      if(s) setStagedQty(s.key, c, (s.qtys[c]||0)+1);
       break;
     }
     case 'confirm-staged': confirmStaged(el.getAttribute('data-key')); break;
@@ -7188,9 +7218,33 @@ async function onActionInner(act, el){
     case 'del-cart': removeFromCart(parseInt(el.getAttribute('data-idx'))); break;
     case 'edit-cart-item':{
       const main = el.getAttribute('data-main'), product = el.getAttribute('data-product');
+      // ⚠️ بق: كان بيضيف الصنف لـ state.staged وبس، من غير ما يفتح قطاعه
+      // (state.mainGroup) ولا التصنيف الفرعي ولا خطوة "اختار اللون" الأول —
+      // دي كلها شروط لازم تتحقق عشان شبكة الأصناف (اللي فيها بلوك التعديل)
+      // تتعرض أصلاً. فلو الموزع كان واقف في قطاع/تصنيف/لون مختلف، الشبكة
+      // مكانتش بتتعرض خالص، فالشاشة كانت "واقفة مكانها" من غير ما تفتح حاجة.
+      state.mainGroup = main;
+      state.productSearch = '';
+      state.accGlobalSearch = '';
+      state.colorPickerOpenKey = null;
+      if(sectorNeedsSubFilter(main)){
+        const catEntry = CATALOG.find(d=>d.main===main && d.product===product);
+        const subs = subGroupsForMain(main);
+        state.subGroup = (catEntry && catEntry.sub) ? catEntry.sub : (subs.length===1 ? subs[0] : null);
+      } else {
+        state.subGroup = null;
+        if(colorsForMain(main).length){
+          // القطاعات دي بتحتاج خطوة "اختار اللون" قبل ما الشبكة تتعرض —
+          // بنحدد أول لون للصنف ده في السلة عشان الخطوة دي تتخطى تلقائيًا.
+          const existingColor = state.cart.find(it=>it.main===main && it.product===product);
+          state.selectedColor = existingColor ? existingColor.color : null;
+        }
+      }
       toggleStagedProduct(main, product);
-      const scrollTarget = document.querySelector('.stagedblock');
-      if(scrollTarget) scrollTarget.scrollIntoView({behavior:'smooth', block:'center'});
+      requestAnimationFrame(()=>{
+        const scrollTarget = document.querySelector('.stagedblock') || document.querySelector('.inlinestaged');
+        if(scrollTarget) scrollTarget.scrollIntoView({behavior:'smooth', block:'center'});
+      });
       break;
     }
 
