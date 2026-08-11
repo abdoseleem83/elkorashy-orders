@@ -2,16 +2,18 @@
   "name": "القرشي - طلبات الموزعين",
   "short_name": "طلبات القرشي",
   "description": "نظام طلبات الموزعين - القرشي لأبواب وشبابيك الـ UPVC",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#F3F6FA",
   "theme_color": "#002050",
   "dir": "rtl",
   "lang": "ar",
-  "orientation": "portrait",
-  "id": "/elkorashy-orders/",
-  "categories": ["business", "shopping"],
+  "id": "./",
+  "categories": [
+    "business",
+    "shopping"
+  ],
   "icons": [
     {
       "src": "icon-192.png",

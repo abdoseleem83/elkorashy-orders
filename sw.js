@@ -1,12 +1,21 @@
 // ⚠️ مهم: غيّر رقم النسخة دي في كل مرة ترفع تحديث جديد.
 // ده اللي بيخلي المتصفح يرمي الكاش القديم ويجيب الملفات الجديدة.
-const CACHE_VERSION = 'v173';
+// 🔑 الرقم ده لازم يطابق APP_BUILD في index.html و APP_VERSION في apps_script.gs.
+const CACHE_VERSION = 'v174';
 const CACHE_NAME = 'elkorashy-' + CACHE_VERSION;
 
+// الملفات اللي التطبيق مايشتغلش من غيرها — بتتخزّن وقت التثبيت.
+// ⚠️ المكتبات (vendor/) بقت هنا كمان: قبل كده كانت بتتحمّل من CDN خارجي
+// ومكانتش متخزنة خالص، يعني التطبيق كان "أوفلاين" اسميًا بس — أول ما النت
+// يقطع، الـ PDF والصور والإكسل كلهم بيقعوا.
 const PRECACHE = [
   './',
-  './index.html',
-  './manifest.json'
+  './manifest.json',
+  './logo.jpg',
+  './data/catalog-fallback.json',
+  './vendor/html2canvas.min.js',
+  './vendor/jspdf.umd.min.js',
+  './vendor/exceljs.min.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -35,11 +44,15 @@ self.addEventListener('activate', (event) => {
     // خد السيطرة على كل الصفحات المفتوحة فورًا من غير ما تستنى إعادة فتح
     await self.clients.claim();
 
-    // اقفل/حدّث كل الصفحات المفتوحة عشان تشتغل بالكود الجديد على طول.
-    // النسخ القديمة من index.html مش بتعرف تعمل reload لوحدها، فبنعملهولها احنا.
+    // ⚠️ قبل كده كنا بنعمل client.navigate() لكل تاب مفتوح هنا — يعني الصفحة
+    // بتتحدّث تحت إيد المستخدم فجأة. لو كان بيكتب طلب، الشاشة بتتقلب قدامه.
+    // دلوقتي بنبعت رسالة للصفحة بس، وهي اللي بتقرر إمتى تعمل reload (index.html
+    // فيه معالج controllerchange بيعرض رسالة الأول وبيحمي من حلقة تحديث
+    // لا نهائية). النسخ القديمة جدًا اللي مافيهاش المعالج ده هتاخد التحديث
+    // في أول فتح جديد للتطبيق — وده مقبول تمامًا مقابل إننا مانضيعش شغل حد.
     const clients = await self.clients.matchAll({ type: 'window' });
     clients.forEach(client => {
-      if ('navigate' in client) client.navigate(client.url).catch(() => {});
+      try { client.postMessage({ type: 'SW_ACTIVATED', version: CACHE_VERSION }); } catch (e) {}
     });
   })());
 });
@@ -54,14 +67,20 @@ self.addEventListener('message', (event) => {
 
 
 // ===== Push Notification Handler =====
+// ⚠️ الإشعارات دي متوقفة حاليًا من ناحية السيرفر (شوف الشرح في apps_script.gs) —
+// المعالج سايبينه شغال عشان لو ربطنا خدمة إشعارات حقيقية بعدين (FCM مثلاً)
+// يشتغل على طول من غير تعديل.
 self.addEventListener('push', (event) => {
   let data = { title: '🔔 القرشي', body: 'إشعار جديد' };
-  try{ if(event.data) data = event.data.json(); }catch(e){}
+  try { if (event.data) data = event.data.json(); } catch (e) {}
   event.waitUntil(
     self.registration.showNotification(data.title || '🔔 القرشي', {
       body: data.body || '',
-      icon: './icons/icon-192.png',
-      badge: './icons/icon-96.png',
+      // 🐞 المسارات دي كانت './icons/icon-192.png' و './icons/icon-96.png' —
+      // مفيش فولدر اسمه icons أصلاً، والأيقونات في جذر المشروع مباشرة،
+      // و icon-96 مش موجود خالص. يعني الإشعار كان يطلع من غير أي أيقونة.
+      icon: './icon-192.png',
+      badge: './icon-192.png',
       dir: 'rtl',
       lang: 'ar',
       tag: data.tag || 'elkorashy-push',
@@ -75,8 +94,8 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || './';
   event.waitUntil(
-    self.clients.matchAll({ type:'window', includeUncontrolled:true }).then(clients => {
-      for(const c of clients){ if(c.url.includes('index.html') || c.url.endsWith('/')){ c.focus(); return; } }
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+      for (const c of clients) { if (c.url.includes('index.html') || c.url.endsWith('/')) { c.focus(); return; } }
       return self.clients.openWindow(url);
     })
   );
@@ -84,7 +103,6 @@ self.addEventListener('notificationclick', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
@@ -109,8 +127,6 @@ self.addEventListener('fetch', (event) => {
         //     بره الجهاز أصلًا، وبيفضل يرجّع النسخة القديمة لحد ما مدته تخلص.
         //     الحل الوحيد المضمون: نضيف باراميتر فريد للرابط، فيبقى "رابط جديد"
         //     مالوش نسخة مخزّنة عند الـ CDN فيجيبه من السيرفر مباشرة.
-        //     (نفس الحل المجرّب في تطبيق الأبواب — كان ناقص هنا وده كان سبب
-        //     بطء وصول التحديثات.)
         const bust = url.pathname + '?_v=' + Date.now();
         let fresh;
         try {
@@ -125,21 +141,31 @@ self.addEventListener('fetch', (event) => {
       } catch (e) {
         // مفيش نت → رجّع آخر نسخة متخزنة عشان التطبيق يفضل شغال أوفلاين
         const cached = await caches.match(req);
-        return cached || caches.match('./index.html');
+        return cached || caches.match('./index.html') || caches.match('./');
       }
     })());
     return;
   }
 
-  // باقي الملفات (مكتبات، أيقونات...): stale-while-revalidate
+  // باقي الملفات (المكتبات، الأيقونات، الكتالوج الاحتياطي): cache-first.
+  // ⚠️ الملفات دي كلها مربوطة بالنسخة (الكاش بيتمسح كله مع كل نسخة جديدة)،
+  // فالقراءة من الكاش الأول آمنة وأسرع بكتير — خصوصًا للمكتبات اللي حجمها
+  // ١.٥ ميجا. التحديث بيجي مع تغيير CACHE_VERSION.
   event.respondWith((async () => {
     const cached = await caches.match(req);
-    const network = fetch(req).then(res => {
-      if (res && res.status === 200 && res.type === 'basic') {
-        caches.open(CACHE_NAME).then(c => c.put(req, res.clone())).catch(() => {});
+    if (cached) return cached;
+    try {
+      const res = await fetch(req);
+      // 🐞 الشرط القديم كان res.type === 'basic' — وده بيستبعد أي ملف من
+      // دومين تاني، يعني مكتبات الـ CDN مكانتش بتتخزّن أبدًا. بقت محلية
+      // دلوقتي، بس بنسيب الشرط واسع عشان أي ملف خارجي يتخزّن برضه.
+      if (res && (res.status === 200 || res.type === 'opaque')) {
+        const cache = await caches.open(CACHE_NAME);
+        cache.put(req, res.clone()).catch(() => {});
       }
       return res;
-    }).catch(() => null);
-    return cached || network || new Response('', { status: 504 });
+    } catch (e) {
+      return new Response('', { status: 504, statusText: 'offline' });
+    }
   })());
 });
