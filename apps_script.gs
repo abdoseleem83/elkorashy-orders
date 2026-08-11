@@ -111,51 +111,6 @@ function ensureTokenSecret_() {
 }
 
 /**
- * 🔍 شغّلها من محرر Apps Script عشان تشوف حالة الإعداد كلها في سطر واحد.
- * مابتطبعش أي سر — بتقول بس "متسجّل ولا لأ" وطول القيمة.
- */
-function checkSetup() {
-  const keys = ['ADMIN_PIN', 'MANAGE_PIN', 'CALLMEBOT_APIKEY', 'ADMIN_WHATSAPP', 'TOKEN_SECRET'];
-  let out = 'نسخة الكود في المحرر: ' + APP_VERSION + '\n';
-  out += '───────────────────────\n';
-  keys.forEach(function (k) {
-    const v = secret_(k);
-    out += k + ': ' + (v ? ('✅ متسجّل (' + v.length + ' خانة)') : '❌ فاضي') + '\n';
-  });
-  out += '───────────────────────\n';
-  out += 'مهم: الرقم ده نسخة الكود اللي في المحرر دلوقتي.\n';
-  out += 'عشان تتأكد إن المنشور نفسه اتحدّث، افتح رابط الـ/exec وحط في آخره:\n';
-  out += '   ?action=version\n';
-  out += 'لو رجّعلك رقم أقدم، يبقى النشر لسه على نسخة قديمة.';
-  Logger.log(out);
-  return out;
-}
-
-/**
- * 🔑 بيتأكد إن الرقم اللي بتكتبه هو المتسجّل فعلاً — من غير ما يطبع الرقم نفسه.
- * اكتب الرقم اللي بتجربه بين القوسين، اضغط Run، وشوف النتيجة.
- */
-function testPins() {
-  const tryAdmin  = '';   // اكتب الرقم اللي بتجربه في "متابعة المخزن"
-  const tryManage = '';   // اكتب الرقم اللي بتجربه في تبويب "الإدارة"
-
-  let out = '';
-  if (tryAdmin) {
-    out += 'ADMIN_PIN: ' + (String(tryAdmin).trim() === secret_('ADMIN_PIN')
-      ? '✅ مظبوط — الرقم ده صح' : '❌ غلط — مش ده الرقم المتسجّل') + '\n';
-  } else out += 'ADMIN_PIN: (ماكتبتش رقم تجربه)\n';
-
-  if (tryManage) {
-    out += 'MANAGE_PIN: ' + (String(tryManage).trim() === secret_('MANAGE_PIN')
-      ? '✅ مظبوط — الرقم ده صح' : '❌ غلط — مش ده الرقم المتسجّل') + '\n';
-  } else out += 'MANAGE_PIN: (ماكتبتش رقم تجربه)\n';
-
-  out += '\n⚠️ امسح الأرقام من الدالة دي بعد ما تخلص.';
-  Logger.log(out);
-  return out;
-}
-
-/**
  * 🚨 بيلغي كل التوكنات الصالحة فورًا (أدمن + إدارة + كل الموزعين).
  * شغّلها لو شكيت إن حد وصل لتوكن، أو بعد ما تغيّر أرقام الـ PIN.
  */
