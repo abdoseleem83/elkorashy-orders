@@ -1,0 +1,24 @@
+# مخلفات أنظمة التشغيل
+.DS_Store
+Thumbs.db
+
+# محررات
+.vscode/
+.idea/
+*.swp
+
+# node (بنستخدمه في الاختبارات بس)
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# ملفات مؤقتة
+*.log
+*.tmp
+.cache/
+
+# ⚠️ أي ملف أسرار — المستودع ده عام
+.env
+.env.*
+secrets.json
+.clasp.json
