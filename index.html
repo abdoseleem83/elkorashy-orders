@@ -1515,6 +1515,7 @@ const state = {
   catalogAgeMin:0,        // عمر النسخة المحفوظة بالدقايق
   managePinError:false,   // ⚠️ الحقلين دول كانوا بيتستخدموا من غير ما يتعرّفوا هنا
   managePinChecking:false,
+  serverVersionMismatch:'',   // نسخة السيرفر لو مختلفة عن نسخة التطبيق
   showInstallBanner:false,
   installGateBypassed:false,
 };
@@ -2794,9 +2795,18 @@ async function submitLogin(){
     const data = await apiPost({ action:'login', username, password });
     state.authLoading = false;
     if(!data.ok){
+      // ⚠️ مهم: نفرّق بين "الباسورد غلط" و"السيرفر مش فاهم الطلب".
+      // السيرفر بيرجّع reason معروفة في حالة الرفض الحقيقي بس. لو رجّع error
+      // خام (أو مرجّعش reason خالص)، يبقى المشكلة في السيرفر مش في الباسورد —
+      // وأشهر سبب: الكود الجديد اتلصق في محرر Apps Script بس **مااتعملهوش
+      // Deploy**، فالـ/exec لسه بيشغّل الكود القديم اللي مش عارف login كـ POST.
+      // قبل كده كنا بنقول "الباسورد غلط" في الحالتين، والمستخدم يفضل يجرب
+      // باسوردات صح ويستغرب ليه مش بيدخل.
+      const known = (data.reason === 'pending' || data.reason === 'locked' || data.reason === 'invalid');
       if(data.reason==='pending')      state.authError = 'حسابك لسه قيد المراجعة، استنى موافقة الأدمن';
       else if(data.reason==='locked')  state.authError = 'اتقفل الحساب مؤقتًا بعد محاولات كتير غلط — استنى ١٥ دقيقة وحاول تاني';
-      else                             state.authError = 'اسم المستخدم أو كلمة المرور غلط';
+      else if(known)                   state.authError = 'اسم المستخدم أو كلمة المرور غلط';
+      else                             state.authError = '⚠️ السيرفر مش رد صح — الباسورد بتاعك غالبًا سليم.\nالسبب المتوقع: نسخة السيرفر قديمة ومحتاجة Deploy جديد.';
       render();
       return;
     }
@@ -3879,6 +3889,14 @@ async function exportStockPDF(){
   try{ document.body.removeChild(wrap); }catch(e){}
   state.stockPdfBusy = false;
   render();
+}
+
+function renderVersionMismatch_(){
+  if(!state.serverVersionMismatch) return '';
+  return `<div style="position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#7A1F28;color:#fff;padding:10px 14px;font-size:13px;line-height:1.6;text-align:center;">
+    ⚠️ <b>السيرفر على نسخة ${esc(state.serverVersionMismatch)} والتطبيق على ${esc(APP_BUILD)}</b><br>
+    <span style="font-size:12px;opacity:.92;">الكود اتلصق في Apps Script بس مااتعملوش نشر. افتح: نشر ← إدارة عمليات النشر ← ✏️ ← إصدار جديد ← تعديل.</span>
+  </div>`;
 }
 
 function renderGlobalError(){
@@ -6920,7 +6938,7 @@ function render(){
     else if(state.view==='manage') view = renderManageView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
-    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderGlobalError();
+    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderGlobalError() + renderVersionMismatch_();
     bindEvents();
     applyFixedHeaderSpacing_();
     applyFixedFooterSpacing_();
@@ -6954,6 +6972,7 @@ function renderAuthView(){
   else if(state.authView==='forgot') inner = renderForgotForm();
   else inner = renderLoginForm();
   return `
+  ${renderVersionMismatch_()}
   <div class="authwrap">
     <div class="authcard" style="text-align:right;">
       <img class="authlogo" src="${logoSrc_()}" alt="القرشي">
@@ -7790,6 +7809,22 @@ if('serviceWorker' in navigator){
   });
 }
 
+// ⚠️ بيتأكد إن نسخة السيرفر تطابق نسخة التطبيق.
+// الحالة دي بتحصل كتير: الملفات بتترفع على GitHub (فالتطبيق بياخد النسخة
+// الجديدة)، بس محرر Apps Script مااتعملوش Deploy — فالسيرفر يفضل على الكود
+// القديم. النتيجة أعطال غامضة (الدخول بيفشل، الأرشيف مايشتغلش) من غير أي
+// رسالة مفهومة. دلوقتي بنكشفها ونقولها صريحة.
+async function checkServerVersion_(){
+  try{
+    const d = await apiGet('version', {}, { cache:'no-store' });
+    const sv = d && d.version ? String(d.version) : '';
+    if(sv && sv !== APP_BUILD){
+      state.serverVersionMismatch = sv;
+      render();
+    }
+  }catch(e){ /* مفيش نت — مش وقتها */ }
+}
+
 // ===== init =====
 loadUserSession();
 restoreAdminSession();
@@ -7798,6 +7833,7 @@ loadProfile();
 // اللوجو بقى ملف مستقل — بنحمّله في الخلفية ونحوّله data URI عشان يبقى جاهز
 // وقت توليد الـ PDF وصور الطلبات (html2canvas مابيستناش الصور اللي بتتحمّل).
 preloadLogo_().then(()=>{ if(LOGO_DATA_URI) render(); });
+checkServerVersion_();
 loadCatalog().then(()=>{ checkForResumableDraft(); render(); });
 render();
 if(state.adminUnlocked && getAdminToken()) startAdminPoll_();
