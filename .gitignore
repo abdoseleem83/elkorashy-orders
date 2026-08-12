@@ -22,3 +22,6 @@ package-lock.json
 .env.*
 secrets.json
 .clasp.json
+
+# ملفات مضغوطة اتبعتت للرفع اليدوي — مالهاش لازمة في المستودع
+*.zip
