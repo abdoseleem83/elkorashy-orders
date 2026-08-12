@@ -1318,7 +1318,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v175';
+const APP_BUILD = 'v176';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1524,6 +1524,33 @@ let CATALOG = [];
 let DISCOUNTS = {};
 let MAIN_GROUPS = [];
 let SECTOR_CHIPS = [];
+
+// ⚡ فهرس الكتالوج للبحث السريع (O(1) بدل المسح الخطي O(n)):
+//   - CATALOG_INDEX: مفتاح دقيق "main|product|color" → الصنف
+//   - CATALOG_BY_MAIN_PRODUCT: مفتاح "main|product" → مصفوفة الأصناف (للبحث بدون لون)
+//   - CATALOG_BY_PRODUCT: مفتاح "product" → مصفوفة الأصناف (findCatalogItemAnyMain)
+// لازم تتناداها rebuildCatalogIndex_() بعد أي تعديل على CATALOG.
+let CATALOG_INDEX = new Map();
+let CATALOG_BY_MAIN_PRODUCT = new Map();
+let CATALOG_BY_PRODUCT = new Map();
+
+function rebuildCatalogIndex_(){
+  CATALOG_INDEX = new Map();
+  CATALOG_BY_MAIN_PRODUCT = new Map();
+  CATALOG_BY_PRODUCT = new Map();
+  for(const d of CATALOG){
+    const np = normalizeProductName(d.product);
+    const nc = normalizeProductName(d.color);
+    CATALOG_INDEX.set(d.main + '|' + np + '|' + nc, d);
+    const mpKey = d.main + '|' + np;
+    let mpArr = CATALOG_BY_MAIN_PRODUCT.get(mpKey);
+    if(!mpArr){ mpArr = []; CATALOG_BY_MAIN_PRODUCT.set(mpKey, mpArr); }
+    mpArr.push(d);
+    let pArr = CATALOG_BY_PRODUCT.get(np);
+    if(!pArr){ pArr = []; CATALOG_BY_PRODUCT.set(np, pArr); }
+    pArr.push(d);
+  }
+}
 
 // ===== helpers =====
 const $ = sel => document.querySelector(sel);
@@ -1882,6 +1909,7 @@ async function loadCatalog(){
       state.catalogError = true;
     }
   }
+  rebuildCatalogIndex_();   // ⚡ لازم بعد أي تعيين لـ CATALOG
   MAIN_GROUPS = [...new Set(CATALOG.map(d=>d.main))];
   SECTOR_CHIPS = [...MAIN_GROUPS, OTHER_SECTOR];
   state.catalogLoading = false;
@@ -1908,24 +1936,24 @@ function normalizeProductName(s){
   return String(s||'').trim().replace(/\s+/g,' ');
 }
 function findCatalogItem(main, product, color){
+  // ⚡ بحث O(1) عن طريق الفهرس بدل المسح الخطي على 1000+ صنف في كل استدعاء
   const np = normalizeProductName(product), nc = normalizeProductName(color);
-  let item = CATALOG.find(d=>d.main===main && normalizeProductName(d.product)===np && normalizeProductName(d.color)===nc);
+  let item = CATALOG_INDEX.get(main + '|' + np + '|' + nc);
   if(!item && nc===''){
     // الصنف متوقع من غير لون، لكن ممكن خلية "اللون" في الشيت فيها نص غلط
     // (زي اسم مجموعة فرعية) بدل ما تكون فاضية — لو في صنف واحد بس بنفس
     // الاسم والقطاع، نرجّعه بدل ما نسيب السعر مفقود
-    const candidates = CATALOG.filter(d=>d.main===main && normalizeProductName(d.product)===np);
-    if(candidates.length===1) item = candidates[0];
+    const candidates = CATALOG_BY_MAIN_PRODUCT.get(main + '|' + np);
+    if(candidates && candidates.length===1) item = candidates[0];
   }
   return item;
 }
 function findCatalogItemAnyMain(product, color){
+  // ⚡ بحث O(1) عن طريق الفهرس
   const np = normalizeProductName(product), nc = normalizeProductName(color);
-  let item = CATALOG.find(d=>normalizeProductName(d.product)===np && normalizeProductName(d.color)===nc);
-  if(!item && nc===''){
-    const candidates = CATALOG.filter(d=>normalizeProductName(d.product)===np);
-    if(candidates.length===1) item = candidates[0];
-  }
+  const byProduct = CATALOG_BY_PRODUCT.get(np);
+  let item = byProduct && byProduct.find(d=>normalizeProductName(d.color)===nc);
+  if(!item && nc==='' && byProduct && byProduct.length===1) item = byProduct[0];
   return item;
 }
 function getDiscount(main){
