@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>فحص السيرفر — القرشي</title>
+<style>
+  :root{ --navy:#002050; --gold:#B8860B; --ok:#1B7A3D; --bad:#C0392B; --warn:#8A5A00; --muted:#6B6B6B; }
+  *{ box-sizing:border-box; }
+  body{ font-family:'Segoe UI',Tahoma,sans-serif; background:#F3F6FA; margin:0; padding:16px; color:#1a1a1a; line-height:1.7; }
+  .wrap{ max-width:720px; margin:0 auto; }
+  .card{ background:#fff; border:1px solid #DCE4EC; border-radius:14px; padding:18px; margin-bottom:14px; }
+  h1{ font-size:20px; color:var(--navy); margin:0 0 4px; }
+  .sub{ color:var(--muted); font-size:13.5px; margin-bottom:16px; }
+  label{ display:block; font-weight:700; font-size:14px; margin-bottom:6px; }
+  input{ width:100%; padding:11px 12px; border:1.5px solid #C7D2DE; border-radius:9px;
+         font-size:13px; font-family:monospace; direction:ltr; text-align:left; }
+  input:focus{ outline:none; border-color:var(--navy); }
+  button{ width:100%; margin-top:12px; padding:13px; border:0; border-radius:9px; background:var(--navy);
+          color:#fff; font-size:15.5px; font-weight:700; cursor:pointer; font-family:inherit; }
+  button:disabled{ opacity:.55; cursor:default; }
+  .res{ margin-top:16px; padding:14px; border-radius:10px; font-size:14.5px; display:none; }
+  .res.show{ display:block; }
+  .res.ok{ background:#E8F5EC; border:1.5px solid var(--ok); color:#0F5228; }
+  .res.bad{ background:#FBEAE8; border:1.5px solid var(--bad); color:#7A1F28; }
+  .res.warn{ background:#FBEBD1; border:1.5px solid var(--gold); color:var(--warn); }
+  .res b{ display:block; font-size:16px; margin-bottom:6px; }
+  .steps{ margin:10px 0 0; padding-inline-start:20px; font-size:13.6px; }
+  .steps li{ margin-bottom:5px; }
+  code{ background:#EEF2F7; padding:2px 6px; border-radius:5px; font-size:12.5px;
+        direction:ltr; display:inline-block; unicode-bidi:embed; }
+  .hint{ font-size:12.6px; color:var(--muted); margin-top:8px; }
+  .raw{ margin-top:12px; background:#F7F9FC; border:1px solid #E1E8F0; border-radius:8px;
+        padding:10px; font-family:monospace; font-size:11.5px; direction:ltr; text-align:left;
+        white-space:pre-wrap; word-break:break-all; max-height:180px; overflow:auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="card">
+    <h1>🔍 فحص سيرفر القرشي</h1>
+    <div class="sub">الأداة دي بتقولك رابط الـ Apps Script بتاعك شغّال ولا لأ، وعلى أنهي نسخة — من غير ما تخمّن.</div>
+
+    <label>رابط الـ exec بتاعك</label>
+    <input id="url" placeholder="https://script.google.com/macros/s/.../exec" spellcheck="false">
+    <div class="hint">تجيبه من: محرر Apps Script ← نشر ← إدارة عمليات النشر ← انسخ «رابط تطبيق الويب»</div>
+
+    <button id="go">افحص دلوقتي</button>
+
+    <div id="res" class="res"></div>
+    <div id="raw" class="raw" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:700;color:var(--navy);margin-bottom:8px;">إيه اللي بتفحصه الأداة؟</div>
+    <ol class="steps">
+      <li><b>الرابط موجود أصلاً؟</b> — لو ٤٠٤، يبقى النشر اتشال أو اتعمل رابط جديد.</li>
+      <li><b>النسخة كام؟</b> — لازم تطابق نسخة التطبيق، وإلا هتحصل أعطال غامضة.</li>
+      <li><b>الأسرار متظبطة؟</b> — بتقولك متسجّلة ولا لأ (من غير ما تطبع أي قيمة).</li>
+    </ol>
+  </div>
+
+</div>
+
+<script>
+// نسخة التطبيق المتوقعة — لازم تتغير مع كل إصدار جديد (زي APP_BUILD في index.html)
+const EXPECTED = 'v174';
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function show(cls, html, raw){
+  const r = $('#res');
+  r.className = 'res show ' + cls;
+  r.innerHTML = html;
+  const rawBox = $('#raw');
+  if(raw){ rawBox.style.display='block'; rawBox.textContent = raw; }
+  else { rawBox.style.display='none'; }
+}
+
+$('#go').addEventListener('click', async ()=>{
+  let url = $('#url').value.trim();
+  if(!url){ show('warn', '<b>اكتب الرابط الأول</b>'); return; }
+
+  // أخطاء شائعة في اللصق
+  if(url.endsWith('/dev')){
+    show('warn', '<b>⚠️ ده رابط التطوير مش النشر</b>الرابط لازم ينتهي بـ <code>/exec</code> مش <code>/dev</code>.<br>رابط الـ dev بيشتغل ليك إنت بس، مش للموزعين.');
+    return;
+  }
+  if(!/\/exec\b/.test(url)){
+    if(/script\.google\.com\/macros\/s\//.test(url)) url = url.replace(/\/+$/,'') + '/exec';
+    else { show('warn', '<b>الرابط ده مش شكله رابط Apps Script</b>المفروض يبدأ بـ <code>https://script.google.com/macros/s/</code> وينتهي بـ <code>/exec</code>'); return; }
+  }
+
+  $('#go').disabled = true;
+  $('#go').textContent = 'بيفحص...';
+  show('warn', '<b>جارٍ الفحص…</b>');
+
+  try{
+    const res = await fetch(url + '?action=version&_=' + Date.now(), { cache:'no-store' });
+    const text = await res.text();
+
+    if(res.status === 404){
+      show('bad',
+        '<b>❌ الرابط ده مالوش نشر شغّال (404)</b>' +
+        'ده بالظبط سبب رسالة «server responded with status 404» في التطبيق.' +
+        '<ol class="steps">' +
+        '<li>افتح محرر Apps Script ← <b>نشر</b> ← <b>إدارة عمليات النشر</b></li>' +
+        '<li>لو لقيت النشر القديم مؤرشف/متشال — رجّعه وحدّثه لإصدار جديد (وكده الرابط القديم يشتغل تاني ومتغيّرش حاجة في التطبيق)</li>' +
+        '<li>أو انسخ رابط النشر <b>الشغّال دلوقتي</b> وحطه في <code>index.html</code> سطر <b>1324</b> مكان <code>APPS_SCRIPT_URL</code>، وارفع الملف</li>' +
+        '</ol>', text.slice(0,600));
+      return;
+    }
+
+    if(!res.ok){
+      show('bad', '<b>❌ السيرفر رد بخطأ ' + res.status + '</b>جرّب تفتح الرابط في تاب جديد وشوف بيقول إيه.', text.slice(0,600));
+      return;
+    }
+
+    let d = null;
+    try{ d = JSON.parse(text); }catch(e){}
+
+    if(!d || !d.version){
+      // رد HTML غالبًا = صفحة تسجيل دخول جوجل (صلاحيات النشر غلط)
+      const looksHtml = /<html|<!DOCTYPE/i.test(text);
+      show('bad',
+        '<b>❌ السيرفر مردّش بالشكل المتوقع</b>' +
+        (looksHtml
+          ? 'الرد صفحة HTML مش بيانات — معناها غالبًا إن صلاحيات النشر غلط.<ol class="steps"><li>نشر ← إدارة عمليات النشر ← ✏️</li><li><b>مين له حق الوصول</b> لازم تكون <b>أي شخص (Anyone)</b></li><li>و<b>التنفيذ باسم</b> = <b>أنا</b></li></ol>'
+          : 'الرد مش JSON صالح.'), text.slice(0,600));
+      return;
+    }
+
+    const secrets = [];
+    if(d.configured === false) secrets.push('⚠️ الأرقام السرية (ADMIN_PIN / MANAGE_PIN) مش متسجّلة');
+    else if(d.configured === true) secrets.push('✅ الأرقام السرية متسجّلة');
+
+    if(d.version === EXPECTED){
+      show('ok',
+        '<b>✅ كل حاجة تمام</b>' +
+        'نسخة السيرفر: <code>' + esc(d.version) + '</code> — مطابقة لنسخة التطبيق.<br>' +
+        secrets.join('<br>') +
+        (d.hasQueue ? '<br>✅ شيت طابور الواتساب موجود' : '<br>⚠️ شيت طابور الواتساب مش موجود — شغّل <code>setup()</code>'),
+        text.slice(0,600));
+    } else {
+      show('warn',
+        '<b>⚠️ نسخة السيرفر مختلفة</b>' +
+        'السيرفر على <code>' + esc(d.version) + '</code> والتطبيق على <code>' + EXPECTED + '</code>.' +
+        '<ol class="steps">' +
+        '<li>الصق آخر نسخة من <code>apps_script.gs</code> في المحرر واحفظ</li>' +
+        '<li><b>نشر ← إدارة عمليات النشر ← ✏️ (قلم) ← الإصدار: إصدار جديد ← تعديل</b></li>' +
+        '<li>🚨 ماتضغطش «عملية نشر جديدة» — دي بتعمل رابط تاني وتسيب القديم بالكود القديم</li>' +
+        '<li>ارجع افحص هنا تاني</li>' +
+        '</ol>', text.slice(0,600));
+    }
+
+  }catch(e){
+    show('bad',
+      '<b>❌ متعذّر الوصول للسيرفر</b>' +
+      'يا إما مفيش نت، يا إما الرابط غلط تمامًا.<br>' +
+      'جرّب تفتح الرابط ده في تاب جديد وشوف بيحصل إيه:<br>' +
+      '<code>' + esc(url) + '?action=version</code>',
+      String(e && e.message ? e.message : e));
+  } finally {
+    $('#go').disabled = false;
+    $('#go').textContent = 'افحص دلوقتي';
+  }
+});
+
+// Enter = فحص
+$('#url').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#go').click(); });
+</script>
+</body>
+</html>
