@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v174';
+const APP_VERSION = 'v175';
 
 const SHEET_NAME = 'Orders';
 const ARCHIVE_SHEET_NAME = 'الأرشيف';
@@ -508,7 +508,7 @@ function saveOrder_(data) {
   ]);
 
   notifyWhatsApp(data, itemsSummary, isUpdate, orderNo);
-  syncReservedColumns_();
+  markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
   return json_({ ok: true, orderNo: orderNo });
 }
 
@@ -575,7 +575,7 @@ function updateOrderStatus_(id, status) {
     }
     break;
   }
-  syncReservedColumns_();   // الحالة اتغيّرت — الحجز لازم يتحدّث
+  markReservedDirty_();   // الحالة اتغيّرت — الحجز لازم يتحدّث
   return { ok: true, notified: notified };
 }
 
@@ -587,7 +587,7 @@ function deleteOrderById_(id) {
   for (let i = 0; i < ids.length; i++) {
     if (String(ids[i][0]) === String(id)) {
       sheet.deleteRow(i + 2);
-      syncReservedColumns_();
+      markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
       return { ok: true, deleted: 1 };
     }
   }
@@ -622,7 +622,7 @@ function deleteDeliveredOrders_() {
     if (String(statuses[i][0]).trim() === STATUS_DONE) rows.push(i + 2);
   }
   if (rows.length) deleteRowsBatch_(sheet, rows);
-  syncReservedColumns_();
+  markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
   return { ok: true, deleted: rows.length };
 }
 
@@ -657,7 +657,7 @@ function archiveDoneOrders_() {
 
   asheet.getRange(asheet.getLastRow() + 1, 1, toMove.length, width + 1).setValues(toMove);
   deleteRowsBatch_(sheet, rowNums);
-  syncReservedColumns_();
+  markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
   return { ok: true, archived: toMove.length };
 }
 
@@ -685,7 +685,7 @@ function restoreArchivedOrder_(id) {
     if (String(data[i][COL_ID - 1]) === String(id)) {
       sheet.getRange(sheet.getLastRow() + 1, 1, 1, width).setValues([data[i]]);
       asheet.deleteRow(i + 2);
-      syncReservedColumns_();
+      markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
       return { ok: true };
     }
   }
@@ -943,6 +943,8 @@ function getDistributorWaKey_(phone) {
 
 // بيشتغل تلقائيًا كل دقيقة: بياخد الرسايل المستنية ويبعتها.
 function processWhatsAppQueue() {
+  // بنركب المزامنة المؤجّلة على نفس الـ trigger بدل ما نعمل تاني — أرخص وأبسط
+  syncReservedIfDirty_();
   if (!secret_('CALLMEBOT_APIKEY')) return;
   const sheet = getWhatsAppQueueSheet_();
   const rows = sheet.getDataRange().getValues();
@@ -1094,10 +1096,12 @@ function buildReservedMap_(csheet) {
  * لو العمودين مش موجودين بالاسم بالظبط، بيتخطى من غير أي خطأ.
  */
 function syncReservedColumns_() {
-  const lock = LockService.getScriptLock();
-  // لو فيه مزامنة شغالة دلوقتي، مانستناش طويل — الـ trigger كل ١٠ دقايق
-  // (reconcileReserved) هو شبكة الأمان اللي بتضمن إن الأرقام تتظبط برضه.
-  if (!lock.tryLock(15000)) return;
+  // ⚠️ getDocumentLock مش getScriptLock: العدّاد (getNextOrderNumber_) بياخد
+  // الـ script lock، ولو استخدمنا نفس النوع هنا كان الاتنين بيزاحموا بعض
+  // ويأخّروا الطلب. ودلوقتي مابنستناش خالص (tryLock(0)) — لو مشغول نسيبها
+  // للمرة الجاية، والـ trigger كل ١٠ دقايق بيضمن إنها تحصل.
+  const lock = LockService.getDocumentLock();
+  if (!lock.tryLock(0)) { markReservedDirty_(); return; }
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const csheet = ss.getSheetByName(CATALOG_SHEET_NAME);
@@ -1139,7 +1143,38 @@ function syncReservedColumns_() {
   }
 }
 
-/** شبكة أمان: بتشتغل من trigger كل ١٠ دقايق لو مزامنة فاتت بسبب الـ lock. */
+// ═══════════════════════════════════════════════════════════════════
+//  ⚡ ليه المزامنة مابقتش جوه مسار الحفظ؟
+// ═══════════════════════════════════════════════════════════════════
+//
+// syncReservedColumns_ بتقرا شيت الأصناف كله + شيت الطلبات كله وبتكتب عمودين.
+// ده ٨-١٠ نداءات لـ Sheets API، وكل نداء بياخد جزء من الثانية — يعني ثواني
+// مضافة على **كل** طلب بيتبعت، والموزّع قاعد مستني الشاشة.
+//
+// وأسوأ: getNextOrderNumber_ بتاخد الـ script lock، والمزامنة بتاخد نفس النوع،
+// والـ trigger الدوري كمان. فلو اتصادفوا، الطلب بيستنى الـ lock لحد ٢٥ ثانية.
+//
+// الحل: الحفظ بيعلّم "فيه تغيير" وبيرجّع فورًا، والمزامنة بتحصل في الخلفية
+// خلال دقيقة (مع trigger الواتساب اللي شغّال كل دقيقة أصلاً). الرصيد المعروض
+// بيتأخر دقيقة على الأكتر — وده مقبول تمامًا في الشغل، مقابل إن إرسال الطلب
+// بقى فوري.
+
+const RESERVED_DIRTY_KEY = 'RESERVED_DIRTY';
+
+function markReservedDirty_() {
+  try { props_().setProperty(RESERVED_DIRTY_KEY, '1'); } catch (e) {}
+}
+
+/** بتتنادى من trigger الدقيقة — بتزامن بس لو فيه تغيير فعلاً. */
+function syncReservedIfDirty_() {
+  try {
+    if (props_().getProperty(RESERVED_DIRTY_KEY) !== '1') return;
+    props_().deleteProperty(RESERVED_DIRTY_KEY);
+    markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
+  } catch (e) { logError_('syncReservedIfDirty_', e, ''); }
+}
+
+/** شبكة أمان: كل ١٠ دقايق بتعيد الحساب كامل، حتى لو العلامة ضاعت. */
 function reconcileReserved() { syncReservedColumns_(); }
 
 /** 🔧 شغّلها يدويًا أي وقت لو عايز تحسب المحجوز من الأول فورًا. */
@@ -1169,7 +1204,7 @@ function updateCatalogItem_(data) {
     if (data.price !== undefined) sheet.getRange(r, 7).setValue(data.price === '' ? '' : Number(data.price));
     if (data.stock !== undefined) sheet.getRange(r, 8).setValue(data.stock === '' ? '' : Number(data.stock));
     if (data.available !== undefined) sheet.getRange(r, 9).setValue(data.available ? '' : 'لا');
-    syncReservedColumns_();
+    markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
     return true;
   }
   return false;
@@ -1252,7 +1287,7 @@ function bulkUpdateCatalog_(rows, mode) {
 
   if (updated && data.length) sheet.getRange(2, 1, data.length, width).setValues(data);
   if (toAppend.length) sheet.getRange(sheet.getLastRow() + 1, 1, toAppend.length, width).setValues(toAppend);
-  syncReservedColumns_();
+  markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
   return { updated: updated, added: added, notFound: notFound };
 }
 
@@ -1290,7 +1325,12 @@ function buildCatalogPayload_() {
       const headers = csheet.getRange(1, 1, 1, lastCol).getValues()[0];
       const remainColIdx = findHeaderCol_(headers, 'رصيد متبقي');
       const rows = csheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
-      const reserved = buildReservedMap_(csheet);
+      // ⚡ المحجوز بيتحسب **عند الحاجة بس**. في الحالة الطبيعية عمود "رصيد
+      // متبقي" مليان بأرقام جاهزة، فمش محتاجين نقرا شيت الطلبات كله أصلاً.
+      // قبل كده كان بيتحسب دايمًا — يعني كل مرة أي موزّع بيفتح التطبيق، السيرفر
+      // بيقرا كل الطلبات على الفاضي. ده كان أبطأ حاجة في فتح التطبيق.
+      let _reservedCache = null;
+      const reserved_ = () => (_reservedCache || (_reservedCache = buildReservedMap_(csheet)));
 
       items = rows.filter(function (r) { return r[0]; }).map(function (r) {
         const adminAvailable = !(r[8] && String(r[8]).trim() === 'لا');
@@ -1303,11 +1343,11 @@ function buildCatalogPayload_() {
           if (remainText !== '') {
             stockQty = Math.max(0, Number(remainText) || 0);
           } else {
-            const held = reserved[String(r[0]).trim()] || 0;
+            const held = reserved_()[String(r[0]).trim()] || 0;
             stockQty = (rawStock === null) ? null : Math.max(0, rawStock - held);
           }
         } else {
-          const held = reserved[String(r[0]).trim()] || 0;
+          const held = reserved_()[String(r[0]).trim()] || 0;
           stockQty = (rawStock === null) ? null : Math.max(0, rawStock - held);
         }
 
