@@ -1318,7 +1318,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v175';
+const APP_BUILD = 'v176';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1491,6 +1491,7 @@ const state = {
   editingOrderId:null,
 
   myOrders:[],
+  myOrdersNeedsLogin:false,   // التوكن ناقص/منتهي — "طلباتي" بس محتاجة دخول
   myOrdersLoading:false,
   myOrdersSearched:false,
   myOrdersPhone:'',
@@ -2385,13 +2386,15 @@ async function loadOrders(){
 
 async function loadMyOrdersByIds(ids){
   if(!ids.length) return [];
+  if(!getUserToken()){ markOrdersNeedLogin_(); return []; }
   const data = await apiGet('lookup', { ids: ids.join(','), token: getUserToken() });
-  if(isUnauthorized_(data)){ forceRelogin_(); return []; }
+  if(isUnauthorized_(data)){ markOrdersNeedLogin_(); return []; }
   return Array.isArray(data) ? data : [];
 }
 async function loadMyOrdersByPhone(phone){
+  if(!getUserToken()){ markOrdersNeedLogin_(); return []; }
   const data = await apiGet('lookup', { phone: phone, token: getUserToken() });
-  if(isUnauthorized_(data)){ forceRelogin_(); return []; }
+  if(isUnauthorized_(data)){ markOrdersNeedLogin_(); return []; }
   return Array.isArray(data) ? data : [];
 }
 
@@ -2564,11 +2567,29 @@ function setUserToken(t){
 function isUnauthorized_(d){
   return !!(d && d.ok === false && d.error === 'unauthorized');
 }
-function forceRelogin_(msg){
+// 🐞 إصلاح: الدالة دي كانت بتمسح الجلسة كلها وترمي المستخدم بره التطبيق أول
+// ما نداء "طلباتي" يرجع unauthorized. والنتيجة إن اللي بيفتح بالبصمة (وخزنته
+// اتعملت قبل ما نضيف التوكن) كان بيتطرد فجأة وهو بيتصفّح، ويفقد السلة
+// والمسودة، والرسالة تقوله "انتهت مدة التسجيل" وهو مش عامل حاجة.
+//
+// الصح: غياب التوكن بيمنع **"طلباتي" بس** — إرسال الطلبات شغّال عادي من غيره
+// (السيرفر بياخد اسم المستخدم من البيانات لو مفيش توكن). فبنعلّم إن الشاشة دي
+// محتاجة دخول، ونسيب المستخدم مكانه بكل شغله.
+function markOrdersNeedLogin_(){
+  state.myOrdersNeedsLogin = true;
+  state.myOrders = [];
+  state.myOrdersLoading = false;
+}
+
+// دخول جديد من غير ما نضيّع السلة ولا المسودة — بنشيل الجلسة بس
+function goToLogin_(){
   setUserToken('');
   state.currentUser = null;
+  state.myOrdersNeedsLogin = false;
+  state.authView = 'login';
+  state.authError = '';
+  state.showBiometricGate = false;
   try{ sessionStorage.removeItem(LS_USER_KEY); }catch(e){}
-  showToast(msg || 'انتهت جلستك — سجّل دخول تاني');
   render();
 }
 
@@ -2772,6 +2793,9 @@ async function unlockWithBiometric(){
       // التوكن متخزّن جوه الخزنة مع باقي بيانات الحساب — لازم يرجع للجلسة
       // كمان، وإلا "طلباتي" هترجع فاضية (السيرفر بقى بيطلب توكن).
       setUserToken(u.token || '');
+      // خزنة اتعملت قبل نسخة التوكنات → مفيش توكن جواها. بنسيبه يدخل ويشتغل
+      // عادي (الطلبات بتتبعت من غير توكن)، بس "طلباتي" هتطلب دخول بكلمة المرور.
+      state.myOrdersNeedsLogin = !u.token;
       try{ sessionStorage.setItem(LS_USER_KEY, JSON.stringify(u)); }catch(e){}
       state.showBiometricGate = false;
       checkForResumableDraft(); // 🛒 لو في مسودة محفوظة، نعرض إشعار بعد فتح البصمة
@@ -2811,6 +2835,7 @@ async function submitLogin(){
       return;
     }
     setUserToken(data.token || '');
+    state.myOrdersNeedsLogin = false;
     state.currentUser = { username: data.username || username, distName: data.distName||'', distRegion: data.distRegion||'', distPhone: data.distPhone||'', distType: data.distType||'موزع', token: data.token||'' };
     try{ sessionStorage.setItem(LS_USER_KEY, JSON.stringify(state.currentUser)); }catch(e){}
     // ⚠️ إصلاح جذري لمشكلة "اسم الموزّع غلط في الطلبات": لو الموزّع كتب اسم
@@ -3386,11 +3411,24 @@ function warehouseUnitDisplay(it){
   return { qty: it.qty, unitLabel: it.unitType || '' };
 }
 
-function normalizeItemToSmallUnit(it){
+// forceSmallUnit=true → الاكسسوارات كمان بتتحوّل للقطعة حتى لو الموزع اختار
+// كرتونة. بيتستخدم في تصدير الإكسل بس: المخزن بيسحب بالقطعة، فالكرتونة في
+// الشيت كانت بتخليه يحسب بإيده في كل مرة.
+// ⚠️ الباقي (عرض السعر، صور النواقص) بيفضل بوحدة الموزع زي ما هو — لأن الموزع
+// طلب "٣ كراتين" ولازم يشوفها كده في عرض السعر بتاعه.
+function normalizeItemToSmallUnit(it, forceSmallUnit){
   if(it.main===OTHER_SECTOR) return { qty: it.qty, unitLabel: it.unitType||'' };
   if(it.main==='ابواب WPC') return { qty: it.qty, unitLabel:'قطعة' };
-  // الاكسسوارات: نحافظ على وحدة الموزع (كرتونة أو قطعة) بدون تحويل
-  if(it.main && it.main.includes('اكسسوارات')) return { qty: it.qty, unitLabel: it.unitType||'قطعة' };
+  if(it.main && it.main.includes('اكسسوارات')){
+    if(!forceSmallUnit) return { qty: it.qty, unitLabel: it.unitType||'قطعة' };
+    // الكرتونة × محتواها (عمود D في شيت الأصناف) = عدد القطع
+    const accCat = findCatalogItem(it.main, it.product, it.color);
+    const accContent = Number(accCat && accCat.unit) || 1;
+    return {
+      qty: (it.unitType === 'كرتونة' ? it.qty * accContent : it.qty),
+      unitLabel: 'قطعة'
+    };
+  }
   const bigUnits = ['لفة','كرتونة'];
   const catItem = findCatalogItem(it.main, it.product, it.color);
   const content = catItem ? (catItem.unit || 1) : 1;
@@ -5205,7 +5243,8 @@ async function exportExcel(statusFilter){
       grandTotal += it.lineTotal||0;
       serial++;
       // بنصدّر بالوحدة الصغيرة (عود / قطعة) مش باللفة — زي عرض السعر بالظبط
-      const norm = normalizeItemToSmallUnit(it);
+      // true = حوّل الاكسسوارات للقطعة كمان — المخزن بيسحب بالقطعة
+      const norm = normalizeItemToSmallUnit(it, true);
       // ⚠️ سعر الوحدة المعروض لازم يطابق الإجمالي: نستخرجه من (الإجمالي ÷ الكمية)
       // عشان الكرتونة/اللفة تظهر بسعرها الكامل مش بسعر القطعة (نفس بق عرض السعر).
       const unitPriceDisp = (it.lineTotal!=null && norm.qty) ? (it.lineTotal / norm.qty) : rawPriceForItem(it);
@@ -5987,7 +6026,17 @@ function renderMyOrdersView(){
   const saved = getSavedOrderRefs();
   let content = '';
 
-  if(state.myOrdersLoading){
+  if(state.myOrdersNeedsLogin){
+    content = `<div class="card" style="text-align:center;padding:22px 16px;">
+      <div style="font-size:34px;margin-bottom:8px;">🔐</div>
+      <div style="font-weight:800;color:var(--navy);font-size:16px;margin-bottom:6px;">محتاج تسجّل دخول عشان تشوف طلباتك</div>
+      <div style="font-size:13.4px;color:var(--muted);line-height:1.75;margin-bottom:14px;">
+        دي خطوة أمان: عشان محدش غيرك يشوف طلباتك، الشاشة دي محتاجة تسجيل دخول بكلمة المرور.<br>
+        <b>سلتك ومسودتك محفوظين</b> — مش هتضيع حاجة.
+      </div>
+      <button class="chip" data-act="goto-relogin" style="padding:10px 22px;font-size:14.5px;">سجّل دخول</button>
+    </div>`;
+  } else if(state.myOrdersLoading){
     content = `<div class="loading">جارٍ التحميل...</div>`;
   } else if(state.myOrders.length===0 && state.myOrdersSearched){
     content = `<div class="emptystate"><div class="ic">📭</div><div>مفيش طلبات ظاهرة — جرب تدوّر برقم الهاتف</div></div>`;
@@ -7330,6 +7379,7 @@ window.addEventListener('unhandledrejection', e=>{
 async function onActionInner(act, el){
   switch(act){
     case 'goto-login': state.authView='login'; state.authError=''; render(); break;
+    case 'goto-relogin': goToLogin_(); break;
     case 'goto-register': state.authView='register'; state.authError=''; render(); break;
     case 'goto-forgot': state.authView='forgot'; state.authError=''; state.forgotSent=false; render(); break;
     case 'login-submit': await submitLogin(); break;

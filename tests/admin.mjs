@@ -67,13 +67,23 @@ await page.unroute('**/script.google.com/**');
 await page.route('**/script.google.com/**', async route => {
   await route.fulfill({ status:200, contentType:'application/json', body: JSON.stringify({ ok:false, error:'unauthorized' }) });
 });
-const relogin = await page.evaluate(async ()=>{ await loadMyOrdersByIds(['a1']); return !state.currentUser; });
-console.log('٥) التوكن المنتهي بيرجّع لشاشة الدخول:', relogin?'✅':'❌');
+// ⚠️ السلوك اتغيّر عن قصد في v176: التوكن المنتهي **مابيطردش** المستخدم من
+// التطبيق (ده كان بيضيّع سلته ومسودته وهو بيتصفّح). بدل كده "طلباتي" بس هي
+// اللي بتطلب دخول، والباقي شغّال عادي.
+const sess = await page.evaluate(async ()=>{
+  localStorage.setItem('qurashi_my_orders', JSON.stringify([{id:'a1',distName:'x'}]));
+  state.cart = [{main:'م',product:'p',color:'',qty:1,unitType:'قطعة',name:'n'}];
+  await loadMyOrdersByIds(['a1']);
+  return { stillIn: !!state.currentUser, needsLogin: !!state.myOrdersNeedsLogin, cart: state.cart.length };
+});
+console.log('٥) التوكن المنتهي مابيطردش المستخدم:', sess.stillIn ? '✅' : '❌');
+console.log('٦) "طلباتي" بس بتطلب دخول:', sess.needsLogin ? '✅' : '❌');
+console.log('٧) السلة مابتضيعش:', sess.cart===1 ? '✅' : '❌');
 
 console.log('\nنداءات السيرفر:');
 calls.forEach(c=>console.log('   ', c.m.padEnd(5), c.action.padEnd(18), c.token?('token='+c.token):''));
 const mutationsViaGet = calls.filter(c=>c.m==='GET' && ['archiveDone','restoreArchived','delete','deleteDelivered','updateStatus','login'].includes(c.action));
-console.log('\n٦) مفيش عمليات تعديل بـ GET:', mutationsViaGet.length===0 ? '✅' : ('❌ '+JSON.stringify(mutationsViaGet)));
+console.log('\n٨) مفيش عمليات تعديل بـ GET:', mutationsViaGet.length===0 ? '✅' : ('❌ '+JSON.stringify(mutationsViaGet)));
 console.log('\n' + (errors.length ? '❌ أخطاء:\n'+errors.join('\n') : '✅ مفيش أخطاء'));
 await browser.close();
 process.exit(errors.length?1:0);
