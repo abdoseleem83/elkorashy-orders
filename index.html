@@ -1320,7 +1320,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v178';
+const APP_BUILD = 'v179';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1495,6 +1495,7 @@ const state = {
   myOrders:[],
   myOrdersLoading:false,
   myOrdersSearched:false,
+  myOrdersAuthMissing:false,
   myOrdersPhone:'',
 
   adminUnlocked:false,
@@ -2416,16 +2417,28 @@ async function loadOrders(){
 async function loadMyOrdersByIds(ids){
   if(!ids.length) return [];
   const data = await apiGet('lookup', { ids: ids.join(','), token: getUserToken() });
-  if(isUnauthorized_(data)){ forceRelogin_(); return []; }
+  // 🛡️ التوكن مش صالح: مانطلّعش المستخدم بالقوة (ده كان بيحصل بمجرد الدخول
+  // على "تابع طلبيتك"). نرفع علامة عشان الشاشة تعرض زرار "سجّل دخول تاني".
+  if(isUnauthorized_(data)){ state.myOrdersAuthMissing = true; return []; }
   return Array.isArray(data) ? data : [];
 }
 async function loadMyOrdersByPhone(phone){
   const data = await apiGet('lookup', { phone: phone, token: getUserToken() });
-  if(isUnauthorized_(data)){ forceRelogin_(); return []; }
+  if(isUnauthorized_(data)){ state.myOrdersAuthMissing = true; return []; }
   return Array.isArray(data) ? data : [];
 }
 
 async function refreshMyOrders(){
+  // 🛡️ من غير توكن جلسة، نداء lookup هيرجع unauthorized ويطلّع المستخدم بالغلط.
+  // بدل كده نعرض رسالة هادية ونسيبه في مكانه — الجلسة ماتتمسحش.
+  if(!getUserToken()){
+    state.myOrders = [];
+    state.myOrdersSearched = true;
+    state.myOrdersAuthMissing = true;
+    render();
+    return;
+  }
+  state.myOrdersAuthMissing = false;
   state.myOrdersLoading = true; render();
   try{
     const saved = getSavedOrderRefs();
@@ -2766,7 +2779,10 @@ async function enableBiometricLogin(){
       }
     });
     localStorage.setItem(LS_BIOMETRIC_CREDID_KEY, b64FromBuf_(cred.rawId));
-    localStorage.setItem(LS_BIOMETRIC_VAULT_KEY, JSON.stringify(state.currentUser));
+    // 🔑 نضمن إن أحدث توكن جلسة متخزّن جوه الخزنة — من غيره الدخول بالبصمة
+    // بيرجّع توكن فاضي و"تابع طلبيتك" بتفشل بـ unauthorized.
+    const vaultUser = Object.assign({}, state.currentUser, { token: state.currentUser.token || getUserToken() });
+    localStorage.setItem(LS_BIOMETRIC_VAULT_KEY, JSON.stringify(vaultUser));
     showToast('اتفعّل الدخول بالبصمة على الجهاز ده ✅');
   }catch(e){
     showToast('اتلغى تفعيل البصمة');
@@ -6029,6 +6045,9 @@ function renderMyOrdersView(){
 
   if(state.myOrdersLoading){
     content = `<div class="loading">جارٍ التحميل...</div>`;
+  } else if(state.myOrdersAuthMissing){
+    content = `<div class="emptystate"><div class="ic">🔑</div><div>انتهت جلستك — سجّل دخول تاني عشان تشوف طلباتك</div>
+      <button class="exportbtn" style="margin-top:12px;" data-act="goto-login">تسجيل الدخول</button></div>`;
   } else if(state.myOrders.length===0 && state.myOrdersSearched){
     content = `<div class="emptystate"><div class="ic">📭</div><div>مفيش طلبات ظاهرة — جرب تدوّر برقم الهاتف</div></div>`;
   } else {
@@ -7440,6 +7459,17 @@ async function onActionInner(act, el){
     case 'reg-type-dist': state.regDistType='موزع'; render(); break;
     case 'reg-type-client': state.regDistType='عميل'; render(); break;
     case 'forgot-submit': await submitForgot(); break;
+    case 'goto-login':
+      // تجديد الجلسة من شاشة "تابع طلبيتك" — بنمسح التوكن المنتهي بس، من غير
+      // ما نلمس أي بيانات تانية، ونوري فورم الدخول عشان يجدّد التوكن.
+      setUserToken('');
+      state.currentUser = null;
+      try{ sessionStorage.removeItem(LS_USER_KEY); }catch(e){}
+      state.authView='login';
+      state.showBiometricGate = isBiometricEnabledForThisDevice();
+      state.myOrdersAuthMissing = false;
+      render();
+      break;
     case 'logout':
       state.currentUser = null;
       setAdminToken('');
