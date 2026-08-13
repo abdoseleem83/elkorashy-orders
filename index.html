@@ -1320,7 +1320,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v177';
+const APP_BUILD = 'v178';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -5235,7 +5235,17 @@ async function exportExcel(statusFilter){
       grandTotal += it.lineTotal||0;
       serial++;
       // بنصدّر بالوحدة الصغيرة (عود / قطعة) مش باللفة — زي عرض السعر بالظبط
-      const norm = normalizeItemToSmallUnit(it);
+      let norm = normalizeItemToSmallUnit(it);
+      // 📦 في تصدير الإكسيل تحديدًا: الأكسسوارات دايمًا بالقطعة، حتى لو الموزع
+      // طلب بالكرتونة (كرتونة × عدد القطع في الكرتونة = عمود المحتوى unit).
+      // ده محلي هنا بس — مش في normalizeItemToSmallUnit — عشان مايأثرش على
+      // طلبية النواقص اللي بتفضل بالكرتونة. الإجمالي (lineTotal) ما بيتغيرش،
+      // وسعر الوحدة تحت بيطلع سعر القطعة تلقائيًا من (الإجمالي ÷ الكمية).
+      if(it.main && it.main.includes('اكسسوارات') && it.unitType === 'كرتونة'){
+        const accCat = findCatalogItem(it.main, it.product, it.color);
+        const accContent = Number(accCat && accCat.unit) || 1;
+        norm = { qty: it.qty * accContent, unitLabel: 'قطعة' };
+      }
       // ⚠️ سعر الوحدة المعروض لازم يطابق الإجمالي: نستخرجه من (الإجمالي ÷ الكمية)
       // عشان الكرتونة/اللفة تظهر بسعرها الكامل مش بسعر القطعة (نفس بق عرض السعر).
       const unitPriceDisp = (it.lineTotal!=null && norm.qty) ? (it.lineTotal / norm.qty) : rawPriceForItem(it);
