@@ -1320,7 +1320,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v179';
+const APP_BUILD = 'v180';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1842,7 +1842,8 @@ function normalizeCatalogItems_(items){
     price: (d.price===null || d.price===undefined || d.price==='') ? null : Number(d.price),
     available: d.available !== false,
     inStock: d.inStock !== false,
-    stock: (d.stock===null || d.stock===undefined) ? null : Number(d.stock)
+    stock: (d.stock===null || d.stock===undefined) ? null : Number(d.stock),
+    reserved_qty: (d.reserved_qty===null || d.reserved_qty===undefined) ? 0 : Number(d.reserved_qty)
   }));
 }
 
@@ -6530,10 +6531,13 @@ function unavailableForWarehouse_(main, product, color, warehouse){
     const item = c || firstCatalogItem_(main, product);
     if(!item || item.available===false) return true;
     if(item.inStock === false) return true;
-    const n = Number(item.stock);
-    if(!isFinite(n) || n <= 0) return true;          // صفر رصيد
+    // 🛘 CRITICAL: الرصيد الفعلي = الرصيد الخام - الحجز المحتفظ به
+    // لو ما طرحناش الحجز، أصناف محجوزة بتظهر متاحة بالغلط.
+    const reserved = (item.reserved_qty || 0);  // من عمود البضاعة المحجوزة
+    const effectiveStock = Number(item.stock) - reserved;
+    if(!isFinite(effectiveStock) || effectiveStock <= 0) return true;          // صفر رصيد فعلي
     const content = Number(item.unit) || 1;
-    if(n < content) return true;                      // أقل من لفة كاملة
+    if(effectiveStock < content) return true;                      // أقل من لفة كاملة
     return false;
   }catch(e){ return false; }
 }
