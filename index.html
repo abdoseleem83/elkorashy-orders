@@ -1329,7 +1329,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v183';
+const APP_BUILD = 'v184';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -5804,14 +5804,14 @@ function renderOrderView(){
                   <div class="chipwrap chipgrid4 chipsquares" style="margin-top:8px;">
                     ${extraColors.map(c=>{
                       const unavailable = isColorUnavailable(stagedEntry.main, stagedEntry.product, c);
-                      const colorClass = { 'أبيض': 'color-white', 'بيج': 'color-beige', 'خشبي': 'color-wood', 'أسود': 'color-black', 'رمادي': 'color-gray', 'أرو': 'color-aro' }[c] || '';
-                      if(unavailable) return `<button class="chip disabled ${colorClass}" data-act="noop-unavailable" disabled>${esc(c)}<small>موقوف</small></button>`;
-                      if(!warehouseAffectsStock()) return `<button class="chip ${colorClass}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
+                      const colorStyles = { 'أبيض': 'background:#FFF;color:#333;border-color:#D0D0D0;', 'بيج': 'background:#D4A574;color:#333;border-color:#C49464;', 'خشبي': 'background:#8B6F47;color:#FFF;border-color:#6B5435;', 'أسود': 'background:#000;color:#FFF;border-color:#333;', 'رمادي': 'background:#A9A9A9;color:#FFF;border-color:#808080;', 'أرو': 'background:#8B7BA8;color:#FFF;border-color:#6B5B88;' }[c] || '';
+                      if(unavailable) return `<button class="chip disabled" style="${colorStyles}" data-act="noop-unavailable" disabled>${esc(c)}<small>موقوف</small></button>`;
+                      if(!warehouseAffectsStock()) return `<button class="chip" style="${colorStyles}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
                       const lvl = colorStockLevel(findCatalogItem(stagedEntry.main, stagedEntry.product, c));
-                      if(lvl==='out') return `<button class="chip nostockchip ${colorClass}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متاح رصيد</small></button>`;
-                      if(lvl==='crit') return `<button class="chip outstockchip ${colorClass}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>متاح اعواد</small></button>`;
-                      if(lvl==='low') return `<button class="chip gold lowstockchip ${colorClass}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
-                      return `<button class="chip greenchip ${colorClass}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
+                      if(lvl==='out') return `<button class="chip nostockchip" style="${colorStyles}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متاح رصيد</small></button>`;
+                      if(lvl==='crit') return `<button class="chip outstockchip" style="${colorStyles}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>متاح اعواد</small></button>`;
+                      if(lvl==='low') return `<button class="chip gold lowstockchip" style="${colorStyles}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
+                      return `<button class="chip greenchip" style="${colorStyles}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
                     }).join('')}
                   </div>` : ''}
                   ` : '') +
