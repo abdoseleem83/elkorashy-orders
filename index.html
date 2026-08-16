@@ -339,14 +339,22 @@ textarea{resize:vertical;min-height:60px;}
 .chipwrap.chipgrid4 .chip{padding:9px 6px;text-align:center;}
 /* لون مميّز لكل قطاع — يبقى واضح ومختلف عن اللي جنبه في شبكة الـ4 في الصف */
 /* الألوان الفعلية — خلفية تمثل اللون الحقيقي */
-.chip.sc-1{background:#FFFFFF;border-color:#D0D0D0;color:#333;}                /* أبيض */
-.chip.sc-2{background:#A9A9A9;border-color:#808080;color:#FFF;}                /* رمادي */
-.chip.sc-3{background:#8B6F47;border-color:#6B5435;color:#FFF;}                /* خشبي */
-.chip.sc-4{background:#8B7BA8;border-color:#6B5B88;color:#FFF;}                /* أرو */
-.chip.sc-5{background:#EAF3FB;border-color:#8FB8DE;color:#1F4E79;}
-.chip.sc-6{background:#EAF7EF;border-color:#8FCFA6;color:#1E6B3A;}
-.chip.sc-7{background:#D4A574;border-color:#C49464;color:#333;}                /* بيج */
-.chip.sc-8{background:#000000;border-color:#333333;color:#FFF;}                /* أسود */
+.chip.sc-1{background:#EAF3FB;border-color:#8FB8DE;color:#1F4E79;}
+.chip.sc-2{background:#EAF7EF;border-color:#8FCFA6;color:#1E6B3A;}
+.chip.sc-3{background:#FBEFEA;border-color:#E3A98A;color:#8A4A1F;}
+.chip.sc-4{background:#F4EAFB;border-color:#C6A0E0;color:#5B2C82;}
+.chip.sc-5{background:#FBEAF0;border-color:#E0A0BE;color:#82285A;}
+.chip.sc-6{background:#EAEFFB;border-color:#A0B3E0;color:#2A3C82;}
+.chip.sc-7{background:#FBF7EA;border-color:#E0CE9F;color:#7A5F1F;}
+.chip.sc-8{background:#EEEEEE;border-color:#BFBFBF;color:#444;}
+
+/* الألوان الحقيقية للاختيار (أبيض، بيج، خشبي، أسود، رمادي، أرو) */
+.chip.color-white{background:#FFFFFF;border-color:#D0D0D0;color:#333;}
+.chip.color-beige{background:#D4A574;border-color:#C49464;color:#333;}
+.chip.color-wood{background:#8B6F47;border-color:#6B5435;color:#FFF;}
+.chip.color-black{background:#000000;border-color:#333333;color:#FFF;}
+.chip.color-gray{background:#A9A9A9;border-color:#808080;color:#FFF;}
+.chip.color-aro{background:#8B7BA8;border-color:#6B5B88;color:#FFF;}
 .chip.sc-1.active,.chip.sc-2.active,.chip.sc-3.active,.chip.sc-4.active,
 .chip.sc-5.active,.chip.sc-6.active,.chip.sc-7.active,.chip.sc-8.active{
   background:var(--navy);border-color:var(--navy);color:#fff;
@@ -1321,7 +1329,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v182';
+const APP_BUILD = 'v183';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -5796,13 +5804,14 @@ function renderOrderView(){
                   <div class="chipwrap chipgrid4 chipsquares" style="margin-top:8px;">
                     ${extraColors.map(c=>{
                       const unavailable = isColorUnavailable(stagedEntry.main, stagedEntry.product, c);
-                      if(unavailable) return `<button class="chip disabled" data-act="noop-unavailable" disabled>${esc(c)}<small>موقوف</small></button>`;
-                      if(!warehouseAffectsStock()) return `<button class="chip" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
+                      const colorClass = { 'أبيض': 'color-white', 'بيج': 'color-beige', 'خشبي': 'color-wood', 'أسود': 'color-black', 'رمادي': 'color-gray', 'أرو': 'color-aro' }[c] || '';
+                      if(unavailable) return `<button class="chip disabled ${colorClass}" data-act="noop-unavailable" disabled>${esc(c)}<small>موقوف</small></button>`;
+                      if(!warehouseAffectsStock()) return `<button class="chip ${colorClass}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
                       const lvl = colorStockLevel(findCatalogItem(stagedEntry.main, stagedEntry.product, c));
-                      if(lvl==='out') return `<button class="chip nostockchip" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متاح رصيد</small></button>`;
-                      if(lvl==='crit') return `<button class="chip outstockchip" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>متاح اعواد</small></button>`;
-                      if(lvl==='low') return `<button class="chip gold lowstockchip" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
-                      return `<button class="chip greenchip" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
+                      if(lvl==='out') return `<button class="chip nostockchip ${colorClass}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متاح رصيد</small></button>`;
+                      if(lvl==='crit') return `<button class="chip outstockchip ${colorClass}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>متاح اعواد</small></button>`;
+                      if(lvl==='low') return `<button class="chip gold lowstockchip ${colorClass}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
+                      return `<button class="chip greenchip ${colorClass}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
                     }).join('')}
                   </div>` : ''}
                   ` : '') +
