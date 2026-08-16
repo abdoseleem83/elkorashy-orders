@@ -1602,6 +1602,8 @@ const ICONS_ = {
   sendIcon: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
   imageIcon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',
 };
+const COLOR_STYLES_MAP = { 'أبيض': 'background:#FFF;color:#333;border-color:#D0D0D0;', 'بيج': 'background:#D4A574;color:#333;border-color:#C49464;', 'خشبي': 'background:#8B6F47;color:#FFF;border-color:#6B5435;', 'أسود': 'background:#000;color:#FFF;border-color:#333;', 'رمادي': 'background:#A9A9A9;color:#FFF;border-color:#808080;', 'أرو': 'background:#8B7BA8;color:#FFF;border-color:#6B5B88;' };
+function getColorStyle(c){ return COLOR_STYLES_MAP[c] || ''; }
 function ico_(name, size){
   size = size || 17;
   return `<svg class="ico-svg" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS_[name]||''}</svg>`;
@@ -5676,7 +5678,7 @@ function renderOrderView(){
       <div class="card">
         <h2><span class="num">4</span>اختار اللون</h2>
         <div class="chipwrap chipgrid4">
-          ${colorsAvail.map(c=>`<button class="chip ${state.selectedColor===c?'active':''}" data-act="set-color" data-val="${esc(c)}">${esc(c)}</button>`).join('')}
+          ${colorsAvail.map(c=>`<button class="chip ${state.selectedColor===c?'active':''}" style="${getColorStyle(c)}" data-act="set-color" data-val="${esc(c)}">${esc(c)}</button>`).join('')}
         </div>
       </div>`;
     }
@@ -5804,7 +5806,7 @@ function renderOrderView(){
                   <div class="chipwrap chipgrid4 chipsquares" style="margin-top:8px;">
                     ${extraColors.map(c=>{
                       const unavailable = isColorUnavailable(stagedEntry.main, stagedEntry.product, c);
-                      const colorStyles = { 'أبيض': 'background:#FFF;color:#333;border-color:#D0D0D0;', 'بيج': 'background:#D4A574;color:#333;border-color:#C49464;', 'خشبي': 'background:#8B6F47;color:#FFF;border-color:#6B5435;', 'أسود': 'background:#000;color:#FFF;border-color:#333;', 'رمادي': 'background:#A9A9A9;color:#FFF;border-color:#808080;', 'أرو': 'background:#8B7BA8;color:#FFF;border-color:#6B5B88;' }[c] || '';
+                      const colorStyles = getColorStyle(c);
                       if(unavailable) return `<button class="chip disabled" style="${colorStyles}" data-act="noop-unavailable" disabled>${esc(c)}<small>موقوف</small></button>`;
                       if(!warehouseAffectsStock()) return `<button class="chip" style="${colorStyles}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
                       const lvl = colorStockLevel(findCatalogItem(stagedEntry.main, stagedEntry.product, c));
