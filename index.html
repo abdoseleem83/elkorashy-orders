@@ -3434,6 +3434,20 @@ function rollsOrRodsDisplay_(smallQty, content){
   return { qty: Math.round(rolls*10)/10, unitLabel: 'لفة' };
 }
 
+// ⚠️ بيفصل الكمية بالوحدة الصغيرة (عود) لجزئين: عدد اللفات الكاملة + الباقي
+// بالعود (لو مش لفة كاملة بالظبط). ده بيتفرق عن rollsOrRodsDisplay_ اللي كان
+// بيرجّع رقم واحد بس (لفة كسرية زي 1.5، أو عود لو أقل من لفة) — هنا بنرجّع
+// الاتنين مع بعض عشان: (1) العرض يبقى واضح "1 لفة + 3 عود" بدل "1.4 لفة"،
+// و(2) الخصم يتطبق بس على اللفات الكاملة (الموزع بياخد خصم اللفة لما يكمّل
+// لفة كاملة فعلًا؛ الباقي اللي مكملش لفة بيتحسب بسعر العود العادي من غير خصم).
+function splitRollsAndRods_(smallQty, content){
+  const c = Number(content) || 1;
+  if(c <= 1) return { rolls: 0, rods: smallQty };
+  const wholeRolls = Math.floor((Number(smallQty)||0) / c + 1e-9);
+  const remainderRods = Math.round(((Number(smallQty)||0) - wholeRolls*c) * 100) / 100;
+  return { rolls: wholeRolls, rods: remainderRods };
+}
+
 function warehouseUnitDisplay(it){
   if(it.unitType === 'لفة' || it.unitType === 'كرتونة'){
     return { qty: it.qty, unitLabel: it.unitType };
@@ -4156,18 +4170,33 @@ function computeQuoteRows_(order){
   // (زي 0.3 لفة) — بعكس تصدير الإكسيل اللي فضل بالعود زي ما هو (متلمسناهوش).
   // السعر بيتحوّل لسعر اللفة (سعر العود × محتوى اللفة) بس لما تكون العرض
   // فعلًا لفات، عشان الإجمالي يفضل مطابق للحقيقي بالظبط في الحالتين.
-  const rows = order.items.map(it=>{
+  const rows = [];
+  order.items.forEach(it=>{
     const raw = rawPriceForItem(it); // سعر القطعة الصغيرة (عود/قطعة) — الأساس المالي الصحيح
     const norm = normalizeItemToSmallUnit(it);
-    let dispQty = norm.qty, dispUnit = norm.unitLabel, dispPrice = raw;
+    const unavailNow = unavailableForWarehouse_(it.main, it.product, it.color, asText(order.warehouse));
     if(ROLL_GROUPS_.includes(it.main)){
+      // ⚠️ قاعدة الخصم: الخصم بيتطبق بس على اللفات الكاملة. لو الموزع طلب
+      // مثلًا 7 عود ومحتوى اللفة 6 عود، بيتقسم لصفين: 1 لفة (بسعر اللفة +
+      // خصم لو مؤهل) و1 عود باقي (بسعر العود العادي من غير خصم خالص) —
+      // بدل ما يتحسب الكل بسعر واحد أو خصم واحد غلط.
       const catItem = findCatalogItem(it.main, it.product, it.color);
       const content = Number(catItem && catItem.unit) || 1;
-      const disp = rollsOrRodsDisplay_(norm.qty, content);
-      dispQty = disp.qty;
-      dispUnit = disp.unitLabel;
-      dispPrice = raw==null ? null : (dispUnit==='لفة' ? raw*content : raw);
-    } else if(it.unitType === 'كرتونة'){
+      const split = splitRollsAndRods_(norm.qty, content);
+      if(split.rolls>0){
+        const dispPrice = raw==null ? null : raw*content;
+        const lineRaw = dispPrice==null ? null : dispPrice*split.rolls;
+        rows.push(Object.assign({}, it, { normQty: split.rolls, normUnit: 'لفة', rawPrice: dispPrice, lineRaw, unavailable: unavailNow, noRollDiscount:false }));
+      }
+      if(split.rods>0 || split.rolls===0){
+        const dispQty = split.rods; // لو مفيش لفات خالص، دي كل الكمية بالعود
+        const lineRaw = raw==null ? null : raw*dispQty;
+        rows.push(Object.assign({}, it, { normQty: dispQty, normUnit: 'عود', rawPrice: raw, lineRaw, unavailable: unavailNow, noRollDiscount:true }));
+      }
+      return;
+    }
+    let dispQty = norm.qty, dispUnit = norm.unitLabel, dispPrice = raw;
+    if(it.unitType === 'كرتونة'){
       // ⚠️ البق: الاكسسوارات بتتطلب بالكرتونة، لكن سعر الكتالوج سعر القطعة.
       // كان الإجمالي = عدد الكراتين × سعر القطعة (غلط). الصح: سعر الكرتونة =
       // سعر القطعة × عدد القطع في الكرتونة (عمود المحتوى D)، زي ما القطاعات
@@ -4183,8 +4212,7 @@ function computeQuoteRows_(order){
     // والرصيد الحالي — مش نعتمد على اللقطة القديمة المخزّنة وقت الإضافة (اللي
     // ممكن تكون false لو الرصيد اتغيّر بعد كده، أو لو state.warehouse وقت
     // الطباعة مش نفس مخزن الطلب). ده اللي كان بيخلي الملاحظات ماتظهرش للأدمن.
-    const unavailNow = unavailableForWarehouse_(it.main, it.product, it.color, asText(order.warehouse));
-    return Object.assign({}, it, { normQty: dispQty, normUnit: dispUnit, rawPrice: dispPrice, lineRaw, unavailable: unavailNow });
+    rows.push(Object.assign({}, it, { normQty: dispQty, normUnit: dispUnit, rawPrice: dispPrice, lineRaw, unavailable: unavailNow, noRollDiscount:false }));
   });
   const subtotal = rows.reduce((s,r)=> s + (r.lineRaw||0), 0);
   // ⚠️ فرّقنا بين حاجتين هنا: "الخصم موجود أصلاً" (بيتحسب دايمًا لو موزع،
@@ -4198,6 +4226,7 @@ function computeQuoteRows_(order){
   if(eligible){
     rows.forEach(r=>{
       if(r.lineRaw==null) return;
+      if(r.noRollDiscount) return; // باقي العود اللي ملوش لفة كاملة — من غير خصم
       // لو في خصم مخصص → يحل محل خصم القطاع
       const pct = customPct>0 ? customPct : getDiscount(r.main);
       if(pct>0) discountTotal += r.lineRaw * (pct/100);
@@ -4329,7 +4358,7 @@ async function buildQuotePDF(order){
                 serialCounter++;
                 const rowBg = rowIndex%2===0?'#FFFFFF':'#F3F6FA';
                 if(showDiscount){
-                  const pct = getDiscount(it.main);
+                  const pct = it.noRollDiscount ? 0 : (customPct>0 ? customPct : getDiscount(it.main));
                   const discAmt = (lineAmt!=null && pct>0) ? lineAmt*(pct/100) : 0;
                   const net = lineAmt==null ? null : lineAmt - discAmt;
                   html += `
@@ -4346,7 +4375,7 @@ async function buildQuotePDF(order){
                   // لو موزع بس الزرار مخفي، لسه بيتحسب خصمه فعليًا — بنوري
                   // السعر الصافي بعد الخصم هنا، مش السعر الخام، عشان الرقم
                   // النهائي يفضل صحيح حتى من غير ما نوري تفاصيل الخصم.
-                  const pct = getDiscount(it.main);
+                  const pct = it.noRollDiscount ? 0 : (customPct>0 ? customPct : getDiscount(it.main));
                   const discAmt = (eligible && lineAmt!=null && pct>0) ? lineAmt*(pct/100) : 0;
                   const net = lineAmt==null ? null : lineAmt - discAmt;
                   html += `
@@ -4524,7 +4553,7 @@ async function buildOrderImagePages(order){
       const lineAmt = it.rawPrice==null ? null : it.rawPrice*qty;
       const rowBg = entry.serial%2===0?'#FFFFFF':'#F3F6FA';
       if(showDiscount){
-        const pct = getDiscount(it.main);
+        const pct = it.noRollDiscount ? 0 : (customPct>0 ? customPct : getDiscount(it.main));
         const discAmt = (lineAmt!=null && pct>0) ? lineAmt*(pct/100) : 0;
         const net = lineAmt==null ? null : lineAmt - discAmt;
         html += `
@@ -4538,7 +4567,7 @@ async function buildOrderImagePages(order){
           <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;font-size:13.5px;">${net==null?'—':Math.round(net).toLocaleString('en-US')}</td>
         </tr>`;
       } else {
-        const pct = getDiscount(it.main);
+        const pct = it.noRollDiscount ? 0 : (customPct>0 ? customPct : getDiscount(it.main));
         const discAmt = (eligible && lineAmt!=null && pct>0) ? lineAmt*(pct/100) : 0;
         const net = lineAmt==null ? null : lineAmt - discAmt;
         html += `
@@ -4679,12 +4708,18 @@ async function buildShortageImageGroup(order, groupKey){
   const rows = relevant.map(it=>{
     const norm = normalizeItemToSmallUnit(it);
     if(ROLL_GROUPS_.includes(it.main)){
+      // ⚠️ لو الكمية مش لفة كاملة بالظبط (زي 1.4 لفة)، بنقسمها لجزئين واضحين:
+      // عدد اللفات الكاملة + الباقي بالعود — بدل ما تتعرض كسر لفة مش مفهوم
+      // عمليًا لأمين المخزن (زي "1.4 لفة"). بيتعرضوا مع بعض "1 لفة + 3 عود".
       const cat = findCatalogItem(it.main, it.product, it.color);
       const content = Number(cat && cat.unit) || 1;
-      const disp = rollsOrRodsDisplay_(norm.qty, content);
-      return Object.assign({}, it, { dispQty: disp.qty, dispUnit: disp.unitLabel });
+      const split = splitRollsAndRods_(norm.qty, content);
+      const parts = [];
+      if(split.rolls>0) parts.push(split.rolls + ' لفة');
+      if(split.rods>0 || split.rolls===0) parts.push(split.rods + ' عود');
+      return Object.assign({}, it, { rollQty: split.rolls, rodQty: (split.rods>0||split.rolls===0)?split.rods:0, dispLabel: parts.join(' + ') });
     }
-    return Object.assign({}, it, { dispQty: norm.qty, dispUnit: norm.unitLabel });
+    return Object.assign({}, it, { rollQty: 0, rodQty: 0, dispLabel: norm.qty + ' ' + norm.unitLabel });
   });
 
   const groupsMap = new Map();
@@ -4730,8 +4765,8 @@ async function buildShortageImageGroup(order, groupKey){
     .filter(m=>SHORTAGE_TOTAL_MAINS_.includes(m))
     .map(m=>{
       const items = groupsMap.get(m);
-      const rollsSum = items.filter(it=>it.dispUnit==='لفة').reduce((a,it)=>a+(Number(it.dispQty)||0), 0);
-      const rodsSum = items.filter(it=>it.dispUnit==='عود').reduce((a,it)=>a+(Number(it.dispQty)||0), 0);
+      const rollsSum = items.reduce((a,it)=>a+(Number(it.rollQty)||0), 0);
+      const rodsSum = items.reduce((a,it)=>a+(Number(it.rodQty)||0), 0);
       const parts = [];
       if(rollsSum>0) parts.push(Math.round(rollsSum*10)/10 + ' لفة');
       if(rodsSum>0) parts.push(Math.round(rodsSum*10)/10 + ' عود');
@@ -4781,7 +4816,7 @@ async function buildShortageImageGroup(order, groupKey){
         <span style="flex:1;font-weight:800;font-size:${rowFont_};color:#002050;line-height:1.25;">
           ${esc(it.name || it.product)}${(it.color && !it.colorLabel)?` <span style="color:#6B7A8C;font-size:${colorFont_};font-weight:700;">- ${esc(it.color)}</span>`:''}
         </span>
-        <span style="font-weight:800;font-size:${rowFont_};color:#1080C0;white-space:nowrap;">${it.dispQty} ${esc(it.dispUnit||'')}</span>
+        <span style="font-weight:800;font-size:${rowFont_};color:#1080C0;white-space:nowrap;">${esc(it.dispLabel||'')}</span>
       </div>`;
     });
     return html;
