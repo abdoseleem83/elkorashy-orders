@@ -1329,7 +1329,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v184';
+const APP_BUILD = 'v185';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1715,7 +1715,7 @@ function isColorUnavailable(main, product, color){
 //   'ok'   = كفاية
 function colorStockLevel(item){
   if(!item || item.available===false) return 'out'; // "موقوف" يفضل زي ما هو
-  if(!warehouseAffectsStock()) return 'ok';
+  if(!warehouseAffectsStock(item && item.main)) return 'ok';
   const n = Number(item.stock);
   if(!isFinite(n) || n <= 0) return 'out';
   if(item.inStock === false) return 'out';
@@ -1743,14 +1743,18 @@ function isClientAccount(){
 // ⚠️ تعديلها = حجز بضاعة خاطئ + أرقام رصيد كاذبة.
 // ⚠️ **بلاش تغيّرها إلا لو قالتلك الإدارة العليا بالظبط.**
 const STOCK_TRACKED_WAREHOUSES_ = ['طنطا'];
-function warehouseAffectsStock(){
+// ⚠️ الاكسسوارات (main يحتوي على "اكسسوارات") مستثناة من تتبّع الرصيد في كل
+// المخازن (حتى طنطا) — بيتعاملوا زي أي مخزن تاني: متاحين دايمًا من غير أي
+// تلوين أو لافتة "متوفر/مفيش رصيد". بطلب صريح من المستخدم.
+function warehouseAffectsStock(main){
   if(state.currentUser && state.currentUser.distType === 'عميل') return false;
+  if(main && main.includes('اكسسوارات')) return false;
   return STOCK_TRACKED_WAREHOUSES_.includes(state.warehouse);
 }
 
 function effectiveInStock(item){
   if(!item || item.available===false) return false; // "موقوف" من الأدمن يفضل يتطبق دايمًا
-  if(!warehouseAffectsStock()) return true;
+  if(!warehouseAffectsStock(item && item.main)) return true;
   if(item.inStock===false) return false;
   const n = Number(item.stock);
   if(!isFinite(n) || n <= 0) return false;
@@ -5425,7 +5429,7 @@ function renderHeader(){
 // أو '' لو الكمية سليمة. بتشتغل بس في المخازن اللي رصيدها متتبَّع فعليًا
 // (طنطا حاليًا) — المخازن التانية مالهاش رصيد دقيق أصلاً فمفيش داعي نقارن.
 function stockShortageWarning_(main, product, color, unitType, qty){
-  if(!warehouseAffectsStock()) return '';
+  if(!warehouseAffectsStock(main)) return '';
   const item = findCatalogItem(main, product, color);
   if(!item) return '';
   const stock = Number(item.stock);
@@ -5500,7 +5504,7 @@ function renderStagedBlock(s){
         const sel = s.selectedColors.includes(c) ? 'active' : '';
         // ⚠️ في مخازن العاشر/المنصورة، أو لو الداخل عميل، الرصيد مالوش معنى —
         // اللون بيتعرض عادي (شكل افتراضي، مفيش لون تلوين ولا لافتة خالص).
-        if(!warehouseAffectsStock()){
+        if(!warehouseAffectsStock(s.main)){
           return `<button class="chip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
         }
         const lvl = colorStockLevel(findCatalogItem(s.main, s.product, c));
@@ -5733,7 +5737,7 @@ function renderOrderView(){
       }
       // ترتيب حسب توفر الرصيد: متوفر أولًا، بعده كمية قليلة، بعده متاح اعواد،
       // وأخيرًا مفيش رصيد خالص — والمنتجات الموقوفة (تعطيل يدوي) في الآخر خالص.
-      if(warehouseAffectsStock()){
+      if(warehouseAffectsStock(state.mainGroup)){
         const levelRank_ = lvl => lvl==='ok' ? 0 : lvl==='low' ? 1 : lvl==='crit' ? 2 : lvl==='out' ? 3 : 4;
         const rankFor_ = n => {
           const unavailable = colorToUse
@@ -5787,7 +5791,7 @@ function renderOrderView(){
             // ⚠️ في مخازن العاشر والمنصورة، ولو الداخل عميل، الرصيد مالوش
             // معنى — نوري الصنف عادي من غير أي تلوين أو لافتة "متوفر/مفيش
             // رصيد" خالص. "موقوف" من الأدمن يفضل يتطبق دايمًا مهما كان.
-            const showStock = warehouseAffectsStock();
+            const showStock = warehouseAffectsStock(state.mainGroup);
             // في وضع "اختار اللون" بنستخدم المستوى الحقيقي بتاع اللون ده بالظبط
             // (4 مستويات: مفيش رصيد خالص / اعواد / قليلة / متوفر) — نفس الألوان
             // والتصميم المستخدمين أصلاً في شرائح الألوان.
@@ -5843,7 +5847,7 @@ function renderOrderView(){
                       const unavailable = isColorUnavailable(stagedEntry.main, stagedEntry.product, c);
                       const colorStyles = getColorStyle(c);
                       if(unavailable) return `<button class="chip disabled" style="${colorStyles}" data-act="noop-unavailable" disabled>${esc(c)}<small>موقوف</small></button>`;
-                      if(!warehouseAffectsStock()) return `<button class="chip" style="${colorStyles}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
+                      if(!warehouseAffectsStock(stagedEntry.main)) return `<button class="chip" style="${colorStyles}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
                       const lvl = colorStockLevel(findCatalogItem(stagedEntry.main, stagedEntry.product, c));
                       if(lvl==='out') return `<button class="chip nostockchip" style="${colorStyles}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متاح رصيد</small></button>`;
                       if(lvl==='crit') return `<button class="chip outstockchip" style="${colorStyles}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>متاح اعواد</small></button>`;
@@ -6571,6 +6575,8 @@ function unavailableForWarehouse_(main, product, color, warehouse){
     const c = color ? findCatalogItem(main, product, color) : null;
     if(c && c.available === false) return true;
     if(!color && isProductFullyUnavailable(main, product)) return true;
+    // الاكسسوارات مستثناة من تتبّع الرصيد في كل المخازن → كله متاح
+    if(main && main.includes('اكسسوارات')) return false;
     // المخزن ده أصلاً مش بيتتبّع فيه رصيد → كله متاح
     if(!STOCK_TRACKED_WAREHOUSES_.includes(asText(warehouse))) return false;
     // نحسب مستوى الرصيد يدويًا (نفس منطق colorStockLevel بس من غير ما نعتمد
@@ -6610,7 +6616,7 @@ function computeUnavailable_(main, product, color){
     const c = color ? findCatalogItem(main, product, color) : null;
     if(c && c.available === false) return true;
     if(!color && isProductFullyUnavailable(main, product)) return true;
-    if(!warehouseAffectsStock()) return false;
+    if(!warehouseAffectsStock(main)) return false;
     const lvl = c ? colorStockLevel(c) : productStockLevel(main, product);
     // ⚠️ 'out' = رصيد صفر · 'crit' = فيه شوية عيدان بس أقل من لفة كاملة.
     // الاتنين لازم يتعلّموا "غير متاح" في عرض السعر، لأن الموزّع بيطلب باللفة
