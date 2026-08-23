@@ -1334,7 +1334,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v192';
+const APP_BUILD = 'v193';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -5659,7 +5659,6 @@ function renderOrderView(){
         </div>
         <br>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-          <button class="newbtn" data-act="edit-last-order">✏️ تعديل الطلب / إضافة أصناف</button>
           <button class="newbtn outline" data-act="new-order">تسجيل طلب جديد</button>
         </div>
       </div>
@@ -6126,14 +6125,10 @@ function renderMyOrdersView(){
           `).join('')}
         </div>
         ${renderOrderTotalLine(o)}
-        ${isDone ? `<div class="donenote">✅ الطلب ده اتسلّم بالفعل — مش قابل للتعديل</div>` : ''}
         <div class="adminbtnrow">
           <button class="delbtn pdf" data-act="preview-myorder-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
             ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('fileIcon',14) + ' عرض PDF'}
           </button>
-          ${!isDone ? `
-          <button class="delbtn edit" data-act="edit-order" data-id="${esc(o.id)}">✏️ تعديل الأصناف والكميات</button>
-          <button class="delbtn edit" data-act="edit-order" data-id="${esc(o.id)}">➕ إضافة أصناف جديدة</button>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -7753,9 +7748,7 @@ async function onActionInner(act, el){
     case 'close-cart-review': state.showCartReview=false; render(); break;
     case 'cart-add-more': state.showCartReview=false; render(); break;
     case 'edit-last-order':{
-      const lo = state.lastOrder;
-      if(lo){ startEditOrder(lo); }
-      else { showToast('مفيش طلب متاح للتعديل'); }
+      showToast('التعديل اتلغى — سجّل الطلب الإضافي كطلب جديد عادي');
       break;
     }
     case 'cart-send':
@@ -7831,11 +7824,7 @@ async function onActionInner(act, el){
     case 'myorders-search': searchMyOrdersByPhone(); break;
     case 'myorders-refresh': refreshMyOrders(); break;
     case 'edit-order':{
-      const id = el.getAttribute('data-id');
-      const ord = state.myOrders.find(o=>o.id===id) || state.orders.find(o=>o.id===id);
-      if(!ord) break;
-      if(normStatus_(ord.status)===STATUS_DONE){ showToast('الطلب ده اتسلّم بالفعل — مش قابل للتعديل'); break; }
-      startEditOrder(ord);
+      showToast('التعديل اتلغى — سجّل الطلب الإضافي كطلب جديد عادي');
       break;
     }
 
