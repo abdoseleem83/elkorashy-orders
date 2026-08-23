@@ -1330,7 +1330,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v189';
+const APP_BUILD = 'v190';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -4847,8 +4847,8 @@ async function buildShortageImageGroup(order, groupKey){
       <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #1080C0;padding-bottom:14px;margin-bottom:16px;">
         <img src="${logoSrc_()}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #DCE4EC;padding:4px;">
         <div style="flex:1;">
-          <div style="font-size:22px;font-weight:800;color:#002050;">طلبية نواقص ${esc(asText(order.distName))}${order.warehouse ? ` <span style="color:#1080C0;">— مخزن ${esc(asText(order.warehouse))}</span>` : ''}</div>
-          <div style="font-size:13.4px;color:#6B7A8C;margin-top:2px;">${esc(asText(order.distRegion))} · ${esc(group.label)}</div>
+          <div style="font-size:22px;font-weight:800;color:#002050;">طلبية نواقص${order.warehouse ? ` <span style="color:#1080C0;">— مخزن ${esc(asText(order.warehouse))}</span>` : ''}</div>
+          <div style="font-size:13.4px;color:#6B7A8C;margin-top:2px;">${esc(group.label)}</div>
         </div>
         <div style="text-align:left;">
           <div style="font-size:14.6px;font-weight:800;color:#1080C0;">#${esc(orderNoDisplay_(order))}</div>
