@@ -1334,7 +1334,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v193';
+const APP_BUILD = 'v194';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -6057,12 +6057,11 @@ function renderDailyWarningModal(){
   return `
   <div class="modalbg">
     <div class="modalcard">
-      <div class="modalic">⚠️</div>
+      <div class="modalic">ℹ️</div>
       <h3>بعتّ طلب النهارده بالفعل</h3>
-      <p>آخر طلب بعته النهارده رقمه <b>#${esc(lastId)}</b>. الأفضل تعدّل عليه بدل ما تبعت طلب جديد.</p>
+      <p>آخر طلب بعته النهارده رقمه <b>#${esc(lastId)}</b>. لو ده طلب تاني ومختلف، ولا يهمك — كمّل بعت عادي.</p>
       <div class="modalbtns">
-        <button class="modalbtn primary" data-act="goto-myorders-from-warning">عدّل الطلب اللي بعته</button>
-        <button class="modalbtn" data-act="continue-daily">لأ، كمّل إرسال طلب جديد</button>
+        <button class="modalbtn primary" data-act="continue-daily">تمام، كمّل إرسال الطلب</button>
       </div>
     </div>
   </div>`;
