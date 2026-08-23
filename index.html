@@ -1253,8 +1253,17 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .previewfoot .savebtn{width:100%;}
 
 .delbtn.edit{border-color:var(--navy);color:var(--navy);margin-top:8px;}
-.adminbtnrow{display:flex;gap:8px;margin-top:10px;}
+.adminbtnrow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
 .adminbtnrow .delbtn{margin-top:0;flex:1;}
+.editmenu{flex:1;position:relative;}
+.editmenu summary{list-style:none;cursor:pointer;text-align:center;user-select:none;}
+.editmenu summary::-webkit-details-marker{display:none;}
+.editmenu summary::after{content:' ▾';}
+.editmenu[open] summary::after{content:' ▴';}
+.editmenu-list{position:absolute;z-index:20;top:calc(100% + 4px);right:0;left:0;background:#fff;border:1.5px solid var(--navy);border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.14);}
+.editmenu-item{display:block;width:100%;text-align:right;padding:11px 12px;background:#fff;border:0;border-bottom:1px solid #eee;color:var(--navy);font-size:13.3px;font-weight:600;cursor:pointer;}
+.editmenu-item:last-child{border-bottom:0;}
+.editmenu-item:active{background:#f2f4fa;}
 .delbtn.pdf{border-color:var(--gold);color:#8A6D0B;}
 
 @media (min-width:480px){
@@ -1329,7 +1338,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v185';
+const APP_BUILD = 'v186';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -5393,6 +5402,7 @@ function renderHeader(){
         <button class="tabbtn" data-act="force-update" title="تحديث إجباري">${ico_('cloudRefresh',14)} تحديث</button>
       </div>
       <div class="toolrow">
+        <button class="toolbtn" data-act="goto" data-view="myorders" title="تعديل على طلبك">✏️</button>
         ${isWebAuthnSupported() ? `
         <button class="toolbtn fingerbtn ${bioOn?'on':'off'}" data-act="${bioOn?'disable-biometric':'enable-biometric'}" title="${bioOn?'البصمة مفعّلة — دوس عشان تلغيها':'البصمة غير مفعّلة — دوس عشان تفعّلها'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></svg></button>
         ` : ''}
@@ -5936,18 +5946,14 @@ function renderOrderView(){
       </div>
     </div>`;
 
-  // زرار للرجوع لأي طلب اتحفظ في السلة قبل كده — ظاهر أول حاجة في الفورم
-  // عشان يبقى سهل الوصول، خصوصًا إن مفيش طريقة تانية غير الرسالة التلقائية
-  // اللي بتظهر أول ما التطبيق يفتح بس.
-  const openDraftBtn = `
-    <div class="card" style="text-align:center;">
-      <button class="newbtn outline" data-act="open-saved-draft">🛒 عندي طلب محفوظ في السلة — افتحه</button>
-    </div>`;
+  // ملحوظة: زرار "عندي طلب محفوظ في السلة" اتشال من هنا بناءً على طلب —
+  // بقى متاح دلوقتي من أيقونة "✏️ تعديل على طلبك" في الهيدر (شاشة تابع
+  // طلبيتك)، فمفيش داعي يتكرر هنا تحت شاشة اختيار المخزن.
 
   // العميل ميشوفش شاشة اختيار المخزن أصلاً — مالهاش معنى بالنسباله لأنه
   // مش بيشوف رصيد في أي مخزن.
   if(!state.warehouse && !isClientAccount()){
-    return `<main>${warehouseCard}${openDraftBtn}</main>`;
+    return `<main>${warehouseCard}</main>`;
   }
 
   const distSection = `
@@ -6131,7 +6137,14 @@ function renderMyOrdersView(){
           <button class="delbtn pdf" data-act="preview-myorder-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
             ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('fileIcon',14) + ' عرض PDF'}
           </button>
-          ${!isDone ? `<button class="delbtn edit" data-act="edit-order" data-id="${esc(o.id)}">✏️ تعديل الطلب</button>` : ''}
+          ${!isDone ? `
+          <details class="editmenu">
+            <summary class="delbtn edit">✏️ تعديل / إضافة أصناف</summary>
+            <div class="editmenu-list">
+              <button class="editmenu-item" data-act="edit-order" data-id="${esc(o.id)}">✏️ تعديل الأصناف والكميات</button>
+              <button class="editmenu-item" data-act="edit-order" data-id="${esc(o.id)}">➕ إضافة أصناف جديدة للطلب</button>
+            </div>
+          </details>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -6506,6 +6519,7 @@ function renderAdminView(){
       <button class="exportbtn" data-act="goto-manage-inline">${ico_('manageIcon',13)} إدارة الأصناف</button>
       <button class="exportbtn" data-act="export-excel-received">تصدير Excel (${STATUS_RECEIVED})</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُنفَّذ</button>
+      <button class="exportbtn" data-act="reactivate-wa-notify" title="لو بطلت إشعارات الواتساب توصل، دوس هنا وابعت الرسالة اللي هتفتح عشان تفعّلها تاني">🔔 فعّل إشعارات الواتساب تاني</button>
     </div>
     <div class="polldiag">
       <span>${state.pollDiag ? esc(state.pollDiag) : 'الإشعار شغّال — بيفحص كل 45 ثانية'}</span>
@@ -6722,6 +6736,17 @@ function openOrderWhatsApp(order){
   return false;
 }
 
+// إشعارات الواتساب بتتبعت عن طريق CallMeBot، واللي بيحصل إن أحيانًا تفعيل
+// الرقم عند CallMeBot بيقف (خصوصًا لو مفيش رسايل اتبعتت لفترة)، فالإشعارات
+// بتوقف من غير أي خطأ ظاهر في التطبيق. الحل: يبعت رسالة التفعيل دي تاني
+// لرقم CallMeBot الرسمي، ويرجع يشتغل عادي خلال دقايق.
+function reactivateWhatsAppNotify(){
+  const num = '34644597165';
+  const msg = 'I allow callmebot to send me messages';
+  window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
+  showToast('ابعت الرسالة اللي فتحت زي ما هي، والإشعارات هترجع تشتغل خلال دقايق');
+}
+
 function notifyDistributorManually(id){
   const ord = state.orders.find(o=>o.id===id);
   if(!ord) return;
@@ -6784,7 +6809,23 @@ async function sendOrderAsImage(){
   }
   await shareOrderImage();
   // shareOrderImage بيعلّم state.orderSentToWa — بنزامنها مع waSent عشان الزرار
-  if(state.orderSentToWa){ state.waSent = true; render(); }
+  if(state.orderSentToWa){
+    state.waSent = true; render();
+    autoReturnHomeAfterSend_();
+  }
+}
+
+// بعد ما الموزع يبعت طلبه (واتساب) أو ينزّل مستنداته من شاشة "تم الإرسال"،
+// مفيش داعي الشاشة تفضل واقفة هناك — بترجع تلقائي للشاشة الرئيسية (طلب
+// جديد) بعد تأخير بسيط عشان يشوف رسالة التأكيد الأول.
+let __autoHomeTimer = null;
+function autoReturnHomeAfterSend_(){
+  if(__autoHomeTimer) clearTimeout(__autoHomeTimer);
+  showToast('تم ✅ هيرجعلك للشاشة الرئيسية...', 2500);
+  __autoHomeTimer = setTimeout(()=>{
+    __autoHomeTimer = null;
+    if(state.successOrderId) resetOrderForm();
+  }, 2200);
 }
 
 async function shareOrderImage(){
@@ -7746,7 +7787,7 @@ async function onActionInner(act, el){
       break;
     case 'download-quote-plain':
       if(!state.quotePdfPlain){ await generateBothQuotes(state.lastOrder); }
-      if(state.quotePdfPlain) downloadQuote();
+      if(state.quotePdfPlain){ downloadQuote(); autoReturnHomeAfterSend_(); }
       break;
     case 'preview-quote-plain':
       if(!state.quotePdfPlain){ await generateBothQuotes(state.lastOrder); }
@@ -7761,11 +7802,14 @@ async function onActionInner(act, el){
     case 'shortage-img':
       handleShortageImage(el.getAttribute('data-id') || null, el.getAttribute('data-group'));
       break;
-    case 'send-order-wa': openOrderWhatsApp(state.lastOrder); break;
+    case 'send-order-wa':
+      if(openOrderWhatsApp(state.lastOrder)) autoReturnHomeAfterSend_();
+      break;
     case 'send-order-img': await sendOrderAsImage(); break;
     case 'make-docs': if(state.lastOrder) generateBothQuotes(state.lastOrder); break;
     case 'clear-save-error': state.saveError=''; render(); break;
     case 'notify-dist': notifyDistributorManually(el.getAttribute('data-id')); break;
+    case 'reactivate-wa-notify': reactivateWhatsAppNotify(); break;
     case 'do-notify-dist':{
       const nid = state.notifyPromptId;
       state.notifyPromptId = null;
