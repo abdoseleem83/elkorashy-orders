@@ -1255,6 +1255,10 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .delbtn.edit{border-color:var(--navy);color:var(--navy);margin-top:8px;}
 .adminbtnrow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
 .adminbtnrow .delbtn{margin-top:0;flex:1;}
+.adminbtnrow-compact{gap:6px;}
+.adminbtnrow-compact .delbtn{flex:1 1 auto;min-width:0;padding:6px 8px;font-size:11.6px;border-radius:8px;}
+.adminbtnrow-compact .delbtn .ic{font-size:13px;}
+.adminbtnrow-compact .delbtn svg{width:13px;height:13px;}
 .donenote{margin-top:8px;padding:8px 10px;background:#E9F6EC;border:1px solid #B7DFC0;border-radius:8px;color:#1F6B32;font-size:12.6px;font-weight:700;text-align:center;}
 .delbtn.pdf{border-color:var(--gold);color:#8A6D0B;}
 
@@ -1330,7 +1334,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v190';
+const APP_BUILD = 'v192';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -4847,11 +4851,9 @@ async function buildShortageImageGroup(order, groupKey){
       <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #1080C0;padding-bottom:14px;margin-bottom:16px;">
         <img src="${logoSrc_()}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #DCE4EC;padding:4px;">
         <div style="flex:1;">
-          <div style="font-size:22px;font-weight:800;color:#002050;">طلبية نواقص${order.warehouse ? ` <span style="color:#1080C0;">— مخزن ${esc(asText(order.warehouse))}</span>` : ''}</div>
-          <div style="font-size:13.4px;color:#6B7A8C;margin-top:2px;">${esc(group.label)}</div>
+          <div style="font-size:22px;font-weight:800;color:#002050;">اوردر رقم #${esc(orderNoDisplay_(order))} ${esc(group.label)}${order.warehouse ? ` <span style="color:#1080C0;">— مخزن ${esc(asText(order.warehouse))}</span>` : ''}</div>
         </div>
         <div style="text-align:left;">
-          <div style="font-size:14.6px;font-weight:800;color:#1080C0;">#${esc(orderNoDisplay_(order))}</div>
           <div style="font-size:12.3px;color:#6B7A8C;">${esc(dateStr)}</div>
           ${pages.length>1 ? `<div style="font-size:12.3px;color:#6B7A8C;font-weight:800;">صفحة ${p+1} من ${pages.length}</div>` : ''}
         </div>
@@ -6479,19 +6481,16 @@ function renderAdminView(){
         </div>
         ${renderOrderTotalLine(o)}
         ${o.note ? `<div class="note">${esc(o.note)}</div>` : ''}
-        <div class="adminbtnrow">
-          ${isDone ? `<button class="delbtn pdf" data-act="notify-dist" data-id="${esc(o.id)}">${ico_('bellIcon',14)} بلّغ الموزع</button>` : ''}
-          <button class="delbtn pdf" data-act="preview-order-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
-            ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('eyeIcon',14) + ' معاينة'}
-          </button>
+        <div class="adminbtnrow adminbtnrow-compact">
+          ${isDone ? `<button class="delbtn pdf" data-act="notify-dist" data-id="${esc(o.id)}">${ico_('bellIcon',11)} بلّغ الموزع</button>` : ''}
           <button class="delbtn pdf" data-act="download-order-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
-            ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('downloadIcon',14) + ' تصدير PDF'}
+            ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('downloadIcon',11) + ' تصدير PDF'}
           </button>
           <button class="delbtn pdf" data-act="shortage-img" data-id="${esc(o.id)}" data-group="kraft_new" ${state.shortageImgBusy===(o.id+'|kraft_new')?'disabled':''}>
-            ${state.shortageImgBusy===(o.id+'|kraft_new') ? '⏳ جارٍ...' : ico_('imageIcon',14) + ' نواقص كرافت ونيو'}
+            ${state.shortageImgBusy===(o.id+'|kraft_new') ? '⏳ جارٍ...' : ico_('imageIcon',11) + ' نواقص كرافت ونيو'}
           </button>
           <button class="delbtn pdf" data-act="shortage-img" data-id="${esc(o.id)}" data-group="combin_acc" ${state.shortageImgBusy===(o.id+'|combin_acc')?'disabled':''}>
-            ${state.shortageImgBusy===(o.id+'|combin_acc') ? '⏳ جارٍ...' : ico_('imageIcon',14) + ' نواقص كومبن واكسسوارات'}
+            ${state.shortageImgBusy===(o.id+'|combin_acc') ? '⏳ جارٍ...' : ico_('imageIcon',11) + ' نواقص كومبن واكسسوارات'}
           </button>
         </div>
         <button class="delbtn" data-act="delete-order" data-id="${esc(o.id)}">${ico_('trashIcon',14)} حذف الطلب</button>`}
