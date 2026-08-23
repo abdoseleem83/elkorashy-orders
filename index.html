@@ -249,6 +249,7 @@ nav.tabs .toolbtn{
   font-family:'Cairo',sans-serif;font-weight:800;
 }
 nav.tabs .toolbtn.logoutbtn{border-color:rgba(179,38,30,.3);color:var(--danger);}
+nav.tabs .toolbtn.myordersbtn{width:auto;min-width:0;padding:0 10px;border-radius:20px;gap:5px;border-color:rgba(20,45,90,.35);font-size:13px;}
 /* زرار الخروج — باب + كلمة exit، أوسع من الدواير */
 nav.tabs .toolbtn.exitbtn{
   width:auto;
@@ -1255,15 +1256,6 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .delbtn.edit{border-color:var(--navy);color:var(--navy);margin-top:8px;}
 .adminbtnrow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
 .adminbtnrow .delbtn{margin-top:0;flex:1;}
-.editmenu{flex:1;position:relative;}
-.editmenu summary{list-style:none;cursor:pointer;text-align:center;user-select:none;}
-.editmenu summary::-webkit-details-marker{display:none;}
-.editmenu summary::after{content:' ▾';}
-.editmenu[open] summary::after{content:' ▴';}
-.editmenu-list{position:absolute;z-index:20;top:calc(100% + 4px);right:0;left:0;background:#fff;border:1.5px solid var(--navy);border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.14);}
-.editmenu-item{display:block;width:100%;text-align:right;padding:11px 12px;background:#fff;border:0;border-bottom:1px solid #eee;color:var(--navy);font-size:13.3px;font-weight:600;cursor:pointer;}
-.editmenu-item:last-child{border-bottom:0;}
-.editmenu-item:active{background:#f2f4fa;}
 .delbtn.pdf{border-color:var(--gold);color:#8A6D0B;}
 
 @media (min-width:480px){
@@ -1338,7 +1330,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v186';
+const APP_BUILD = 'v188';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -5402,7 +5394,7 @@ function renderHeader(){
         <button class="tabbtn" data-act="force-update" title="تحديث إجباري">${ico_('cloudRefresh',14)} تحديث</button>
       </div>
       <div class="toolrow">
-        <button class="toolbtn" data-act="goto" data-view="myorders" title="تعديل على طلبك">✏️</button>
+        <button class="toolbtn myordersbtn" data-act="goto" data-view="myorders" title="تعديل على طلبك">✏️ <span>طلباتي</span></button>
         ${isWebAuthnSupported() ? `
         <button class="toolbtn fingerbtn ${bioOn?'on':'off'}" data-act="${bioOn?'disable-biometric':'enable-biometric'}" title="${bioOn?'البصمة مفعّلة — دوس عشان تلغيها':'البصمة غير مفعّلة — دوس عشان تفعّلها'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></svg></button>
         ` : ''}
@@ -6138,13 +6130,8 @@ function renderMyOrdersView(){
             ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('fileIcon',14) + ' عرض PDF'}
           </button>
           ${!isDone ? `
-          <details class="editmenu">
-            <summary class="delbtn edit">✏️ تعديل / إضافة أصناف</summary>
-            <div class="editmenu-list">
-              <button class="editmenu-item" data-act="edit-order" data-id="${esc(o.id)}">✏️ تعديل الأصناف والكميات</button>
-              <button class="editmenu-item" data-act="edit-order" data-id="${esc(o.id)}">➕ إضافة أصناف جديدة للطلب</button>
-            </div>
-          </details>` : ''}
+          <button class="delbtn edit" data-act="edit-order" data-id="${esc(o.id)}">✏️ تعديل الأصناف والكميات</button>
+          <button class="delbtn edit" data-act="edit-order" data-id="${esc(o.id)}">➕ إضافة أصناف جديدة</button>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -6520,6 +6507,7 @@ function renderAdminView(){
       <button class="exportbtn" data-act="export-excel-received">تصدير Excel (${STATUS_RECEIVED})</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُنفَّذ</button>
       <button class="exportbtn" data-act="reactivate-wa-notify" title="لو بطلت إشعارات الواتساب توصل، دوس هنا وابعت الرسالة اللي هتفتح عشان تفعّلها تاني">🔔 فعّل إشعارات الواتساب تاني</button>
+      <button class="exportbtn" data-act="open-callmebot-page" title="لو الرقم قال دعوه للواتساب يبقى الرقم اتغيّر — هنا هتلاقي الرقم الجديد من موقعهم الرسمي">🌐 الصفحة الرسمية (لو الرقم اتغيّر)</button>
     </div>
     <div class="polldiag">
       <span>${state.pollDiag ? esc(state.pollDiag) : 'الإشعار شغّال — بيفحص كل 45 ثانية'}</span>
@@ -6740,11 +6728,23 @@ function openOrderWhatsApp(order){
 // الرقم عند CallMeBot بيقف (خصوصًا لو مفيش رسايل اتبعتت لفترة)، فالإشعارات
 // بتوقف من غير أي خطأ ظاهر في التطبيق. الحل: يبعت رسالة التفعيل دي تاني
 // لرقم CallMeBot الرسمي، ويرجع يشتغل عادي خلال دقايق.
+// إشعارات الواتساب بتتبعت عن طريق CallMeBot، واللي بيحصل إن أحيانًا تفعيل
+// الرقم عند CallMeBot بيقف (خصوصًا لو مفيش رسايل اتبعتت لفترة)، فالإشعارات
+// بتوقف من غير أي خطأ ظاهر في التطبيق. الحل: يبعت رسالة التفعيل دي تاني
+// لرقم CallMeBot الرسمي، ويرجع يشتغل عادي خلال دقايق.
+// ⚠️ مهم: رقم CallMeBot بيتغيّر من فترة للتانية من عندهم (مش حاجة إحنا
+// بنتحكم فيها)، فلو الرقم ده بقى قديم وواتساب قال "دعوه للواتساب" (يعني
+// الرقم مش موجود عليهم بالرقم ده دلوقتي)، لازم تاخد الرقم الجديد من
+// صفحتهم الرسمية وتحدّثه هنا.
+const CALLMEBOT_ACTIVATION_NUMBER = '34623789580'; // آخر تحديث معروف من callmebot.com
 function reactivateWhatsAppNotify(){
-  const num = '34644597165';
   const msg = 'I allow callmebot to send me messages';
-  window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
-  showToast('ابعت الرسالة اللي فتحت زي ما هي، والإشعارات هترجع تشتغل خلال دقايق');
+  const opened = window.open('https://wa.me/' + CALLMEBOT_ACTIVATION_NUMBER + '?text=' + encodeURIComponent(msg), '_blank');
+  showToast('لو واتساب قال "دعوه للواتساب" يبقى رقم CallMeBot اتغيّر — دوس على "الصفحة الرسمية" تحت وهاتلك الرقم الجديد', 6000);
+  return opened;
+}
+function openCallMeBotOfficialPage(){
+  window.open('https://www.callmebot.com/blog/free-api-whatsapp-messages/', '_blank');
 }
 
 function notifyDistributorManually(id){
@@ -7810,6 +7810,7 @@ async function onActionInner(act, el){
     case 'clear-save-error': state.saveError=''; render(); break;
     case 'notify-dist': notifyDistributorManually(el.getAttribute('data-id')); break;
     case 'reactivate-wa-notify': reactivateWhatsAppNotify(); break;
+    case 'open-callmebot-page': openCallMeBotOfficialPage(); break;
     case 'do-notify-dist':{
       const nid = state.notifyPromptId;
       state.notifyPromptId = null;
