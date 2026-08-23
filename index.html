@@ -249,7 +249,6 @@ nav.tabs .toolbtn{
   font-family:'Cairo',sans-serif;font-weight:800;
 }
 nav.tabs .toolbtn.logoutbtn{border-color:rgba(179,38,30,.3);color:var(--danger);}
-nav.tabs .toolbtn.myordersbtn{width:auto;min-width:0;padding:0 10px;border-radius:20px;gap:5px;border-color:rgba(20,45,90,.35);font-size:13px;}
 /* زرار الخروج — باب + كلمة exit، أوسع من الدواير */
 nav.tabs .toolbtn.exitbtn{
   width:auto;
@@ -1256,6 +1255,7 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .delbtn.edit{border-color:var(--navy);color:var(--navy);margin-top:8px;}
 .adminbtnrow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
 .adminbtnrow .delbtn{margin-top:0;flex:1;}
+.donenote{margin-top:8px;padding:8px 10px;background:#E9F6EC;border:1px solid #B7DFC0;border-radius:8px;color:#1F6B32;font-size:12.6px;font-weight:700;text-align:center;}
 .delbtn.pdf{border-color:var(--gold);color:#8A6D0B;}
 
 @media (min-width:480px){
@@ -1330,7 +1330,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v188';
+const APP_BUILD = 'v189';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -5389,12 +5389,11 @@ function renderHeader(){
       <button class="backnav" data-act="go-back" title="رجوع للصفحة السابقة">→ رجوع للصفحة السابقة</button>` : ''}
       <div class="tabgrid">
         <button class="tabbtn ${state.view==='order'?'active':''}" data-act="goto" data-view="order">${ico_('newOrder',14)} طلب جديد</button>
-        <button class="tabbtn ${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">${ico_('track',14)} تابع طلبيتك</button>
+        <button class="tabbtn ${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">${ico_('track',14)} طلباتي</button>
         <button class="tabbtn ${(state.view==='admin'||state.view==='manage')?'active':''}" data-act="goto" data-view="admin">${ico_('warehouse',14)} الإدارة${state.adminNewCount>0 ? `<span class="navbadge">${state.adminNewCount}</span>` : ''}</button>
         <button class="tabbtn" data-act="force-update" title="تحديث إجباري">${ico_('cloudRefresh',14)} تحديث</button>
       </div>
       <div class="toolrow">
-        <button class="toolbtn myordersbtn" data-act="goto" data-view="myorders" title="تعديل على طلبك">✏️ <span>طلباتي</span></button>
         ${isWebAuthnSupported() ? `
         <button class="toolbtn fingerbtn ${bioOn?'on':'off'}" data-act="${bioOn?'disable-biometric':'enable-biometric'}" title="${bioOn?'البصمة مفعّلة — دوس عشان تلغيها':'البصمة غير مفعّلة — دوس عشان تفعّلها'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></svg></button>
         ` : ''}
@@ -5939,8 +5938,8 @@ function renderOrderView(){
     </div>`;
 
   // ملحوظة: زرار "عندي طلب محفوظ في السلة" اتشال من هنا بناءً على طلب —
-  // بقى متاح دلوقتي من أيقونة "✏️ تعديل على طلبك" في الهيدر (شاشة تابع
-  // طلبيتك)، فمفيش داعي يتكرر هنا تحت شاشة اختيار المخزن.
+  // بقى متاح دلوقتي من تاب "طلباتي" في الهيدر (نفس شاشة متابعة الطلبات)،
+  // فمفيش داعي يتكرر هنا تحت شاشة اختيار المخزن.
 
   // العميل ميشوفش شاشة اختيار المخزن أصلاً — مالهاش معنى بالنسباله لأنه
   // مش بيشوف رصيد في أي مخزن.
@@ -6125,6 +6124,7 @@ function renderMyOrdersView(){
           `).join('')}
         </div>
         ${renderOrderTotalLine(o)}
+        ${isDone ? `<div class="donenote">✅ الطلب ده اتسلّم بالفعل — مش قابل للتعديل</div>` : ''}
         <div class="adminbtnrow">
           <button class="delbtn pdf" data-act="preview-myorder-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
             ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('fileIcon',14) + ' عرض PDF'}
@@ -7834,7 +7834,9 @@ async function onActionInner(act, el){
     case 'edit-order':{
       const id = el.getAttribute('data-id');
       const ord = state.myOrders.find(o=>o.id===id) || state.orders.find(o=>o.id===id);
-      if(ord) startEditOrder(ord);
+      if(!ord) break;
+      if(normStatus_(ord.status)===STATUS_DONE){ showToast('الطلب ده اتسلّم بالفعل — مش قابل للتعديل'); break; }
+      startEditOrder(ord);
       break;
     }
 
