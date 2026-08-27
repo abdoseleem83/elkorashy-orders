@@ -834,8 +834,10 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .authwrap{
   min-height:100dvh;
   display:flex;
+  flex-direction:column;
   align-items:center;
   justify-content:center;
+  gap:10px;
   padding:24px 16px;
   background:linear-gradient(160deg,var(--navy) 0%,var(--navy-deep) 60%);
 }
@@ -919,6 +921,7 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
   background:var(--gold);color:#fff;font-size:11px;font-weight:800;
   padding:5px 9px;border-radius:10px 10px 10px 2px;white-space:nowrap;
   box-shadow:0 4px 10px rgba(0,0,0,.18);
+  animation:bubblepulse 1.6s ease-in-out infinite;
 }
 .windowhint .arrow{
   font-size:20px;color:var(--gold);line-height:1;
@@ -928,6 +931,10 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 @keyframes hintbounce{
   0%,100%{transform:translate(0,0);}
   50%{transform:translate(-4px,5px);}
+}
+@keyframes bubblepulse{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.05);}
 }
 
 .adminbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
@@ -1392,7 +1399,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v198';
+const APP_BUILD = 'v199';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -7185,26 +7192,33 @@ function renderAuthWalker(){
   return `
   <div class="authwalkstage">
     <div class="windowhint${playing?' playing':''}">
-      <span class="bubble">اتفضل ادخل علشان طلبيتك</span>
+      <span class="bubble">أهلًا بيك في شركة القرشي PVC</span>
       <span class="arrow">↙</span>
     </div>
     <svg class="walker${playing?' playing':''}" viewBox="0 0 60 100" xmlns="http://www.w3.org/2000/svg">
-      <g class="leg l"><rect x="20" y="58" width="8" height="30" rx="4" fill="var(--navy)"/></g>
-      <g class="leg r"><rect x="32" y="58" width="8" height="30" rx="4" fill="var(--navy)"/></g>
-      <rect x="15" y="28" width="30" height="34" rx="11" fill="var(--gold)"/>
-      <g class="arm l"><rect x="8" y="32" width="8" height="24" rx="4" fill="var(--gold)"/></g>
-      <g class="arm r"><rect x="44" y="32" width="8" height="24" rx="4" fill="var(--gold)"/></g>
+      <defs>
+        <linearGradient id="wshirt" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--gold)"/>
+          <stop offset="100%" stop-color="var(--navy)"/>
+        </linearGradient>
+      </defs>
+      <ellipse cx="30" cy="94" rx="15" ry="3.5" fill="rgba(0,0,0,.15)"/>
+      <g class="leg l"><rect x="19" y="60" width="9" height="27" rx="4.5" fill="var(--navy-deep)"/><ellipse cx="23.5" cy="89" rx="6" ry="4" fill="var(--navy)"/></g>
+      <g class="leg r"><rect x="32" y="60" width="9" height="27" rx="4.5" fill="var(--navy-deep)"/><ellipse cx="36.5" cy="89" rx="6" ry="4" fill="var(--navy)"/></g>
+      <path class="body" d="M17 62 Q15 34 22 27 Q30 22 38 27 Q45 34 43 62 Q30 68 17 62 Z" fill="url(#wshirt)"/>
+      <g class="arm l"><rect x="9" y="33" width="9" height="25" rx="4.5" fill="var(--gold)"/><circle cx="13.5" cy="59" r="5" fill="#F4C9A0"/></g>
+      <g class="arm r"><rect x="42" y="33" width="9" height="25" rx="4.5" fill="var(--gold)"/><circle cx="46.5" cy="59" r="5" fill="#F4C9A0"/></g>
       <!-- شباك UPVC ماسكاه الشخصية بإيدها الشمال -->
       <g class="window-prop">
-        <rect x="-2" y="52" width="18" height="22" rx="2" fill="#EAF3FB" stroke="var(--navy)" stroke-width="2"/>
-        <line x1="7" y1="52" x2="7" y2="74" stroke="var(--navy)" stroke-width="1.6"/>
-        <line x1="-2" y1="63" x2="16" y2="63" stroke="var(--navy)" stroke-width="1.6"/>
+        <rect x="-3" y="49" width="20" height="24" rx="3" fill="#EAF3FB" stroke="var(--navy-deep)" stroke-width="2"/>
+        <line x1="7" y1="49" x2="7" y2="73" stroke="var(--navy-deep)" stroke-width="1.6"/>
+        <line x1="-3" y1="61" x2="17" y2="61" stroke="var(--navy-deep)" stroke-width="1.6"/>
       </g>
-      <circle class="head" cx="30" cy="16" r="14" fill="#F2C29B"/>
-      <circle cx="25" cy="15" r="1.6" fill="var(--navy-deep)"/>
-      <circle cx="35" cy="15" r="1.6" fill="var(--navy-deep)"/>
-      <path d="M25 21 Q30 24 35 21" stroke="var(--navy-deep)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-      <path d="M18 8 Q30 -2 42 8 Q42 2 30 1 Q18 2 18 8 Z" fill="var(--navy)"/>
+      <circle class="head" cx="30" cy="16" r="13" fill="#F4C9A0"/>
+      <path d="M17 10 Q18 0 30 0 Q42 0 43 10 Q43 3 30 2 Q17 3 17 10 Z" fill="#3B2418"/>
+      <circle cx="25.5" cy="15" r="1.5" fill="var(--navy-deep)"/>
+      <circle cx="34.5" cy="15" r="1.5" fill="var(--navy-deep)"/>
+      <path d="M25 21 Q30 24.5 35 21" stroke="var(--navy-deep)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
     </svg>
   </div>`;
 }
