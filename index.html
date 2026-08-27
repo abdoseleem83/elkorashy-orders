@@ -846,17 +846,38 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
   max-width:380px;
   background:var(--card);
   border-radius:18px;
-  padding:26px 22px 22px;
+  padding:0;
+  overflow:hidden;
   box-shadow:0 18px 40px rgba(21,34,56,.35);
   border:1px solid rgba(255,255,255,.06);
 }
-.authlogo{
-  width:64px;height:64px;border-radius:14px;object-fit:contain;
-  background:#fff;border:1px solid var(--line);padding:5px;
-  display:block;margin:0 auto 10px;
+.authcard.cardslide{animation:cardpop .45s cubic-bezier(.22,.8,.32,1) both;}
+@keyframes cardpop{
+  0%{opacity:0;transform:translateY(16px) scale(.98);}
+  100%{opacity:1;transform:translateY(0) scale(1);}
 }
-.authtitle{color:var(--navy);font-size:17.4px;font-weight:800;text-align:center;margin:0 0 2px;}
-.authsub{color:var(--muted);font-size:13.4px;text-align:center;margin:0 0 18px;}
+.authbanner{
+  position:relative;overflow:hidden;
+  padding:24px 22px 20px;text-align:center;
+  background:linear-gradient(120deg,var(--navy) 0%,var(--navy-deep) 55%,var(--gold) 160%);
+}
+.authbanner::after{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(120px 90px at 88% -10%,rgba(255,255,255,.18),transparent 70%);
+}
+.authbody{padding:22px 22px 22px;}
+.authlogo{
+  width:60px;height:60px;border-radius:14px;object-fit:contain;
+  background:#fff;border:1px solid rgba(255,255,255,.5);padding:5px;
+  display:block;margin:0 auto 8px;position:relative;z-index:1;
+}
+.authtitle{color:#fff;font-size:15.6px;font-weight:800;text-align:center;margin:0 0 2px;position:relative;z-index:1;}
+.authsub{color:rgba(255,255,255,.72);font-size:12.4px;text-align:center;margin:0 0 12px;position:relative;z-index:1;}
+.authwelcome{
+  color:#fff;font-size:19px;font-weight:800;text-align:center;
+  position:relative;z-index:1;transition:opacity .2s;
+}
+.authwelcome .sw{display:block;color:rgba(255,255,255,.78);font-size:12.6px;font-weight:600;margin-top:5px;}
 .authcard h3{color:var(--navy);font-size:16.8px;margin:0 0 14px;text-align:center;font-weight:800;}
 .authcard label{margin-top:2px;}
 .authcard input{margin-bottom:2px;}
@@ -873,69 +894,6 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .authlinks .lnk{color:var(--gold);font-weight:700;}
 .authlinks .muted{color:var(--muted);}
 .authcard .err{color:var(--danger);font-size:14px;margin:6px 0 0;text-align:center;}
-
-/* شخصية الترحيب المتحركة فوق كارت تسجيل الدخول */
-.authwalkstage{
-  width:100%;max-width:380px;height:104px;position:relative;
-  margin:0 auto 4px;overflow:hidden;pointer-events:none;
-}
-.walker{
-  position:absolute;bottom:0;width:52px;height:92px;left:calc(50% - 26px);
-}
-.walker.playing{animation:walkacross 1.9s cubic-bezier(.33,.05,.24,1) both;}
-@keyframes walkacross{
-  0%{left:-60px;}
-  78%{left:calc(50% - 26px);}
-  100%{left:calc(50% - 26px);}
-}
-.walker .leg{transform-box:fill-box;transform-origin:top center;}
-.walker.playing .leg{animation:legswing .26s ease-in-out 7;animation-fill-mode:forwards;}
-.walker .leg.l{animation-delay:0s;}
-.walker .leg.r{animation-delay:.13s;}
-@keyframes legswing{
-  0%{transform:rotate(20deg);}
-  50%{transform:rotate(-20deg);}
-  100%{transform:rotate(0deg);}
-}
-.walker .arm{transform-box:fill-box;transform-origin:top center;}
-/* الدراع الشمال ماسكة شباك، فبتفضل ثابتة (مش بتتلوّح مع المشي) */
-.walker .arm.r{transform-box:fill-box;transform-origin:top center;}
-.walker.playing .arm.r{animation:wave .55s ease-in-out infinite;animation-delay:1.85s;}
-.walker:not(.playing) .arm.r{animation:wave .55s ease-in-out infinite;}
-@keyframes wave{
-  0%,100%{transform:rotate(-8deg);}
-  50%{transform:rotate(-38deg);}
-}
-.walker .head{animation:none;}
-.walker.playing{animation-name:walkacross;}
-.authwalkstage.hidden{display:none;}
-
-/* سهم بيشاور على الشباك اللي في إيدها بعد ما توصل */
-.windowhint{
-  position:absolute;top:0;left:6px;
-  display:flex;flex-direction:column;align-items:center;gap:2px;
-  opacity:1;
-}
-.windowhint.playing{opacity:0;animation:hintfade .4s ease forwards;animation-delay:2.05s;}
-.windowhint .bubble{
-  background:var(--gold);color:#fff;font-size:11px;font-weight:800;
-  padding:5px 9px;border-radius:10px 10px 10px 2px;white-space:nowrap;
-  box-shadow:0 4px 10px rgba(0,0,0,.18);
-  animation:bubblepulse 1.6s ease-in-out infinite;
-}
-.windowhint .arrow{
-  font-size:20px;color:var(--gold);line-height:1;
-  animation:hintbounce 1s ease-in-out infinite;
-}
-@keyframes hintfade{to{opacity:1;}}
-@keyframes hintbounce{
-  0%,100%{transform:translate(0,0);}
-  50%{transform:translate(-4px,5px);}
-}
-@keyframes bubblepulse{
-  0%,100%{transform:scale(1);}
-  50%{transform:scale(1.05);}
-}
 
 .adminbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
 .adminbar input{flex:1 1 100%;}
@@ -1399,7 +1357,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v199';
+const APP_BUILD = 'v200';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1471,7 +1429,7 @@ const state = {
   authView:'login',            // login | register | forgot
   showBiometricGate:false,     // لو true بيظهر شاشة "افتح بالبصمة" بدل فورم الدخول
   biometricBusy:false,
-  authWalkerPlayed:false,      // شخصية الترحيب بتمشي مرة واحدة بس أول ما شاشة الدخول تفتح، مش مع كل render (كتابة حروف)
+  lastAuthMode:null,           // آخر وضع (login/register/forgot) اتعرض — عشان نعرف نشغّل أنيميشن الكارت أول ما الوضع يتغيّر بس، مش مع كل حرف بيتكتب
   authUsername:'',
   authPassword:'',
   authPassword2:'',
@@ -7184,60 +7142,30 @@ function render(){
   }
 }
 
-function renderAuthWalker(){
-  // بيتشغّل مرة واحدة بس (أول ما شاشة الدخول/التسجيل تفتح) — بعد كده بيفضل واقف بيلوّح
-  // عشان مايعيدش يمشي مع كل render (زي كتابة حرف في الفورم).
-  const playing = !state.authWalkerPlayed;
-  if(playing) state.authWalkerPlayed = true;
-  return `
-  <div class="authwalkstage">
-    <div class="windowhint${playing?' playing':''}">
-      <span class="bubble">أهلًا بيك في شركة القرشي PVC</span>
-      <span class="arrow">↙</span>
-    </div>
-    <svg class="walker${playing?' playing':''}" viewBox="0 0 60 100" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="wshirt" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="var(--gold)"/>
-          <stop offset="100%" stop-color="var(--navy)"/>
-        </linearGradient>
-      </defs>
-      <ellipse cx="30" cy="94" rx="15" ry="3.5" fill="rgba(0,0,0,.15)"/>
-      <g class="leg l"><rect x="19" y="60" width="9" height="27" rx="4.5" fill="var(--navy-deep)"/><ellipse cx="23.5" cy="89" rx="6" ry="4" fill="var(--navy)"/></g>
-      <g class="leg r"><rect x="32" y="60" width="9" height="27" rx="4.5" fill="var(--navy-deep)"/><ellipse cx="36.5" cy="89" rx="6" ry="4" fill="var(--navy)"/></g>
-      <path class="body" d="M17 62 Q15 34 22 27 Q30 22 38 27 Q45 34 43 62 Q30 68 17 62 Z" fill="url(#wshirt)"/>
-      <g class="arm l"><rect x="9" y="33" width="9" height="25" rx="4.5" fill="var(--gold)"/><circle cx="13.5" cy="59" r="5" fill="#F4C9A0"/></g>
-      <g class="arm r"><rect x="42" y="33" width="9" height="25" rx="4.5" fill="var(--gold)"/><circle cx="46.5" cy="59" r="5" fill="#F4C9A0"/></g>
-      <!-- شباك UPVC ماسكاه الشخصية بإيدها الشمال -->
-      <g class="window-prop">
-        <rect x="-3" y="49" width="20" height="24" rx="3" fill="#EAF3FB" stroke="var(--navy-deep)" stroke-width="2"/>
-        <line x1="7" y1="49" x2="7" y2="73" stroke="var(--navy-deep)" stroke-width="1.6"/>
-        <line x1="-3" y1="61" x2="17" y2="61" stroke="var(--navy-deep)" stroke-width="1.6"/>
-      </g>
-      <circle class="head" cx="30" cy="16" r="13" fill="#F4C9A0"/>
-      <path d="M17 10 Q18 0 30 0 Q42 0 43 10 Q43 3 30 2 Q17 3 17 10 Z" fill="#3B2418"/>
-      <circle cx="25.5" cy="15" r="1.5" fill="var(--navy-deep)"/>
-      <circle cx="34.5" cy="15" r="1.5" fill="var(--navy-deep)"/>
-      <path d="M25 21 Q30 24.5 35 21" stroke="var(--navy-deep)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-    </svg>
-  </div>`;
-}
-
 function renderAuthView(){
-  let inner, showWalker=false;
-  if(state.showBiometricGate){ inner = renderBiometricGate(); showWalker=true; }
-  else if(state.authView==='register'){ inner = renderRegisterForm(); showWalker=true; }
-  else if(state.authView==='forgot') inner = renderForgotForm();
-  else { inner = renderLoginForm(); showWalker=true; }
+  let inner, mode='login';
+  if(state.showBiometricGate){ inner = renderBiometricGate(); mode='login'; }
+  else if(state.authView==='register'){ inner = renderRegisterForm(); mode='register'; }
+  else if(state.authView==='forgot'){ inner = renderForgotForm(); mode='forgot'; }
+  else { inner = renderLoginForm(); mode='login'; }
+  const changed = state.lastAuthMode !== mode;
+  state.lastAuthMode = mode;
+  const welcome = mode==='register'
+    ? { h:'يلا نبدأ! 🚀', s:'املا بياناتك عشان نفعّل حسابك' }
+    : mode==='forgot'
+      ? { h:'محتاج مساعدة؟ 🔑', s:'هنبعت طلب تغيير الباسورد للأدمن' }
+      : { h:'أهلًا بيك تاني! 👋', s:'سجّل دخولك عشان تكمّل طلبيتك' };
   return `
   ${renderVersionMismatch_()}
   <div class="authwrap">
-    ${showWalker ? renderAuthWalker() : ''}
-    <div class="authcard" style="text-align:right;">
-      <img class="authlogo" src="${logoSrc_()}" alt="القرشي">
-      <div class="authtitle">القرشي لأبواب وشبابيك الـ UPVC</div>
-      <div class="authsub">بوابة طلبات الموزعين</div>
-      ${inner}
+    <div class="authcard${changed?' cardslide':''}" style="text-align:right;">
+      <div class="authbanner">
+        <img class="authlogo" src="${logoSrc_()}" alt="القرشي">
+        <div class="authtitle">القرشي لأبواب وشبابيك الـ UPVC</div>
+        <div class="authsub">بوابة طلبات الموزعين</div>
+        <div class="authwelcome">${welcome.h}<span class="sw">${welcome.s}</span></div>
+      </div>
+      <div class="authbody">${inner}</div>
     </div>
   </div>`;
 }
@@ -7588,8 +7516,8 @@ window.addEventListener('unhandledrejection', e=>{
 
 async function onActionInner(act, el){
   switch(act){
-    case 'goto-login': state.authView='login'; state.authError=''; state.authWalkerPlayed=false; render(); break;
-    case 'goto-register': state.authView='register'; state.authError=''; state.authWalkerPlayed=false; render(); break;
+    case 'goto-login': state.authView='login'; state.authError=''; render(); break;
+    case 'goto-register': state.authView='register'; state.authError=''; render(); break;
     case 'goto-forgot': state.authView='forgot'; state.authError=''; state.forgotSent=false; render(); break;
     case 'login-submit': await submitLogin(); break;
     case 'biometric-unlock': await unlockWithBiometric(); break;
