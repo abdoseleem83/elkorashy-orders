@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v175';
+const APP_VERSION = 'v176';
 
 const SHEET_NAME = 'Orders';
 const ARCHIVE_SHEET_NAME = 'الأرشيف';
@@ -53,6 +53,11 @@ const TTL_USER_MS  = 30 * 24 * 60 * 60 * 1000;   // ٣٠ يوم
 // حد محاولات تسجيل الدخول الفاشلة قبل القفل المؤقت
 const LOGIN_MAX_FAILS = 5;
 const LOGIN_LOCK_SECONDS = 15 * 60;   // ١٥ دقيقة
+
+// حد إجمالي لطلبات "تسجيل حساب جديد" في نفس النافذة الزمنية — بدون ده أي حد
+// يقدر يغرق شيت "المستخدمين" وإشعارات الأدمن بحسابات وهمية.
+const REGISTER_MAX_PER_WINDOW = 20;
+const REGISTER_WINDOW_SECONDS = 15 * 60;   // ١٥ دقيقة
 
 
 // ═══════════════════════════════════════════════════════════════════
@@ -180,17 +185,23 @@ function userFromToken_(token) {
   return u ? u : null;
 }
 
+// 🔒 نفس آلية قفل محاولات الدخول (isLoginLocked_) لكن بمفتاح ثابت بدل اسم
+// مستخدم — عشان محدش يقدر يجرّب رقم الـ PIN آلاف المرات في السكريبت.
 function adminLogin_(pin) {
   const real = secret_('ADMIN_PIN');
   if (!real) return { ok: false, reason: 'not_configured' };
-  if (String(pin || '').trim() !== real) return { ok: false, reason: 'wrong_pin' };
+  if (isLoginLocked_('admin_pin')) return { ok: false, reason: 'locked' };
+  if (String(pin || '').trim() !== real) { noteLoginFail_('admin_pin'); return { ok: false, reason: 'wrong_pin' }; }
+  clearLoginFails_('admin_pin');
   return { ok: true, token: signToken_('admin', '', TTL_ADMIN_MS) };
 }
 
 function manageLogin_(pin) {
   const real = secret_('MANAGE_PIN');
   if (!real) return { ok: false, reason: 'not_configured' };
-  if (String(pin || '').trim() !== real) return { ok: false, reason: 'wrong_pin' };
+  if (isLoginLocked_('manage_pin')) return { ok: false, reason: 'locked' };
+  if (String(pin || '').trim() !== real) { noteLoginFail_('manage_pin'); return { ok: false, reason: 'wrong_pin' }; }
+  clearLoginFails_('manage_pin');
   return { ok: true, token: signToken_('manage', '', TTL_ADMIN_MS) };
 }
 
@@ -273,6 +284,23 @@ function noteLoginFail_(username) {
 }
 function clearLoginFails_(username) {
   try { CacheService.getScriptCache().remove(loginFailKey_(username)); } catch (e) {}
+}
+
+// ===== حد معدّل التسجيل =====
+// عدّاد عام (مش لكل مستخدم — لسه مفيش اسم مستخدم وقت التسجيل) بيمنع إغراق
+// النظام بحسابات وهمية. بيمسح نفسه لوحده بعد النافذة الزمنية.
+function isRegisterFlooded_() {
+  try {
+    const n = Number(CacheService.getScriptCache().get('reg_flood') || 0);
+    return n >= REGISTER_MAX_PER_WINDOW;
+  } catch (e) { return false; }
+}
+function noteRegisterAttempt_() {
+  try {
+    const cache = CacheService.getScriptCache();
+    const n = Number(cache.get('reg_flood') || 0) + 1;
+    cache.put('reg_flood', String(n), REGISTER_WINDOW_SECONDS);
+  } catch (e) {}
 }
 
 
@@ -451,7 +479,14 @@ function doPostInner_(e) {
   }
 
   // ---------- حفظ / تعديل طلب ----------
-  if (action === 'create' || action === 'update') return saveOrder_(data);
+  // 🔒 قبل كده كان بيقبل الحفظ من غير توكن خالص، ولو مفيش توكن كان بياخد
+  // username من اللي الواجهة بعتته زي ما هو — يعني أي حد يعرف رابط الـ/exec
+  // (المكتوب في index.html اللي في مستودع عام) يقدر يحقن طلب وهمي منسوب
+  // لأي اسم موزّع حقيقي، من غير تسجيل دخول خالص. دلوقتي لازم توكن موزّع صالح.
+  if (action === 'create' || action === 'update') {
+    if (!userFromToken_(token)) return denyAuth_();
+    return saveOrder_(data);
+  }
 
   return json_({ ok: false, error: 'unknown action: ' + action });
 }
@@ -471,9 +506,10 @@ function saveOrder_(data) {
   }).join(' | ');
 
   const isUpdate = data.action === 'update';
-  // اسم المستخدم بيتاخد من التوكن لو موجود — مش من اللي الواجهة بعتته،
-  // عشان محدش يقدر ينسب طلب لحساب مش بتاعه.
-  const username = userFromToken_(data.token) || String(data.username || '');
+  // اسم المستخدم بيتاخد من التوكن بس — مش من اللي الواجهة بعتته، عشان محدش
+  // يقدر ينسب طلب لحساب مش بتاعه. doPostInner_ بيتأكد إن التوكن صالح قبل ما
+  // يوصل هنا أصلاً، فمفيش داعي لأي fallback على data.username.
+  const username = userFromToken_(data.token) || '';
 
   const idCol = sheet.getLastRow() > 1
     ? sheet.getRange(2, COL_ID, sheet.getLastRow() - 1, 1).getValues()
@@ -743,6 +779,8 @@ function handleLogin(username, password) {
 }
 
 function handleRegister(data) {
+  if (isRegisterFlooded_()) return json_({ ok: false, reason: 'flooded' });
+  noteRegisterAttempt_();
   const sheet = getUsersSheet_();
   const username = String(data.username || '').trim();
   const password = String(data.password || '');

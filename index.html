@@ -1357,7 +1357,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v200';
+const APP_BUILD = 'v202';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1541,7 +1541,7 @@ const state = {
   adminMetaCount:null,    // آخر عدد طلبات معروف من السيرفر (للمقارنة)
   pollDiag:'',            // نتيجة آخر فحص للإشعار (تشخيص يظهر في شريط الأدمن)
   pinInput:'',
-  pinError:false,
+  pinError:'',
   orders:[],
   ordersLoading:false,
   adminFilter:'',
@@ -1554,7 +1554,7 @@ const state = {
   catalogError:false,     // مفيش سيرفر ولا نسخة محفوظة — أسامي بس
   catalogStale:false,     // مفيش سيرفر بس فيه نسخة محفوظة على الجهاز
   catalogAgeMin:0,        // عمر النسخة المحفوظة بالدقايق
-  managePinError:false,   // ⚠️ الحقلين دول كانوا بيتستخدموا من غير ما يتعرّفوا هنا
+  managePinError:'',      // ⚠️ الحقلين دول كانوا بيتستخدموا من غير ما يتعرّفوا هنا
   managePinChecking:false,
   serverVersionMismatch:'',   // نسخة السيرفر لو مختلفة عن نسخة التطبيق
   showInstallBanner:false,
@@ -1934,9 +1934,8 @@ async function loadCatalog(){
     // التطبيق "واقف مش راضي يفتح". بنحط حد أقصى ١٥ ثانية.
     const controller = new AbortController();
     const timeoutId = setTimeout(()=>controller.abort(), 15000);
-    const res = await fetch(APPS_SCRIPT_URL + '?action=catalog', {signal: controller.signal});
+    const data = await apiGet('catalog', {}, {signal: controller.signal});
     clearTimeout(timeoutId);
-    const data = await res.json();
     if(data && Array.isArray(data.items) && data.items.length){
       CATALOG = normalizeCatalogItems_(data.items);
       DISCOUNTS = data.discounts || {};
@@ -2427,8 +2426,7 @@ async function saveOrderRemote(order, isUpdate){
 async function loadOrders(){
   state.ordersLoading = true; render();
   try{
-    const res = await fetch(APPS_SCRIPT_URL + '?token=' + encodeURIComponent(getAdminToken()));
-    const data = await res.json();
+    const data = await apiGet('', {token: getAdminToken()});
     if(Array.isArray(data)){
       // توحيد الحالات القديمة ('تحت التنفيذ') على النظام الجديد قبل أي فلترة
       data.forEach(function(o){ o.status = normStatus_(o.status); });
@@ -2676,16 +2674,15 @@ function setAdminToken(t){
 // بيبعت الرقم للسيرفر — السيرفر هو اللي بيتحقق ويرجّع توكن
 async function submitAdminPin(){
   const pin = asText(state.pinInput).trim();
-  if(!pin){ state.pinError = true; render(); return; }
-  state.pinChecking = true; state.pinError = false; render();
+  if(!pin){ state.pinError = 'من فضلك اكتب الرقم'; render(); return; }
+  state.pinChecking = true; state.pinError = ''; render();
   try{
-    const r = await fetch(APPS_SCRIPT_URL + '?action=adminLogin&pin=' + encodeURIComponent(pin));
-    const d = await r.json();
+    const d = await apiGet('adminLogin', {pin});
     if(d && d.ok && d.token){
       setAdminToken(d.token);
       state.adminUnlocked = true;
       state.manageUnlocked = true;   // رقم واحد يفتح كل حاجة
-      state.pinError = false;
+      state.pinError = '';
       state.pinInput = '';
       state.pinChecking = false;
       render();
@@ -2693,9 +2690,9 @@ async function submitAdminPin(){
       startAdminPoll_();
       return;
     }
-    state.pinError = true;
+    state.pinError = (d && d.reason==='locked') ? 'محاولات كتير غلط — الرقم مقفول مؤقتًا، استنى ١٥ دقيقة' : 'الرقم غير صحيح';
   }catch(e){
-    state.pinError = true;
+    state.pinError = 'الرقم غير صحيح';
   }
   state.pinChecking = false;
   render();
@@ -2714,23 +2711,22 @@ function setManageToken(t){
 }
 async function submitManagePin(){
   const pin = asText(state.managePinInput).trim();
-  if(!pin){ state.managePinError = true; render(); return; }
-  state.managePinChecking = true; state.managePinError = false; render();
+  if(!pin){ state.managePinError = 'من فضلك اكتب الرقم'; render(); return; }
+  state.managePinChecking = true; state.managePinError = ''; render();
   try{
-    const r = await fetch(APPS_SCRIPT_URL + '?action=manageLogin&pin=' + encodeURIComponent(pin));
-    const d = await r.json();
+    const d = await apiGet('manageLogin', {pin});
     if(d && d.ok && d.token){
       setManageToken(d.token);
       state.manageUnlocked = true;
-      state.managePinError = false;
+      state.managePinError = '';
       state.managePinInput = '';
       state.managePinChecking = false;
       render();
       return;
     }
-    state.managePinError = true;
+    state.managePinError = (d && d.reason==='locked') ? 'محاولات كتير غلط — الرقم مقفول مؤقتًا، استنى ١٥ دقيقة' : 'رقم غلط، حاول تاني';
   }catch(e){
-    state.managePinError = true;
+    state.managePinError = 'رقم غلط، حاول تاني';
   }
   state.managePinChecking = false;
   render();
@@ -2946,7 +2942,9 @@ async function submitRegister(){
     const data = await apiPost({ action:'register', username, password, distName, distRegion, distPhone, distType: state.regDistType });
     state.authLoading = false;
     if(!data.ok){
-      state.authError = data.reason==='exists' ? 'اسم المستخدم ده متسجل قبل كده' : 'حصلت مشكلة، حاول تاني';
+      state.authError = data.reason==='exists' ? 'اسم المستخدم ده متسجل قبل كده'
+        : data.reason==='flooded' ? 'فيه ضغط طلبات تسجيل كتير دلوقتي — حاول تاني بعد شوية'
+        : 'حصلت مشكلة، حاول تاني';
       render();
       return;
     }
@@ -3611,7 +3609,7 @@ async function runDiagnostics(){
   log('');
 
   const testOrder = {
-    action:'create', id:'TEST'+Date.now().toString(36), ts:Date.now(),
+    action:'create', id:'TEST'+Date.now().toString(36), ts:Date.now(), token:getUserToken(),
     distName:'اختبار تشخيص', distRegion:'اختبار', distPhone:'0000000000',
     note:'صف تجريبي — امسحه', status: STATUS_PENDING,
     items:[{ main:'أصناف أخرى', product:'اختبار', name:'اختبار', color:'', unitType:'قطعة', qty:1, unitPrice:0, lineTotal:0 }]
@@ -3903,8 +3901,7 @@ function renderCatalogUploadModal(){
 async function loadPwRequests(){
   state.showPwRequests = true; state.pwRequestsLoading = true; render();
   try{
-    const r = await fetch(APPS_SCRIPT_URL + '?action=passwordRequests&token=' + encodeURIComponent(getAdminToken()));
-    const d = await r.json();
+    const d = await apiGet('passwordRequests', {token: getAdminToken()});
     state.pwRequests = Array.isArray(d) ? d : [];
     state.pwRequestsCount = state.pwRequests.length;
   }catch(e){
@@ -5158,8 +5155,7 @@ async function manageExportCatalog(){
   if(!(await ensureLibs_('exceljs'))){ showToast('حصل خطأ في تحميل أداة التصدير، حاول تاني'); return; }
   state.manageExportBusy = true; render();
   try{
-    const res = await fetch(APPS_SCRIPT_URL + '?action=manageExportCatalog&token=' + encodeURIComponent(getManageToken()));
-    const rows = await res.json();
+    const rows = await apiGet('manageExportCatalog', {token: getManageToken()});
     if(!Array.isArray(rows)) throw new Error('bad response');
 
     const wb = new ExcelJS.Workbook();
@@ -5257,16 +5253,11 @@ async function submitCatalogUpload(){
   state.catalogUploadBusy = true; state.catalogUploadResult = null; render();
   const isManageCtx = state.catalogUploadContext==='manage';
   try{
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({
-        action: isManageCtx ? 'manageUploadCatalog' : 'uploadCatalog',
-        token: isManageCtx ? getManageToken() : getAdminToken(),
-        mode: state.catalogUploadMode, rows: state.catalogUploadRows
-      })
+    const data = await apiPost({
+      action: isManageCtx ? 'manageUploadCatalog' : 'uploadCatalog',
+      token: isManageCtx ? getManageToken() : getAdminToken(),
+      mode: state.catalogUploadMode, rows: state.catalogUploadRows
     });
-    const data = await res.json();
     if(data && data.ok){
       state.catalogUploadResult = { updated:data.updated||0, added:data.added||0, notFound:data.notFound||[] };
       showToast('تم رفع الملف بنجاح ✅');
@@ -6215,7 +6206,7 @@ function renderManageView(){
       <p style="color:var(--muted);font-size:13px;margin-bottom:10px;">الأصناف والأسعار والأرصدة وطلبات الموافقة — محمي برقم سري خاص منفصل عن الأدمن</p>
       <input type="password" inputmode="numeric" placeholder="الرقم السري" value="${esc(state.managePinInput)}" data-act="set-manage-pin">
       <button data-act="submit-manage-pin" ${state.managePinChecking?'disabled':''}>${state.managePinChecking?'جارٍ التحقق...':'دخول'}</button>
-      ${state.managePinError ? '<div class="err">رقم غلط، حاول تاني</div>' : ''}
+      ${state.managePinError ? `<div class="err">${esc(state.managePinError)}</div>` : ''}
     </div>`;
   }
 
@@ -6457,7 +6448,7 @@ function renderAdminView(){
         <h2 style="color:var(--navy);font-size:17.9px;margin:0 0 6px;">دخول المتابعة</h2>
         <p style="color:var(--muted);font-size:14.6px;margin:0;">أدخل رقم المتابعة الخاص بالإدارة</p>
         <input type="tel" inputmode="numeric" placeholder="••••" maxlength="6" value="${esc(state.pinInput)}" data-act="pin-input">
-        ${state.pinError ? '<div class="err">الرقم غير صحيح</div>' : ''}
+        ${state.pinError ? `<div class="err">${esc(state.pinError)}</div>` : ''}
         <br><button data-act="pin-submit" ${state.pinChecking?'disabled':''}>${state.pinChecking?'جارٍ التحقق...':'دخول'}</button>
       </div>
     </main>`;
@@ -7460,7 +7451,7 @@ function onInputChange(act, el, val){
       }
       break;
     }
-    case 'pin-input': state.pinInput = val.replace(/[^0-9]/g,''); state.pinError=false; break;
+    case 'pin-input': state.pinInput = val.replace(/[^0-9]/g,''); state.pinError=''; break;
     case 'admin-search': state.adminFilter = val; break;
     case 'myorders-phone': state.myOrdersPhone = val; break;
     case 'auth-username': state.authUsername = val; state.authError=''; break;
