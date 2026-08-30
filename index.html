@@ -2390,7 +2390,13 @@ async function orderExistsRemote(id){
   }catch(e){ return false; }
 }
 
-async function saveOrderRemote(order, isUpdate){
+// بيتحقق إن كان الخطأ ده خطأ "شبكة/اتصال" (يعني الريكوست مارضاش يوصل للسيرفر
+// أصلاً) — الحالات دي بس اللي منطقي نعيد المحاولة فيها تلقائيًا.
+function isNetworkError_(e){
+  return !!(e && e.name === 'TypeError' && /fetch/i.test(String(e.message || '')));
+}
+
+async function saveOrderRemoteOnce_(order, isUpdate){
   const payload = Object.assign({}, order, { action: isUpdate ? 'update' : 'create', token: getUserToken() });
   const controller = new AbortController();
   // Apps Script بياخد وقت خصوصًا في أول نداء أو لما الطلب فيه أصناف كتير.
@@ -2421,6 +2427,35 @@ async function saveOrderRemote(order, isUpdate){
   try{ data = await res.json(); }catch(e){ throw new Error('invalid server response'); }
   if(!data || data.ok !== true) throw new Error(data && data.error ? data.error : 'server did not confirm save');
   return data;
+}
+
+async function saveOrderRemote(order, isUpdate){
+  // ⚠️ "Failed to fetch" معناها إن الريكوست مارضاش يوصل للسيرفر أصلاً —
+  // مش خطأ راجع من Apps Script. غالبًا بتبقى لقطة نت مؤقتة (خصوصًا على
+  // موبايل)، فبنعيد المحاولة تلقائيًا 3 مرات بفاصل بسيط قبل ما نستسلم،
+  // وبعدها نبين رسالة عربي واضحة بدل الرسالة الإنجليزي الخام.
+  const maxAttempts = 3;
+  for(let attempt=1; attempt<=maxAttempts; attempt++){
+    try{
+      return await saveOrderRemoteOnce_(order, isUpdate);
+    }catch(e){
+      const isLast = attempt === maxAttempts;
+      if(isNetworkError_(e)){
+        if(isLast){
+          // قبل ما نستسلم، نتأكد إحنا فعلاً مقطوعين من النت مش إن جوجل
+          // بترفض الريكوست لسبب تاني (رابط غلط، Deploy لاغي، إلخ).
+          const offline = (typeof navigator !== 'undefined' && navigator.onLine === false);
+          throw new Error(offline
+            ? 'مفيش اتصال بالإنترنت. اتأكد من الشبكة وحاول تاني.'
+            : 'تعذّر الوصول للسيرفر بعد ' + maxAttempts + ' محاولات. جرّب تاني بعد شوية، أو لو استمرت المشكلة كلّم المسؤول عن التطبيق.');
+        }
+        await new Promise(r=>setTimeout(r, 1500 * attempt));
+        continue;
+      }
+      // أي خطأ تاني (مش شبكة) — مفيش داعي نعيد المحاولة، نطلعه على طول.
+      throw e;
+    }
+  }
 }
 
 async function loadOrders(){
