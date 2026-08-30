@@ -2445,9 +2445,13 @@ async function saveOrderRemote(order, isUpdate){
           // قبل ما نستسلم، نتأكد إحنا فعلاً مقطوعين من النت مش إن جوجل
           // بترفض الريكوست لسبب تاني (رابط غلط، Deploy لاغي، إلخ).
           const offline = (typeof navigator !== 'undefined' && navigator.onLine === false);
-          throw new Error(offline
+          const err = new Error(offline
             ? 'مفيش اتصال بالإنترنت. اتأكد من الشبكة وحاول تاني.'
             : 'تعذّر الوصول للسيرفر بعد ' + maxAttempts + ' محاولات. جرّب تاني بعد شوية، أو لو استمرت المشكلة كلّم المسؤول عن التطبيق.');
+          // 🏷️ بنعلّم الخطأ ده عشان اللي بينادي (actuallySubmit) يقدر يحفظ
+          // الطلب في طابور offline بدل ما يبين صندوق خطأ للمستخدم.
+          err.isNetworkFailure = true;
+          throw err;
         }
         await new Promise(r=>setTimeout(r, 1500 * attempt));
         continue;
@@ -2455,6 +2459,68 @@ async function saveOrderRemote(order, isUpdate){
       // أي خطأ تاني (مش شبكة) — مفيش داعي نعيد المحاولة، نطلعه على طول.
       throw e;
     }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  طابور الطلبات اللي فشلت بسبب النت (offline queue)
+// ═══════════════════════════════════════════════════════════════════
+//
+// لو الإرسال فشل بسبب النت (مش unauthorized ولا خطأ سيرفر)، بدل ما نبين
+// خطأ للموزع ونخلّيه يحاول يدوي، بنخزّن الطلب كامل محليًا ونعتبره "اتبعت"
+// من ناحية الموزع (شاشة نجاح عادية)، وبعدين نحاول نبعته فعليًا للسيرفر
+// تلقائي أول ما النت يرجع أو أول ما التطبيق يتفتح.
+const LS_OFFLINE_QUEUE_KEY = 'qurashi_offline_queue';
+
+function getOfflineQueue_(){
+  try{ return JSON.parse(localStorage.getItem(LS_OFFLINE_QUEUE_KEY) || '[]'); }catch(e){ return []; }
+}
+function saveOfflineQueue_(q){
+  try{ localStorage.setItem(LS_OFFLINE_QUEUE_KEY, JSON.stringify(q)); }catch(e){}
+}
+function queueOfflineOrder_(order, isUpdate){
+  const q = getOfflineQueue_();
+  q.push({ order: order, isUpdate: !!isUpdate, queuedAt: Date.now() });
+  saveOfflineQueue_(q);
+  state.offlineQueueCount = q.length;
+}
+function offlineQueueCount(){
+  return getOfflineQueue_().length;
+}
+
+let _flushingOfflineQueue = false;
+// بيحاول يبعت كل الطلبات المتراكمة في الطابور، واحد ورا التاني. أول طلب
+// يفشل بسبب النت بيوقّف المحاولة (نسيب الباقي زي ما هو لحد المرة الجاية).
+// لو فشل بسبب unauthorized، بردو بنوقف — لحد ما الموزع يسجّل دخول تاني.
+async function flushOfflineQueue_(){
+  if(_flushingOfflineQueue) return;
+  let q = getOfflineQueue_();
+  if(!q.length) return;
+  _flushingOfflineQueue = true;
+  let sentCount = 0;
+  try{
+    while(q.length){
+      const item = q[0];
+      try{
+        await saveOrderRemoteOnce_(item.order, item.isUpdate);
+        q.shift();
+        saveOfflineQueue_(q);
+        state.offlineQueueCount = q.length;
+        sentCount++;
+      }catch(e){
+        // فشل (نت لسه مقطوع، أو unauthorized، أو أي حاجة تانية) — نوقف
+        // ونسيب الطلب ده وكل اللي بعده في الطابور لحد المحاولة الجاية.
+        break;
+      }
+    }
+  }finally{
+    _flushingOfflineQueue = false;
+  }
+  if(sentCount > 0){
+    showToast(sentCount === 1
+      ? '✅ اتبعت طلب كان محفوظ عندك من قبل'
+      : '✅ اتبعت ' + sentCount + ' طلبات كانت محفوظة عندك من قبل');
+    render();
   }
 }
 
@@ -2677,10 +2743,10 @@ async function apiPost(payload, opts){
 // (قبل كده أي حد كان يقدر يسحب كل الطلبات بأرقام تليفونات العملاء من غير
 // أي تحقق — شوف التعليق على lookup في apps_script.gs.)
 function getUserToken(){
-  try{ return sessionStorage.getItem(LS_USER_TOKEN_KEY) || ''; }catch(e){ return ''; }
+  try{ return localStorage.getItem(LS_USER_TOKEN_KEY) || ''; }catch(e){ return ''; }
 }
 function setUserToken(t){
-  try{ t ? sessionStorage.setItem(LS_USER_TOKEN_KEY, t) : sessionStorage.removeItem(LS_USER_TOKEN_KEY); }catch(e){}
+  try{ t ? localStorage.setItem(LS_USER_TOKEN_KEY, t) : localStorage.removeItem(LS_USER_TOKEN_KEY); }catch(e){}
 }
 
 // بيرجّع true لو الرد معناه "التوكن مش صالح" — وساعتها بنرجّع المستخدم
@@ -2691,7 +2757,7 @@ function isUnauthorized_(d){
 function forceRelogin_(msg){
   setUserToken('');
   state.currentUser = null;
-  try{ sessionStorage.removeItem(LS_USER_KEY); }catch(e){}
+  try{ localStorage.removeItem(LS_USER_KEY); }catch(e){}
   showToast(msg || 'انتهت جلستك — سجّل دخول تاني');
   render();
 }
@@ -2783,11 +2849,12 @@ function restoreManageSession(){
 }
 
 function loadUserSession(){
-  // بنستخدم sessionStorage (مش localStorage) عشان الجلسة تتمسح لما التطبيق يتقفل
-  // خالص، فيبقى لازم تسجيل دخول جديد في كل مرة فتح — وده بياخد بالنا نتحقق من
-  // وجود تحديث للتطبيق (Service Worker) في كل مرة بدل ما نفضل شغالين بنسخة قديمة.
+  // 🔄 كنا بنستخدم sessionStorage عشان الجلسة تتمسح لما التطبيق يتقفل، بس ده كان
+  // بيخلي أي قفل عادي للموبايل يرجّع الموزع لتسجيل الدخول من جديد، مع إن
+  // التوكن نفسه صالح 30 يوم على السيرفر (TTL_USER_MS). دلوقتي localStorage
+  // عشان الجلسة تفضل شغالة لحد ما التوكن ينتهي فعلاً أو يعمل خروج بنفسه.
   try{
-    const raw = sessionStorage.getItem(LS_USER_KEY);
+    const raw = localStorage.getItem(LS_USER_KEY);
     if(raw){
       const u = JSON.parse(raw);
       if(u && u.username){ state.currentUser = u; return; }
@@ -2897,10 +2964,11 @@ async function unlockWithBiometric(){
       // التوكن متخزّن جوه الخزنة مع باقي بيانات الحساب — لازم يرجع للجلسة
       // كمان، وإلا "طلباتي" هترجع فاضية (السيرفر بقى بيطلب توكن).
       setUserToken(u.token || '');
-      try{ sessionStorage.setItem(LS_USER_KEY, JSON.stringify(u)); }catch(e){}
+      try{ localStorage.setItem(LS_USER_KEY, JSON.stringify(u)); }catch(e){}
       state.showBiometricGate = false;
       checkForResumableDraft(); // 🛒 لو في مسودة محفوظة، نعرض إشعار بعد فتح البصمة
       ensurePushRegistered();
+      flushOfflineQueue_(); // 📶 نحاول نبعت أي طلبات كانت واقفة بسبب unauthorized
     }
   }catch(e){
     showToast('تعذّر التحقق بالبصمة، جرّب تاني أو ادخل بكلمة المرور');
@@ -2937,7 +3005,7 @@ async function submitLogin(){
     }
     setUserToken(data.token || '');
     state.currentUser = { username: data.username || username, distName: data.distName||'', distRegion: data.distRegion||'', distPhone: data.distPhone||'', distType: data.distType||'موزع', token: data.token||'' };
-    try{ sessionStorage.setItem(LS_USER_KEY, JSON.stringify(state.currentUser)); }catch(e){}
+    try{ localStorage.setItem(LS_USER_KEY, JSON.stringify(state.currentUser)); }catch(e){}
     // ⚠️ إصلاح جذري لمشكلة "اسم الموزّع غلط في الطلبات": لو الموزّع كتب اسم
     // غلط/مختصر مرة واحدة قبل كده، كان بيتحفظ محليًا على جهازه (localStorage)
     // للأبد، وبما إن الشرط القديم كان "لو فيه اسم موجود، سيبه"، الاسم الصحيح
@@ -2953,6 +3021,7 @@ async function submitLogin(){
     state.authPassword='';
     checkForResumableDraft(); // 🛒 لو في مسودة محفوظة، نعرض إشعار بعد الدخول مباشرة
     ensurePushRegistered();
+    flushOfflineQueue_(); // 📶 نحاول نبعت أي طلبات كانت واقفة بسبب unauthorized
     render();
   }catch(e){
     state.authLoading = false;
@@ -3366,6 +3435,30 @@ function proceedAfterDailyWarning(){
   render();
 }
 
+// بيقفل شاشة الطلب ويعرض شاشة النجاح — سواء الطلب اتبعت فعلاً للسيرفر أو
+// اتحفظ في طابور الأوفلاين عشان يتبعت لاحقًا. الفرق الوحيد بين الحالتين
+// رسالة التوست ورقم الطلب المؤقت (لحد ما السيرفر يرجّع الرقم الحقيقي).
+function finalizeOrderSuccess_(order, isUpdate, oldId, id, orderNo, toastMsg){
+  order.orderNo = orderNo;
+  state.successOrderId = orderNo;
+  state.successMode = isUpdate ? 'updated' : 'new';
+  state.lastOrder = order;
+  // الطلب الجديد (سواء جديد أو ناتج عن تعديل) بيتسجّل في "طلباتي" برقمه الجديد،
+  // والمرجع القديم بيتشال عشان مايفضلش الطلب القديم ظاهر عند الموزع.
+  if(oldId) removeOrderRef(oldId);
+  saveOrderRef(id, order.distName);
+  localStorage.setItem(LS_LAST_DATE_KEY, todayStr());
+  localStorage.setItem(LS_LAST_ID_KEY, id.toUpperCase());
+  state.cart=[]; state.staged=[]; state.distName=''; state.distRegion=''; state.distPhone=''; state.note=''; state.warehouse=''; state.editingOrderId=null;
+  loadProfile();
+  clearDraft();
+  showToast(toastMsg, 5000);
+  state.waSent = false;
+  state.waImgPreparing = false;
+  state.orderImages = null;
+  prepareOrderImage();
+}
+
 async function actuallySubmit(){
   state.showConfirmModal = false;
   state.saveError = '';
@@ -3392,42 +3485,34 @@ async function actuallySubmit(){
   try{
     const resp = await saveOrderRemote(order, isUpdate);
     const orderNo = (resp && resp.orderNo) ? String(resp.orderNo) : id.toUpperCase();
-    order.orderNo = orderNo;
-    state.successOrderId = orderNo;
-    state.successMode = isUpdate ? 'updated' : 'new';
-    state.lastOrder = order;
-    // الطلب الجديد (سواء جديد أو ناتج عن تعديل) بيتسجّل في "طلباتي" برقمه الجديد،
-    // والمرجع القديم بيتشال عشان مايفضلش الطلب القديم ظاهر عند الموزع.
-    if(oldId) removeOrderRef(oldId);
-    saveOrderRef(id, order.distName);
-    localStorage.setItem(LS_LAST_DATE_KEY, todayStr());
-    localStorage.setItem(LS_LAST_ID_KEY, id.toUpperCase());
-    state.cart=[]; state.staged=[]; state.distName=''; state.distRegion=''; state.distPhone=''; state.note=''; state.warehouse=''; state.editingOrderId=null;
-    loadProfile();
-    clearDraft();
-    // ✅ إشعار فوري بعد استلام الطلب (5 ثواني عشان المستخدم يقراها)
-    showToast(isUpdate
-      ? '✅ تم استلام تعديلك — جاري المراجعة والتأكيد بالمتاح'
-      : '✅ تم استلام طلبك — جاري المراجعة والتأكيد بالمتاح', 5000);
     // 📲 مابقناش نبعت واتساب تلقائيًا ولا إجباري — بطلب صريح من المستخدم.
     // بس بنعرض في شاشة النجاح ملاحظة + سهم بيشاور على زرار واتساب،
     // والموزع هو اللي يدوس بنفسه.
-    // (v151 كانت جربت فتح تلقائي فور الحفظ، بس المتصفح مش دايمًا بيسمح بيه
-    // من غير ضغطة مستخدم قريبة، فرجعنا للوضع اليدوي بطلب المستخدم.)
-    state.waSent = false;
-    state.waImgPreparing = false;
-    state.orderImages = null;   // صور الطلب الجديدة بتتجهّز أول ما يدوس ابعت
-    // ⚠️ بق مهم: كنا بنجهّز صور الطلب (html2canvas) لحظة ما يدوس "ابعت
-    // واتساب" نفسها، وده معناه إن navigator.share() كانت بتتنادى بعد
-    // await طويل (تجهيز الصور بياخد وقت) — والمتصفح بيسحب صلاحية "ضغطة
-    // مستخدم حقيقية" لو استخدمناها بعد await طويل زي كده، فـ navigator.share
-    // كانت بترفض تفتح بصمت من غير أي رسالة خطأ ظاهرة (بالظبط نفس مشكلة
-    // window.open الموثّقة فوق مع reserveWaWindow). الحل: نبدأ تجهيز الصور
-    // في الخلفية فورًا من هنا (من غير ما نستنى/await)، عشان لما الموزع يدوس
-    // الزرار بعد كام ثانية، الصور تكون جاهزة والمشاركة تتنادى على طول جوه
-    // الضغطة نفسها من غير أي انتظار قبلها.
-    prepareOrderImage();
+    finalizeOrderSuccess_(order, isUpdate, oldId, id, orderNo, isUpdate
+      ? '✅ تم استلام تعديلك — جاري المراجعة والتأكيد بالمتاح'
+      : '✅ تم استلام طلبك — جاري المراجعة والتأكيد بالمتاح');
   }catch(e){
+    // 🔒 "unauthorized" معناها جلسة الموزّع خلصت أو مش صالحة — مش خطأ نت
+    // ولا خطأ سيرفر. الطلب (السلة) لسه محفوظ في state، فبنرجّعه لشاشة
+    // الدخول بدل ما نبين له رسالة خطأ خام مش هتتحل غير بـ login تاني.
+    if(e && e.message === 'unauthorized'){
+      forceRelogin_('انتهت جلستك — سجّل دخول تاني وطلبك هيفضل محفوظ عندك');
+      state.submitting = false;
+      render();
+      return;
+    }
+    // 📶 فشل بسبب النت بعد كل محاولات الإعادة — بدل ما نوقف الموزع بخطأ،
+    // بنحفظ الطلب في طابور محلي ونعامله كأنه اتبعت. التطبيق هيحاول يبعته
+    // فعليًا للسيرفر أول ما النت يرجع (أو أول ما يتفتح تاني).
+    if(e && e.isNetworkFailure){
+      queueOfflineOrder_(order, isUpdate);
+      finalizeOrderSuccess_(order, isUpdate, oldId, id, id.toUpperCase(),
+        '📶 مفيش نت دلوقتي — الطلب اتحفظ عندك وهيتبعت تلقائيًا أول ما النت يرجع');
+      state.submitting = false;
+      render();
+      if(state.lastOrder && state.successOrderId) generateBothQuotes(state.lastOrder);
+      return;
+    }
     // صندوق خطأ ثابت (مش toast بيختفي) فيه السبب الخام — عشان نعرف السبب الحقيقي
     state.saveError = 'نوع العملية: ' + (isUpdate ? 'تعديل' : 'جديد')
       + '\nرقم الطلب: ' + id
@@ -7618,7 +7703,7 @@ async function onActionInner(act, el){
       // ما نلمس أي بيانات تانية، ونوري فورم الدخول عشان يجدّد التوكن.
       setUserToken('');
       state.currentUser = null;
-      try{ sessionStorage.removeItem(LS_USER_KEY); }catch(e){}
+      try{ localStorage.removeItem(LS_USER_KEY); }catch(e){}
       state.authView='login';
       state.showBiometricGate = isBiometricEnabledForThisDevice();
       state.myOrdersAuthMissing = false;
@@ -7629,7 +7714,7 @@ async function onActionInner(act, el){
       setAdminToken('');
       state.adminUnlocked = false;
       stopAdminPoll_();
-      try{ sessionStorage.removeItem(LS_USER_KEY); }catch(e){}
+      try{ localStorage.removeItem(LS_USER_KEY); }catch(e){}
       state.authView='login'; state.authUsername=''; state.authPassword='';
       state.showBiometricGate = isBiometricEnabledForThisDevice();
       render();
@@ -8054,6 +8139,11 @@ loadUserSession();
 restoreAdminSession();
 restoreManageSession();
 loadProfile();
+// 📶 لو في طلبات اتحفظت أوفلاين من قبل (النت كان مقطوع وقت الإرسال)، نحاول
+// نبعتها تاني هنا (أول ما التطبيق يتفتح)، وكمان أول ما النت يرجع فعليًا.
+state.offlineQueueCount = offlineQueueCount();
+if(state.currentUser) flushOfflineQueue_();
+window.addEventListener('online', function(){ if(state.currentUser) flushOfflineQueue_(); });
 // اللوجو بقى ملف مستقل — بنحمّله في الخلفية ونحوّله data URI عشان يبقى جاهز
 // وقت توليد الـ PDF وصور الطلبات (html2canvas مابيستناش الصور اللي بتتحمّل).
 preloadLogo_().then(()=>{ if(LOGO_DATA_URI) render(); });
