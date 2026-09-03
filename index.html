@@ -3787,8 +3787,8 @@ function renderNotifyPrompt(){
   const ord = state.orders.find(o=>o.id===state.notifyPromptId);
   if(!ord) return '';
   return `
-  <div class="modalbg">
-    <div class="modalcard">
+  <div class="modalbg" data-act="skip-notify">
+    <div class="modalcard" data-act="noop">
       <div class="modalic">📲</div>
       <h3>تبلّغ الموزع بتحديث الطلب؟</h3>
       <p>هيفتح واتساب برسالة جاهزة عن طلب <b>${esc(ord.distName)}</b> — تختار المستلم بنفسك</p>
@@ -3803,8 +3803,8 @@ function renderNotifyPrompt(){
 function renderWarehouseModal(){
   if(!state.showWarehouseModal) return '';
   return `
-  <div class="modalbg">
-    <div class="modalcard">
+  <div class="modalbg" data-act="close-warehouse">
+    <div class="modalcard" data-act="noop">
       <div class="modalic">🏬</div>
       <h3>برجاء اختيار المخزن</h3>
       <p>لسهولة توجيهه للمسؤول</p>
@@ -6221,13 +6221,15 @@ function renderResumeModal(){
 function renderDailyWarningModal(){
   const lastId = localStorage.getItem(LS_LAST_ID_KEY) || '';
   return `
-  <div class="modalbg">
-    <div class="modalcard">
+  <div class="modalbg" data-act="cancel-daily-warning">
+    <div class="modalcard" data-act="noop">
       <div class="modalic">ℹ️</div>
       <h3>بعتّ طلب النهارده بالفعل</h3>
       <p>آخر طلب بعته النهارده رقمه <b>#${esc(lastId)}</b>. لو ده طلب تاني ومختلف، ولا يهمك — كمّل بعت عادي.</p>
       <div class="modalbtns">
         <button class="modalbtn primary" data-act="continue-daily">تمام، كمّل إرسال الطلب</button>
+        <button class="modalbtn" data-act="goto-myorders-from-warning">📋 شوف طلباتي الأول</button>
+        <button class="modalbtn" data-act="cancel-daily-warning" style="color:var(--muted);">إلغاء، ارجع للمراجعة</button>
       </div>
     </div>
   </div>`;
@@ -6236,8 +6238,8 @@ function renderDailyWarningModal(){
 function renderConfirmModal(){
   const count = state.cart.length;
   return `
-  <div class="modalbg">
-    <div class="modalcard">
+  <div class="modalbg" data-act="close-confirm">
+    <div class="modalcard" data-act="noop">
       <div class="modalic">📦</div>
       <h3>متأكد من ${state.editingOrderId?'حفظ التعديلات':'إرسال الطلب'}؟</h3>
       <p>الطلب فيه <b>${count}</b> صنف باسم <b>${esc(state.distName)}</b> — ${esc(state.distRegion)}.<br>راجع الأصناف قبل التأكيد، مش هتقدر تعدّل إلا من "طلباتي" بعدين.</p>
@@ -7932,6 +7934,7 @@ async function onActionInner(act, el){
     case 'save-draft': saveDraft(); break;
     case 'preview-cart-invoice': previewCartInvoice(); break;
     case 'continue-daily': proceedAfterDailyWarning(); break;
+    case 'cancel-daily-warning': state.showDailyWarning=false; render(); break;
     case 'goto-myorders-from-warning':
       state.showDailyWarning = false;
       state.view = 'myorders';
