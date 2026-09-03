@@ -1,7 +1,7 @@
 // ⚠️ مهم: غيّر رقم النسخة دي في كل مرة ترفع تحديث جديد.
 // ده اللي بيخلي المتصفح يرمي الكاش القديم ويجيب الملفات الجديدة.
 // 🔑 الرقم ده لازم يطابق APP_BUILD في index.html و APP_VERSION في apps_script.gs.
-const CACHE_VERSION = 'v205';
+const CACHE_VERSION = 'v206';
 const CACHE_NAME = 'elkorashy-' + CACHE_VERSION;
 
 // الملفات اللي بتتحمّل إجباري وقت تثبيت النسخة — خليها **أقل حاجة ممكنة**.
@@ -142,8 +142,20 @@ self.addEventListener('fetch', (event) => {
         return fresh;
       } catch (e) {
         // مفيش نت → رجّع آخر نسخة متخزنة عشان التطبيق يفضل شغال أوفلاين
+        // 🐞 بق حقيقي: السطر كان `cached || caches.match('./index.html') || caches.match('./')`
+        // و caches.match بترجّع **وعد (Promise)** — والوعد قيمته دايمًا true،
+        // فالـ || كان بياخد أول واحدة على طول حتى لو نتيجتها undefined. النتيجة
+        // إن الفتح أوفلاين كان بيرجّع undefined لـ respondWith → صفحة "مفيش نت"
+        // بتاعة المتصفح بدل التطبيق. دلوقتي بننتظر كل واحدة بالترتيب فعلاً،
+        // وبنرجّع رد واضح لو مفيش أي نسخة متخزنة.
         const cached = await caches.match(req);
-        return cached || caches.match('./index.html') || caches.match('./');
+        if (cached) return cached;
+        const html = (await caches.match('./index.html')) || (await caches.match('./'));
+        if (html) return html;
+        return new Response('<h1 dir="rtl">مفيش اتصال بالإنترنت</h1>', {
+          status: 503,
+          headers: { 'Content-Type': 'text/html; charset=utf-8' }
+        });
       }
     })());
     return;
