@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v176';
+const APP_VERSION = 'v206';
 
 const SHEET_NAME = 'Orders';
 const ARCHIVE_SHEET_NAME = 'الأرشيف';
@@ -526,13 +526,25 @@ function saveOrder_(data) {
 
   // ✏️ التعديل بيعمل صف **جديد** برقم وتاريخ جديد، والقديم بيتعلّم "مُعدّل"
   // (يفضل ظاهر للأدمن كنسخة قديمة) — مش بيحدّث نفس الصف.
+  //
+  // 🔒 ثغرة اتصلحت: الكود القديم كان بيعلّم أي صف رقمه = oldId من غير ما
+  // يتأكد إن الطلب ده بتاع نفس الموزّع اللي باعت. يعني أي موزّع مسجّل دخول
+  // كان يقدر يبعت oldId بتاع طلب **موزّع تاني** ويخليه "مُعدّل" — الطلب
+  // بيختفي من متابعة صاحبه وحجز بضاعته بيتفك. دلوقتي بنتأكد من الملكية:
+  // إما اسم المستخدم مطابق، أو (للطلبات القديمة اللي مالهاش عمود اسم مستخدم)
+  // رقم التليفون مطابق. غير كده بنسيب الصف القديم زي ما هو.
   if (isUpdate && data.oldId != null && String(data.oldId)) {
     const oldId = String(data.oldId);
+    const myPhone = normalizePhone((userInfo_(username) || {}).phone || '');
     for (let i = 0; i < idCol.length; i++) {
-      if (String(idCol[i][0]) === oldId) {
-        sheet.getRange(i + 2, COL_STATUS).setValue(STATUS_EDITED);
-        break;
-      }
+      if (String(idCol[i][0]) !== oldId) continue;
+      const rowUser = String(sheet.getRange(i + 2, COL_USERNAME).getValue() || '').trim();
+      const rowPhone = normalizePhone(sheet.getRange(i + 2, COL_PHONE).getValue());
+      const mine = rowUser
+        ? (rowUser.toLowerCase() === String(username).trim().toLowerCase())
+        : (!!myPhone && rowPhone === myPhone);
+      if (mine) sheet.getRange(i + 2, COL_STATUS).setValue(STATUS_EDITED);
+      break;
     }
   }
 

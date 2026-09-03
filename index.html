@@ -1357,7 +1357,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v202';
+const APP_BUILD = 'v206';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1392,16 +1392,25 @@ function nextStatus_(status){
   return STATUS_ORDER[(i<0?0:i+1) % STATUS_ORDER.length];
 }
 // المخازن اللي الموزع بيحمّل منها — عايز تضيف/تشيل مخزن؟ عدّل السطر ده بس.
-const WAREHOUSES = ['طنطا', 'الاسكندرية', 'المنصورة اكسا', 'العاشر اكسا'];
+const WAREHOUSES = ['طنطا', 'المنصورة اكسا', 'العاشر اكسا'];
 // أيقونة تمثّل مدينة كل مخزن (بدل الأيقونة الموحّدة 🏬) — عايز تضيف مخزن
 // جديد فوق؟ زوّد له سطر هنا كمان بنفس الاسم بالظبط.
 const WAREHOUSE_ICONS_ = {
   'طنطا': '🕌',           // مسجد السيد البدوي، أشهر معلم في طنطا
-  'الاسكندرية': '🏛️',      // مكتبة الإسكندرية ومعالمها الأثرية
   'المنصورة اكسا': '🌉',   // كوبري المنصورة على النيل
   'العاشر اكسا': '🏭'      // مدينة العاشر من رمضان الصناعية
 };
 function warehouseIcon_(w){ return WAREHOUSE_ICONS_[w] || '🏬'; }
+// 🧹 مخزن اتشال من القايمة (زي "الاسكندرية" اللي اتشال) ممكن يفضل متخزّن في
+// مسودّة محفوظة على الجهاز أو في طلب قديم بنعدّل عليه. لو سيبناه زي ما هو،
+// الموزّع يكمّل الطلب على مخزن مابقاش موجود من غير ما يلاحظ. بنفلتره هنا
+// فيرجع لشاشة اختيار المخزن ويختار من الموجود فعلاً.
+// ⚠️ الطلبات القديمة المتسجّلة بتفضل معروضة باسم مخزنها الأصلي زي ما هو —
+// إحنا بنفلتر بس المخزن اللي هيتكتب في طلب **جديد**.
+function validWarehouse_(w){
+  const v = asText(w).trim();
+  return WAREHOUSES.includes(v) ? v : '';
+}
 // تنبيه "كمية قليلة" لو الرصيد أقل من عدد اللفات ده.
 // ⚠️ الرصيد في الشيت مكتوب بالـ"عود"، فلازم نضربه في محتوى اللفة قبل المقارنة:
 //    لفة فيها 8 عود × 5 لفات = 40 عود → أي رصيد أقل من 40 عود = كمية قليلة.
@@ -1631,8 +1640,30 @@ const ICONS_ = {
   sendIcon: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
   imageIcon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',
 };
-const COLOR_STYLES_MAP = { 'أبيض': 'background:#FFF;color:#333;border-color:#D0D0D0;', 'بيج': 'background:#D4A574;color:#333;border-color:#C49464;', 'خشبي': 'background:#8B6F47;color:#FFF;border-color:#6B5435;', 'أسود': 'background:#000;color:#FFF;border-color:#333;', 'رمادي': 'background:#A9A9A9;color:#FFF;border-color:#808080;', 'أرو': 'background:#8B7BA8;color:#FFF;border-color:#6B5B88;' };
-function getColorStyle(c){ return COLOR_STYLES_MAP[c] || ''; }
+const COLOR_STYLES_MAP = {
+  'أبيض': 'background:#FFF;color:#333;border-color:#D0D0D0;',
+  'بيج': 'background:#D4A574;color:#333;border-color:#C49464;',
+  'خشبي': 'background:#8B6F47;color:#FFF;border-color:#6B5435;',
+  'أسود': 'background:#000;color:#FFF;border-color:#333;',
+  'رمادي': 'background:#A9A9A9;color:#FFF;border-color:#808080;',
+  'أرو': 'background:#8B7BA8;color:#FFF;border-color:#6B5B88;',
+  'جولدن اوك': 'background:#B07A3C;color:#FFF;border-color:#8C5F2C;'
+};
+// 🐞 بق حقيقي: مفاتيح الخريطة فوق مكتوبة بالهمزة (أبيض/أسود/أرو)، بينما
+// شيت "الأصناف" مكتوب فيه من غير همزة (ابيض/اسود/ارو) — فتلات ألوان من ست
+// ماكانتش بتاخد لون الشريحة بتاعها خالص وبتطلع رمادية زي أي شريحة عادية.
+// بنوحّد الكتابة قبل البحث بدل ما نكرّر المفاتيح.
+function normColorKey_(c){
+  return asText(c).trim()
+    .replace(/[أإآ]/g, 'ا')   // كل أشكال الألف تبقى ألف عادية
+    .replace(/\s+/g, ' ');
+}
+const COLOR_STYLES_NORM_ = (()=>{
+  const m = {};
+  Object.keys(COLOR_STYLES_MAP).forEach(k=>{ m[normColorKey_(k)] = COLOR_STYLES_MAP[k]; });
+  return m;
+})();
+function getColorStyle(c){ return COLOR_STYLES_NORM_[normColorKey_(c)] || ''; }
 function ico_(name, size){
   size = size || 17;
   return `<svg class="ico-svg" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS_[name]||''}</svg>`;
@@ -1756,7 +1787,7 @@ function colorStockLevel(item){
 
 // المخازن دي (العاشر والمنصورة) ماعندهاش تتبّع رصيد حقيقي — الأصناف كلها
 // تتعامل كأنها متاحة دايمًا فيها من غير أي تلوين أو لافتة "متوفر/مفيش رصيد".
-// وطنطا والإسكندرية بس هما اللي بيتبع فيهم الرصيد الحقيقي.
+// طنطا بس هي اللي بيتبع فيها الرصيد الحقيقي (شوف STOCK_TRACKED_WAREHOUSES_).
 // والعميل (مش الموزع) ميشوفش أي معلومة رصيد في أي مخزن، ومش بيشوف اختيار
 // مخزن أصلاً — فالرصيد بالنسبالو مالوش معنى في كل الأحوال.
 function isClientAccount(){
@@ -3200,7 +3231,7 @@ function resumeDraft(){
     state.distRegion = asText(draft.distRegion);
     state.distPhone = asText(draft.distPhone);
     state.note = asText(draft.note);
-    state.warehouse = asText(draft.warehouse);
+    state.warehouse = validWarehouse_(draft.warehouse);
     state.cart = draft.cart || [];
   }
   state.pendingDraft = null;
@@ -3550,7 +3581,7 @@ function startEditOrder(order){
   state.distRegion = asText(order.distRegion);
   state.distPhone = asText(order.distPhone);
   state.note = asText(order.note);
-  state.warehouse = asText(order.warehouse);
+  state.warehouse = validWarehouse_(order.warehouse);
   state.cart = order.items.map(it=>Object.assign({}, it));
   state.staged = [];
   state.mainGroup = null;
@@ -7832,7 +7863,6 @@ async function onActionInner(act, el){
     case 'manage-reject-pw':
       if(confirm('متأكد إنك عايز ترفض طلب إعادة تعيين كلمة السر ده؟')) manageDecidePw(el.getAttribute('data-val'), false);
       break;
-    case 'set-staged-unit': setStagedUnit(el.getAttribute('data-key'), el.getAttribute('data-val')); break;
     case 'staged-qty-dec':{
       const s = state.staged.find(x=>x.key===el.getAttribute('data-key'));
       const c = el.getAttribute('data-val');

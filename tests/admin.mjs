@@ -67,8 +67,15 @@ await page.unroute('**/script.google.com/**');
 await page.route('**/script.google.com/**', async route => {
   await route.fulfill({ status:200, contentType:'application/json', body: JSON.stringify({ ok:false, error:'unauthorized' }) });
 });
-const relogin = await page.evaluate(async ()=>{ await loadMyOrdersByIds(['a1']); return !state.currentUser; });
-console.log('٥) التوكن المنتهي بيرجّع لشاشة الدخول:', relogin?'✅':'❌');
+// ⚠️ ملحوظة: التوكن المنتهي هنا مقصود إنه **مايطردش** المستخدم بالقوة —
+// ده كان بيحصل قبل كده بمجرد الدخول على "تابع طلبيتك" (شوف التعليق فوق
+// loadMyOrdersByIds في index.html). السلوك الصحيح: يفضل مسجّل دخول، وبس
+// يتحط علم myOrdersAuthMissing عشان الشاشة تعرض زرار "سجّل دخول تاني".
+const relogin = await page.evaluate(async ()=>{
+  await loadMyOrdersByIds(['a1']);
+  return state.currentUser != null && state.myOrdersAuthMissing === true;
+});
+console.log('٥) التوكن المنتهي بيسيب المستخدم داخل ويعلّم myOrdersAuthMissing:', relogin?'✅':'❌');
 
 console.log('\nنداءات السيرفر:');
 calls.forEach(c=>console.log('   ', c.m.padEnd(5), c.action.padEnd(18), c.token?('token='+c.token):''));
