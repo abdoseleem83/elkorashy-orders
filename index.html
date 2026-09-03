@@ -51,6 +51,11 @@
   margin-bottom:10px;
 }
 *{box-sizing:border-box;}
+/* انتقال ناعم موحّد لكل الأزرار — إحساس أحدث واستجابة بصرية للمس بدون
+   أي تغيير في التخطيط أو السلوك الوظيفي (مجرد transform/opacity خفيف) */
+button{transition:var(--transition);}
+button:active:not(:disabled){transform:scale(.97);}
+button:disabled{transform:none;}
 /* ⚠️ ده كان السبب الحقيقي إن الهيدر لسه بيتحرك مع التمرير رغم
    position:sticky: overflow-x:hidden من غير overflow-y مكتوب — قاعدة CSS
    بتخلي المتصفح يحط overflow-y:auto ضمنيًا، فـ body كان بيبقى صندوق تمرير
@@ -424,13 +429,13 @@ textarea{resize:vertical;min-height:60px;}
   50%{transform:scale(1.18);}
 }
 .whtile{
-  border:1.5px solid var(--line);background:#FCFBF8;border-radius:12px;
+  border:1.5px solid var(--line);background:#FCFBF8;border-radius:13px;
   padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;
   font-family:'Cairo',sans-serif;font-size:14px;font-weight:700;color:var(--ink);
   cursor:pointer;
 }
 .whtile .whicon{font-size:28px;}
-.whtile.active{background:var(--navy);border-color:var(--navy);color:#fff;}
+.whtile.active{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:var(--shadow-md);}
 .chip{
   border:1.5px solid var(--line);
   background:#FCFBF8;
@@ -446,6 +451,7 @@ textarea{resize:vertical;min-height:60px;}
   background:var(--navy);
   border-color:var(--navy);
   color:#fff;
+  box-shadow:0 4px 12px rgba(0,36,104,.25);
 }
 .chip.gold.active{background:var(--gold);border-color:var(--gold);color:var(--navy-deep);}
 
@@ -582,7 +588,6 @@ textarea{resize:vertical;min-height:60px;}
 /* بلوك التفاصيل بيتفتح جوه القايمة تحت الصنف نفسه مباشرة */
 .productgrid.listmode .inlinestaged{margin:-1px 0 6px;}
 .productgrid.listmode .inlinestaged .stagedblock{margin:0;}
-.productgrid .ptile.selected{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:700;}
 .productgrid .empty{
   grid-column:1 / -1;
   padding:20px;text-align:center;color:var(--muted);font-size:14.6px;
@@ -600,15 +605,16 @@ textarea{resize:vertical;min-height:60px;}
   background:var(--navy);
   color:#fff;
   border:none;
-  border-radius:10px;
+  border-radius:12px;
   padding:13px;
   font-family:'Cairo',sans-serif;
   font-weight:800;
   font-size:16.2px;
   cursor:pointer;
   margin-top:14px;
+  box-shadow:var(--shadow-md);
 }
-.addbtn:disabled{background:#B9C0CD;cursor:not-allowed;}
+.addbtn:disabled{background:#B9C0CD;cursor:not-allowed;box-shadow:none;}
 
 /* cart */
 .cartrow{
@@ -752,22 +758,27 @@ textarea{resize:vertical;min-height:60px;}
   padding:60px 20px;
 }
 .success .ic{
-  width:70px;height:70px;border-radius:50%;
+  width:76px;height:76px;border-radius:50%;
   background:var(--success-bg);color:var(--success);
   display:flex;align-items:center;justify-content:center;
   font-size:38.1px;margin:0 auto 18px;
+  box-shadow:0 10px 26px rgba(30,122,84,.22);
+  animation:successpop .4s cubic-bezier(.22,.9,.4,1) both;
 }
+@keyframes successpop{0%{opacity:0;transform:scale(.6);}70%{transform:scale(1.06);}100%{opacity:1;transform:scale(1);}}
 .success h2{color:var(--navy);font-size:21.3px;margin:0 0 8px;}
 .success p{color:var(--muted);font-size:15.1px;margin:0 0 22px;}
 .success .ordid{
   display:inline-block;background:#fff;border:1.5px solid var(--line);
-  border-radius:10px;padding:8px 16px;font-weight:800;color:var(--navy);font-size:15.7px;letter-spacing:.5px;
+  border-radius:12px;padding:8px 16px;font-weight:800;color:var(--navy);font-size:15.7px;letter-spacing:.5px;
+  box-shadow:var(--shadow-sm);
 }
 .newbtn{
-  margin-top:22px;background:var(--navy);color:#fff;border:none;border-radius:10px;
+  margin-top:22px;background:var(--navy);color:#fff;border:none;border-radius:12px;
   padding:12px 24px;font-family:'Cairo',sans-serif;font-weight:700;font-size:15.7px;cursor:pointer;
+  box-shadow:var(--shadow-md);
 }
-.newbtn.outline{background:none;border:1.5px solid var(--navy);color:var(--navy);margin-top:10px;}
+.newbtn.outline{background:none;border:1.5px solid var(--navy);color:var(--navy);margin-top:10px;box-shadow:none;}
 .receiptpreview{
   margin:18px auto 4px;max-width:280px;border-radius:12px;overflow:hidden;
   border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.08);
@@ -810,15 +821,15 @@ nav.tabs .tabbtn.managetab{background:#EEF0FA;border-color:var(--navy-soft);font
 nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(--navy-soft);}
 .managesubtabs{display:flex;gap:8px;}
 .managesubtab{
-  flex:1;background:#fff;border:1.5px solid var(--line);border-radius:10px;
+  flex:1;background:#fff;border:1.5px solid var(--line);border-radius:11px;
   padding:9px 6px;font-family:'Cairo',sans-serif;font-weight:800;font-size:12.4px;
   color:var(--navy-deep);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;
 }
-.managesubtab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+.managesubtab.active{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:var(--shadow-sm);}
 .managelist{display:flex;flex-direction:column;gap:8px;}
 .managerow{
   display:flex;align-items:center;gap:8px;background:#fff;border:1.3px solid var(--line);
-  border-radius:10px;padding:9px 11px;
+  border-radius:11px;padding:9px 11px;box-shadow:var(--shadow-sm);
 }
 .managerow-info{flex:1;min-width:0;}
 .managerow-name{font-size:13px;font-weight:800;color:var(--ink);}
@@ -966,10 +977,12 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 
 .toast{
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-  background:var(--navy-deep);color:#fff;padding:11px 20px;border-radius:10px;
-  font-size:14.6px;font-weight:600;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,.25);
+  background:var(--navy-deep);color:#fff;padding:11px 20px;border-radius:12px;
+  font-size:14.6px;font-weight:600;z-index:999;box-shadow:var(--shadow-lg);
   max-width:90%;text-align:center;
+  animation:toastin .2s cubic-bezier(.22,.9,.4,1) both;
 }
+@keyframes toastin{0%{opacity:0;transform:translate(-50%,10px);}100%{opacity:1;transform:translate(-50%,0);}}
 
 .installbanner{
   display:flex;align-items:center;gap:10px;
@@ -988,7 +1001,7 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 
 .installgate{
   min-height:100vh;
-  background:linear-gradient(160deg,var(--navy) 0%,var(--navy-deep) 100%);
+  background:linear-gradient(165deg,var(--navy) 0%,var(--navy-deep) 65%,#000A2C 100%);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:40px 26px;text-align:center;color:#fff;
 }
@@ -1051,7 +1064,7 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .productgrid .ptile.blackstock:hover{background:#000;}
 
 /* المختار يفضل بلون الاختيار مهما كانت حالته */
-.productgrid .ptile.selected{background:var(--navy);color:#fff;border-color:var(--navy);}
+.productgrid .ptile.selected{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:700;box-shadow:0 4px 12px rgba(0,36,104,.25);}
 
 .productgrid .ptile.unavailable{
   opacity:.45;cursor:not-allowed;position:relative;
@@ -1251,28 +1264,33 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 
 /* modals */
 .modalbg{
-  position:fixed;inset:0;background:rgba(21,34,56,.55);
+  position:fixed;inset:0;background:rgba(0,16,72,.6);backdrop-filter:blur(2px);
   display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;
+  animation:modalbgin .18s ease both;
 }
+@keyframes modalbgin{0%{opacity:0;}100%{opacity:1;}}
 .modalcard{
-  background:#fff;border-radius:16px;padding:26px 22px;max-width:360px;width:100%;
-  text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.3);
+  background:#fff;border-radius:18px;padding:26px 22px;max-width:360px;width:100%;
+  text-align:center;box-shadow:var(--shadow-lg);
+  animation:modalcardin .22s cubic-bezier(.22,.8,.32,1) both;
 }
+@keyframes modalcardin{0%{opacity:0;transform:translateY(10px) scale(.97);}100%{opacity:1;transform:translateY(0) scale(1);}}
 .modalic{font-size:35.8px;margin-bottom:10px;}
 .modalcard h3{color:var(--navy);font-size:18.5px;margin:0 0 10px;}
 .modalcard p{color:var(--muted);font-size:14px;line-height:1.7;margin:0 0 20px;}
 .modalbtns{display:flex;flex-direction:column;gap:8px;}
 .modalbtn{
   border:1.5px solid var(--line);background:#fff;color:var(--ink);
-  border-radius:10px;padding:12px;font-family:'Cairo',sans-serif;font-weight:700;font-size:15.1px;cursor:pointer;
+  border-radius:11px;padding:12px;font-family:'Cairo',sans-serif;font-weight:700;font-size:15.1px;cursor:pointer;
 }
-.modalbtn.primary{background:var(--navy);border-color:var(--navy);color:#fff;}
+.modalbtn.primary{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:var(--shadow-md);}
 
 /* in-app PDF preview */
 .previewmodal{
-  background:#fff;border-radius:14px;width:100%;max-width:520px;
+  background:#fff;border-radius:16px;width:100%;max-width:520px;
   max-height:88dvh;display:flex;flex-direction:column;overflow:hidden;
-  box-shadow:0 20px 50px rgba(0,0,0,.35);
+  box-shadow:var(--shadow-lg);
+  animation:modalcardin .22s cubic-bezier(.22,.8,.32,1) both;
 }
 .previewhead{
   display:flex;align-items:center;justify-content:space-between;
