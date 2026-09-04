@@ -1391,7 +1391,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v213';
+const APP_BUILD = 'v214';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -4366,7 +4366,11 @@ function downloadQuote(){
 // بتقبل المشاركة حتى بعد تأخير التجهيز (ثانية أو اتنين) طالما لسه جوه
 // نفس تفاعل المستخدم، فمفيش داعي نقسمها. لو نادرًا وحصل رفض من المتصفح،
 // بنخزّن الملفات الجاهزة ونسيب زرار "ابعت تاني" كخطة احتياط بس.
-async function shareQuoteAndShortage_(order, busyStateKey){
+// includeQuote=false بتستخدم في شاشة الإدارة بس (بطلب صريح: الأدمن محتاج
+// النواقص بس عشان يوجّه المخزن، مش عرض السعر). باقي الشاشات (شاشة النجاح
+// وطلباتي) بتفضل تبعت الاتنين مع بعض زي ما هو الافتراضي.
+async function shareQuoteAndShortage_(order, busyStateKey, includeQuote){
+  if(includeQuote === undefined) includeQuote = true;
   // لو الملفات already جاهزة من محاولة سابقة فشلت (fallback نادر) — نحاول
   // نبعتها تاني على طول من غير ما نعيد بناء أي حاجة.
   if(state.quoteShortageReady && order && state.quoteShortageReady.orderId===order.id){
@@ -4378,16 +4382,18 @@ async function shareQuoteAndShortage_(order, busyStateKey){
     const files = [];
     const orderNo = orderNoDisplay_(order);
 
-    const quote = await buildQuotePDF(order);
-    if(quote){
-      if(quote.imgBlob) files.push(new File([quote.imgBlob], 'عرض_سعر_' + orderNo + '.png', {type:'image/png'}));
-      else files.push(new File([quote.blob], 'عرض_سعر_' + orderNo + '.pdf', {type:'application/pdf'}));
-    } else {
-      // 🐞 بق حقيقي كان هنا: buildQuotePDF بترجع null بصمت لو فشلت (خصوصًا
-      // timeout في html2canvas على طلبات كبيرة أو جهاز/نت بطيء) — وكنا
-      // بنتجاهل الفشل ده تمامًا ونكمل على النواقص بس. النتيجة إن المشاركة
-      // كانت بتفتح بالنواقص بس من غير عرض السعر، من غير أي تفسير للموزّع.
-      showToast('تعذّر تجهيز عرض السعر — هيتبعت النواقص بس، جرّب تاني بعدين');
+    if(includeQuote){
+      const quote = await buildQuotePDF(order);
+      if(quote){
+        if(quote.imgBlob) files.push(new File([quote.imgBlob], 'عرض_سعر_' + orderNo + '.png', {type:'image/png'}));
+        else files.push(new File([quote.blob], 'عرض_سعر_' + orderNo + '.pdf', {type:'application/pdf'}));
+      } else {
+        // 🐞 بق حقيقي كان هنا: buildQuotePDF بترجع null بصمت لو فشلت (خصوصًا
+        // timeout في html2canvas على طلبات كبيرة أو جهاز/نت بطيء) — وكنا
+        // بنتجاهل الفشل ده تمامًا ونكمل على النواقص بس. النتيجة إن المشاركة
+        // كانت بتفتح بالنواقص بس من غير عرض السعر، من غير أي تفسير للموزّع.
+        showToast('تعذّر تجهيز عرض السعر — هيتبعت النواقص بس، جرّب تاني بعدين');
+      }
     }
 
     for(const groupKey of Object.keys(SHORTAGE_IMG_GROUPS_)){
@@ -4399,7 +4405,7 @@ async function shareQuoteAndShortage_(order, busyStateKey){
       blobs.forEach((b,i)=> files.push(new File([b], base + (blobs.length>1 ? '_'+(i+1) : '') + '.png', {type:'image/png'})));
     }
 
-    if(!files.length){ showToast('مفيش عرض سعر ولا نواقص لهذا الطلب'); return; }
+    if(!files.length){ showToast(includeQuote ? 'مفيش عرض سعر ولا نواقص لهذا الطلب' : 'مفيش نواقص لهذا الطلب'); return; }
     state.quoteShortageReady = { files, orderNo, orderId: order.id };
     await trySendReadyFiles_();
   }catch(e){
@@ -5217,10 +5223,11 @@ function findOrderForShortage_(id){
 
 // نص زرار "نواقص + عرض سعر" بيتغيّر حسب مرحلته: جهّز (أول ضغطة) → جارٍ
 // التجهيز → ابعت واتساب (لما الملفات تبقى جاهزة لنفس الطلب ده بالظبط).
-function quoteShortageBtnLabel_(orderId){
+function quoteShortageBtnLabel_(orderId, label){
+  if(label === undefined) label = 'نواقص + عرض سعر';
   if(state.shareQuoteShortageBusy) return 'جارٍ التجهيز...';
   if(state.quoteShortageReady && state.quoteShortageReady.orderId===orderId) return 'ابعت واتساب دلوقتي';
-  return 'نواقص + عرض سعر';
+  return label;
 }
 
 // ===== صور المخزن =====
@@ -6735,8 +6742,10 @@ function renderAdminView(){
           <button class="delbtn pdf" data-act="download-order-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
             ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('downloadIcon',11) + ' تصدير PDF'}
           </button>
-          <button class="delbtn pdf" data-act="share-quote-shortage" data-id="${esc(o.id)}" ${state.shareQuoteShortageBusy?'disabled':''}>
-            ${ico_('imageIcon',11)} ${quoteShortageBtnLabel_(o.id)}
+          <!-- بطلب صريح: شاشة الإدارة بتبعت النواقص بس (من غير عرض السعر) —
+               الأدمن محتاج يوجّه المخزن، مش يبعتله عرض سعر. -->
+          <button class="delbtn pdf" data-act="share-shortage-only" data-id="${esc(o.id)}" ${state.shareQuoteShortageBusy?'disabled':''}>
+            ${ico_('imageIcon',11)} ${quoteShortageBtnLabel_(o.id, 'نواقص')}
           </button>
         </div>
         <button class="delbtn" data-act="delete-order" data-id="${esc(o.id)}">${ico_('trashIcon',14)} حذف الطلب</button>`}
@@ -8034,6 +8043,11 @@ async function onActionInner(act, el){
       break;
     case 'share-quote-shortage':
       await shareQuoteAndShortage_(findOrderForShortage_(el.getAttribute('data-id')), 'shareQuoteShortageBusy');
+      break;
+    // بطلب صريح: زرار شاشة الإدارة بس (متابعة الطلبات) — النواقص من غير
+    // عرض السعر. الأدمن محتاج يوجّه المخزن بس، مش يبعت عرض سعر للمخزن.
+    case 'share-shortage-only':
+      await shareQuoteAndShortage_(findOrderForShortage_(el.getAttribute('data-id')), 'shareQuoteShortageBusy', false);
       break;
     case 'close-preview': closePreviewModal(); break;
     case 'download-preview': downloadPreviewModal(); break;
