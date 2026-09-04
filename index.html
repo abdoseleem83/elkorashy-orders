@@ -1391,7 +1391,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v214';
+const APP_BUILD = 'v215';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -4373,7 +4373,7 @@ async function shareQuoteAndShortage_(order, busyStateKey, includeQuote){
   if(includeQuote === undefined) includeQuote = true;
   // لو الملفات already جاهزة من محاولة سابقة فشلت (fallback نادر) — نحاول
   // نبعتها تاني على طول من غير ما نعيد بناء أي حاجة.
-  if(state.quoteShortageReady && order && state.quoteShortageReady.orderId===order.id){
+  if(state.quoteShortageReady && order && state.quoteShortageReady.orderId===order.id && state.quoteShortageReady.includeQuote===includeQuote){
     return trySendReadyFiles_();
   }
   if(!order || !order.items || !order.items.length){ showToast('الطلب مفيهوش أصناف'); return; }
@@ -4406,7 +4406,7 @@ async function shareQuoteAndShortage_(order, busyStateKey, includeQuote){
     }
 
     if(!files.length){ showToast(includeQuote ? 'مفيش عرض سعر ولا نواقص لهذا الطلب' : 'مفيش نواقص لهذا الطلب'); return; }
-    state.quoteShortageReady = { files, orderNo, orderId: order.id };
+    state.quoteShortageReady = { files, orderNo, orderId: order.id, includeQuote };
     await trySendReadyFiles_();
   }catch(e){
     console.error('shareQuoteAndShortage_ failed:', e);
