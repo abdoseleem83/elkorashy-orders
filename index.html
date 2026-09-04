@@ -1391,7 +1391,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v209';
+const APP_BUILD = 'v210';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -4342,7 +4342,17 @@ function downloadQuote(){
 //  المشاركة خالص). بناء PDF + الصور بياخد ثانية أو اتنين (async حقيقي)،
 //  فمينفعش نستناه قبل ما ننادي navigator.share — لازم "جهّز" الأول
 //  (يخزّن الملفات جاهزة)، وبعدين "ابعت" في ضغطة منفصلة تالية.
-async function prepareQuoteAndShortage_(order, busyStateKey){
+// 🔑 بطلب صريح: ضغطة واحدة بس تفتح شاشة المشاركة على طول — من غير
+// خطوتين منفصلتين (جهّز ثم ابعت). التجربة الفعلية أثبتت إن navigator.share
+// بتقبل المشاركة حتى بعد تأخير التجهيز (ثانية أو اتنين) طالما لسه جوه
+// نفس تفاعل المستخدم، فمفيش داعي نقسمها. لو نادرًا وحصل رفض من المتصفح،
+// بنخزّن الملفات الجاهزة ونسيب زرار "ابعت تاني" كخطة احتياط بس.
+async function shareQuoteAndShortage_(order, busyStateKey){
+  // لو الملفات already جاهزة من محاولة سابقة فشلت (fallback نادر) — نحاول
+  // نبعتها تاني على طول من غير ما نعيد بناء أي حاجة.
+  if(state.quoteShortageReady && order && state.quoteShortageReady.orderId===order.id){
+    return trySendReadyFiles_();
+  }
   if(!order || !order.items || !order.items.length){ showToast('الطلب مفيهوش أصناف'); return; }
   state[busyStateKey] = true; render();
   try{
@@ -4366,18 +4376,16 @@ async function prepareQuoteAndShortage_(order, busyStateKey){
 
     if(!files.length){ showToast('مفيش عرض سعر ولا نواقص لهذا الطلب'); return; }
     state.quoteShortageReady = { files, orderNo, orderId: order.id };
-    showToast('جاهز — دوس "ابعت واتساب" تاني');
+    await trySendReadyFiles_();
   }catch(e){
-    console.error('prepareQuoteAndShortage_ failed:', e);
+    console.error('shareQuoteAndShortage_ failed:', e);
     showToast('حصل خطأ في تجهيز الملفات: ' + (e && e.message ? e.message : e));
   }finally{
     state[busyStateKey] = false; render();
   }
 }
 
-// بتتنادى مباشرة من onclick الزرار — من غير أي await قبلها — عشان تفضل
-// جوه نفس user gesture وnavigator.share يقبلها فعليًا (شوف الشرح فوق).
-async function sendQuoteAndShortage_(){
+async function trySendReadyFiles_(){
   const ready = state.quoteShortageReady;
   if(!ready) return;
   const { files, orderNo } = ready;
@@ -4386,16 +4394,21 @@ async function sendQuoteAndShortage_(){
       await navigator.share({ files, title:'طلب #'+orderNo, text:'عرض السعر والنواقص — طلب #'+orderNo });
       state.quoteShortageReady = null; render();
       return;
-    }catch(e){ /* المستخدم لغى المشاركة — نسيبه يجرّب تاني، الملفات لسه جاهزة */ }
-  } else {
-    // fallback: مفيش دعم لمشاركة الملفات خالص (سطح مكتب غالبًا) — بننزّل
-    // كل حاجة ونفتح واتساب على طول عشان يبقى أقرب حاجة لواتساب إجباري
-    // ممكنة تقنيًا.
-    files.forEach(f=> downloadBlob(f, f.name));
-    showToast('اتحمّلت ' + files.length + ' ملفات — هتفتح واتساب، ارفقهم يدويًا');
-    setTimeout(()=>{ window.open('https://wa.me/?text=' + encodeURIComponent('عرض السعر والنواقص — طلب #' + orderNo), '_blank'); }, 900);
-    state.quoteShortageReady = null; render();
+    }catch(e){
+      // رفض نادر من المتصفح — الملفات لسه محفوظة، نوري الموزّع إنه يجرّب
+      // تاني بضغطة واحدة تانية بدل ما نضيّع الشغل.
+      showToast('دوس "نواقص + عرض سعر" تاني عشان تبعت');
+      render();
+      return;
+    }
   }
+  // fallback: مفيش دعم لمشاركة الملفات خالص (سطح مكتب غالبًا) — بننزّل
+  // كل حاجة ونفتح واتساب على طول عشان يبقى أقرب حاجة لواتساب إجباري
+  // ممكنة تقنيًا.
+  files.forEach(f=> downloadBlob(f, f.name));
+  showToast('اتحمّلت ' + files.length + ' ملفات — هتفتح واتساب، ارفقهم يدويًا');
+  setTimeout(()=>{ window.open('https://wa.me/?text=' + encodeURIComponent('عرض السعر والنواقص — طلب #' + orderNo), '_blank'); }, 900);
+  state.quoteShortageReady = null; render();
 }
 
 // الإرسال على واتساب بقى بصورة (PNG) مش PDF — الصورة بتتفتح في الشات على طول
@@ -7990,17 +8003,9 @@ async function onActionInner(act, el){
       if(!state.quotePdfPlain){ await generateBothQuotes(state.lastOrder); }
       if(state.quotePdfPlain) previewPdfBlob(state.quotePdfPlain, 'عرض_سعر_' + (state.successOrderId||'order') + '.pdf');
       break;
-    case 'share-quote-shortage': {
-      const order = findOrderForShortage_(el.getAttribute('data-id'));
-      // لو الملفات جاهزة بالفعل لنفس الطلب ده — الضغطة دي "ابعت" (لازم
-      // تتنادى فورًا من غير await قبلها عشان navigator.share يقبلها).
-      if(state.quoteShortageReady && order && state.quoteShortageReady.orderId===order.id){
-        sendQuoteAndShortage_();
-      } else {
-        await prepareQuoteAndShortage_(order, 'shareQuoteShortageBusy');
-      }
+    case 'share-quote-shortage':
+      await shareQuoteAndShortage_(findOrderForShortage_(el.getAttribute('data-id')), 'shareQuoteShortageBusy');
       break;
-    }
     case 'close-preview': closePreviewModal(); break;
     case 'download-preview': downloadPreviewModal(); break;
     case 'share-preview': sharePreviewModal(); break;
