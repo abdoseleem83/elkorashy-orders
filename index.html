@@ -1317,8 +1317,14 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
   header.top{padding:26px 28px 22px;}
   main{padding:22px 24px 100px;}
 }
-</style>
-
+/* بطلب صريح: على الشاشات الكبيرة (لابتوب/ديسكتوب) التطبيق كان محصور في
+   640px وسط الشاشة، والباقي يمين وشمال خلفية كحلية فاضية (var(--navy-deep)
+   من .fixedhead-outer). دلوقتي بياخد مساحة أوسع بكتير على الشاشات
+   العريضة — لحد 1400px بدل ما يمتد لعرض الشاشة بالكامل (اللي كان هيخلي
+   سطور النص تطول جدًا وتصعب القراءة على شاشات فائقة العرض). */
+@media (min-width:900px){
+  #app, .fixedhead-inner, .submitbar.fixed .submitbar-inner{max-width:1400px;}
+}
 </style>
 </head>
 <body>
@@ -1385,7 +1391,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v206';
+const APP_BUILD = 'v207';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1420,13 +1426,15 @@ function nextStatus_(status){
   return STATUS_ORDER[(i<0?0:i+1) % STATUS_ORDER.length];
 }
 // المخازن اللي الموزع بيحمّل منها — عايز تضيف/تشيل مخزن؟ عدّل السطر ده بس.
-const WAREHOUSES = ['طنطا', 'المنصورة اكسا', 'العاشر اكسا'];
+// ⚠️ "المنصورة اكسا" و"العاشر اكسا" اتدمجوا في مخزن واحد اسمه "اكسا" —
+// الطلبات القديمة اللي اتسجلت بأي اسم منهم بتفضل معروضة باسمها الأصلي
+// زي ما هو (validWarehouse_ بيفلترها بس وقت طلب جديد أو تعديل).
+const WAREHOUSES = ['طنطا', 'اكسا'];
 // أيقونة تمثّل مدينة كل مخزن (بدل الأيقونة الموحّدة 🏬) — عايز تضيف مخزن
 // جديد فوق؟ زوّد له سطر هنا كمان بنفس الاسم بالظبط.
 const WAREHOUSE_ICONS_ = {
-  'طنطا': '🕌',           // مسجد السيد البدوي، أشهر معلم في طنطا
-  'المنصورة اكسا': '🌉',   // كوبري المنصورة على النيل
-  'العاشر اكسا': '🏭'      // مدينة العاشر من رمضان الصناعية
+  'طنطا': '🕌',   // مسجد السيد البدوي، أشهر معلم في طنطا
+  'اكسا': '🏭'    // مخازن اكسا (المنصورة والعاشر مدموجين)
 };
 function warehouseIcon_(w){ return WAREHOUSE_ICONS_[w] || '🏬'; }
 // 🧹 مخزن اتشال من القايمة (زي "الاسكندرية" اللي اتشال) ممكن يفضل متخزّن في
@@ -1557,7 +1565,6 @@ const state = {
   diagText:'',
   saveError:'',
 
-  showConfirmModal:false,
   showWarehouseModal:false,
   showDailyWarning:false,
   showResumeModal:false,
@@ -3485,13 +3492,14 @@ function requestSubmit(){
       return;
     }
   }
-  state.showConfirmModal = true; render();
+  // 🚀 بطلب صريح: مفيش مودال "متأكد من الإرسال؟" — بمجرد اكتمال البيانات
+  // والأصناف، الطلب بيتبعت على طول.
+  actuallySubmit();
 }
 
 function proceedAfterDailyWarning(){
   state.showDailyWarning = false;
-  state.showConfirmModal = true;
-  render();
+  actuallySubmit();
 }
 
 // بيقفل شاشة الطلب ويعرض شاشة النجاح — سواء الطلب اتبعت فعلاً للسيرفر أو
@@ -3519,7 +3527,6 @@ function finalizeOrderSuccess_(order, isUpdate, oldId, id, orderNo, toastMsg){
 }
 
 async function actuallySubmit(){
-  state.showConfirmModal = false;
   state.saveError = '';
   state.submitting = true; render();
 
@@ -4303,25 +4310,57 @@ function downloadQuote(){
   downloadBlob(q.blob, 'عرض_سعر_' + (state.successOrderId||'order') + '.pdf');
 }
 
-function downloadShortage(){
-  const q = state.shortagePdf;
-  if(!q) return;
-  downloadBlob(q.blob, 'طلبية_نواقص_' + (state.successOrderId||'order') + '.pdf');
-}
+// ═══════════════════════════════════════════════════════════════════
+//  مشاركة موحّدة: عرض السعر + كل مجموعات النواقص المتاحة في الطلب —
+//  دفعة واحدة في شاشة مشاركة الموبايل، بطلب صريح من المستخدم.
+// ═══════════════════════════════════════════════════════════════════
+//
+// ⚠️ ملحوظة تقنية مهمة: navigator.share (معيار الويب القياسي) بيفتح قايمة
+// كل تطبيقات المشاركة المتاحة على الجهاز — مفيش أي API في المتصفح يقدر
+// "يفرض" واتساب تحديدًا أو يتخطى اختيار المستخدم. أقصى حاجة ممكنة: نخلي
+// واتساب هو الخيار المتاح فورًا (عن طريق wa.me) في حالة الـ fallback لو
+// المشاركة الأصلية مش مدعومة على الجهاز (أجهزة سطح المكتب مثلًا).
+async function shareQuoteAndShortage_(order, busyStateKey){
+  if(!order || !order.items || !order.items.length){ showToast('الطلب مفيهوش أصناف'); return; }
+  state[busyStateKey] = true; render();
+  try{
+    const files = [];
+    const orderNo = orderNoDisplay_(order);
 
-async function shareShortagePDF(){
-  const q = state.shortagePdf;
-  if(!q) return;
-  const name = 'طلبية_نواقص_' + (state.successOrderId||'order');
-  if(await shareAsImage_(q, name, 'طلبية نواقص')) return;
-  if(q.imgBlob){
-    downloadBlob(q.imgBlob, name + '.png');
-    showToast('اتحملت الصورة — هتفتح واتساب، ارفقها من المعرض');
-  } else {
-    downloadShortage();
-    showToast('اتحمل الملف — هتفتح واتساب، ارفقه يدويًا');
+    const quote = await buildQuotePDF(order);
+    if(quote){
+      if(quote.imgBlob) files.push(new File([quote.imgBlob], 'عرض_سعر_' + orderNo + '.png', {type:'image/png'}));
+      else files.push(new File([quote.blob], 'عرض_سعر_' + orderNo + '.pdf', {type:'application/pdf'}));
+    }
+
+    for(const groupKey of Object.keys(SHORTAGE_IMG_GROUPS_)){
+      const group = SHORTAGE_IMG_GROUPS_[groupKey];
+      if(!order.items.some(it=>group.mains.includes(it.main))) continue;   // المجموعة دي مالهاش أصناف في الطلب ده أصلاً
+      const blobs = await buildShortageImageGroup(order, groupKey);
+      if(!blobs || !blobs.length) continue;
+      const base = 'نواقص_' + group.label.replace(/\s+/g,'_') + '_' + orderNo;
+      blobs.forEach((b,i)=> files.push(new File([b], base + (blobs.length>1 ? '_'+(i+1) : '') + '.png', {type:'image/png'})));
+    }
+
+    if(!files.length){ showToast('مفيش عرض سعر ولا نواقص لهذا الطلب'); return; }
+
+    if(navigator.canShare && navigator.canShare({files})){
+      try{
+        await navigator.share({ files, title:'طلب #'+orderNo, text:'عرض السعر والنواقص — طلب #'+orderNo });
+        return;
+      }catch(e){ /* المستخدم لغى المشاركة — نكمل على التحميل تحت */ }
+    }
+    // fallback: مفيش دعم لمشاركة الملفات (سطح مكتب غالبًا) — بننزّل كل حاجة
+    // ونفتح واتساب على طول عشان يبقى أقرب حاجة لواتساب إجباري ممكنة تقنيًا.
+    files.forEach(f=> downloadBlob(f, f.name));
+    showToast('اتحمّلت ' + files.length + ' ملفات — هتفتح واتساب، ارفقهم يدويًا');
+    setTimeout(()=>{ window.open('https://wa.me/?text=' + encodeURIComponent('عرض السعر والنواقص — طلب #' + orderNo), '_blank'); }, 900);
+  }catch(e){
+    console.error('shareQuoteAndShortage_ failed:', e);
+    showToast('حصل خطأ في تجهيز الملفات: ' + (e && e.message ? e.message : e));
+  }finally{
+    state[busyStateKey] = false; render();
   }
-  setTimeout(()=>{ window.open('https://wa.me/?text=' + encodeURIComponent('طلبية نواقص #' + (state.successOrderId||'')), '_blank'); }, 900);
 }
 
 // الإرسال على واتساب بقى بصورة (PNG) مش PDF — الصورة بتتفتح في الشات على طول
@@ -5092,43 +5131,14 @@ async function buildShortageImageGroup(order, groupKey){
 }
 
 // بيدوّر على الطلب بمعرّفه (لو موجود) وإلا بيرجع لآخر طلب اتبعت (state.lastOrder) —
-// عشان نفس الزرارين يشتغلوا هنا وفي شاشة "تم إرسال الطلب".
+// عشان زرار "نواقص + عرض سعر" يشتغل من كل شاشة (النجاح / الأدمن / طلباتي)
+// بنفس الدالة.
 function findOrderForShortage_(id){
   if(id){
     const o = state.orders.find(o=>o.id===id) || state.myOrders.find(o=>o.id===id);
     if(o) return o;
   }
   return state.lastOrder;
-}
-
-async function handleShortageImage(id, groupKey){
-  const order = findOrderForShortage_(id);
-  if(!order){ showToast('مفيش طلب'); return; }
-  const busyKey = id || 'last';
-  state.shortageImgBusy = busyKey + '|' + groupKey; render();
-  try{
-    const blobs = await buildShortageImageGroup(order, groupKey);
-    if(blobs && blobs.length){
-      const label = SHORTAGE_IMG_GROUPS_[groupKey].label;
-      const base = 'نواقص_' + label.replace(/\s+/g,'_') + '_' + orderNoDisplay_(order);
-      if(blobs.length === 1){
-        previewImageBlob(blobs[0], base + '.png');
-      } else {
-        // أكتر من صفحة: بنعرض الأولى ونحمّل الباقي، وبنقول للمستخدم صراحةً
-        // إن فيه صفحات زيادة عشان مايفتكرش إن الباقي ضاع.
-        previewImageBlob(blobs[0], base + '_1.png');
-        blobs.slice(1).forEach((b,i)=> downloadBlob(b, base + '_' + (i+2) + '.png'));
-        showToast('الطلب اتقسم ' + blobs.length + ' صفحات — الباقي اتحمّل عندك');
-      }
-    } else {
-      showToast('مفيش أصناف من "' + SHORTAGE_IMG_GROUPS_[groupKey].label + '" في الطلب ده');
-    }
-  }catch(e){
-    console.error('handleShortageImage failed:', e);
-    showToast('حصل خطأ في تجهيز الصورة: ' + (e && e.message ? e.message : e));
-  }
-  state.shortageImgBusy = null;
-  render();
 }
 
 // ===== صور المخزن =====
@@ -5827,8 +5837,8 @@ function renderOrderView(){
           ${(state.waSent || state.waImgPreparing) ? '' : '<div class="wanote-arrow">⬆️</div>'}
         </div>
         <!-- ✂️ بناءً على طلب صريح: المستندات بقت "عرض السعر" بس، بأيقوناته
-             التلاتة (واتساب صورة / تنزيل PDF / معاينة). باقي المستندات
-             (صورة الطلب العامة، أمر صرف المخزن، طلبية النواقص) اتشالت. -->
+             التلاتة (واتساب صورة / تنزيل PDF / معاينة). صورة الطلب العامة
+             وأمر صرف المخزن اتشالوا. -->
         <div class="docsection">
           <div class="docsectiontitle">${ico_('fileIcon',15)} عرض السعر</div>
           <div class="iconbtnrow">
@@ -5844,12 +5854,14 @@ function renderOrderView(){
           </div>
         </div>
 
+        <!-- 📦 زرار موحّد: عرض السعر + كل مجموعات النواقص المتاحة في الطلب
+             (كرافت/نيو و/أو كومبن/اكسسوارات — كل مجموعة موجودة فعليًا بس)
+             مع بعض في شاشة مشاركة واحدة، بدل ما يبعتوا واحد واحد. -->
         <div class="docsection">
-          <div class="docsectiontitle">📦 طلبية النواقص</div>
-          <div class="iconbtnrow">
-            <button class="iconbtn" data-act="shortage-img" data-group="kraft_new" ${state.shortageImgBusy==='last|kraft_new'?'disabled':''}><span class="ic">🖼️</span><span>${state.shortageImgBusy==='last|kraft_new'?'جارٍ...':'نواقص كرافت ونيو'}</span></button>
-            <button class="iconbtn" data-act="shortage-img" data-group="combin_acc" ${state.shortageImgBusy==='last|combin_acc'?'disabled':''}><span class="ic">🖼️</span><span>${state.shortageImgBusy==='last|combin_acc'?'جارٍ...':'نواقص كومبن واكسسوارات'}</span></button>
-          </div>
+          <div class="docsectiontitle">📦 النواقص + عرض السعر</div>
+          <button class="wanote-btn" style="font-size:14px;padding:12px;" data-act="share-quote-shortage" ${state.shareQuoteShortageBusy?'disabled':''}>
+            <span class="ic">📲</span> ${state.shareQuoteShortageBusy ? 'جارٍ التجهيز...' : 'ابعت النواقص وعرض السعر واتساب'}
+          </button>
         </div>
         <br>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
@@ -6146,9 +6158,9 @@ function renderOrderView(){
     <div class="card distcard">
       ${state.editingOrderId ? `<div class="editbanner">✏️ بتعدّل على طلب سابق #${esc(state.editingOrderId.toUpperCase())}</div>` : ''}
       ${isClientAccount() ? '' : `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-        <span style="font-size:12px;color:var(--muted);">${warehouseIcon_(state.warehouse)} المخزن: <b style="color:var(--navy);">${esc(state.warehouse)}</b></span>
-        <button class="chip" style="padding:3px 10px;font-size:11px;" data-act="pick-warehouse-inline" data-val="">غيّر</button>
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;">
+        <span style="font-size:10.5px;">${warehouseIcon_(state.warehouse)}</span>
+        <span style="font-size:12px;color:var(--muted);">المخزن: <b style="color:var(--navy);">${esc(state.warehouse)}</b></span>
       </div>
       ${(state.warehouse && !STOCK_TRACKED_WAREHOUSES_.includes(state.warehouse)) ? `
       <div class="warehousewarn">⚠ الأصناف في مخزن "${esc(state.warehouse)}" غير معتمدة إلا وقت التحميل فقط، نظرًا لعدم حجز بضاعة مسبقًا.</div>
@@ -6225,7 +6237,6 @@ function renderOrderView(){
     </div>
   </main>
   ${state.showDailyWarning ? renderDailyWarningModal() : ''}
-  ${state.showConfirmModal ? renderConfirmModal() : ''}
   ${state.showResumeModal ? renderResumeModal() : ''}
   `;
 }
@@ -6258,29 +6269,6 @@ function renderDailyWarningModal(){
         <button class="modalbtn primary" data-act="continue-daily">تمام، كمّل إرسال الطلب</button>
         <button class="modalbtn" data-act="goto-myorders-from-warning">📋 شوف طلباتي الأول</button>
         <button class="modalbtn" data-act="cancel-daily-warning" style="color:var(--muted);">إلغاء، ارجع للمراجعة</button>
-      </div>
-    </div>
-  </div>`;
-}
-
-function renderConfirmModal(){
-  const count = state.cart.length;
-  return `
-  <div class="modalbg" data-act="close-confirm">
-    <div class="modalcard" data-act="noop">
-      <div class="modalic">📦</div>
-      <h3>متأكد من ${state.editingOrderId?'حفظ التعديلات':'إرسال الطلب'}؟</h3>
-      <p>الطلب فيه <b>${count}</b> صنف باسم <b>${esc(state.distName)}</b> — ${esc(state.distRegion)}.<br>راجع الأصناف قبل التأكيد، مش هتقدر تعدّل إلا من "طلباتي" بعدين.</p>
-      <div style="background:#FAF9F5;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-        <span style="font-size:14px;color:var(--muted);">${warehouseIcon_(state.warehouse)} مخزن التحميل</span>
-        <span style="display:flex;align-items:center;gap:8px;">
-          <b style="color:var(--navy);font-size:14.6px;">${esc(asText(state.warehouse) || '—')}</b>
-          <button class="chip" data-act="change-warehouse" style="padding:3px 9px;font-size:12.3px;">غيّر</button>
-        </span>
-      </div>
-      <div class="modalbtns">
-        <button class="modalbtn primary" data-act="do-submit">${state.editingOrderId?'تأكيد الحفظ':'تأكيد الإرسال'}</button>
-        <button class="modalbtn" data-act="close-confirm">الرجوع للمراجعة</button>
       </div>
     </div>
   </div>`;
@@ -6320,9 +6308,12 @@ function renderMyOrdersView(){
           `).join('')}
         </div>
         ${renderOrderTotalLine(o)}
-        <div class="adminbtnrow">
+        <div class="adminbtnrow adminbtnrow-compact">
           <button class="delbtn pdf" data-act="preview-myorder-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
-            ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('fileIcon',14) + ' عرض PDF'}
+            ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('eyeIcon',13) + ' معاينة'}
+          </button>
+          <button class="delbtn pdf" data-act="share-quote-shortage" data-id="${esc(o.id)}" ${state.shareQuoteShortageBusy?'disabled':''}>
+            ${state.shareQuoteShortageBusy ? '⏳ جارٍ...' : ico_('imageIcon',13) + ' نواقص + عرض سعر'}
           </button>
         </div>
       </div>`;
@@ -6676,11 +6667,8 @@ function renderAdminView(){
           <button class="delbtn pdf" data-act="download-order-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
             ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('downloadIcon',11) + ' تصدير PDF'}
           </button>
-          <button class="delbtn pdf" data-act="shortage-img" data-id="${esc(o.id)}" data-group="kraft_new" ${state.shortageImgBusy===(o.id+'|kraft_new')?'disabled':''}>
-            ${state.shortageImgBusy===(o.id+'|kraft_new') ? '⏳ جارٍ...' : ico_('imageIcon',11) + ' نواقص كرافت ونيو'}
-          </button>
-          <button class="delbtn pdf" data-act="shortage-img" data-id="${esc(o.id)}" data-group="combin_acc" ${state.shortageImgBusy===(o.id+'|combin_acc')?'disabled':''}>
-            ${state.shortageImgBusy===(o.id+'|combin_acc') ? '⏳ جارٍ...' : ico_('imageIcon',11) + ' نواقص كومبن واكسسوارات'}
+          <button class="delbtn pdf" data-act="share-quote-shortage" data-id="${esc(o.id)}" ${state.shareQuoteShortageBusy?'disabled':''}>
+            ${state.shareQuoteShortageBusy ? '⏳ جارٍ...' : ico_('imageIcon',11) + ' نواقص + عرض سعر'}
           </button>
         </div>
         <button class="delbtn" data-act="delete-order" data-id="${esc(o.id)}">${ico_('trashIcon',14)} حذف الطلب</button>`}
@@ -7751,11 +7739,6 @@ async function onActionInner(act, el){
     case 'close-stock': state.showStock=false; render(); break;
     case 'stock-search': state.stockSearch = el.value; render(); break;
     case 'export-stock-pdf': await exportStockPDF(); break;
-    case 'change-warehouse':
-      state.showConfirmModal = false;
-      state.showWarehouseModal = true;
-      render();
-      break;
     case 'reg-type-dist': state.regDistType='موزع'; render(); break;
     case 'reg-type-client': state.regDistType='عميل'; render(); break;
     case 'forgot-submit': await submitForgot(); break;
@@ -7969,10 +7952,6 @@ async function onActionInner(act, el){
       render();
       if(!state.myOrdersSearched) refreshMyOrders();
       break;
-    case 'close-confirm': state.showConfirmModal=false; render(); break;
-    case 'do-submit':
-      actuallySubmit();
-      break;
     case 'resume-draft': resumeDraft(); break;
     case 'discard-draft': discardDraftAndStartFresh(); break;
     case 'open-saved-draft': openSavedDraftManually(); break;
@@ -7990,15 +7969,12 @@ async function onActionInner(act, el){
       if(!state.quotePdfPlain){ await generateBothQuotes(state.lastOrder); }
       if(state.quotePdfPlain) previewPdfBlob(state.quotePdfPlain, 'عرض_سعر_' + (state.successOrderId||'order') + '.pdf');
       break;
-    case 'share-shortage': shareShortagePDF(); break;
-    case 'download-shortage': downloadShortage(); break;
-    case 'preview-shortage': previewPdfBlob(state.shortagePdf, 'طلبية_نواقص_' + (state.successOrderId||'order') + '.pdf'); break;
+    case 'share-quote-shortage':
+      await shareQuoteAndShortage_(findOrderForShortage_(el.getAttribute('data-id')), 'shareQuoteShortageBusy');
+      break;
     case 'close-preview': closePreviewModal(); break;
     case 'download-preview': downloadPreviewModal(); break;
     case 'share-preview': sharePreviewModal(); break;
-    case 'shortage-img':
-      handleShortageImage(el.getAttribute('data-id') || null, el.getAttribute('data-group'));
-      break;
     case 'send-order-wa':
       if(openOrderWhatsApp(state.lastOrder)) autoReturnHomeAfterSend_();
       break;
