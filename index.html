@@ -1391,7 +1391,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v208';
+const APP_BUILD = 'v209';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -1566,7 +1566,6 @@ const state = {
   saveError:'',
 
   showWarehouseModal:false,
-  showDailyWarning:false,
   showResumeModal:false,
   pendingDraft:null,
   draftJustSaved:false,
@@ -1600,7 +1599,6 @@ const state = {
   catalogAgeMin:0,        // عمر النسخة المحفوظة بالدقايق
   managePinError:'',      // ⚠️ الحقلين دول كانوا بيتستخدموا من غير ما يتعرّفوا هنا
   managePinChecking:false,
-  serverVersionMismatch:'',   // نسخة السيرفر لو مختلفة عن نسخة التطبيق
   showInstallBanner:false,
   installGateBypassed:false,
 };
@@ -3469,7 +3467,7 @@ function addOtherItem(){
 }
 
 // ===== submit flow =====
-function requestSubmit(){
+async function requestSubmit(){
   // حماية إضافية: أي قيمة جاية من الشيت ممكن تبقى رقم مش نص
   state.distName = asText(state.distName);
   state.distRegion = asText(state.distRegion);
@@ -3485,11 +3483,19 @@ function requestSubmit(){
   }
   if(state.cart.length===0){ showToast('لسه محضتش أي صنف للطلب'); return; }
 
+  // 🔗 دمج تلقائي بطلب صريح: لو الموزّع بعت طلب النهارده بالفعل ولسه
+  // "لم يستلم" (يعني السيرفر استلمه بس الأدمن لسه ما نفّذوش)، الطلب ده
+  // بيتبعت كـ"تعديل" تلقائي للطلب القديم — أصناف الطلب القديم بتتضاف
+  // لأصناف السلة الحالية، والقديم بيتعلّم "مُعدّل" (زي آلية التعديل
+  // العادية بالظبط)، من غير أي سؤال أو تنبيه للموزّع. لو الطلب القديم
+  // خلص تنفيذه أو اتعدّل قبل كده أو حصل أي خطأ في التحقق، الطلب الجديد
+  // يتبعت عادي كطلب منفصل.
   if(!state.editingOrderId){
     const lastDate = localStorage.getItem(LS_LAST_DATE_KEY);
-    if(lastDate === todayStr()){
-      state.showDailyWarning = true; render();
-      return;
+    const lastId = localStorage.getItem(LS_LAST_ID_KEY);
+    if(lastDate === todayStr() && lastId){
+      const merged = await tryMergeWithLastOrder_(lastId);
+      if(merged) return;   // actuallySubmit اتنادت بالفعل جوه tryMergeWithLastOrder_
     }
   }
   // 🚀 بطلب صريح: مفيش مودال "متأكد من الإرسال؟" — بمجرد اكتمال البيانات
@@ -3497,9 +3503,24 @@ function requestSubmit(){
   actuallySubmit();
 }
 
-function proceedAfterDailyWarning(){
-  state.showDailyWarning = false;
-  actuallySubmit();
+// بيتأكد من حالة آخر طلب اتبعت النهارده، ولو لسه "تم استلام الطلب" بس
+// (مش نفّذ ومش اتعدّل قبل كده)، بيدمج الأصناف الجديدة معاه وبيبعت.
+// بيرجّع true لو الدمج حصل فعلاً (يعني الاستدعاء اللي فوق يوقف هنا).
+async function tryMergeWithLastOrder_(lastId){
+  try{
+    const results = await loadMyOrdersByIds([lastId]);
+    const last = results.find(o=>String(o.id).toLowerCase()===String(lastId).toLowerCase());
+    if(!last || normStatus_(last.status) !== STATUS_RECEIVED) return false;
+    state.cart = (last.items||[]).map(it=>Object.assign({}, it)).concat(state.cart);
+    state.editingOrderId = last.id;
+    showToast('الطلب ده اتضاف تلقائيًا لطلبك اللي لسه ما اتنفّذش النهارده');
+    await actuallySubmit();
+    return true;
+  }catch(e){
+    // أي فشل في التحقق (نت، توكن، إلخ) — الأأمن إننا نبعته كطلب منفصل
+    // عادي بدل ما نوقف الموزّع أو نخمّن حالة مش متأكدين منها.
+    return false;
+  }
 }
 
 // بيقفل شاشة الطلب ويعرض شاشة النجاح — سواء الطلب اتبعت فعلاً للسيرفر أو
@@ -3605,6 +3626,7 @@ function resetOrderForm(){
   state.lastOrder = null;
   state.quotePdfPlain = null;
   state.shortagePdf = null;
+  state.quoteShortageReady = null;
   render();
 }
 
@@ -4182,14 +4204,6 @@ async function exportStockPDF(){
   render();
 }
 
-function renderVersionMismatch_(){
-  if(!state.serverVersionMismatch) return '';
-  return `<div style="position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#7A1F28;color:#fff;padding:10px 14px;font-size:13px;line-height:1.6;text-align:center;">
-    ⚠️ <b>السيرفر على نسخة ${esc(state.serverVersionMismatch)} والتطبيق على ${esc(APP_BUILD)}</b><br>
-    <span style="font-size:12px;opacity:.92;">الكود اتلصق في Apps Script بس مااتعملوش نشر. افتح: نشر ← إدارة عمليات النشر ← ✏️ ← إصدار جديد ← تعديل.</span>
-  </div>`;
-}
-
 function renderGlobalError(){
   if(!state.saveError) return '';
   return `
@@ -4320,7 +4334,15 @@ function downloadQuote(){
 // "يفرض" واتساب تحديدًا أو يتخطى اختيار المستخدم. أقصى حاجة ممكنة: نخلي
 // واتساب هو الخيار المتاح فورًا (عن طريق wa.me) في حالة الـ fallback لو
 // المشاركة الأصلية مش مدعومة على الجهاز (أجهزة سطح المكتب مثلًا).
-async function shareQuoteAndShortage_(order, busyStateKey){
+// ═══════════════════════════════════════════════════════════════════
+//  🔑 مقسّمة لخطوتين (زي shareAsImage_ بالظبط) — نفس القيد الموثّق فوقها:
+//  navigator.share لازم يتنده مباشرة جوه نفس لحظة الضغطة (نفس الـ user
+//  gesture)، وإلا المتصفح بيعتبرها ضغطة "قديمة" ويرفض المشاركة بصمت
+//  ويسقط على أقرب سلوك احتياطي (فتح واتساب مباشرة من غير ما يوري شاشة
+//  المشاركة خالص). بناء PDF + الصور بياخد ثانية أو اتنين (async حقيقي)،
+//  فمينفعش نستناه قبل ما ننادي navigator.share — لازم "جهّز" الأول
+//  (يخزّن الملفات جاهزة)، وبعدين "ابعت" في ضغطة منفصلة تالية.
+async function prepareQuoteAndShortage_(order, busyStateKey){
   if(!order || !order.items || !order.items.length){ showToast('الطلب مفيهوش أصناف'); return; }
   state[busyStateKey] = true; render();
   try{
@@ -4343,23 +4365,36 @@ async function shareQuoteAndShortage_(order, busyStateKey){
     }
 
     if(!files.length){ showToast('مفيش عرض سعر ولا نواقص لهذا الطلب'); return; }
-
-    if(navigator.canShare && navigator.canShare({files})){
-      try{
-        await navigator.share({ files, title:'طلب #'+orderNo, text:'عرض السعر والنواقص — طلب #'+orderNo });
-        return;
-      }catch(e){ /* المستخدم لغى المشاركة — نكمل على التحميل تحت */ }
-    }
-    // fallback: مفيش دعم لمشاركة الملفات (سطح مكتب غالبًا) — بننزّل كل حاجة
-    // ونفتح واتساب على طول عشان يبقى أقرب حاجة لواتساب إجباري ممكنة تقنيًا.
-    files.forEach(f=> downloadBlob(f, f.name));
-    showToast('اتحمّلت ' + files.length + ' ملفات — هتفتح واتساب، ارفقهم يدويًا');
-    setTimeout(()=>{ window.open('https://wa.me/?text=' + encodeURIComponent('عرض السعر والنواقص — طلب #' + orderNo), '_blank'); }, 900);
+    state.quoteShortageReady = { files, orderNo, orderId: order.id };
+    showToast('جاهز — دوس "ابعت واتساب" تاني');
   }catch(e){
-    console.error('shareQuoteAndShortage_ failed:', e);
+    console.error('prepareQuoteAndShortage_ failed:', e);
     showToast('حصل خطأ في تجهيز الملفات: ' + (e && e.message ? e.message : e));
   }finally{
     state[busyStateKey] = false; render();
+  }
+}
+
+// بتتنادى مباشرة من onclick الزرار — من غير أي await قبلها — عشان تفضل
+// جوه نفس user gesture وnavigator.share يقبلها فعليًا (شوف الشرح فوق).
+async function sendQuoteAndShortage_(){
+  const ready = state.quoteShortageReady;
+  if(!ready) return;
+  const { files, orderNo } = ready;
+  if(navigator.canShare && navigator.canShare({files})){
+    try{
+      await navigator.share({ files, title:'طلب #'+orderNo, text:'عرض السعر والنواقص — طلب #'+orderNo });
+      state.quoteShortageReady = null; render();
+      return;
+    }catch(e){ /* المستخدم لغى المشاركة — نسيبه يجرّب تاني، الملفات لسه جاهزة */ }
+  } else {
+    // fallback: مفيش دعم لمشاركة الملفات خالص (سطح مكتب غالبًا) — بننزّل
+    // كل حاجة ونفتح واتساب على طول عشان يبقى أقرب حاجة لواتساب إجباري
+    // ممكنة تقنيًا.
+    files.forEach(f=> downloadBlob(f, f.name));
+    showToast('اتحمّلت ' + files.length + ' ملفات — هتفتح واتساب، ارفقهم يدويًا');
+    setTimeout(()=>{ window.open('https://wa.me/?text=' + encodeURIComponent('عرض السعر والنواقص — طلب #' + orderNo), '_blank'); }, 900);
+    state.quoteShortageReady = null; render();
   }
 }
 
@@ -5141,6 +5176,14 @@ function findOrderForShortage_(id){
   return state.lastOrder;
 }
 
+// نص زرار "نواقص + عرض سعر" بيتغيّر حسب مرحلته: جهّز (أول ضغطة) → جارٍ
+// التجهيز → ابعت واتساب (لما الملفات تبقى جاهزة لنفس الطلب ده بالظبط).
+function quoteShortageBtnLabel_(orderId){
+  if(state.shareQuoteShortageBusy) return 'جارٍ التجهيز...';
+  if(state.quoteShortageReady && state.quoteShortageReady.orderId===orderId) return 'ابعت واتساب دلوقتي';
+  return 'نواقص + عرض سعر';
+}
+
 // ===== صور المخزن =====
 // صورة لكل مجموعة رئيسية لوحدها (عشان متبقاش صفحة طويلة)، من غير أي أسعار —
 // فيها: مسلسل / اسم العميل / الصنف / الكمية. توجّهها للمخزن على طول.
@@ -5860,7 +5903,7 @@ function renderOrderView(){
         <div class="docsection">
           <div class="docsectiontitle">📦 النواقص + عرض السعر</div>
           <button class="wanote-btn" style="font-size:14px;padding:12px;" data-act="share-quote-shortage" ${state.shareQuoteShortageBusy?'disabled':''}>
-            <span class="ic">📲</span> ${state.shareQuoteShortageBusy ? 'جارٍ التجهيز...' : 'ابعت النواقص وعرض السعر واتساب'}
+            <span class="ic">📲</span> ${quoteShortageBtnLabel_(state.lastOrder && state.lastOrder.id)}
           </button>
         </div>
         <br>
@@ -6237,7 +6280,6 @@ function renderOrderView(){
       </div>
     </div>
   </main>
-  ${state.showDailyWarning ? renderDailyWarningModal() : ''}
   ${state.showResumeModal ? renderResumeModal() : ''}
   `;
 }
@@ -6253,23 +6295,6 @@ function renderResumeModal(){
       <div class="modalbtns">
         <button class="modalbtn primary" data-act="resume-draft">أيوه، كمّل الطلب ده</button>
         <button class="modalbtn" data-act="discard-draft">لأ، ابدأ طلب جديد</button>
-      </div>
-    </div>
-  </div>`;
-}
-
-function renderDailyWarningModal(){
-  const lastId = localStorage.getItem(LS_LAST_ID_KEY) || '';
-  return `
-  <div class="modalbg" data-act="cancel-daily-warning">
-    <div class="modalcard" data-act="noop">
-      <div class="modalic">ℹ️</div>
-      <h3>بعتّ طلب النهارده بالفعل</h3>
-      <p>آخر طلب بعته النهارده رقمه <b>#${esc(lastId)}</b>. لو ده طلب تاني ومختلف، ولا يهمك — كمّل بعت عادي.</p>
-      <div class="modalbtns">
-        <button class="modalbtn primary" data-act="continue-daily">تمام، كمّل إرسال الطلب</button>
-        <button class="modalbtn" data-act="goto-myorders-from-warning">📋 شوف طلباتي الأول</button>
-        <button class="modalbtn" data-act="cancel-daily-warning" style="color:var(--muted);">إلغاء، ارجع للمراجعة</button>
       </div>
     </div>
   </div>`;
@@ -6314,7 +6339,7 @@ function renderMyOrdersView(){
             ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('eyeIcon',13) + ' معاينة'}
           </button>
           <button class="delbtn pdf" data-act="share-quote-shortage" data-id="${esc(o.id)}" ${state.shareQuoteShortageBusy?'disabled':''}>
-            ${state.shareQuoteShortageBusy ? '⏳ جارٍ...' : ico_('imageIcon',13) + ' نواقص + عرض سعر'}
+            ${ico_('imageIcon',13)} ${quoteShortageBtnLabel_(o.id)}
           </button>
         </div>
       </div>`;
@@ -6669,7 +6694,7 @@ function renderAdminView(){
             ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('downloadIcon',11) + ' تصدير PDF'}
           </button>
           <button class="delbtn pdf" data-act="share-quote-shortage" data-id="${esc(o.id)}" ${state.shareQuoteShortageBusy?'disabled':''}>
-            ${state.shareQuoteShortageBusy ? '⏳ جارٍ...' : ico_('imageIcon',11) + ' نواقص + عرض سعر'}
+            ${ico_('imageIcon',11)} ${quoteShortageBtnLabel_(o.id)}
           </button>
         </div>
         <button class="delbtn" data-act="delete-order" data-id="${esc(o.id)}">${ico_('trashIcon',14)} حذف الطلب</button>`}
@@ -7276,7 +7301,7 @@ function render(){
     else if(state.view==='manage') view = renderManageView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
-    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderGlobalError() + renderVersionMismatch_();
+    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderGlobalError();
     bindEvents();
     applyFixedHeaderSpacing_();
     applyFixedFooterSpacing_();
@@ -7317,7 +7342,6 @@ function renderAuthView(){
       ? { h:'محتاج مساعدة؟ 🔑', s:'هنبعت طلب تغيير الباسورد للأدمن' }
       : { h:'أهلًا بيك تاني! 👋', s:'سجّل دخولك عشان تكمّل طلبيتك' };
   return `
-  ${renderVersionMismatch_()}
   <div class="authwrap">
     <div class="authcard${changed?' cardslide':''}" style="text-align:right;">
       <div class="authbanner">
@@ -7690,7 +7714,7 @@ async function onActionInner(act, el){
       state.warehouse = el.getAttribute('data-val');
       state.showWarehouseModal = false;
       // اختار المخزن → نكمّل على تأكيد الإرسال على طول
-      requestSubmit();
+      await requestSubmit();
       break;
     case 'pick-warehouse-inline':{
       // ⚠️ ده الزرار بتاع خطوة "هتحمّل من أنهي مخزن؟" الأولى في الفورم —
@@ -7937,30 +7961,18 @@ async function onActionInner(act, el){
     case 'other-qty-inc': state.otherQty = state.otherQty+1; render(); break;
     case 'add-other': addOtherItem(); break;
 
-    case 'request-submit': requestSubmit(); break;
+    case 'request-submit': await requestSubmit(); break;
     case 'toggle-discount': state.discountVisible = !state.discountVisible; render(); break;
     // set-extra-discount: handled via blur in bindEvents
     case 'open-cart-review': if(state.pendingDraft && !state.cart.length){ resumeDraft(); state.showResumeModal=false; } state.showCartReview=true; render(); break;
     case 'close-cart-review': state.showCartReview=false; render(); break;
     case 'cart-add-more': state.showCartReview=false; render(); break;
-    case 'edit-last-order':{
-      showToast('التعديل اتلغى — سجّل الطلب الإضافي كطلب جديد عادي');
-      break;
-    }
     case 'cart-send':
       state.showCartReview=false;
-      requestSubmit(); // نفس مسار "إرسال الطلب" العادي: تأكيد ثم إرسال فعلي
+      await requestSubmit(); // نفس مسار "إرسال الطلب" العادي: تأكيد ثم إرسال فعلي
       break;
     case 'save-draft': saveDraft(); break;
     case 'preview-cart-invoice': previewCartInvoice(); break;
-    case 'continue-daily': proceedAfterDailyWarning(); break;
-    case 'cancel-daily-warning': state.showDailyWarning=false; render(); break;
-    case 'goto-myorders-from-warning':
-      state.showDailyWarning = false;
-      state.view = 'myorders';
-      render();
-      if(!state.myOrdersSearched) refreshMyOrders();
-      break;
     case 'resume-draft': resumeDraft(); break;
     case 'discard-draft': discardDraftAndStartFresh(); break;
     case 'open-saved-draft': openSavedDraftManually(); break;
@@ -7978,9 +7990,17 @@ async function onActionInner(act, el){
       if(!state.quotePdfPlain){ await generateBothQuotes(state.lastOrder); }
       if(state.quotePdfPlain) previewPdfBlob(state.quotePdfPlain, 'عرض_سعر_' + (state.successOrderId||'order') + '.pdf');
       break;
-    case 'share-quote-shortage':
-      await shareQuoteAndShortage_(findOrderForShortage_(el.getAttribute('data-id')), 'shareQuoteShortageBusy');
+    case 'share-quote-shortage': {
+      const order = findOrderForShortage_(el.getAttribute('data-id'));
+      // لو الملفات جاهزة بالفعل لنفس الطلب ده — الضغطة دي "ابعت" (لازم
+      // تتنادى فورًا من غير await قبلها عشان navigator.share يقبلها).
+      if(state.quoteShortageReady && order && state.quoteShortageReady.orderId===order.id){
+        sendQuoteAndShortage_();
+      } else {
+        await prepareQuoteAndShortage_(order, 'shareQuoteShortageBusy');
+      }
       break;
+    }
     case 'close-preview': closePreviewModal(); break;
     case 'download-preview': downloadPreviewModal(); break;
     case 'share-preview': sharePreviewModal(); break;
@@ -8173,9 +8193,11 @@ async function checkServerVersion_(){
   try{
     const d = await apiGet('version', {}, { cache:'no-store' });
     const sv = d && d.version ? String(d.version) : '';
+    // بطلب صريح: بقت toast بتظهر مرة واحدة بس وتختفي، بدل شريط ثابت كان
+    // فاضل ظاهر طول الوقت. مدة أطول من المعتاد (الرسالة مهمة ومحتاجة وقت
+    // تتقرا) بس مش دايمة.
     if(sv && sv !== APP_BUILD){
-      state.serverVersionMismatch = sv;
-      render();
+      showToast('⚠️ السيرفر على نسخة ' + sv + ' والتطبيق على ' + APP_BUILD + ' — الكود اتلصق في Apps Script بس مااتعملوش نشر (Deploy)', 9000);
     }
   }catch(e){ /* مفيش نت — مش وقتها */ }
 }
