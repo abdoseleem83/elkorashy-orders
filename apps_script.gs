@@ -1223,7 +1223,14 @@ function syncReservedIfDirty_() {
   try {
     if (props_().getProperty(RESERVED_DIRTY_KEY) !== '1') return;
     props_().deleteProperty(RESERVED_DIRTY_KEY);
-    markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
+    // 🐞 بق حقيقي كان هنا: السطر ده كان `markReservedDirty_()` بدل
+    // `syncReservedColumns_()` — يعني الدالة كانت بس بتمسح العلامة وترجع
+    // تحطها تاني من غير ما تعمل المزامنة الفعلية خالص. النتيجة: تحديث
+    // "بضاعة محجوزة"/"رصيد متبقي" في شيت الأصناف كان بيتأخر فعليًا لحد
+    // ١٠ دقايق (عن طريق reconcileReserved المنفصلة) بدل دقيقة واحدة زي
+    // الموثّق فوق. لو syncReservedColumns_ لقت القفل مشغول، هي نفسها
+    // بتعمل markReservedDirty_() وترجع (شوف تعليقها) — فمفيش داعي نكررها هنا.
+    syncReservedColumns_();
   } catch (e) { logError_('syncReservedIfDirty_', e, ''); }
 }
 
