@@ -1391,7 +1391,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v211';
+const APP_BUILD = 'v212';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -3508,8 +3508,19 @@ async function requestSubmit(){
 // بيرجّع true لو الدمج حصل فعلاً (يعني الاستدعاء اللي فوق يوقف هنا).
 async function tryMergeWithLastOrder_(lastId){
   try{
-    const results = await loadMyOrdersByIds([lastId]);
-    const last = results.find(o=>String(o.id).toLowerCase()===String(lastId).toLowerCase());
+    // ⚡ لو الطلب القديم لسه في state.lastOrder (نفس الجلسة، من ثوانٍ) —
+    // نستخدمه على طول من غير نداء شبكة. ده مهم جدًا هنا تحديدًا: كل نداء
+    // شبكة إضافي قبل navigator.share() بيقرّب الاستدعاء من حد "مفيش أي
+    // علاقة بضغطة المستخدم" اللي المتصفح بيرفض المشاركة التلقائية بعده
+    // (شوف الشرح في shareQuoteAndShortage_). في السيناريو الشائع (موزّع
+    // بيبعت طلبين في نفس الجلسة من غير ما يقفل التطبيق) ده بيلغي نداء
+    // lookup بالكامل ويخلي الدمج فوري.
+    let last = (state.lastOrder && String(state.lastOrder.id).toLowerCase()===String(lastId).toLowerCase())
+      ? state.lastOrder : null;
+    if(!last){
+      const results = await loadMyOrdersByIds([lastId]);
+      last = results.find(o=>String(o.id).toLowerCase()===String(lastId).toLowerCase());
+    }
     if(!last || normStatus_(last.status) !== STATUS_RECEIVED) return false;
     state.cart = (last.items||[]).map(it=>Object.assign({}, it)).concat(state.cart);
     state.editingOrderId = last.id;
@@ -4404,8 +4415,9 @@ async function trySendReadyFiles_(){
       return;
     }catch(e){
       // رفض نادر من المتصفح — الملفات لسه محفوظة، نوري الموزّع إنه يجرّب
-      // تاني بضغطة واحدة تانية بدل ما نضيّع الشغل.
-      showToast('دوس "نواقص + عرض سعر" تاني عشان تبعت');
+      // تاني بضغطة واحدة تانية بدل ما نضيّع الشغل. الزرار بقى أول حاجة
+      // ظاهرة في شاشة النجاح (شوف renderOrderView) فمحتاجش يدوّر عليه.
+      showToast('دوس "نواقص + عرض سعر" فوق عشان تبعت', 5000);
       render();
       return;
     }
@@ -5893,6 +5905,19 @@ function renderOrderView(){
         ${state.successMode==='updated' ? '<p style="color:#6B6B6B;font-size:13px;margin-top:-4px;">الطلب القديم اتعلّم «مُعدّل» عند المخزن، وده رقمه الجديد.</p>' : ''}
         <p>هيتم مراجعة طلبك والتواصل معاك لتأكيد التنفيذ</p>
         <div class="ordid">#${esc(state.successOrderId)}</div>
+
+        <!-- 📦 زرار موحّد بارز — أول حاجة تحت رقم الطلب مباشرة. بيفتح تلقائيًا
+             فور نجاح الإرسال (شوف actuallySubmit)؛ الزرار هنا هو خطة
+             الاحتياط لو المتصفح رفض الفتح التلقائي (نادر — بيحصل لو المسافة
+             الزمنية عن ضغطة "إرسال الطلب" طالت أكتر من اللازم)، فلازم يكون
+             أول حاجة ظاهرة بدون أي تمرير. -->
+        <div class="docsection" style="border-color:var(--gold);">
+          <div class="docsectiontitle">📦 النواقص + عرض السعر</div>
+          <button class="wanote-btn" style="font-size:14px;padding:12px;" data-act="share-quote-shortage" ${state.shareQuoteShortageBusy?'disabled':''}>
+            <span class="ic">📲</span> ${quoteShortageBtnLabel_(state.lastOrder && state.lastOrder.id)}
+          </button>
+        </div>
+
         <div class="wanote">
           <p class="wanote-t">📲 لو سمحت اضغط <b>«ابعت الطلب واتساب»</b> عشان المخزن يستلم طلبك.</p>
           <button class="wanote-btn ${state.waSent?'sent':''}" data-act="send-order-img" ${state.waImgPreparing?'disabled':''}>
@@ -5916,16 +5941,6 @@ function renderOrderView(){
               <div class="loading" style="padding:10px 20px;">جارٍ التجهيز...</div>
             `}
           </div>
-        </div>
-
-        <!-- 📦 زرار موحّد: عرض السعر + كل مجموعات النواقص المتاحة في الطلب
-             (كرافت/نيو و/أو كومبن/اكسسوارات — كل مجموعة موجودة فعليًا بس)
-             مع بعض في شاشة مشاركة واحدة، بدل ما يبعتوا واحد واحد. -->
-        <div class="docsection">
-          <div class="docsectiontitle">📦 النواقص + عرض السعر</div>
-          <button class="wanote-btn" style="font-size:14px;padding:12px;" data-act="share-quote-shortage" ${state.shareQuoteShortageBusy?'disabled':''}>
-            <span class="ic">📲</span> ${quoteShortageBtnLabel_(state.lastOrder && state.lastOrder.id)}
-          </button>
         </div>
         <br>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
