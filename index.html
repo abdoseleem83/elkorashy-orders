@@ -1391,7 +1391,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v210';
+const APP_BUILD = 'v211';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -3578,6 +3578,11 @@ async function actuallySubmit(){
     finalizeOrderSuccess_(order, isUpdate, oldId, id, orderNo, isUpdate
       ? '✅ تم استلام تعديلك — جاري المراجعة والتأكيد بالمتاح'
       : '✅ تم استلام طلبك — جاري المراجعة والتأكيد بالمتاح');
+    // 📲 بطلب صريح: شاشة المشاركة تفتح تلقائيًا فور نجاح الإرسال — من غير
+    // ما الموزّع يحتاج يدوس على أي زرار. بتتنادى هنا (استكمال مباشر
+    // لنفس سلسلة async اللي بدأت من ضغطة "إرسال الطلب") عشان تفضل جوه
+    // نفس تفاعل المستخدم وnavigator.share يقبلها.
+    shareQuoteAndShortage_(order, 'shareQuoteShortageBusy');
   }catch(e){
     // 🔒 "unauthorized" معناها جلسة الموزّع خلصت أو مش صالحة — مش خطأ نت
     // ولا خطأ سيرفر. الطلب (السلة) لسه محفوظ في state، فبنرجّعه لشاشة
@@ -3597,7 +3602,7 @@ async function actuallySubmit(){
         '📶 مفيش نت دلوقتي — الطلب اتحفظ عندك وهيتبعت تلقائيًا أول ما النت يرجع');
       state.submitting = false;
       render();
-      if(state.lastOrder && state.successOrderId) generateBothQuotes(state.lastOrder);
+      if(state.lastOrder && state.successOrderId) shareQuoteAndShortage_(state.lastOrder, 'shareQuoteShortageBusy');
       return;
     }
     // صندوق خطأ ثابت (مش toast بيختفي) فيه السبب الخام — عشان نعرف السبب الحقيقي
@@ -3609,7 +3614,10 @@ async function actuallySubmit(){
   }
   state.submitting = false;
   render();
-  // ✅ نولّد عرض السعر تلقائياً بعد ما الطلب يتبعت
+  // ✅ نولّد عرض السعر تلقائياً بعد ما الطلب يتبعت — ده بس لدعم زرارات
+  // "عرض السعر" اليدوية (معاينة/تنزيل) في شاشة النجاح كـfallback. المشاركة
+  // التلقائية الفعلية (اللي بتفتح شاشة اختيار التطبيق على طول) اتنادت
+  // بالفعل فوق جوه try، فور نجاح الحفظ — شوف shareQuoteAndShortage_.
   if(state.lastOrder && state.successOrderId) generateBothQuotes(state.lastOrder);
   // ⛔ مابقناش نولّد الـ PDF تلقائيًا هنا. html2canvas بيجمّد الشاشة وهو شغال،
   // فكانت شاشة النجاح متظهرش والمستخدم يفتكر إن الحفظ فشل — مع إنه نجح فعلاً.
