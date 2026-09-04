@@ -1391,7 +1391,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v207';
+const APP_BUILD = 'v208';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -6158,6 +6158,7 @@ function renderOrderView(){
     <div class="card distcard">
       ${state.editingOrderId ? `<div class="editbanner">✏️ بتعدّل على طلب سابق #${esc(state.editingOrderId.toUpperCase())}</div>` : ''}
       ${isClientAccount() ? '' : `
+      ${state.editingOrderId ? '' : `<button class="backnav" data-act="back-to-warehouse" style="width:auto;padding:6px 12px;font-size:11px;margin-bottom:8px;" title="ارجع لاختيار المخزن من الأول">→ رجوع لاختيار المخزن</button>`}
       <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;">
         <span style="font-size:10.5px;">${warehouseIcon_(state.warehouse)}</span>
         <span style="font-size:12px;color:var(--muted);">المخزن: <b style="color:var(--navy);">${esc(state.warehouse)}</b></span>
@@ -7779,6 +7780,14 @@ async function onActionInner(act, el){
       }
       break;
     }
+    // 🔙 بطلب صريح: لو الموزّع اختار مخزن غلط، مفيش زرار "غيّر" ملاصق
+    // (اتشال عمدًا — عايز المخزن يفضل ثابت أثناء تعبئة الفورم)، لكن لازم
+    // يقدر "يرجع لأول الصفحة" (شاشة اختيار المخزن) من غير ما يفضل عالق.
+    // بيمسح المخزن بس — السلة وبيانات الموزع بتفضل زي ما هي.
+    case 'back-to-warehouse':
+      state.warehouse = '';
+      render();
+      break;
     case 'set-group':{
       state.mainGroup = el.getAttribute('data-val');
       state.productSearch='';
