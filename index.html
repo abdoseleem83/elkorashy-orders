@@ -1391,7 +1391,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v212';
+const APP_BUILD = 'v213';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -4382,6 +4382,12 @@ async function shareQuoteAndShortage_(order, busyStateKey){
     if(quote){
       if(quote.imgBlob) files.push(new File([quote.imgBlob], 'عرض_سعر_' + orderNo + '.png', {type:'image/png'}));
       else files.push(new File([quote.blob], 'عرض_سعر_' + orderNo + '.pdf', {type:'application/pdf'}));
+    } else {
+      // 🐞 بق حقيقي كان هنا: buildQuotePDF بترجع null بصمت لو فشلت (خصوصًا
+      // timeout في html2canvas على طلبات كبيرة أو جهاز/نت بطيء) — وكنا
+      // بنتجاهل الفشل ده تمامًا ونكمل على النواقص بس. النتيجة إن المشاركة
+      // كانت بتفتح بالنواقص بس من غير عرض السعر، من غير أي تفسير للموزّع.
+      showToast('تعذّر تجهيز عرض السعر — هيتبعت النواقص بس، جرّب تاني بعدين');
     }
 
     for(const groupKey of Object.keys(SHORTAGE_IMG_GROUPS_)){
@@ -4773,7 +4779,7 @@ async function buildQuotePDF(order){
   try{
     const canvas = await withTimeout(
       html2canvas(wrap, {scale: pdfScale_(rows.length), backgroundColor:'#ffffff', useCORS:true, allowTaint:true}),
-      20000, 'quote-pdf'
+      35000, 'quote-pdf'
     );
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p','mm','a4');
