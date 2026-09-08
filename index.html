@@ -1379,7 +1379,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v215';
+const APP_BUILD = 'v216';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNc4qy-YxLbPZitO2FfVBf7yfkqyQS8XLbnefyvy-m3LE9N036Mpraex9zSIwOjJZf/exec';
@@ -5866,7 +5866,7 @@ function renderOrderView(){
       <div class="card success">
         <div class="ic">${ico_('checkCircle',36)}</div>
         <h2>${state.successMode==='updated' ? 'تم عمل طلب جديد بالتعديل ✅' : 'تم إرسال الطلب بنجاح'}</h2>
-        ${state.successMode==='updated' ? '<p style="color:#6B6B6B;font-size:13px;margin-top:-4px;">الطلب القديم اتعلّم «مُعدّل» عند المخزن، وده رقمه الجديد.</p>' : ''}
+        ${state.successMode==='updated' ? '<p style="color:#6B6B6B;font-size:13px;margin-top:-4px;">الطلب القديم اتمسح، وده رقم الطلب الجديد اللي هيتنفَّذ.</p>' : ''}
         <p>هيتم مراجعة طلبك والتواصل معاك لتأكيد التنفيذ</p>
         <div class="ordid">#${esc(state.successOrderId)}</div>
 
@@ -6324,7 +6324,7 @@ function renderMyOrdersView(){
           <div>
             <div class="dname">${esc(o.distName)}</div>
             <div class="dmeta">${esc(o.distRegion||'')} · ${dateStr}</div>
-            <div class="oid">#${esc(orderNoDisplay_(o))}</div>
+            <div class="oid">#${esc(orderNoDisplay_(o))}${o.editedFrom ? ` <span class="statusbadge edited" style="padding:1px 6px;font-size:10.5px;">${ico_('editIcon',11)} معدّل</span>` : ''}</div>
           </div>
           <span class="statusbadge ${si.cls}">${si.icon} ${esc(si.label)}</span>
         </div>
@@ -6670,7 +6670,7 @@ function renderAdminView(){
             <div class="dname"><span class="ochev">${isOpen?'▾':'▸'}</span> ${esc(o.distName)}</div>
             <div class="dmeta">🏬 ${esc(o.warehouse||'—')}</div>
             <div class="dmeta">${ico_('clockIcon',12)} ${dateStr}</div>
-            <div class="oid">#${esc(orderNoDisplay_(o))} · ${nItems} صنف</div>
+            <div class="oid">#${esc(orderNoDisplay_(o))} · ${nItems} صنف${o.editedFrom ? ` · <span class="statusbadge edited" style="padding:1px 6px;font-size:10.5px;" title="اتعدّل من طلب #${esc(o.editedFrom)}">${ico_('editIcon',11)} معدّل</span>` : ''}</div>
           </div>
           <div class="oheadside">
             <button class="statusbadge ${si.cls}" data-act="toggle-status" data-id="${esc(o.id)}" title="دوس عشان تتقدّم للمرحلة الجاية">
