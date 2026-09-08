@@ -1573,6 +1573,7 @@ const state = {
   adminNewCount:0,        // عدد الطلبات الجديدة اللي لسه الأدمن ماشافهاش
   adminMetaCount:null,    // آخر عدد طلبات معروف من السيرفر (للمقارنة)
   pollDiag:'',            // نتيجة آخر فحص للإشعار (تشخيص يظهر في شريط الأدمن)
+  newOrdersPopup:null,    // {count, lastOrder} — نافذة منبثقة لما يجي طلب جديد (شوف onNewOrders_)
   pinInput:'',
   pinError:'',
   orders:[],
@@ -2286,11 +2287,16 @@ function playNotifyBeep_(){
 // بيتنادى لما نكتشف طلب/طلبات جديدة
 function onNewOrders_(newCount, lastOrder){
   playNotifyBeep_();
+  // 🔔 بطلب صريح: نافذة منبثقة واضحة بدل ما تفضل توست بسيط ممكن يفوت —
+  // بتفضل ظاهرة على الشاشة لحد ما الأدمن يتعامل معاها (يروح للطلبات أو يقفلها).
+  // لو النافذة أصلاً مفتوحة (طلب جديد جه وهو لسه ماتعاملش مع اللي قبله)
+  // بنجمع العدد بدل ما نستبدله، عشان مايضيعش العدد الحقيقي.
+  const total = (state.newOrdersPopup ? state.newOrdersPopup.count : 0) + newCount;
   const who = lastOrder && lastOrder.distName ? (' من ' + lastOrder.distName) : '';
-  const txt = newCount === 1
+  const txt = total === 1
     ? ('📦 طلب جديد' + who)
-    : ('📦 ' + newCount + ' طلبات جديدة');
-  showToast('🔔 ' + txt, 6000);
+    : ('📦 ' + total + ' طلبات جديدة' + who);
+  state.newOrdersPopup = { count: total, lastOrder: lastOrder, text: txt };
   // إشعار نظام لو المستخدم مسموح (بيبان حتى لو التطبيق في الخلفية القريبة)
   try{
     if('Notification' in window && Notification.permission === 'granted'){
@@ -3809,6 +3815,23 @@ function renderNotifyPrompt(){
       <div class="modalbtns">
         <button class="modalbtn primary" data-act="do-notify-dist">📲 ابعت على واتساب</button>
         <button class="modalbtn" data-act="skip-notify">مش دلوقتي</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderNewOrdersPopup(){
+  if(!state.newOrdersPopup) return '';
+  const p = state.newOrdersPopup;
+  return `
+  <div class="modalbg" data-act="dismiss-new-orders">
+    <div class="modalcard" data-act="noop">
+      <div class="modalic">🔔</div>
+      <h3>${esc(p.text)}</h3>
+      <p>وصل دلوقتي عند المخزن — عايز تراجعه؟</p>
+      <div class="modalbtns">
+        <button class="modalbtn primary" data-act="goto-new-orders">📦 روح للطلبات</button>
+        <button class="modalbtn" data-act="dismiss-new-orders">تجاهل دلوقتي</button>
       </div>
     </div>
   </div>`;
@@ -7305,7 +7328,7 @@ function render(){
     else if(state.view==='manage') view = renderManageView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
-    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderGlobalError();
+    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderNewOrdersPopup() + renderGlobalError();
     bindEvents();
     applyFixedHeaderSpacing_();
     applyFixedFooterSpacing_();
@@ -7809,6 +7832,17 @@ async function onActionInner(act, el){
       }
       break;
     }
+    // 🔔 النافذة المنبثقة لطلب جديد (شوف onNewOrders_/renderNewOrdersPopup)
+    case 'goto-new-orders':
+      state.newOrdersPopup = null;
+      state.view = 'admin';
+      render();
+      if(state.adminUnlocked){ loadOrders(); markAdminOrdersSeen_(); }
+      break;
+    case 'dismiss-new-orders':
+      state.newOrdersPopup = null;
+      render();
+      break;
     // 🔙 بطلب صريح: لو الموزّع اختار مخزن غلط، مفيش زرار "غيّر" ملاصق
     // (اتشال عمدًا — عايز المخزن يفضل ثابت أثناء تعبئة الفورم)، لكن لازم
     // يقدر "يرجع لأول الصفحة" (شاشة اختيار المخزن) من غير ما يفضل عالق.
