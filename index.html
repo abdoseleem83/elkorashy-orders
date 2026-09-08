@@ -1392,7 +1392,9 @@ const OTHER_SECTOR = 'أصناف أخرى';
 const STATUS_LEGACY_PENDING = 'تحت التنفيذ';
 const STATUS_RECEIVED = 'تم استلام الطلب';
 const STATUS_DONE = 'تم تنفيذ الطلب';
-const STATUS_EDITED = 'مُعدّل';   // الطلب القديم اللي اتعمله تعديل — بيفضل ظاهر للأدمن
+const STATUS_EDITED = 'مُعدّل';   // حالة قديمة (قبل v216) — الطلب القديم دلوقتي بيتمسح تمامًا
+                                  // بدل ما يتعلّم الحالة دي، بس لسه محتاجينها لطلبات قديمة
+                                  // في الشيت من قبل الترقية (شوف editedFrom للتاج الجديد)
 const STATUS_PENDING = STATUS_RECEIVED;   // اسم قديم — سايبينه عشان أي كود بيناديه
 const STATUS_ORDER = [STATUS_RECEIVED, STATUS_DONE];
 function normStatus_(st){
