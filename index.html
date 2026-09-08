@@ -84,18 +84,6 @@ body{
 }
 .profile-bar span{display:none;}
 
-.chambers{
-  display:flex;
-  gap:3px;
-  height:22px;
-  margin:0 0 2px 0;
-}
-.chambers i{
-  flex:1;
-  border:1.5px solid rgba(255,255,255,.35);
-  border-radius:2px;
-}
-
 /* ---------- header ---------- */
 /* ⚠️ position:sticky اتجرّب مرتين ومكنش بيلتصق فعليًا (سواء بسبب overflow
    ضمني على أب، أو تعارض sticky مع أب flex زي #app). بدل ما نكمل نلاحق نفس
@@ -1855,11 +1843,6 @@ function effectiveInStock(item){
   return n >= content;
 }
 
-function isProductOutOfStock(main, product){
-  const opts = colorsForProduct(main, product);
-  return opts.length>0 && opts.every(c=>c.available!==false && isColorOutOfStock(main, product, c.color));
-}
-
 // ⚠️ كان فيه تناقض: تاج الصنف كان بيقول "مفيش رصيد" (أحمر) حتى لو لون واحد
 // فيه عيدان متاحة (crit) — بينما شاشة تفاصيل نفس الصنف كانت بتوري اللون ده
 // "متاح اعواد". بنجمع حالة الألوان كلها هنا بنفس المنطق (3 مستويات) عشان
@@ -1887,12 +1870,6 @@ function lowStockLimitFor(item){
   const content = Number(item && item.unit) || 1;
   return LOW_STOCK_ROLLS * content;
 }
-function isLowStock(main, product, color){
-  const item = findCatalogItem(main, product, color);
-  if(!effectiveInStock(item)) return false;   // أقل من لفة = صفر مش قليل
-  const q = Number(item.stock);
-  return q < lowStockLimitFor(item);
-}
 
 function availableColorsLabel(main, product){
   const opts = colorsForProduct(main, product).filter(c => c.available !== false);
@@ -1916,11 +1893,6 @@ function lowStockColorsLabel(main, product){
   return names.join('، ');
 }
 
-function isColorOutOfStock(main, product, color){
-  const item = findCatalogItem(main, product, color);
-  if(!item) return false;
-  return item.available!==false && !effectiveInStock(item);
-}
 function unitOptionsForGroup(main){
   if(main==='ابواب WPC') return ['بدون إكسسوارات','بإكسسوارات'];
   if(['قطاعات PVC كومبن','قطاعات كرافت لاين','نيو لاين','شاتر'].includes(main)) return ['لفة','عود'];
@@ -1928,10 +1900,6 @@ function unitOptionsForGroup(main){
   if(main===OTHER_SECTOR) return ['قطعة','كرتونة','لفة','عود'];
   return ['قطعة'];
 }
-function unitColumnLabel(main){
-  return main==='ابواب WPC' ? 'الإكسسوارات' : 'الوحدة';
-}
-
 // ===== تحميل الأصناف =====
 // ترتيب المصادر (من الأحسن للأسوأ):
 //   ١) السيرفر مباشرة — أسعار وأرصدة لحظية ✅
@@ -2198,10 +2166,6 @@ function calcUnitPrice(main, product, color, unitType){
   // السعر المعروض في الشاشة دايمًا قبل الخصم — الخصم بيتحسب ويتفصل بس في عرض السعر النهائي
   return item.price * multiplier;
 }
-function fmtPrice(n){
-  if(n==null) return 'السعر غير متاح';
-  return Math.round(n).toLocaleString('en-US') + ' ج.م';
-}
 function renderOrderTotalLine(o){
   if(!o.items || !o.items.length) return '';
   const total = o.items.reduce((s,it)=> s + (it.lineTotal||0), 0);
@@ -2283,12 +2247,6 @@ async function ensurePushRegistered(){
   if(!state.currentUser || state.currentUser.username==='admin') return;
   if(!('Notification' in window)) return;
   if(Notification.permission==='granted') await registerPush();
-}
-
-function chambersHtml(n=4){
-  let s = '<div class="chambers">';
-  for(let i=0;i<n;i++) s += '<i></i>';
-  return s + '</div>';
 }
 
 // ===== إشعار الأدمن بالطلبات الجديدة (طول ما التطبيق مفتوح) =====
@@ -3649,28 +3607,6 @@ function resetOrderForm(){
   render();
 }
 
-// ===== edit existing order =====
-function startEditOrder(order){
-  state.view = 'order';
-  state.editingOrderId = order.id;
-  state.distName = asText(order.distName);
-  state.distRegion = asText(order.distRegion);
-  state.distPhone = asText(order.distPhone);
-  state.note = asText(order.note);
-  state.warehouse = validWarehouse_(order.warehouse);
-  state.cart = order.items.map(it=>Object.assign({}, it));
-  state.staged = [];
-  state.mainGroup = null;
-  state.subGroup = null;
-  state.selectedColor = null;
-  // لو المخزن فاضي في الطلب القديم، نحط أول مخزن متاح عشان الفورم يظهر
-  if(!state.warehouse){
-    if(WAREHOUSES && WAREHOUSES.length) state.warehouse = WAREHOUSES[0];
-  }
-  showToast('بتعدّل على طلب سابق — كمّل التعديل وابعت تاني');
-  render();
-}
-
 // ===== pricing helpers for quote (raw price, normalized to small unit) =====
 function smallUnitLabelFor(main){
   if(main==='ابواب WPC') return 'قطعة';
@@ -4376,7 +4312,7 @@ async function shareQuoteAndShortage_(order, busyStateKey, includeQuote){
   if(state.quoteShortageReady && order && state.quoteShortageReady.orderId===order.id && state.quoteShortageReady.includeQuote===includeQuote){
     return trySendReadyFiles_();
   }
-  if(!order || !order.items || !order.items.length){ showToast('الطلب مفيهوش أصناف'); return; }
+  if(!order || !order.items || !order.items.length){ showToast('الطلب مفيهوش أصناف'); releaseWaWindow(); return; }
   state[busyStateKey] = true; render();
   try{
     const files = [];
@@ -4405,12 +4341,13 @@ async function shareQuoteAndShortage_(order, busyStateKey, includeQuote){
       blobs.forEach((b,i)=> files.push(new File([b], base + (blobs.length>1 ? '_'+(i+1) : '') + '.png', {type:'image/png'})));
     }
 
-    if(!files.length){ showToast(includeQuote ? 'مفيش عرض سعر ولا نواقص لهذا الطلب' : 'مفيش نواقص لهذا الطلب'); return; }
+    if(!files.length){ showToast(includeQuote ? 'مفيش عرض سعر ولا نواقص لهذا الطلب' : 'مفيش نواقص لهذا الطلب'); releaseWaWindow(); return; }
     state.quoteShortageReady = { files, orderNo, orderId: order.id, includeQuote };
     await trySendReadyFiles_();
   }catch(e){
     console.error('shareQuoteAndShortage_ failed:', e);
     showToast('حصل خطأ في تجهيز الملفات: ' + (e && e.message ? e.message : e));
+    releaseWaWindow();
   }finally{
     state[busyStateKey] = false; render();
   }
@@ -4421,6 +4358,7 @@ async function trySendReadyFiles_(){
   if(!ready) return;
   const { files, orderNo } = ready;
   if(navigator.canShare && navigator.canShare({files})){
+    releaseWaWindow();   // مش محتاجينها في المسار ده — لو كانت متحجزة من الضغطة
     try{
       await navigator.share({ files, title:'طلب #'+orderNo, text:'عرض السعر والنواقص — طلب #'+orderNo });
       state.quoteShortageReady = null; render();
@@ -4435,11 +4373,18 @@ async function trySendReadyFiles_(){
     }
   }
   // fallback: مفيش دعم لمشاركة الملفات خالص (سطح مكتب غالبًا) — بننزّل
-  // كل حاجة ونفتح واتساب على طول عشان يبقى أقرب حاجة لواتساب إجباري
-  // ممكنة تقنيًا.
+  // كل حاجة ونفتح واتساب. لو كانت النافذة اتحجزت وقت الضغطة (شوف
+  // reserveWaWindow فوق) بنوجّهها هي — أضمن من window.open جديد بعد كل
+  // الـawait اللي فاتت، لأنها بتتفتح غالبًا بعد ما "لمسة المستخدم" تبرد.
   files.forEach(f=> downloadBlob(f, f.name));
   showToast('اتحمّلت ' + files.length + ' ملفات — هتفتح واتساب، ارفقهم يدويًا');
-  setTimeout(()=>{ window.open('https://wa.me/?text=' + encodeURIComponent('عرض السعر والنواقص — طلب #' + orderNo), '_blank'); }, 900);
+  const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent('عرض السعر والنواقص — طلب #' + orderNo);
+  if(__waWin && !__waWin.closed){
+    try{ __waWin.location.href = waUrl_; }catch(e){ setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900); }
+    __waWin = null;
+  } else {
+    setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900);
+  }
   state.quoteShortageReady = null; render();
 }
 
@@ -4470,9 +4415,9 @@ async function shareAsImage_(q, baseName, title){
 
 async function shareQuotePDF(){
   const q = state.quotePdfPlain;
-  if(!q) return;
+  if(!q){ releaseWaWindow(); return; }
   const name = 'عرض_سعر_' + (state.successOrderId||'order');
-  if(await shareAsImage_(q, name, 'عرض سعر')) return;
+  if(await shareAsImage_(q, name, 'عرض سعر')){ releaseWaWindow(); return; }
   // 3) آخر حل: ننزّل الصورة ونفتح واتساب عشان يرفقها بإيده
   if(q.imgBlob){
     downloadBlob(q.imgBlob, name + '.png');
@@ -4484,7 +4429,13 @@ async function shareQuotePDF(){
   const o = state.lastOrder;
   let msg = 'طلب #' + (state.successOrderId||'') + '\n';
   if(o) msg += 'الموزع: ' + asText(o.distName) + '\nالمنطقة: ' + asText(o.distRegion) + '\n';
-  setTimeout(()=>{ window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank'); }, 900);
+  const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent(msg);
+  if(__waWin && !__waWin.closed){
+    try{ __waWin.location.href = waUrl_; }catch(e){ setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900); }
+    __waWin = null;
+  } else {
+    setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900);
+  }
 }
 
 // ===== quote PDF (عرض سعر) =====
@@ -7547,9 +7498,10 @@ function renderInstallBanner(){
 // الصفحة**. بندوّر على أقرب عنصر فيه data-act من مكان الضغطة بـ closest().
 //
 // 🔑 وده كمان بيحل مشكلة المودالات بشكل أنضف: خلفية المودال (.modalbg) ليها
-// data-act="close-x" واللوحة اللي جواها data-act="noop". closest() بيرجّع
-// أقرب واحد للضغطة — فالضغط جوه اللوحة بيوصل لـ"noop" (مابيعملش حاجة)
-// والضغط على الخلفية بيوصل لـ"close-x". من غير أي stopPropagation خالص.
+// data-act="close-xxx" خاص بكل مودال (مثلاً close-warehouse)، واللوحة اللي
+// جواها data-act="noop". closest() بيرجّع أقرب واحد للضغطة — فالضغط جوه
+// اللوحة بيوصل لـ"noop" (مابيعملش حاجة) والضغط على الخلفية بيوصل لـ"close-xxx".
+// من غير أي stopPropagation خالص.
 
 let eventsWired_ = false;
 
@@ -8030,8 +7982,9 @@ async function onActionInner(act, el){
 
     case 'new-order': resetOrderForm(); break;
     case 'share-quote-plain':
+      if(!navigator.canShare) reserveWaWindow();   // احتياطي سطح المكتب — شوف trySendReadyFiles_
       if(!state.quotePdfPlain){ await generateBothQuotes(state.lastOrder); }
-      if(state.quotePdfPlain) shareQuotePDF();
+      if(state.quotePdfPlain) await shareQuotePDF(); else releaseWaWindow();
       break;
     case 'download-quote-plain':
       if(!state.quotePdfPlain){ await generateBothQuotes(state.lastOrder); }
@@ -8042,11 +7995,13 @@ async function onActionInner(act, el){
       if(state.quotePdfPlain) previewPdfBlob(state.quotePdfPlain, 'عرض_سعر_' + (state.successOrderId||'order') + '.pdf');
       break;
     case 'share-quote-shortage':
+      if(!navigator.canShare) reserveWaWindow();   // احتياطي سطح المكتب — شوف trySendReadyFiles_
       await shareQuoteAndShortage_(findOrderForShortage_(el.getAttribute('data-id')), 'shareQuoteShortageBusy');
       break;
     // بطلب صريح: زرار شاشة الإدارة بس (متابعة الطلبات) — النواقص من غير
     // عرض السعر. الأدمن محتاج يوجّه المخزن بس، مش يبعت عرض سعر للمخزن.
     case 'share-shortage-only':
+      if(!navigator.canShare) reserveWaWindow();
       await shareQuoteAndShortage_(findOrderForShortage_(el.getAttribute('data-id')), 'shareQuoteShortageBusy', false);
       break;
     case 'close-preview': closePreviewModal(); break;
@@ -8081,11 +8036,6 @@ async function onActionInner(act, el){
 
     case 'myorders-search': searchMyOrdersByPhone(); break;
     case 'myorders-refresh': refreshMyOrders(); break;
-    case 'edit-order':{
-      showToast('التعديل اتلغى — سجّل الطلب الإضافي كطلب جديد عادي');
-      break;
-    }
-
     case 'pin-submit':
       await submitAdminPin();
       break;
