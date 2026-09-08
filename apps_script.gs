@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v215';
+const APP_VERSION = 'v216';
 
 const SHEET_NAME = 'Orders';
 const ARCHIVE_SHEET_NAME = 'الأرشيف';
@@ -27,7 +27,15 @@ const ERRORS_SHEET_NAME = 'أخطاء';
 const STATUS_RECEIVED = 'تم استلام الطلب';
 const STATUS_PENDING = STATUS_RECEIVED;   // اسم قديم — سايبينه عشان أي كود بيناديه
 const STATUS_DONE = 'تم تنفيذ الطلب';
-const STATUS_EDITED = 'مُعدّل';            // الطلب القديم بعد ما يتعمله تعديل
+const STATUS_EDITED = 'مُعدّل';            // حالة قديمة — بتفضل موجودة بس لطلبات اتعدّلت قبل v216
+                                           // (شوف saveOrder_: من v216 الطلب القديم بيتمسح تمامًا
+                                           // بدل ما يتعلّم "مُعدّل"، والطلب الجديد بيحمل علامة
+                                           // EDIT_MARK_PREFIX_ في الملاحظات بدل كده)
+// علامة مخفية بتتحط في أول عمود "ملاحظات" للطلب الجديد الناتج عن تعديل —
+// بتتشال قبل ما تتعرض للموزع/الأدمن (شوف rowToOrder). مفيش داعي لعمود شيت
+// جديد عشان كده، والصيغة دي آمنة (نص عادي مايتفلترش أو يتفسّر كأي حاجة تانية).
+const EDIT_MARK_PREFIX_ = '⟦EDITED_FROM:';
+const EDIT_MARK_SUFFIX_ = '⟧';
 
 // أعمدة شيت Orders (1-indexed) — مكان واحد بدل أرقام سايبة في الكود
 const COL_ID = 1, COL_TS = 2, COL_NAME = 3, COL_REGION = 4, COL_PHONE = 5,
@@ -524,15 +532,17 @@ function saveOrder_(data) {
     }
   }
 
-  // ✏️ التعديل بيعمل صف **جديد** برقم وتاريخ جديد، والقديم بيتعلّم "مُعدّل"
-  // (يفضل ظاهر للأدمن كنسخة قديمة) — مش بيحدّث نفس الصف.
+  // ✏️ التعديل بيعمل صف **جديد** برقم وتاريخ جديد، والقديم بيتمسح تمامًا —
+  // يفضل الطلب الجديد بس، وعليه علامة "معدّل" (شوف EDIT_MARK_PREFIX_ ورجّع
+  // على rowToOrder) بدل ما يفضل الصف القديم معلَّق بحالة "مُعدّل" للأبد.
   //
-  // 🔒 ثغرة اتصلحت: الكود القديم كان بيعلّم أي صف رقمه = oldId من غير ما
-  // يتأكد إن الطلب ده بتاع نفس الموزّع اللي باعت. يعني أي موزّع مسجّل دخول
-  // كان يقدر يبعت oldId بتاع طلب **موزّع تاني** ويخليه "مُعدّل" — الطلب
-  // بيختفي من متابعة صاحبه وحجز بضاعته بيتفك. دلوقتي بنتأكد من الملكية:
-  // إما اسم المستخدم مطابق، أو (للطلبات القديمة اللي مالهاش عمود اسم مستخدم)
-  // رقم التليفون مطابق. غير كده بنسيب الصف القديم زي ما هو.
+  // 🔒 ثغرة اتصلحت (لسه سارية): الكود القديم كان بيعلّم أي صف رقمه = oldId
+  // من غير ما يتأكد إن الطلب ده بتاع نفس الموزّع اللي باعت. يعني أي موزّع
+  // مسجّل دخول كان يقدر يبعت oldId بتاع طلب **موزّع تاني** ويمسحه. دلوقتي
+  // بنتأكد من الملكية: إما اسم المستخدم مطابق، أو (للطلبات القديمة اللي
+  // مالهاش عمود اسم مستخدم) رقم التليفون مطابق. غير كده بنسيب الصف القديم
+  // زي ما هو من غير ما نمسحه.
+  let editedFromOrderNo = '';
   if (isUpdate && data.oldId != null && String(data.oldId)) {
     const oldId = String(data.oldId);
     const myPhone = normalizePhone((userInfo_(username) || {}).phone || '');
@@ -543,7 +553,10 @@ function saveOrder_(data) {
       const mine = rowUser
         ? (rowUser.toLowerCase() === String(username).trim().toLowerCase())
         : (!!myPhone && rowPhone === myPhone);
-      if (mine) sheet.getRange(i + 2, COL_STATUS).setValue(STATUS_EDITED);
+      if (mine) {
+        editedFromOrderNo = String(sheet.getRange(i + 2, COL_ORDERNO).getValue() || '');
+        sheet.deleteRow(i + 2);   // الصف القديم بيتمسح تمامًا — الجديد بس اللي فاضل
+      }
       break;
     }
   }
@@ -551,9 +564,12 @@ function saveOrder_(data) {
   const orderNo = getNextOrderNumber_(data.warehouse);
   const newRow = sheet.getLastRow() + 1;
   sheet.getRange(newRow, COL_PHONE).setNumberFormat('@');
+  const noteToSave = editedFromOrderNo
+    ? (EDIT_MARK_PREFIX_ + editedFromOrderNo + EDIT_MARK_SUFFIX_ + (data.note || ''))
+    : (data.note || '');
   sheet.appendRow([
     data.id, new Date(data.ts), data.distName, data.distRegion || '',
-    String(data.distPhone || ''), data.note || '', itemsSummary,
+    String(data.distPhone || ''), noteToSave, itemsSummary,
     isUpdate ? STATUS_PENDING : (data.status || STATUS_PENDING),
     JSON.stringify(items), data.warehouse || '', orderNo, username
   ]);
@@ -1460,13 +1476,27 @@ function rowToOrder(r) {
   let ts = new Date(r[COL_TS - 1]).getTime();
   if (!isFinite(ts)) ts = 0;
 
+  // ✏️ علامة التعديل مخبّية في أول الملاحظات (شوف EDIT_MARK_PREFIX_ في
+  // saveOrder_) — بنشيلها من هنا قبل ما الملاحظة توصل للموزع/الأدمن،
+  // ونرجّع رقم الطلب القديم في editedFrom عشان الواجهة تعرض تاج "معدّل".
+  let noteRaw = String(r[COL_NOTE - 1] == null ? '' : r[COL_NOTE - 1]);
+  let editedFrom = '';
+  if (noteRaw.indexOf(EDIT_MARK_PREFIX_) === 0) {
+    const endIdx = noteRaw.indexOf(EDIT_MARK_SUFFIX_, EDIT_MARK_PREFIX_.length);
+    if (endIdx > -1) {
+      editedFrom = noteRaw.slice(EDIT_MARK_PREFIX_.length, endIdx);
+      noteRaw = noteRaw.slice(endIdx + EDIT_MARK_SUFFIX_.length);
+    }
+  }
+
   return {
     id: String(r[COL_ID - 1]),
     ts: ts,
     distName: String(r[COL_NAME - 1] == null ? '' : r[COL_NAME - 1]),
     distRegion: String(r[COL_REGION - 1] == null ? '' : r[COL_REGION - 1]),
     distPhone: String(r[COL_PHONE - 1] == null ? '' : r[COL_PHONE - 1]),
-    note: String(r[COL_NOTE - 1] == null ? '' : r[COL_NOTE - 1]),
+    note: noteRaw,
+    editedFrom: editedFrom,
     status: String(r[COL_STATUS - 1] == null ? '' : r[COL_STATUS - 1]),
     items: items,
     warehouse: String(r[COL_WAREHOUSE - 1] == null ? '' : r[COL_WAREHOUSE - 1]),
