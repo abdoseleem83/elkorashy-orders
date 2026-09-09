@@ -6222,9 +6222,17 @@ function renderOrderView(){
     return `<main>${warehouseCard}</main>`;
   }
 
+  // ⚠️ تنبيه استباقي: لو فيه طلب اتبعت النهارده ولسه "لم يستلم"، الطلب الجديد
+  // ده هيتضاف عليه تلقائيًا كتعديل (شوف tryMergeWithLastOrder_) — بنقول
+  // للموزّع كده الأول عشان مايتفاجأش، مش بس توست بعد ما يحصل خلاص.
+  const willMergeToday = !state.editingOrderId
+    && localStorage.getItem(LS_LAST_DATE_KEY) === todayStr()
+    && !!localStorage.getItem(LS_LAST_ID_KEY);
+
   const distSection = `
     <div class="card distcard">
       ${state.editingOrderId ? `<div class="editbanner">✏️ بتعدّل على طلب سابق #${esc(state.editingOrderId.toUpperCase())}</div>` : ''}
+      ${willMergeToday ? `<div class="editbanner" style="background:#FBEBD1;">ℹ️ عندك طلب النهارده لسه "لم يستلم" — لو بعتت ده هيتضاف عليه تلقائيًا كتعديل، مش هيتسجّل كطلب منفصل</div>` : ''}
       ${isClientAccount() ? '' : `
       ${state.editingOrderId ? '' : `<button class="backnav" data-act="back-to-warehouse" style="width:auto;padding:6px 12px;font-size:11px;margin-bottom:8px;" title="ارجع لاختيار المخزن من الأول">→ رجوع لاختيار المخزن</button>`}
       <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;">
@@ -6360,6 +6368,10 @@ function renderMyOrdersView(){
         </div>
         ${renderOrderTotalLine(o)}
         <div class="adminbtnrow adminbtnrow-compact">
+          ${normStatus_(o.status)===STATUS_RECEIVED ? `
+          <button class="delbtn edit" data-act="edit-my-order" data-id="${esc(o.id)}" title="عدّل على الطلب ده">
+            ${ico_('editIcon',13)} تعديل
+          </button>` : ''}
           <button class="delbtn pdf" data-act="preview-myorder-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
             ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('eyeIcon',13) + ' معاينة'}
           </button>
@@ -8095,6 +8107,29 @@ async function onActionInner(act, el){
     case 'preview-myorder-pdf':{
       const id = el.getAttribute('data-id');
       if(!state.adminPdfGeneratingId) previewMyOrderPDF(id);
+      break;
+    }
+    // ✏️ بطلب صريح: زرار تعديل واضح على أي طلب "لم يستلم" في شاشة طلباتي —
+    // بديل يدوي للدمج التلقائي (شوف tryMergeWithLastOrder_)، لمّا الموزّع
+    // يحب يبدأ التعديل بنفسه بدل ما يستنى يبعت طلب جديد في نفس اليوم.
+    case 'edit-my-order':{
+      const id = el.getAttribute('data-id');
+      const order = state.myOrders.find(o=>o.id===id);
+      if(!order){ showToast('الطلب ده مش موجود'); break; }
+      state.view = 'order';
+      state.editingOrderId = order.id;
+      state.distName = asText(order.distName);
+      state.distRegion = asText(order.distRegion);
+      state.distPhone = asText(order.distPhone);
+      state.note = asText(order.note);
+      state.warehouse = validWarehouse_(order.warehouse) || (WAREHOUSES && WAREHOUSES[0]) || '';
+      state.cart = order.items.map(it=>Object.assign({}, it));
+      state.staged = [];
+      state.mainGroup = null;
+      state.subGroup = null;
+      state.selectedColor = null;
+      showToast('بتعدّل على طلب سابق — كمّل التعديل وابعت تاني');
+      render();
       break;
     }
     case 'download-order-pdf':{
