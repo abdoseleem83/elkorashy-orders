@@ -3163,6 +3163,49 @@ async function previewCartInvoice(){
   render();
 }
 
+// 📤 بطلب صريح: زرار "مشاركة" في مودال "مراجعة الطلب" — بيبني صورة عرض
+// السعر من السلة الحالية (قبل الإرسال) ويفتح شاشة المشاركة على طول
+// (نفس مبدأ shareQuotePDF)، عشان الموزّع يقدر يبعتها لحد يستأذنه قبل
+// ما يأكّد الطلب فعليًا.
+async function shareCartReview_(){
+  if(state.cart.length===0){ showToast('لسه محضتش أي صنف تقدر تشاركه'); return; }
+  if(!navigator.canShare) reserveWaWindow();
+  state.cartShareBusy = true; render();
+  const tempOrder = {
+    id: 'PREVIEW', ts: Date.now(),
+    distName: asText(state.distName).trim() || 'معاينة',
+    distRegion: asText(state.distRegion).trim(),
+    distPhone: asText(state.distPhone).trim(),
+    note: asText(state.note).trim(),
+    items: state.cart
+  };
+  try{
+    const q = await buildQuotePDF(tempOrder);
+    if(!q){ showToast('حصل خطأ في تجهيز المشاركة، حاول تاني'); releaseWaWindow(); return; }
+    if(await shareAsImage_(q, 'معاينة_عرض_سعر', 'معاينة الطلب')){ releaseWaWindow(); return; }
+    if(q.imgBlob){
+      downloadBlob(q.imgBlob, 'معاينة_عرض_سعر.png');
+      showToast('اتحملت الصورة — هتفتح واتساب، ارفقها من المعرض');
+    } else {
+      downloadBlob(q.blob, 'معاينة_عرض_سعر.pdf');
+      showToast('اتحمل الملف — هتفتح واتساب، ارفقه يدويًا');
+    }
+    const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent('معاينة طلب قبل الإرسال');
+    if(__waWin && !__waWin.closed){
+      try{ __waWin.location.href = waUrl_; }catch(e){ setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900); }
+      __waWin = null;
+    } else {
+      setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900);
+    }
+  }catch(e){
+    console.error('shareCartReview_ failed:', e);
+    showToast('حصل خطأ في المشاركة: ' + (e && e.message ? e.message : e));
+    releaseWaWindow();
+  }finally{
+    state.cartShareBusy = false; render();
+  }
+}
+
 function saveOrderRef(id, distName){
   const list = getSavedOrderRefs();
   list.unshift({id, distName, ts:Date.now()});
@@ -3947,9 +3990,12 @@ function renderCartReviewModal(){
         ${renderCartItemsHtml(state.cart)}
       </div>
       ${state.cart.length ? `
-      <div class="previewfoot" style="display:flex;gap:8px;">
+      <div class="previewfoot" style="display:flex;flex-wrap:wrap;gap:8px;">
         <button class="savebtn" style="flex:1;min-height:56px;" data-act="cart-add-more">➕ زود أصناف</button>
-        <button class="submitbtn" style="flex:1;min-height:56px;" data-act="cart-send">📨 ابعت الطلب</button>
+        <button class="savebtn" style="flex:1;min-height:56px;" data-act="cart-share" ${state.cartShareBusy?'disabled':''}>
+          ${state.cartShareBusy ? '⏳ جارٍ...' : '📤 مشاركة'}
+        </button>
+        <button class="submitbtn" style="flex:1 1 100%;min-height:56px;" data-act="cart-send">📨 ابعت الطلب</button>
       </div>` : ''}
     </div>
   </div>`;
@@ -4411,6 +4457,46 @@ async function trySendReadyFiles_(){
     setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900);
   }
   state.quoteShortageReady = null; render();
+}
+
+// 📦 بطلب صريح: مجموعة نواقص واحدة بس (كرافت+نيو، أو كومبن+اكسسوارات) —
+// أيقونة منفصلة لكل مجموعة بدل زرار واحد بيبعتهم مع بعض. من غير عرض سعر.
+async function shareShortageGroupOnly_(order, groupKey){
+  const group = SHORTAGE_IMG_GROUPS_[groupKey];
+  if(!group || !order) return;
+  const busyKey = order.id + '|' + groupKey;
+  if(!state.shareShortageGroupBusy) state.shareShortageGroupBusy = {};
+  if(!navigator.canShare) reserveWaWindow();
+  if(!order.items || !order.items.length){ showToast('الطلب مفيهوش أصناف'); releaseWaWindow(); return; }
+  if(!order.items.some(it=>group.mains.includes(it.main))){ showToast('الطلب ده مفيهوش أصناف من ' + group.label); releaseWaWindow(); return; }
+  state.shareShortageGroupBusy[busyKey] = true; render();
+  try{
+    const orderNo = orderNoDisplay_(order);
+    const blobs = await buildShortageImageGroup(order, groupKey);
+    if(!blobs || !blobs.length){ showToast('مفيش نواقص في ' + group.label + ' لهذا الطلب'); releaseWaWindow(); return; }
+    const base = 'نواقص_' + group.label.replace(/\s+/g,'_') + '_' + orderNo;
+    const files = blobs.map((b,i)=> new File([b], base + (blobs.length>1?'_'+(i+1):'') + '.png', {type:'image/png'}));
+    if(navigator.canShare && navigator.canShare({files})){
+      releaseWaWindow();
+      await navigator.share({ files, title: group.label + ' — طلب #' + orderNo, text: 'نواقص ' + group.label + ' — طلب #' + orderNo });
+      return;
+    }
+    files.forEach(f=> downloadBlob(f, f.name));
+    showToast('اتحمّلت الصور — هتفتح واتساب، ارفقها يدويًا');
+    const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent('نواقص ' + group.label + ' — طلب #' + orderNo);
+    if(__waWin && !__waWin.closed){
+      try{ __waWin.location.href = waUrl_; }catch(e){ setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900); }
+      __waWin = null;
+    } else {
+      setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900);
+    }
+  }catch(e){
+    console.error('shareShortageGroupOnly_ failed:', e);
+    showToast('حصل خطأ في تجهيز الصور: ' + (e && e.message ? e.message : e));
+    releaseWaWindow();
+  }finally{
+    state.shareShortageGroupBusy[busyKey] = false; render();
+  }
 }
 
 // الإرسال على واتساب بقى بصورة (PNG) مش PDF — الصورة بتتفتح في الشات على طول
@@ -6731,10 +6817,17 @@ function renderAdminView(){
             ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('downloadIcon',11) + ' تصدير PDF'}
           </button>
           <!-- بطلب صريح: شاشة الإدارة بتبعت النواقص بس (من غير عرض السعر) —
-               الأدمن محتاج يوجّه المخزن، مش يبعتله عرض سعر. -->
-          <button class="delbtn pdf" data-act="share-shortage-only" data-id="${esc(o.id)}" ${state.shareQuoteShortageBusy?'disabled':''}>
-            ${ico_('imageIcon',11)} ${quoteShortageBtnLabel_(o.id, 'نواقص')}
-          </button>
+               الأدمن محتاج يوجّه المخزن، مش يبعتله عرض سعر. وكل مجموعة
+               (كرافت+نيو / كومبن+اكسسوارات) بقالها أيقونة منفصلة بدل ما
+               يتبعتوا مع بعض. -->
+          ${Object.keys(SHORTAGE_IMG_GROUPS_).map(function(gk){
+            const group = SHORTAGE_IMG_GROUPS_[gk];
+            if(!o.items.some(it=>group.mains.includes(it.main))) return '';
+            const busy = state.shareShortageGroupBusy && state.shareShortageGroupBusy[o.id+'|'+gk];
+            return `<button class="delbtn pdf" data-act="share-shortage-group" data-id="${esc(o.id)}" data-group="${esc(gk)}" ${busy?'disabled':''}>
+              ${busy ? '⏳ جارٍ...' : ico_('imageIcon',11) + ' نواقص ' + esc(group.label)}
+            </button>`;
+          }).join('')}
         </div>
         <button class="delbtn" data-act="delete-order" data-id="${esc(o.id)}">${ico_('trashIcon',14)} حذف الطلب</button>`}
       </div>`;
@@ -8015,9 +8108,18 @@ async function onActionInner(act, el){
     case 'request-submit': await requestSubmit(); break;
     case 'toggle-discount': state.discountVisible = !state.discountVisible; render(); break;
     // set-extra-discount: handled via blur in bindEvents
-    case 'open-cart-review': if(state.pendingDraft && !state.cart.length){ resumeDraft(); state.showResumeModal=false; } state.showCartReview=true; render(); break;
+    // 📤 بطلب صريح: المشاركة بقت إجبارية مش زرار اختياري ممكن يتنسى — بتتفتح
+    // تلقائيًا فور الضغط على "مراجعة الطلب" على طول (نفس الضغطة، عشان
+    // navigator.share يقبلها). زرار "📤 مشاركة" في المودال فضل موجود
+    // كـ"جرّب تاني" احتياطي بس (لو رفض أو الجهاز مش بيدعم المشاركة التلقائية).
+    case 'open-cart-review':
+      if(state.pendingDraft && !state.cart.length){ resumeDraft(); state.showResumeModal=false; }
+      state.showCartReview=true; render();
+      shareCartReview_();
+      break;
     case 'close-cart-review': state.showCartReview=false; render(); break;
     case 'cart-add-more': state.showCartReview=false; render(); break;
+    case 'cart-share': await shareCartReview_(); break;
     case 'cart-send':
       state.showCartReview=false;
       await requestSubmit(); // نفس مسار "إرسال الطلب" العادي: تأكيد ثم إرسال فعلي
@@ -8046,11 +8148,11 @@ async function onActionInner(act, el){
       if(!navigator.canShare) reserveWaWindow();   // احتياطي سطح المكتب — شوف trySendReadyFiles_
       await shareQuoteAndShortage_(findOrderForShortage_(el.getAttribute('data-id')), 'shareQuoteShortageBusy');
       break;
-    // بطلب صريح: زرار شاشة الإدارة بس (متابعة الطلبات) — النواقص من غير
-    // عرض السعر. الأدمن محتاج يوجّه المخزن بس، مش يبعت عرض سعر للمخزن.
-    case 'share-shortage-only':
+    // بطلب صريح: شاشة الإدارة بس (متابعة الطلبات) — أيقونة منفصلة لكل
+    // مجموعة نواقص (كرافت+نيو / كومبن+اكسسوارات)، من غير عرض سعر.
+    case 'share-shortage-group':
       if(!navigator.canShare) reserveWaWindow();
-      await shareQuoteAndShortage_(findOrderForShortage_(el.getAttribute('data-id')), 'shareQuoteShortageBusy', false);
+      await shareShortageGroupOnly_(findOrderForShortage_(el.getAttribute('data-id')), el.getAttribute('data-group'));
       break;
     case 'close-preview': closePreviewModal(); break;
     case 'download-preview': downloadPreviewModal(); break;
