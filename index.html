@@ -8108,7 +8108,15 @@ async function onActionInner(act, el){
     case 'request-submit': await requestSubmit(); break;
     case 'toggle-discount': state.discountVisible = !state.discountVisible; render(); break;
     // set-extra-discount: handled via blur in bindEvents
-    case 'open-cart-review': if(state.pendingDraft && !state.cart.length){ resumeDraft(); state.showResumeModal=false; } state.showCartReview=true; render(); break;
+    // 📤 بطلب صريح: المشاركة بقت إجبارية مش زرار اختياري ممكن يتنسى — بتتفتح
+    // تلقائيًا فور الضغط على "مراجعة الطلب" على طول (نفس الضغطة، عشان
+    // navigator.share يقبلها). زرار "📤 مشاركة" في المودال فضل موجود
+    // كـ"جرّب تاني" احتياطي بس (لو رفض أو الجهاز مش بيدعم المشاركة التلقائية).
+    case 'open-cart-review':
+      if(state.pendingDraft && !state.cart.length){ resumeDraft(); state.showResumeModal=false; }
+      state.showCartReview=true; render();
+      shareCartReview_();
+      break;
     case 'close-cart-review': state.showCartReview=false; render(); break;
     case 'cart-add-more': state.showCartReview=false; render(); break;
     case 'cart-share': await shareCartReview_(); break;
