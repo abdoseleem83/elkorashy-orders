@@ -1448,6 +1448,11 @@ const LS_LAST_ID_KEY = 'qurashi_last_order_id';
 const LS_DRAFT_KEY = 'qurashi_draft';
 const LS_PROFILE_KEY = 'qurashi_profile';
 const LS_USER_KEY = 'qurashi_user_session';
+// 🔑 sessionStorage (مش localStorage) — بيفضل موجود لو الموزّع عمل Refresh
+// عادي (نفس التاب)، وبيتمسح لوحده لما التطبيق يتقفل فعليًا (يتقفل التاب/
+// الجلسة تمامًا) أو يعمل خروج بنفسه. ده الفرق بين "Refresh" و"قفل التطبيق"
+// اللي مفيش طريقة تانية نفرّق بينهم بيها. شوف markSessionAuthed_/loadUserSession.
+const SS_AUTHED_KEY = 'qurashi_session_authed';
 const LS_BIOMETRIC_CREDID_KEY = 'qurashi_biometric_credid';
 const LS_BIOMETRIC_VAULT_KEY = 'qurashi_biometric_vault';
 const LS_USER_TOKEN_KEY = 'qurashi_user_token';
@@ -2811,6 +2816,7 @@ function forceRelogin_(msg){
   setUserToken('');
   state.currentUser = null;
   try{ localStorage.removeItem(LS_USER_KEY); }catch(e){}
+  try{ sessionStorage.removeItem(SS_AUTHED_KEY); }catch(e){}
   showToast(msg || 'انتهت جلستك — سجّل دخول تاني');
   render();
 }
@@ -2903,20 +2909,31 @@ function restoreManageSession(){
 
 function loadUserSession(){
   // 🔒 بطلب صريح: التطبيق لما يتقفل تمامًا ويتفتح تاني، لازم الموزّع يدخل
-  // الباسورد أو البصمة تاني — مش هيفضل داخل تلقائي بمجرد فتح التطبيق.
-  // (ملحوظة: ده بيتنفّذ مرة واحدة بس عند تحميل الصفحة من الأول — قفل
-  // الشاشة العادي للموبايل مابيعيدش تحميل الصفحة، فمش بيأثر على الجلسة
-  // النشطة أثناء الاستخدام العادي، بس لو التطبيق اتقفل فعليًا من الأول.)
-  // شوف renderAuthView و onNewOrders_/submitLogin/unlockWithBiometric —
-  // هما اللي بيرجّعوا state.currentUser بعد نجاح الدخول الفعلي.
-  //
-  // مفيش جلسة تلقائية — لو الجهاز ده فيه بصمة متفعلة قبل كده، نعرض شاشة
-  // "افتح بالبصمة" بدل فورم اليوزر/الباسورد مباشرة.
+  // الباسورد أو البصمة تاني. بس ده لازم يتفرّق عن مجرد عمل Refresh عادي
+  // للصفحة (اللي المفروض يفضل داخل بعده من غير ما يتسأل تاني) — والاتنين
+  // فنيًا نفس الحدث بالظبط (تحميل الصفحة من الأول)، مفيش فرق تقني بينهم
+  // إلا SS_AUTHED_KEY: متخزّن في sessionStorage (مش localStorage)، فبيفضل
+  // موجود عبر أي Refresh لنفس التاب، وبيتمسح لوحده لما التاب/التطبيق يتقفل
+  // فعليًا (أو لما يعمل خروج بنفسه — شوف case 'logout').
+  try{
+    if(sessionStorage.getItem(SS_AUTHED_KEY) === '1'){
+      const raw = localStorage.getItem(LS_USER_KEY);
+      if(raw){
+        const u = JSON.parse(raw);
+        if(u && u.username){ state.currentUser = u; return; }
+      }
+    }
+  }catch(e){}
+  // مفيش جلسة مؤكدة للتاب ده — لو الجهاز ده فيه بصمة متفعلة قبل كده،
+  // نعرض شاشة "افتح بالبصمة" بدل فورم اليوزر/الباسورد مباشرة.
   try{
     if(localStorage.getItem(LS_BIOMETRIC_CREDID_KEY) && localStorage.getItem(LS_BIOMETRIC_VAULT_KEY)){
       state.showBiometricGate = true;
     }
   }catch(e){}
+}
+function markSessionAuthed_(){
+  try{ sessionStorage.setItem(SS_AUTHED_KEY, '1'); }catch(e){}
 }
 
 // ===== الدخول بالبصمة (WebAuthn - platform authenticator) =====
@@ -3015,6 +3032,7 @@ async function unlockWithBiometric(){
       // كمان، وإلا "طلباتي" هترجع فاضية (السيرفر بقى بيطلب توكن).
       setUserToken(u.token || '');
       try{ localStorage.setItem(LS_USER_KEY, JSON.stringify(u)); }catch(e){}
+      markSessionAuthed_();
       state.showBiometricGate = false;
       checkForResumableDraft(); // 🛒 لو في مسودة محفوظة، نعرض إشعار بعد فتح البصمة
       ensurePushRegistered();
@@ -3056,6 +3074,7 @@ async function submitLogin(){
     setUserToken(data.token || '');
     state.currentUser = { username: data.username || username, distName: data.distName||'', distRegion: data.distRegion||'', distPhone: data.distPhone||'', distType: data.distType||'موزع', token: data.token||'' };
     try{ localStorage.setItem(LS_USER_KEY, JSON.stringify(state.currentUser)); }catch(e){}
+    markSessionAuthed_();
     // ⚠️ إصلاح جذري لمشكلة "اسم الموزّع غلط في الطلبات": لو الموزّع كتب اسم
     // غلط/مختصر مرة واحدة قبل كده، كان بيتحفظ محليًا على جهازه (localStorage)
     // للأبد، وبما إن الشرط القديم كان "لو فيه اسم موجود، سيبه"، الاسم الصحيح
@@ -7952,6 +7971,7 @@ async function onActionInner(act, el){
       setUserToken('');
       state.currentUser = null;
       try{ localStorage.removeItem(LS_USER_KEY); }catch(e){}
+      try{ sessionStorage.removeItem(SS_AUTHED_KEY); }catch(e){}
       state.authView='login';
       state.showBiometricGate = isBiometricEnabledForThisDevice();
       state.myOrdersAuthMissing = false;
@@ -7963,6 +7983,7 @@ async function onActionInner(act, el){
       state.adminUnlocked = false;
       stopAdminPoll_();
       try{ localStorage.removeItem(LS_USER_KEY); }catch(e){}
+      try{ sessionStorage.removeItem(SS_AUTHED_KEY); }catch(e){}
       state.authView='login'; state.authUsername=''; state.authPassword='';
       state.showBiometricGate = isBiometricEnabledForThisDevice();
       render();
