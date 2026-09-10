@@ -2607,6 +2607,11 @@ async function loadMyOrdersByPhone(phone){
   return Array.isArray(data) ? data : [];
 }
 
+// 🔗 بطلب صريح: طلبات الحساب بقت بتظهر تلقائي من أي جهاز يتسجّل منه
+// دخول — مش بس الجهاز اللي اتبعت منه الطلب أصلاً. lookup من غير ids
+// ولا phone بترجع كل طلبات صاحب التوكن (السيرفر أصلاً بيفلترها باسم
+// المستخدم — شوف apps_script.gs)، فمش محتاجين نعتمد على مرجع محلي
+// (getSavedOrderRefs) اللي بيختلف من جهاز لجهاز.
 async function refreshMyOrders(){
   // 🛡️ من غير توكن جلسة، نداء lookup هيرجع unauthorized ويطلّع المستخدم بالغلط.
   // بدل كده نعرض رسالة هادية ونسيبه في مكانه — الجلسة ماتتمسحش.
@@ -2620,11 +2625,12 @@ async function refreshMyOrders(){
   state.myOrdersAuthMissing = false;
   state.myOrdersLoading = true; render();
   try{
-    const saved = getSavedOrderRefs();
-    const ids = saved.map(o=>o.id);
-    let results = await loadMyOrdersByIds(ids);
-    // merge distName from local ref in case sheet name changed
-    state.myOrders = results.sort((a,b)=> b.ts - a.ts);
+    const data = await apiGet('lookup', { token: getUserToken() });
+    if(isUnauthorized_(data)){ state.myOrdersAuthMissing = true; state.myOrders = []; }
+    else{
+      const results = Array.isArray(data) ? data : [];
+      state.myOrders = results.sort((a,b)=> b.ts - a.ts);
+    }
   }catch(e){ state.myOrders = []; }
   state.myOrdersLoading = false;
   state.myOrdersSearched = true;
@@ -4443,7 +4449,7 @@ async function shareQuoteAndShortage_(order, busyStateKey, includeQuote){
     }
 
     if(!files.length){ showToast(includeQuote ? 'مفيش عرض سعر ولا نواقص لهذا الطلب' : 'مفيش نواقص لهذا الطلب'); releaseWaWindow(); return; }
-    state.quoteShortageReady = { files, orderNo, orderId: order.id, includeQuote };
+    state.quoteShortageReady = { files, orderNo, orderId: order.id, includeQuote, distName: asText(order.distName).trim() };
     await trySendReadyFiles_();
   }catch(e){
     console.error('shareQuoteAndShortage_ failed:', e);
@@ -4457,11 +4463,14 @@ async function shareQuoteAndShortage_(order, busyStateKey, includeQuote){
 async function trySendReadyFiles_(){
   const ready = state.quoteShortageReady;
   if(!ready) return;
-  const { files, orderNo } = ready;
+  const { files, orderNo, distName } = ready;
+  // 📝 بطلب صريح: اسم الموزّع مكتوب في الملحوظة، مش رقم الطلب بس — أسهل
+  // للمخزن إنه يعرف الطلب ده مين ورا غير ما يدوّر على الاسم في مكان تاني.
+  const noteText_ = 'عرض السعر والنواقص — طلب #' + orderNo + (distName ? ' موزع ' + distName : '');
   if(navigator.canShare && navigator.canShare({files})){
     releaseWaWindow();   // مش محتاجينها في المسار ده — لو كانت متحجزة من الضغطة
     try{
-      await navigator.share({ files, title:'طلب #'+orderNo, text:'عرض السعر والنواقص — طلب #'+orderNo });
+      await navigator.share({ files, title:'طلب #'+orderNo, text: noteText_ });
       state.quoteShortageReady = null; render();
       return;
     }catch(e){
@@ -4479,7 +4488,7 @@ async function trySendReadyFiles_(){
   // الـawait اللي فاتت، لأنها بتتفتح غالبًا بعد ما "لمسة المستخدم" تبرد.
   files.forEach(f=> downloadBlob(f, f.name));
   showToast('اتحمّلت ' + files.length + ' ملفات — هتفتح واتساب، ارفقهم يدويًا');
-  const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent('عرض السعر والنواقص — طلب #' + orderNo);
+  const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent(noteText_);
   if(__waWin && !__waWin.closed){
     try{ __waWin.location.href = waUrl_; }catch(e){ setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900); }
     __waWin = null;
@@ -4502,18 +4511,22 @@ async function shareShortageGroupOnly_(order, groupKey){
   state.shareShortageGroupBusy[busyKey] = true; render();
   try{
     const orderNo = orderNoDisplay_(order);
+    const distName = asText(order.distName).trim();
+    // 📝 بطلب صريح: اسم الموزّع مكتوب في الملحوظة — "نواقص كرافت ونيو —
+    // طلب #349 موزع كذا"، مش رقم الطلب بس.
+    const noteText_ = 'نواقص ' + group.label + ' — طلب #' + orderNo + (distName ? ' موزع ' + distName : '');
     const blobs = await buildShortageImageGroup(order, groupKey);
     if(!blobs || !blobs.length){ showToast('مفيش نواقص في ' + group.label + ' لهذا الطلب'); releaseWaWindow(); return; }
     const base = 'نواقص_' + group.label.replace(/\s+/g,'_') + '_' + orderNo;
     const files = blobs.map((b,i)=> new File([b], base + (blobs.length>1?'_'+(i+1):'') + '.png', {type:'image/png'}));
     if(navigator.canShare && navigator.canShare({files})){
       releaseWaWindow();
-      await navigator.share({ files, title: group.label + ' — طلب #' + orderNo, text: 'نواقص ' + group.label + ' — طلب #' + orderNo });
+      await navigator.share({ files, title: group.label + ' — طلب #' + orderNo, text: noteText_ });
       return;
     }
     files.forEach(f=> downloadBlob(f, f.name));
     showToast('اتحمّلت الصور — هتفتح واتساب، ارفقها يدويًا');
-    const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent('نواقص ' + group.label + ' — طلب #' + orderNo);
+    const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent(noteText_);
     if(__waWin && !__waWin.closed){
       try{ __waWin.location.href = waUrl_; }catch(e){ setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900); }
       __waWin = null;
@@ -6451,7 +6464,6 @@ function renderResumeModal(){
 
 // ===== render: my orders view =====
 function renderMyOrdersView(){
-  const saved = getSavedOrderRefs();
   let content = '';
 
   if(state.myOrdersLoading){
@@ -6511,7 +6523,7 @@ function renderMyOrdersView(){
         <input type="tel" placeholder="01xxxxxxxxx" value="${esc(state.myOrdersPhone)}" data-act="myorders-phone">
         <button class="exportbtn" data-act="myorders-search">دوّر</button>
       </div>
-      ${saved.length ? `<button class="exportbtn" style="width:100%;" data-act="myorders-refresh">${ico_('refresh',14)} عرض طلبات هذا الجهاز</button>` : ''}
+      <button class="exportbtn" style="width:100%;" data-act="myorders-refresh">${ico_('refresh',14)} تحديث طلباتي</button>
     </div>
     ${content}
   </main>`;
@@ -7960,7 +7972,7 @@ async function onActionInner(act, el){
       if(v !== state.view){ state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view); }
       state.view = v; render();
       if(v==='admin' && state.adminUnlocked){ loadOrders(); markAdminOrdersSeen_(); }
-      if(v==='myorders' && !state.myOrdersSearched && getSavedOrderRefs().length) refreshMyOrders();
+      if(v==='myorders' && !state.myOrdersSearched) refreshMyOrders();
       break;
     }
     case 'go-back':{
