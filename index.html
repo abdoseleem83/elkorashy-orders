@@ -1379,7 +1379,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v216';
+const APP_BUILD = 'v217';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2668,6 +2668,21 @@ async function deleteOrder(id){
     state.orders = state.orders.filter(o=>o.id!==id);
     showToast('تم حذف الطلب');
   }catch(e){ showToast('حصل خطأ في الحذف، حاول تاني'); }
+  render();
+}
+
+// 🔒 حذف الموزّع لطلبه هو بس (شاشة "طلباتي") — توكن موزّع عادي، والسيرفر
+// بيتأكد إن الطلب فعلاً بتاعه ومش "تم تنفيذه" قبل ما يمسحه (شوف deleteMyOrder_).
+async function deleteMyOrder(id){
+  try{
+    const d = await apiPost({ action:'deleteMyOrder', token:getUserToken(), id:id });
+    if(!d || d.ok !== true) throw new Error(d && d.error ? d.error : 'server refused');
+    state.myOrders = state.myOrders.filter(o=>o.id!==id);
+    removeOrderRef(id);
+    showToast('تم حذف الطلب');
+  }catch(e){
+    showToast(e && e.message === 'unauthorized' ? 'الطلب ده مش بتاعك أو جلستك انتهت' : ('حصل خطأ في الحذف: ' + (e && e.message ? e.message : e)));
+  }
   render();
 }
 
@@ -6464,6 +6479,10 @@ function renderMyOrdersView(){
           <button class="delbtn pdf" data-act="share-quote-shortage" data-id="${esc(o.id)}" ${state.shareQuoteShortageBusy?'disabled':''}>
             ${ico_('imageIcon',13)} ${quoteShortageBtnLabel_(o.id)}
           </button>
+          ${normStatus_(o.status)===STATUS_RECEIVED ? `
+          <button class="delbtn" data-act="delete-my-order" data-id="${esc(o.id)}" title="احذف الطلب ده">
+            ${ico_('trashIcon',13)} حذف
+          </button>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -8232,6 +8251,11 @@ async function onActionInner(act, el){
       state.selectedColor = null;
       showToast('بتعدّل على طلب سابق — كمّل التعديل وابعت تاني');
       render();
+      break;
+    }
+    case 'delete-my-order':{
+      const id = el.getAttribute('data-id');
+      if(confirm('متأكد إنك عايز تحذف الطلب ده نهائيًا؟')) await deleteMyOrder(id);
       break;
     }
     case 'download-order-pdf':{
