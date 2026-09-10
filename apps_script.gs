@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v216';
+const APP_VERSION = 'v217';
 
 const SHEET_NAME = 'Orders';
 const ARCHIVE_SHEET_NAME = 'الأرشيف';
@@ -473,6 +473,12 @@ function doPostInner_(e) {
     if (!isValidAdminToken_(token)) return denyAdmin_();
     return json_(deleteOrderById_(data.id));
   }
+  // 🔒 حذف الموزّع لطلبه هو بس (شاشة "طلباتي") — توكن موزّع عادي، مش أدمن.
+  // الفحص الحقيقي (الطلب ده فعلاً بتاعه، ومش "منفَّذ" بالفعل) جوه deleteMyOrder_.
+  if (action === 'deleteMyOrder') {
+    if (!userFromToken_(token)) return denyAuth_();
+    return json_(deleteMyOrder_(data.id, token));
+  }
   if (action === 'deleteDelivered') {
     if (!isValidAdminToken_(token)) return denyAdmin_();
     return json_(deleteDeliveredOrders_());
@@ -659,6 +665,39 @@ function deleteOrderById_(id) {
     }
   }
   return { ok: true, deleted: 0 };
+}
+
+// 🔒 حذف طلب من الموزّع نفسه (شاشة "طلباتي") — مش زي deleteOrderById_
+// (ده للأدمن بس، توكن أدمن). هنا بنتأكد إن الطلب بتاع نفس صاحب التوكن
+// (اسم المستخدم، أو رقم التليفون للطلبات القديمة من غير عمود اسم مستخدم)
+// قبل ما نمسح — نفس آلية التحقق من الملكية المستخدمة في تعديل الطلب.
+// وبنمنع حذف طلب "تم تنفيذه" فعلاً — ده بقى مسؤولية الأدمن.
+function deleteMyOrder_(id, token) {
+  const username = userFromToken_(token);
+  if (!username) return { ok: false, error: 'unauthorized' };
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  if (!sheet) return { ok: false, error: 'sheet not found' };
+  const n = sheet.getLastRow() - 1;
+  if (n < 1) return { ok: false, error: 'الطلب مش موجود' };
+
+  const ids = sheet.getRange(2, COL_ID, n, 1).getValues();
+  const myPhone = normalizePhone((userInfo_(username) || {}).phone || '');
+  for (let i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]) !== String(id)) continue;
+    const rowUser = String(sheet.getRange(i + 2, COL_USERNAME).getValue() || '').trim();
+    const rowPhone = normalizePhone(sheet.getRange(i + 2, COL_PHONE).getValue());
+    const mine = rowUser
+      ? (rowUser.toLowerCase() === String(username).trim().toLowerCase())
+      : (!!myPhone && rowPhone === myPhone);
+    if (!mine) return { ok: false, error: 'unauthorized' };
+    const status = String(sheet.getRange(i + 2, COL_STATUS).getValue() || '').trim();
+    if (status === STATUS_DONE) return { ok: false, error: 'الطلب ده اتنفّذ بالفعل — متقدرش تحذفه' };
+    sheet.deleteRow(i + 2);
+    markReservedDirty_();
+    return { ok: true };
+  }
+  return { ok: false, error: 'الطلب مش موجود' };
 }
 
 /**
