@@ -1574,6 +1574,8 @@ const state = {
   adminMetaCount:null,    // آخر عدد طلبات معروف من السيرفر (للمقارنة)
   pollDiag:'',            // نتيجة آخر فحص للإشعار (تشخيص يظهر في شريط الأدمن)
   newOrdersPopup:null,    // {count, lastOrder} — نافذة منبثقة لما يجي طلب جديد (شوف onNewOrders_)
+  showMergeAskModal:false, // سؤال "ضيف على القديم ولا طلب جديد؟" (شوف resolveLastOrderForMergeAsk_)
+  mergeAskLast:null,      // الطلب القديم المرشّح للدمج — شوف renderMergeAskModal
   pinInput:'',
   pinError:'',
   orders:[],
@@ -2605,6 +2607,11 @@ async function loadMyOrdersByPhone(phone){
   return Array.isArray(data) ? data : [];
 }
 
+// 🔗 بطلب صريح: طلبات الحساب بقت بتظهر تلقائي من أي جهاز يتسجّل منه
+// دخول — مش بس الجهاز اللي اتبعت منه الطلب أصلاً. lookup من غير ids
+// ولا phone بترجع كل طلبات صاحب التوكن (السيرفر أصلاً بيفلترها باسم
+// المستخدم — شوف apps_script.gs)، فمش محتاجين نعتمد على مرجع محلي
+// (getSavedOrderRefs) اللي بيختلف من جهاز لجهاز.
 async function refreshMyOrders(){
   // 🛡️ من غير توكن جلسة، نداء lookup هيرجع unauthorized ويطلّع المستخدم بالغلط.
   // بدل كده نعرض رسالة هادية ونسيبه في مكانه — الجلسة ماتتمسحش.
@@ -2618,11 +2625,12 @@ async function refreshMyOrders(){
   state.myOrdersAuthMissing = false;
   state.myOrdersLoading = true; render();
   try{
-    const saved = getSavedOrderRefs();
-    const ids = saved.map(o=>o.id);
-    let results = await loadMyOrdersByIds(ids);
-    // merge distName from local ref in case sheet name changed
-    state.myOrders = results.sort((a,b)=> b.ts - a.ts);
+    const data = await apiGet('lookup', { token: getUserToken() });
+    if(isUnauthorized_(data)){ state.myOrdersAuthMissing = true; state.myOrders = []; }
+    else{
+      const results = Array.isArray(data) ? data : [];
+      state.myOrders = results.sort((a,b)=> b.ts - a.ts);
+    }
   }catch(e){ state.myOrders = []; }
   state.myOrdersLoading = false;
   state.myOrdersSearched = true;
@@ -2894,19 +2902,16 @@ function restoreManageSession(){
 }
 
 function loadUserSession(){
-  // 🔄 كنا بنستخدم sessionStorage عشان الجلسة تتمسح لما التطبيق يتقفل، بس ده كان
-  // بيخلي أي قفل عادي للموبايل يرجّع الموزع لتسجيل الدخول من جديد، مع إن
-  // التوكن نفسه صالح 30 يوم على السيرفر (TTL_USER_MS). دلوقتي localStorage
-  // عشان الجلسة تفضل شغالة لحد ما التوكن ينتهي فعلاً أو يعمل خروج بنفسه.
-  try{
-    const raw = localStorage.getItem(LS_USER_KEY);
-    if(raw){
-      const u = JSON.parse(raw);
-      if(u && u.username){ state.currentUser = u; return; }
-    }
-  }catch(e){}
-  // مفيش جلسة شغالة — لو الجهاز ده فيه بصمة متفعلة قبل كده، نعرض شاشة "افتح بالبصمة"
-  // بدل فورم اليوزر/الباسورد مباشرة.
+  // 🔒 بطلب صريح: التطبيق لما يتقفل تمامًا ويتفتح تاني، لازم الموزّع يدخل
+  // الباسورد أو البصمة تاني — مش هيفضل داخل تلقائي بمجرد فتح التطبيق.
+  // (ملحوظة: ده بيتنفّذ مرة واحدة بس عند تحميل الصفحة من الأول — قفل
+  // الشاشة العادي للموبايل مابيعيدش تحميل الصفحة، فمش بيأثر على الجلسة
+  // النشطة أثناء الاستخدام العادي، بس لو التطبيق اتقفل فعليًا من الأول.)
+  // شوف renderAuthView و onNewOrders_/submitLogin/unlockWithBiometric —
+  // هما اللي بيرجّعوا state.currentUser بعد نجاح الدخول الفعلي.
+  //
+  // مفيش جلسة تلقائية — لو الجهاز ده فيه بصمة متفعلة قبل كده، نعرض شاشة
+  // "افتح بالبصمة" بدل فورم اليوزر/الباسورد مباشرة.
   try{
     if(localStorage.getItem(LS_BIOMETRIC_CREDID_KEY) && localStorage.getItem(LS_BIOMETRIC_VAULT_KEY)){
       state.showBiometricGate = true;
@@ -3507,19 +3512,24 @@ async function requestSubmit(){
   }
   if(state.cart.length===0){ showToast('لسه محضتش أي صنف للطلب'); return; }
 
-  // 🔗 دمج تلقائي بطلب صريح: لو الموزّع بعت طلب النهارده بالفعل ولسه
-  // "لم يستلم" (يعني السيرفر استلمه بس الأدمن لسه ما نفّذوش)، الطلب ده
-  // بيتبعت كـ"تعديل" تلقائي للطلب القديم — أصناف الطلب القديم بتتضاف
-  // لأصناف السلة الحالية، والقديم بيتعلّم "مُعدّل" (زي آلية التعديل
-  // العادية بالظبط)، من غير أي سؤال أو تنبيه للموزّع. لو الطلب القديم
-  // خلص تنفيذه أو اتعدّل قبل كده أو حصل أي خطأ في التحقق، الطلب الجديد
-  // يتبعت عادي كطلب منفصل.
+  // 🔗 بطلب صريح: لو الموزّع بعت طلب النهارده بالفعل ولسه "لم يستلم" (يعني
+  // السيرفر استلمه بس الأدمن لسه ما نفّذوش)، بنسأله هو الأول — يضيف
+  // الأصناف الجديدة على الطلب القديم (تعديل) ولا ده طلب منفصل تمامًا؟
+  // (كان الدمج بيحصل تلقائي من غير سؤال، بس ده كان بيلخبط لما الموزّع
+  // يكون قاصد فعلاً طلب تاني منفصل — شوف renderMergeAskModal). لو الطلب
+  // القديم خلص تنفيذه أو اتعدّل قبل كده أو حصل أي خطأ في التحقق، بنسيب
+  // السؤال ونبعت عادي كطلب منفصل.
   if(!state.editingOrderId){
     const lastDate = localStorage.getItem(LS_LAST_DATE_KEY);
     const lastId = localStorage.getItem(LS_LAST_ID_KEY);
     if(lastDate === todayStr() && lastId){
-      const merged = await tryMergeWithLastOrder_(lastId);
-      if(merged) return;   // actuallySubmit اتنادت بالفعل جوه tryMergeWithLastOrder_
+      const last = await resolveLastOrderForMergeAsk_(lastId);
+      if(last){
+        state.mergeAskLast = last;
+        state.showMergeAskModal = true;
+        render();
+        return;
+      }
     }
   }
   // 🚀 بطلب صريح: مفيش مودال "متأكد من الإرسال؟" — بمجرد اكتمال البيانات
@@ -3527,34 +3537,25 @@ async function requestSubmit(){
   actuallySubmit();
 }
 
-// بيتأكد من حالة آخر طلب اتبعت النهارده، ولو لسه "تم استلام الطلب" بس
-// (مش نفّذ ومش اتعدّل قبل كده)، بيدمج الأصناف الجديدة معاه وبيبعت.
-// بيرجّع true لو الدمج حصل فعلاً (يعني الاستدعاء اللي فوق يوقف هنا).
-async function tryMergeWithLastOrder_(lastId){
+// بيتأكد من حالة آخر طلب اتبعت النهارده، وبيرجّعه بس لو لسه "تم استلام
+// الطلب" (مش نفّذ ومش اتعدّل قبل كده) — عشان نعرض سؤال الدمج (شوف
+// renderMergeAskModal). لو مش مؤهّل أو حصل أي خطأ في التحقق، بيرجّع null.
+async function resolveLastOrderForMergeAsk_(lastId){
   try{
     // ⚡ لو الطلب القديم لسه في state.lastOrder (نفس الجلسة، من ثوانٍ) —
-    // نستخدمه على طول من غير نداء شبكة. ده مهم جدًا هنا تحديدًا: كل نداء
-    // شبكة إضافي قبل navigator.share() بيقرّب الاستدعاء من حد "مفيش أي
-    // علاقة بضغطة المستخدم" اللي المتصفح بيرفض المشاركة التلقائية بعده
-    // (شوف الشرح في shareQuoteAndShortage_). في السيناريو الشائع (موزّع
-    // بيبعت طلبين في نفس الجلسة من غير ما يقفل التطبيق) ده بيلغي نداء
-    // lookup بالكامل ويخلي الدمج فوري.
+    // نستخدمه على طول من غير نداء شبكة زيادة.
     let last = (state.lastOrder && String(state.lastOrder.id).toLowerCase()===String(lastId).toLowerCase())
       ? state.lastOrder : null;
     if(!last){
       const results = await loadMyOrdersByIds([lastId]);
       last = results.find(o=>String(o.id).toLowerCase()===String(lastId).toLowerCase());
     }
-    if(!last || normStatus_(last.status) !== STATUS_RECEIVED) return false;
-    state.cart = (last.items||[]).map(it=>Object.assign({}, it)).concat(state.cart);
-    state.editingOrderId = last.id;
-    showToast('الطلب ده اتضاف تلقائيًا لطلبك اللي لسه ما اتنفّذش النهارده');
-    await actuallySubmit();
-    return true;
+    if(!last || normStatus_(last.status) !== STATUS_RECEIVED) return null;
+    return last;
   }catch(e){
-    // أي فشل في التحقق (نت، توكن، إلخ) — الأأمن إننا نبعته كطلب منفصل
-    // عادي بدل ما نوقف الموزّع أو نخمّن حالة مش متأكدين منها.
-    return false;
+    // أي فشل في التحقق (نت، توكن، إلخ) — الأأمن إننا نسيب السؤال ونبعته
+    // كطلب منفصل عادي بدل ما نوقف الموزّع أو نخمّن حالة مش متأكدين منها.
+    return null;
   }
 }
 
@@ -3890,6 +3891,26 @@ function renderNewOrdersPopup(){
       <div class="modalbtns">
         <button class="modalbtn primary" data-act="goto-new-orders">📦 روح للطلبات</button>
         <button class="modalbtn" data-act="dismiss-new-orders">تجاهل دلوقتي</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// 🔗 سؤال الدمج قبل الإرسال — شوف resolveLastOrderForMergeAsk_ في
+// requestSubmit. مفيش data-act على الخلفية عمدًا (زي renderResumeModal):
+// قرار لازم يتاخد، مش يتقفل بالغلط بالضغط برّه.
+function renderMergeAskModal(){
+  if(!state.showMergeAskModal || !state.mergeAskLast) return '';
+  const last = state.mergeAskLast;
+  return `
+  <div class="modalbg">
+    <div class="modalcard" data-act="noop">
+      <div class="modalic">🤔</div>
+      <h3>تضيفه على الطلب القديم ولا ده طلب جديد؟</h3>
+      <p>عندك طلب سابق النهارده <b>#${esc(orderNoDisplay_(last))}</b> لسه "لم يستلم". تحب الأصناف الجديدة تتضاف عليه (يتعتبر تعديل)، ولا ده طلب منفصل تمامًا؟</p>
+      <div class="modalbtns">
+        <button class="modalbtn primary" data-act="merge-ask-yes">✏️ ضيفه على القديم</button>
+        <button class="modalbtn" data-act="merge-ask-no">🆕 لأ، طلب جديد منفصل</button>
       </div>
     </div>
   </div>`;
@@ -4428,7 +4449,7 @@ async function shareQuoteAndShortage_(order, busyStateKey, includeQuote){
     }
 
     if(!files.length){ showToast(includeQuote ? 'مفيش عرض سعر ولا نواقص لهذا الطلب' : 'مفيش نواقص لهذا الطلب'); releaseWaWindow(); return; }
-    state.quoteShortageReady = { files, orderNo, orderId: order.id, includeQuote };
+    state.quoteShortageReady = { files, orderNo, orderId: order.id, includeQuote, distName: asText(order.distName).trim() };
     await trySendReadyFiles_();
   }catch(e){
     console.error('shareQuoteAndShortage_ failed:', e);
@@ -4442,11 +4463,14 @@ async function shareQuoteAndShortage_(order, busyStateKey, includeQuote){
 async function trySendReadyFiles_(){
   const ready = state.quoteShortageReady;
   if(!ready) return;
-  const { files, orderNo } = ready;
+  const { files, orderNo, distName } = ready;
+  // 📝 بطلب صريح: اسم الموزّع مكتوب في الملحوظة، مش رقم الطلب بس — أسهل
+  // للمخزن إنه يعرف الطلب ده مين ورا غير ما يدوّر على الاسم في مكان تاني.
+  const noteText_ = 'عرض السعر والنواقص — طلب #' + orderNo + (distName ? ' موزع ' + distName : '');
   if(navigator.canShare && navigator.canShare({files})){
     releaseWaWindow();   // مش محتاجينها في المسار ده — لو كانت متحجزة من الضغطة
     try{
-      await navigator.share({ files, title:'طلب #'+orderNo, text:'عرض السعر والنواقص — طلب #'+orderNo });
+      await navigator.share({ files, title:'طلب #'+orderNo, text: noteText_ });
       state.quoteShortageReady = null; render();
       return;
     }catch(e){
@@ -4464,7 +4488,7 @@ async function trySendReadyFiles_(){
   // الـawait اللي فاتت، لأنها بتتفتح غالبًا بعد ما "لمسة المستخدم" تبرد.
   files.forEach(f=> downloadBlob(f, f.name));
   showToast('اتحمّلت ' + files.length + ' ملفات — هتفتح واتساب، ارفقهم يدويًا');
-  const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent('عرض السعر والنواقص — طلب #' + orderNo);
+  const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent(noteText_);
   if(__waWin && !__waWin.closed){
     try{ __waWin.location.href = waUrl_; }catch(e){ setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900); }
     __waWin = null;
@@ -4487,18 +4511,22 @@ async function shareShortageGroupOnly_(order, groupKey){
   state.shareShortageGroupBusy[busyKey] = true; render();
   try{
     const orderNo = orderNoDisplay_(order);
+    const distName = asText(order.distName).trim();
+    // 📝 بطلب صريح: اسم الموزّع مكتوب في الملحوظة — "نواقص كرافت ونيو —
+    // طلب #349 موزع كذا"، مش رقم الطلب بس.
+    const noteText_ = 'نواقص ' + group.label + ' — طلب #' + orderNo + (distName ? ' موزع ' + distName : '');
     const blobs = await buildShortageImageGroup(order, groupKey);
     if(!blobs || !blobs.length){ showToast('مفيش نواقص في ' + group.label + ' لهذا الطلب'); releaseWaWindow(); return; }
     const base = 'نواقص_' + group.label.replace(/\s+/g,'_') + '_' + orderNo;
     const files = blobs.map((b,i)=> new File([b], base + (blobs.length>1?'_'+(i+1):'') + '.png', {type:'image/png'}));
     if(navigator.canShare && navigator.canShare({files})){
       releaseWaWindow();
-      await navigator.share({ files, title: group.label + ' — طلب #' + orderNo, text: 'نواقص ' + group.label + ' — طلب #' + orderNo });
+      await navigator.share({ files, title: group.label + ' — طلب #' + orderNo, text: noteText_ });
       return;
     }
     files.forEach(f=> downloadBlob(f, f.name));
     showToast('اتحمّلت الصور — هتفتح واتساب، ارفقها يدويًا');
-    const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent('نواقص ' + group.label + ' — طلب #' + orderNo);
+    const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent(noteText_);
     if(__waWin && !__waWin.closed){
       try{ __waWin.location.href = waUrl_; }catch(e){ setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900); }
       __waWin = null;
@@ -6323,9 +6351,9 @@ function renderOrderView(){
     return `<main>${warehouseCard}</main>`;
   }
 
-  // ⚠️ تنبيه استباقي: لو فيه طلب اتبعت النهارده ولسه "لم يستلم"، الطلب الجديد
-  // ده هيتضاف عليه تلقائيًا كتعديل (شوف tryMergeWithLastOrder_) — بنقول
-  // للموزّع كده الأول عشان مايتفاجأش، مش بس توست بعد ما يحصل خلاص.
+  // ⚠️ تنبيه استباقي: لو فيه طلب اتبعت النهارده ولسه "لم يستلم"، هيتسألك
+  // وقت الإرسال تضيفه عليه ولا ده طلب منفصل (شوف renderMergeAskModal) —
+  // بنقول للموزّع كده الأول عشان مايتفاجأش بالسؤال.
   const willMergeToday = !state.editingOrderId
     && localStorage.getItem(LS_LAST_DATE_KEY) === todayStr()
     && !!localStorage.getItem(LS_LAST_ID_KEY);
@@ -6333,7 +6361,7 @@ function renderOrderView(){
   const distSection = `
     <div class="card distcard">
       ${state.editingOrderId ? `<div class="editbanner">✏️ بتعدّل على طلب سابق #${esc(state.editingOrderId.toUpperCase())}</div>` : ''}
-      ${willMergeToday ? `<div class="editbanner" style="background:#FBEBD1;">ℹ️ عندك طلب النهارده لسه "لم يستلم" — لو بعتت ده هيتضاف عليه تلقائيًا كتعديل، مش هيتسجّل كطلب منفصل</div>` : ''}
+      ${willMergeToday ? `<div class="editbanner" style="background:#FBEBD1;">ℹ️ عندك طلب النهارده لسه "لم يستلم" — وقت الإرسال هنسألك تضيف عليه ولا يتسجّل منفصل</div>` : ''}
       ${isClientAccount() ? '' : `
       ${state.editingOrderId ? '' : `<button class="backnav" data-act="back-to-warehouse" style="width:auto;padding:6px 12px;font-size:11px;margin-bottom:8px;" title="ارجع لاختيار المخزن من الأول">→ رجوع لاختيار المخزن</button>`}
       <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;">
@@ -6436,7 +6464,6 @@ function renderResumeModal(){
 
 // ===== render: my orders view =====
 function renderMyOrdersView(){
-  const saved = getSavedOrderRefs();
   let content = '';
 
   if(state.myOrdersLoading){
@@ -6496,7 +6523,7 @@ function renderMyOrdersView(){
         <input type="tel" placeholder="01xxxxxxxxx" value="${esc(state.myOrdersPhone)}" data-act="myorders-phone">
         <button class="exportbtn" data-act="myorders-search">دوّر</button>
       </div>
-      ${saved.length ? `<button class="exportbtn" style="width:100%;" data-act="myorders-refresh">${ico_('refresh',14)} عرض طلبات هذا الجهاز</button>` : ''}
+      <button class="exportbtn" style="width:100%;" data-act="myorders-refresh">${ico_('refresh',14)} تحديث طلباتي</button>
     </div>
     ${content}
   </main>`;
@@ -7452,7 +7479,7 @@ function render(){
     else if(state.view==='manage') view = renderManageView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
-    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderNewOrdersPopup() + renderGlobalError();
+    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderMergeAskModal() + renderNewOrdersPopup() + renderGlobalError();
     bindEvents();
     applyFixedHeaderSpacing_();
     applyFixedFooterSpacing_();
@@ -7945,7 +7972,7 @@ async function onActionInner(act, el){
       if(v !== state.view){ state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view); }
       state.view = v; render();
       if(v==='admin' && state.adminUnlocked){ loadOrders(); markAdminOrdersSeen_(); }
-      if(v==='myorders' && !state.myOrdersSearched && getSavedOrderRefs().length) refreshMyOrders();
+      if(v==='myorders' && !state.myOrdersSearched) refreshMyOrders();
       break;
     }
     case 'go-back':{
@@ -7966,6 +7993,23 @@ async function onActionInner(act, el){
     case 'dismiss-new-orders':
       state.newOrdersPopup = null;
       render();
+      break;
+    // 🔗 رد سؤال الدمج (شوف renderMergeAskModal / requestSubmit)
+    case 'merge-ask-yes':{
+      const last = state.mergeAskLast;
+      state.showMergeAskModal = false;
+      if(last){
+        state.cart = (last.items||[]).map(it=>Object.assign({}, it)).concat(state.cart);
+        state.editingOrderId = last.id;
+      }
+      state.mergeAskLast = null;
+      await actuallySubmit();
+      break;
+    }
+    case 'merge-ask-no':
+      state.showMergeAskModal = false;
+      state.mergeAskLast = null;
+      await actuallySubmit();
       break;
     // 🔙 بطلب صريح: لو الموزّع اختار مخزن غلط، مفيش زرار "غيّر" ملاصق
     // (اتشال عمدًا — عايز المخزن يفضل ثابت أثناء تعبئة الفورم)، لكن لازم
@@ -8231,8 +8275,8 @@ async function onActionInner(act, el){
       break;
     }
     // ✏️ بطلب صريح: زرار تعديل واضح على أي طلب "لم يستلم" في شاشة طلباتي —
-    // بديل يدوي للدمج التلقائي (شوف tryMergeWithLastOrder_)، لمّا الموزّع
-    // يحب يبدأ التعديل بنفسه بدل ما يستنى يبعت طلب جديد في نفس اليوم.
+    // بديل يدوي لسؤال الدمج (شوف renderMergeAskModal)، لمّا الموزّع يحب
+    // يبدأ التعديل بنفسه بدل ما يستنى يبعت طلب جديد في نفس اليوم.
     case 'edit-my-order':{
       const id = el.getAttribute('data-id');
       const order = state.myOrders.find(o=>o.id===id);
