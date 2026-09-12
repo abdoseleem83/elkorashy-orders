@@ -920,6 +920,19 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .statuschips{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
 .statuschips .chip{padding:6px 12px;font-size:13.4px;}
 
+.whsplit{display:flex;gap:12px;align-items:flex-start;}
+.whcol{flex:1 1 50%;min-width:0;}
+.whcol .whcolhead{
+  display:flex;align-items:center;gap:6px;justify-content:space-between;
+  background:var(--navy);color:#fff;font-weight:800;font-size:13.6px;
+  padding:8px 12px;border-radius:10px;margin-bottom:10px;position:sticky;top:0;
+}
+.whcol .whcolhead .whcount{background:rgba(255,255,255,.18);border-radius:8px;padding:1px 8px;font-size:12px;}
+.whcol .ordercard{margin-bottom:10px;}
+@media (max-width:640px){
+  .whsplit{flex-direction:column;}
+  .whcol{flex:1 1 100%;}
+}
 .ordercard{margin-bottom:12px;}
 .ordercard .ohead{
   display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;
@@ -6843,7 +6856,46 @@ function renderAdminView(){
 
   let orders = filteredAdminOrders_();
 
-  const list = orders.length===0 ? `
+  // ⚠️ الصفحة مقسومة نصين ثابتين: نص لطلبات "طنطا" (دي اللي بتتصدر إكسيل)
+  // ونص لطلبات "اكسا" — كل مخزن في عموده وطلباته تحت بعض بالترتيب العادي.
+  // أي مخزن غير "طنطا" (حاليًا مفيش غيره غير "اكسا") بيقع في عمود "اكسا".
+  const tantaOrders = orders.filter(o => asText(o.warehouse) === 'طنطا');
+  const aksaOrders  = orders.filter(o => asText(o.warehouse) !== 'طنطا');
+
+  const list = `
+    <div class="whsplit">
+      ${renderAdminOrdersColumn_('🕌 طنطا', tantaOrders)}
+      ${renderAdminOrdersColumn_('🏭 اكسا', aksaOrders)}
+    </div>`;
+
+  return `
+  <main>
+    <div class="adminbar">
+      <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
+      <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
+      <button class="exportbtn" data-act="goto-manage-inline">${ico_('manageIcon',13)} إدارة الأصناف</button>
+      <button class="exportbtn" data-act="export-excel-received">تصدير Excel (${STATUS_RECEIVED})</button>
+      <button class="exportbtn danger" data-act="delete-delivered">مسح المُنفَّذ</button>
+      <button class="exportbtn" data-act="reactivate-wa-notify" title="لو بطلت إشعارات الواتساب توصل، دوس هنا وابعت الرسالة اللي هتفتح عشان تفعّلها تاني">🔔 فعّل إشعارات الواتساب تاني</button>
+      <button class="exportbtn" data-act="open-callmebot-page" title="لو الرقم قال دعوه للواتساب يبقى الرقم اتغيّر — هنا هتلاقي الرقم الجديد من موقعهم الرسمي">🌐 الصفحة الرسمية (لو الرقم اتغيّر)</button>
+    </div>
+    <div class="polldiag">
+      <span>${state.pollDiag ? esc(state.pollDiag) : 'الإشعار شغّال — بيفحص كل 45 ثانية'}</span>
+      <button data-act="test-notify">🔔 اختبار</button>
+    </div>
+    <div class="statuschips">
+      <button class="chip ${state.adminStatusFilter==='all'?'active':''}" data-act="admin-status" data-val="all">الكل (${state.orders.length})</button>
+      <button class="chip ${state.adminStatusFilter===STATUS_RECEIVED?'active':''}" data-act="admin-status" data-val="${esc(STATUS_RECEIVED)}">📦 ${STATUS_RECEIVED}</button>
+      <button class="chip ${state.adminStatusFilter===STATUS_DONE?'active':''}" data-act="admin-status" data-val="${esc(STATUS_DONE)}">✅ ${STATUS_DONE}</button>
+    </div>
+    ${list}
+  </main>`;
+}
+
+// عمود واحد (طنطا أو اكسا) في صفحة "متابعة الطلبات" — بيبني كروت الطلبات
+// بتاعة المخزن ده لوحدها، الأحدث فوق زي ما هو مرتّب فعلاً في filteredAdminOrders_.
+function renderAdminOrdersColumn_(title, orders){
+  const cards = orders.length===0 ? `
     <div class="emptystate"><div class="ic">📭</div><div>مفيش طلبات مطابقة حاليًا</div></div>` : orders.map(o=>{
       const date = new Date(o.ts);
       const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' - ' + date.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
@@ -6899,27 +6951,10 @@ function renderAdminView(){
     }).join('');
 
   return `
-  <main>
-    <div class="adminbar">
-      <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
-      <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
-      <button class="exportbtn" data-act="goto-manage-inline">${ico_('manageIcon',13)} إدارة الأصناف</button>
-      <button class="exportbtn" data-act="export-excel-received">تصدير Excel (${STATUS_RECEIVED})</button>
-      <button class="exportbtn danger" data-act="delete-delivered">مسح المُنفَّذ</button>
-      <button class="exportbtn" data-act="reactivate-wa-notify" title="لو بطلت إشعارات الواتساب توصل، دوس هنا وابعت الرسالة اللي هتفتح عشان تفعّلها تاني">🔔 فعّل إشعارات الواتساب تاني</button>
-      <button class="exportbtn" data-act="open-callmebot-page" title="لو الرقم قال دعوه للواتساب يبقى الرقم اتغيّر — هنا هتلاقي الرقم الجديد من موقعهم الرسمي">🌐 الصفحة الرسمية (لو الرقم اتغيّر)</button>
-    </div>
-    <div class="polldiag">
-      <span>${state.pollDiag ? esc(state.pollDiag) : 'الإشعار شغّال — بيفحص كل 45 ثانية'}</span>
-      <button data-act="test-notify">🔔 اختبار</button>
-    </div>
-    <div class="statuschips">
-      <button class="chip ${state.adminStatusFilter==='all'?'active':''}" data-act="admin-status" data-val="all">الكل (${state.orders.length})</button>
-      <button class="chip ${state.adminStatusFilter===STATUS_RECEIVED?'active':''}" data-act="admin-status" data-val="${esc(STATUS_RECEIVED)}">📦 ${STATUS_RECEIVED}</button>
-      <button class="chip ${state.adminStatusFilter===STATUS_DONE?'active':''}" data-act="admin-status" data-val="${esc(STATUS_DONE)}">✅ ${STATUS_DONE}</button>
-    </div>
-    ${list}
-  </main>`;
+    <div class="whcol">
+      <div class="whcolhead"><span>${title}</span><span class="whcount">${orders.length}</span></div>
+      ${cards}
+    </div>`;
 }
 
 function isStandaloneMode(){
