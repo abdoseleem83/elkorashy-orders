@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
@@ -57,8 +57,8 @@
   color-scheme:light;
 }
 /* ============================================================
-   🌙 الوضع الداكن — بيتفعّل بإضافة data-theme="dark" على <html>
-   (بيتحكم فيه زرار في صف الأدوات + بيتحفظ في localStorage).
+   🌙 الوضع الداكن — ثابت دايمًا (data-theme="dark" مكتوب مباشرة على
+   <html> في أول الملف)، مفيش زرار تبديل ولا وضع فاتح خالص.
    معظم عناصر الواجهة بتستخدم المتغيرات دي أصلاً (var(--card) وvar(--ink)
    وvar(--line)...) فبمجرد ما نغيّر قيمتها هنا، كل التطبيق بيتلوّن صح
    من غير ما نلمس كل قاعدة CSS لوحدها.
@@ -232,7 +232,6 @@ nav.tabs .toolrow{
   opacity:1;
   box-shadow:0 0 8px rgba(0,114,214,.5);
 }
-.themebtn{color:var(--ink);}
 .discounttogglebtn{
   background:var(--card) !important;
   border-color:var(--line) !important;
@@ -1386,18 +1385,6 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 </style>
 </head>
 <body>
-<script>
-// 🌙 لازم يتطبّق فورًا هنا (قبل أي حاجة تانية) عشان الشاشة متلمعش بالوضع
-// الفاتح لجزء من الثانية قبل ما تتحول للداكن لو المستخدم مختار داكن أو
-// جهازه أصلاً شغال بوضع داكن (prefers-color-scheme).
-(function(){
-  try{
-    var saved = localStorage.getItem('qurashi_theme');
-    var mode = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    if(mode === 'dark') document.documentElement.setAttribute('data-theme','dark');
-  }catch(e){}
-})();
-</script>
 <div id="app"></div>
 <script>
 // ===== الكتالوج الاحتياطي واللوجو =====
@@ -1539,7 +1526,6 @@ const LS_BIOMETRIC_CREDID_KEY = 'qurashi_biometric_credid';
 const LS_BIOMETRIC_VAULT_KEY = 'qurashi_biometric_vault';
 const LS_USER_TOKEN_KEY = 'qurashi_user_token';
 const LS_CATALOG_CACHE_KEY = 'qurashi_catalog_cache';
-const LS_THEME_KEY = 'qurashi_theme';
 const ADMIN_WHATSAPP = '201067765483';
 
 // ===== state =====
@@ -1753,8 +1739,6 @@ const ICONS_ = {
   boxesIcon: '<path d="M4 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><path d="M4 7h6v6H4z"/><path d="M14 7v-3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><path d="M14 7h6v6h-6z"/><path d="M9 13v7"/><path d="M15 13v7"/><path d="M4 20h16"/>',
   sendIcon: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
   imageIcon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',
-  moonIcon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
-  sunIcon: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
 };
 const COLOR_STYLES_MAP = {
   'أبيض': 'background:#FFF;color:#333;border-color:#D0D0D0;',
@@ -3019,21 +3003,6 @@ function loadUserSession(){
 }
 function markSessionAuthed_(){
   try{ sessionStorage.setItem(SS_AUTHED_KEY, '1'); }catch(e){}
-}
-
-// ===== الوضع الداكن =====
-// التطبيق الفعلي (تغيير data-theme) بيحصل بسكريبت صغير جوه <body> قبل ما
-// حتى الصفحة دي تتفسّر، عشان منمنعش "ومضة" وضع غلط. الدالة دي بترجّع
-// state.theme متوافق مع اللي اتطبّق فعلاً، وبتستخدم برضه للتبديل من الزرار.
-function currentTheme_(){
-  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-}
-function toggleTheme(){
-  const next = currentTheme_() === 'dark' ? 'light' : 'dark';
-  if(next === 'dark') document.documentElement.setAttribute('data-theme','dark');
-  else document.documentElement.removeAttribute('data-theme');
-  try{ localStorage.setItem(LS_THEME_KEY, next); }catch(e){}
-  render();
 }
 
 // ===== الدخول بالبصمة (WebAuthn - platform authenticator) =====
@@ -5924,7 +5893,6 @@ function renderHeader(){
             value="${state.extraDiscount||''}" placeholder="0"
             data-extradiscount>
         </span>` : ''}
-        <button class="toolbtn themebtn" data-act="toggle-theme" title="${currentTheme_()==='dark'?'رجّع الوضع الفاتح':'فعّل الوضع الداكن'}">${currentTheme_()==='dark'?ico_('sunIcon',15):ico_('moonIcon',15)}</button>
         <button class="toolbtn logoutbtn exitbtn" data-act="logout" title="تسجيل خروج">${ico_('door',15)} exit</button>
       </div>
     </nav>
@@ -8318,7 +8286,6 @@ async function onActionInner(act, el){
 
     case 'request-submit': await requestSubmit(); break;
     case 'toggle-discount': state.discountVisible = !state.discountVisible; render(); break;
-    case 'toggle-theme': toggleTheme(); break;
     // set-extra-discount: handled via blur in bindEvents
     // 📤 بطلب صريح: المشاركة بقت إجبارية مش زرار اختياري ممكن يتنسى — بتتفتح
     // تلقائيًا فور الضغط على "مراجعة الطلب" على طول (نفس الضغطة، عشان
