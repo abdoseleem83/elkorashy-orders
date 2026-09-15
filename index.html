@@ -7582,6 +7582,10 @@ function renderAuthView(){
         <div class="authsub">بوابة طلبات الموزعين</div>
         <div class="authwelcome">${welcome.h}<span class="sw">${welcome.s}</span></div>
       </div>
+      ${state.offlineQueueCount>0 ? `
+      <div class="editbanner" style="margin:0 16px 0;background:#FBEBD1;">
+        📶 عندك ${state.offlineQueueCount} طلب اتحفظ عندك وهيتبعت تلقائيًا فور ما تسجّل دخول — مش ضايع
+      </div>` : ''}
       <div class="authbody">${inner}</div>
     </div>
   </div>`;
