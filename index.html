@@ -27,22 +27,64 @@
   --navy-soft:#0090E4;    /* أزرق متوسط زاهي — من منتصف تدرج اللوجو */
   --gold:#0072D6;         /* الأزرق الزاهي المميز (brand) — من قلب اللمعة */
   --gold-light:#29B6F6;   /* سماوي لامع — من أعلى نقطة إضاءة في اللوجو */
-  --bg:#F3F6FA;
+  --bg:#EEF3FA;
   --card:#FFFFFF;
+  /* 🆕 سطوح ثانوية/تلاتية — كانت قيم هيكس منفصلة (#FCFBF8 و#F7F5F0 وغيرها)
+     مكررة في عشرات الأماكن. بقت متغيرات عشان الوضع الداكن يقدر يقلبها
+     كلها مرة واحدة بدل ما نلحّق كل قيمة لوحدها. */
+  --surface2:#F4F7FB;
+  --surface3:#E8EEF6;
   --ink:#0F1F38;
   --muted:#64758A;
   --line:#DCE4EC;
   --success:#1E7A54;
   --success-bg:#E7F3EE;
   --danger:#B3261E;
-  --radius:14px;
+  /* 🆕 حواف مدوّرة أكتر — إحساس "ناعم" (soft UI) بدل الزوايا الحادة نسبيًا
+     اللي كانت موجودة، وده أحد أبرز اتجاهات تصميم التطبيقات الحديثة */
+  --radius:18px;
+  --radius-sm:12px;
+  --radius-lg:24px;
   /* نظام ظلال وانتقالات موحّد بنفس درجة الأزرق بدل الرمادي المحايد،
-     عشان العمق البصري يفضل متسق مع هوية اللوجو */
-  --shadow-sm:0 2px 8px rgba(0,36,104,.08);
-  --shadow-md:0 8px 22px rgba(0,36,104,.14);
-  --shadow-lg:0 18px 44px rgba(0,16,72,.24);
+     عشان العمق البصري يفضل متسق مع هوية اللوجو — ظلال أنعم وأوسع انتشارًا */
+  --shadow-sm:0 3px 10px rgba(0,36,104,.07);
+  --shadow-md:0 10px 26px rgba(0,36,104,.13);
+  --shadow-lg:0 20px 48px rgba(0,16,72,.22);
   --brand-gradient:linear-gradient(135deg,#0AA6F0 0%,#0058B8 48%,#001C58 100%);
+  /* 🆕 خلفية الهيدر بتأثير زجاجي (glassmorphism) — شفافية + بلور خلفية */
+  --header-bg:rgba(255,255,255,.95);
   --transition:.18s cubic-bezier(.4,0,.2,1);
+  color-scheme:light;
+}
+/* ============================================================
+   🌙 الوضع الداكن — بيتفعّل بإضافة data-theme="dark" على <html>
+   (بيتحكم فيه زرار في صف الأدوات + بيتحفظ في localStorage).
+   معظم عناصر الواجهة بتستخدم المتغيرات دي أصلاً (var(--card) وvar(--ink)
+   وvar(--line)...) فبمجرد ما نغيّر قيمتها هنا، كل التطبيق بيتلوّن صح
+   من غير ما نلمس كل قاعدة CSS لوحدها.
+   ============================================================ */
+html[data-theme="dark"]{
+  --navy:#3E8EFF;
+  --navy-deep:#0B1220;
+  --navy-soft:#5BA9FF;
+  --gold:#22C7E0;
+  --gold-light:#6FE3F2;
+  --bg:#0B1220;
+  --card:#151E30;
+  --surface2:#1B2740;
+  --surface3:#22304D;
+  --ink:#E7ECF5;
+  --muted:#93A2C0;
+  --line:#2A3752;
+  --success:#3FCB8E;
+  --success-bg:#12352A;
+  --danger:#FF6B60;
+  --shadow-sm:0 3px 10px rgba(0,0,0,.35);
+  --shadow-md:0 10px 26px rgba(0,0,0,.45);
+  --shadow-lg:0 20px 48px rgba(0,0,0,.55);
+  --brand-gradient:linear-gradient(135deg,#3E8EFF 0%,#1652B0 48%,#0B1220 100%);
+  --header-bg:rgba(21,30,48,.95);
+  color-scheme:dark;
 }
 .ico-svg{vertical-align:middle;flex-shrink:0;position:relative;top:-1px;}
 .warehousewarn{
@@ -95,12 +137,19 @@ body{
 }
 .fixedhead-inner{max-width:640px;margin:0 auto;}
 header.top{
-  background:linear-gradient(155deg,#FFFFFF 0%,#EAF3FC 100%);
+  /* 🆕 هيدر بخلفية شبه شفافة (إحساس زجاجي خفيف) بدل التدرج المصمت،
+     وبيشتغل صح في الوضعين الفاتح والداكن لأن --header-bg بيتغيّر قيمته مع
+     data-theme="dark".
+     ⚠️ جرّبنا الأول backdrop-filter:blur() فعليًا (زجاج حقيقي) بس ده بوّظ
+     توقيت التقاط الصور بـ html2canvas (المستخدمة في مشاركة الطلب/الفواتير)
+     — المكتبة مش بتتعامل صح مع blur وبتسبب بطء/تعليق حقيقي. الشفافية
+     البسيطة من غير blur بتدّي نفس الإحساس تقريبًا من غير المخاطرة دي. */
+  background:var(--header-bg);
   color:var(--ink);
   padding:9px 12px 8px;
   overflow:visible;
   position:relative;
-  border-bottom:2px solid var(--gold-light);
+  border-bottom:1.5px solid var(--line);
 }
 header.top .brand{
   display:flex;
@@ -109,10 +158,14 @@ header.top .brand{
 }
 header.top .logoimg{
   width:27px;height:27px;border-radius:7px;
+  /* 🔒 بتفضل بيضاء دايمًا (مش var(--card)) — اللوجو نفسه له خلفية بيضاء
+     مدمجة في الصورة، فلو الكارت بقى غامق في الوضع الداكن هيبان اللوجو
+     عليه برواز غامق غريب. أيقونة العلامة التجارية بتفضل ثابتة زي أيقونات
+     أي تطبيق تاني بالظبط. */
   background:#fff;object-fit:contain;padding:2px;flex-shrink:0;
   border:1px solid #E7DFC9;
 }
-header.top h1{font-size:13px;margin:0;font-weight:800;letter-spacing:.1px;line-height:1.2;color:var(--navy-deep);}
+header.top h1{font-size:13px;margin:0;font-weight:800;letter-spacing:.1px;line-height:1.2;color:var(--ink);}
 header.top p.sub{margin:0;font-size:9.3px;color:var(--muted);font-weight:600;}
 
 header.top.has-cart{padding-left:46px;}
@@ -124,9 +177,9 @@ header.top.has-cart{padding-left:46px;}
   z-index:5;
   width:32px;height:32px;
   border-radius:50%;
-  background:rgba(0,36,104,.07);
-  border:1px solid rgba(0,36,104,.22);
-  color:var(--navy-deep);
+  background:var(--surface3);
+  border:1px solid var(--line);
+  color:var(--ink);
   font-size:14.5px;
   display:flex;align-items:center;justify-content:center;
   cursor:pointer;
@@ -179,10 +232,11 @@ nav.tabs .toolrow{
   opacity:1;
   box-shadow:0 0 8px rgba(0,114,214,.5);
 }
+.themebtn{color:var(--ink);}
 .discounttogglebtn{
-  background:#fff !important;
+  background:var(--card) !important;
   border-color:var(--line) !important;
-  color:var(--navy-deep) !important;
+  color:var(--ink) !important;
   font-weight:800;
   border-radius:999px !important;
 }
@@ -197,7 +251,7 @@ nav.tabs .toolrow{
 .discounttogglebtn.off{ text-decoration:line-through; opacity:.7; }
 .extradiscwrap{display:inline-flex;align-items:center;gap:4px;vertical-align:middle;direction:rtl;}
 .extradiscwrap.mini{margin:0;}
-.extradiscwrap label{font-size:12px;color:var(--navy-deep);font-weight:800;white-space:nowrap;}
+.extradiscwrap label{font-size:12px;color:var(--ink);font-weight:800;white-space:nowrap;}
 .extradiscwrap input{width:52px;padding:3px 5px;border:2px solid var(--gold);border-radius:6px;font-size:14px;font-weight:800;text-align:center;background:var(--gold);color:var(--navy-deep);}
 .extradiscwrap.mini input{width:38px;padding:2px 4px;font-size:11.5px;}
 .extradiscwrap .pctsign{font-size:13px;font-weight:800;color:var(--navy-deep);}
@@ -214,9 +268,9 @@ nav.tabs .tabbtn{
   display:flex;align-items:center;justify-content:center;gap:3px;
   width:100%;
   min-height:34px;
-  background:#fff;
+  background:var(--card);
   border:1.5px solid var(--line);
-  color:var(--navy-deep);
+  color:var(--ink);
   padding:6px 3px;
   border-radius:9px;
   font-family:'Cairo',sans-serif;
@@ -244,8 +298,8 @@ nav.tabs .toolbtn{
   font-size:15px;
   padding:0;
   border:1.5px solid var(--line);
-  background:#fff;
-  color:var(--navy-deep);
+  background:var(--card);
+  color:var(--ink);
   cursor:pointer;
   transition:.2s;
   font-family:'Cairo',sans-serif;font-weight:800;
@@ -303,12 +357,12 @@ label{
 input[type=text],input[type=tel],input[type=number],input[type=password],textarea{
   width:100%;
   border:1.5px solid var(--line);
-  border-radius:10px;
+  border-radius:var(--radius-sm);
   padding:11px 12px;
   font-family:'Cairo',sans-serif;
   font-size:16.2px;
   color:var(--ink);
-  background:#FCFBF8;
+  background:var(--surface2);
 }
 input:focus,textarea:focus,button:focus-visible{
   outline:2px solid var(--gold);
@@ -332,11 +386,11 @@ textarea{resize:vertical;min-height:60px;}
 .inlinecolorlabel{font-size:12px;font-weight:800;color:var(--navy);margin:8px 0 3px;}
 .addcolorbtn{
   display:inline-flex;align-items:center;justify-content:center;gap:5px;
-  width:auto;margin-top:8px;background:#fff;border:1.5px dashed var(--navy-soft);
+  width:auto;margin-top:8px;background:var(--card);border:1.5px dashed var(--navy-soft);
   color:var(--navy);border-radius:999px;padding:6px 14px;font-family:'Cairo',sans-serif;
   font-weight:800;font-size:11.6px;cursor:pointer;
 }
-.addcolorbtn:active{background:#EEF0FA;}
+.addcolorbtn:active{background:var(--surface3);}
 /* 4 في الصف — للقطاعات والألوان بالظبط زي ما طلب */
 .chipwrap.chipgrid4{display:grid;grid-template-columns:repeat(4, minmax(0,1fr));gap:7px;}
 .chipwrap.chipgrid4 .chip{padding:9px 6px;text-align:center;}
@@ -399,7 +453,7 @@ textarea{resize:vertical;min-height:60px;}
 .polldiag{
   display:flex;align-items:center;justify-content:space-between;gap:8px;
   font-size:11.5px;color:var(--muted);font-weight:700;
-  background:#F4F1E8;border-radius:8px;padding:6px 10px;margin-bottom:10px;
+  background:var(--surface3);border-radius:8px;padding:6px 10px;margin-bottom:10px;
 }
 .polldiag button{
   background:var(--navy);color:#fff;border:none;border-radius:7px;
@@ -417,7 +471,7 @@ textarea{resize:vertical;min-height:60px;}
   50%{transform:scale(1.18);}
 }
 .whtile{
-  border:1.5px solid var(--line);background:#FCFBF8;border-radius:13px;
+  border:1.5px solid var(--line);background:var(--surface2);border-radius:13px;
   padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;
   font-family:'Cairo',sans-serif;font-size:14px;font-weight:700;color:var(--ink);
   cursor:pointer;
@@ -426,7 +480,7 @@ textarea{resize:vertical;min-height:60px;}
 .whtile.active{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:var(--shadow-md);}
 .chip{
   border:1.5px solid var(--line);
-  background:#FCFBF8;
+  background:var(--surface2);
   color:var(--ink);
   padding:9px 14px;
   border-radius:999px;
@@ -490,7 +544,7 @@ textarea{resize:vertical;min-height:60px;}
 
 .searchbox{position:relative;margin-bottom:10px;}
 .searchbox input{padding-left:14px;}
-.accsearchhint{font-size:11.5px;color:var(--navy-soft);background:#EEF0FA;border-radius:8px;padding:7px 10px;margin-bottom:8px;font-weight:700;}
+.accsearchhint{font-size:11.5px;color:var(--navy-soft);background:var(--surface3);border-radius:8px;padding:7px 10px;margin-bottom:8px;font-weight:700;}
 
 .productgrid{
   display:grid;
@@ -515,7 +569,7 @@ textarea{resize:vertical;min-height:60px;}
 .productgrid .ptile{
   border:1.5px solid var(--line);
   border-radius:9px;
-  background:#FCFBF8;
+  background:var(--surface2);
   padding:8px 5px 22px;
   font-size:12px;
   line-height:1.3;
@@ -529,7 +583,7 @@ textarea{resize:vertical;min-height:60px;}
   min-height:72px;
   word-break:break-word;
 }
-.productgrid .ptile:hover{background:#F0EDE4;}
+.productgrid .ptile:hover{background:var(--surface3);}
 
 /* ===== وضع القائمة: الأصناف تحت بعض في صفوف بدل الشبكة =====
    ⚠️ مغيّرناش أي لون — كل كلاسات الحالة (instock/lowstock/outstock/
@@ -584,7 +638,7 @@ textarea{resize:vertical;min-height:60px;}
 .qtystepper{display:flex;align-items:center;gap:10px;}
 .qtystepper button{
   width:38px;height:38px;border-radius:10px;border:1.5px solid var(--line);
-  background:#FCFBF8;font-size:20.2px;font-weight:800;color:var(--navy);cursor:pointer;
+  background:var(--surface2);font-size:20.2px;font-weight:800;color:var(--navy);cursor:pointer;
 }
 .qtystepper input{text-align:center;width:70px;}
 
@@ -666,11 +720,11 @@ textarea{resize:vertical;min-height:60px;}
 /* شريط السلة — بيظهر فوق أزرار الإرسال أول ما يتضاف صنف */
 .cartbar{
   display:flex;align-items:center;justify-content:space-between;gap:8px;
-  background:#fff;border:1.5px solid var(--navy-soft);border-radius:12px;
+  background:var(--card);border:1.5px solid var(--navy-soft);border-radius:12px;
   padding:7px 10px;margin-bottom:8px;
   box-shadow:0 4px 14px rgba(0,0,0,.08);
 }
-.cartbar-txt{font-size:11.6px;font-weight:800;color:var(--navy-deep);}
+.cartbar-txt{font-size:11.6px;font-weight:800;color:var(--ink);}
 .cartbar-btn{
   background:var(--navy);color:#fff;border:none;border-radius:9px;
   padding:8px 16px;font-family:'Cairo',sans-serif;font-weight:800;font-size:12px;cursor:pointer;
@@ -730,7 +784,7 @@ textarea{resize:vertical;min-height:60px;}
 }
 .submitbtn:disabled{background:#D9D2BC;box-shadow:none;cursor:not-allowed;color:#8A8470;border-color:#D9D2BC;}
 .savebtn{
-  background:#fff;
+  background:var(--card);
   color:var(--navy);
 }
 /* توحيد كل الأيقونات (الإيموجي) في التطبيق: نفس المقاس ونفس المحاذاة */
@@ -757,7 +811,7 @@ textarea{resize:vertical;min-height:60px;}
 .success h2{color:var(--navy);font-size:21.3px;margin:0 0 8px;}
 .success p{color:var(--muted);font-size:15.1px;margin:0 0 22px;}
 .success .ordid{
-  display:inline-block;background:#fff;border:1.5px solid var(--line);
+  display:inline-block;background:var(--card);border:1.5px solid var(--line);
   border-radius:12px;padding:8px 16px;font-weight:800;color:var(--navy);font-size:15.7px;letter-spacing:.5px;
   box-shadow:var(--shadow-sm);
 }
@@ -778,19 +832,19 @@ textarea{resize:vertical;min-height:60px;}
 }
 .docsection{
   border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;
-  background:#FCFBF8;text-align:right;
+  background:var(--surface2);text-align:right;
 }
 .docsectiontitle{font-size:14px;font-weight:800;color:var(--navy);margin-bottom:10px;}
 .iconbtnrow{display:flex;gap:8px;}
 .iconbtn{
-  flex:1;background:#fff;border:1.5px solid var(--line);border-radius:10px;
+  flex:1;background:var(--card);border:1.5px solid var(--line);border-radius:10px;
   padding:7px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;
   font-size:10.6px;font-weight:700;color:var(--ink);cursor:pointer;font-family:'Cairo',sans-serif;
 }
 .iconbtn>span{line-height:1.25;text-align:center;}
 .iconbtn .ic{font-size:15px;height:17px;}
 .iconbtn.wa{background:#E9F7EF;border-color:#2F7D5A;color:#1E5B40;}
-.iconbtn:active{background:#F0EDE4;}
+.iconbtn:active{background:var(--surface3);}
 .receiptbtns{display:flex;flex-direction:column;gap:8px;max-width:280px;margin:0 auto;}
 .receiptbtns .newbtn{margin-top:8px;width:100%;}
 
@@ -805,18 +859,18 @@ textarea{resize:vertical;min-height:60px;}
 .pingate .err{color:var(--danger);font-size:14px;margin-top:8px;}
 
 /* ===== تبويب "إدارة" الجديد ===== */
-nav.tabs .tabbtn.managetab{background:#EEF0FA;border-color:var(--navy-soft);font-size:12px;}
+nav.tabs .tabbtn.managetab{background:var(--surface3);border-color:var(--navy-soft);font-size:12px;}
 nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(--navy-soft);}
 .managesubtabs{display:flex;gap:8px;}
 .managesubtab{
-  flex:1;background:#fff;border:1.5px solid var(--line);border-radius:11px;
+  flex:1;background:var(--card);border:1.5px solid var(--line);border-radius:11px;
   padding:9px 6px;font-family:'Cairo',sans-serif;font-weight:800;font-size:12.4px;
-  color:var(--navy-deep);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;
+  color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;
 }
 .managesubtab.active{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:var(--shadow-sm);}
 .managelist{display:flex;flex-direction:column;gap:8px;}
 .managerow{
-  display:flex;align-items:center;gap:8px;background:#fff;border:1.3px solid var(--line);
+  display:flex;align-items:center;gap:8px;background:var(--card);border:1.3px solid var(--line);
   border-radius:11px;padding:9px 11px;box-shadow:var(--shadow-sm);
 }
 .managerow-info{flex:1;min-width:0;}
@@ -826,15 +880,15 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .managerow-edit{
   width:32px;height:32px;border-radius:50%;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
-  background:#EEF0FA;color:var(--navy);border:none;cursor:pointer;
+  background:var(--surface3);color:var(--navy);border:none;cursor:pointer;
 }
 .managehint{text-align:center;color:var(--muted);font-size:12px;margin-top:10px;}
 .managereadonly{
-  background:#F3F6FA;border-radius:10px;padding:10px 12px;font-weight:800;color:var(--navy-deep);font-size:13.4px;
+  background:var(--surface2);border-radius:10px;padding:10px 12px;font-weight:800;color:var(--ink);font-size:13.4px;
 }
 .managereqrow{
   display:flex;align-items:center;justify-content:space-between;gap:10px;
-  background:#fff;border:1.3px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;
+  background:var(--card);border:1.3px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;
 }
 .managereqbtns{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
 .managereqbtns .exportbtn{padding:6px 12px;}
@@ -974,7 +1028,7 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 
 .installbanner{
   display:flex;align-items:center;gap:10px;
-  background:#fff;border-bottom:1.5px solid var(--gold);
+  background:var(--card);border-bottom:1.5px solid var(--gold);
   padding:10px 14px;
 }
 .installbanner img{width:36px;height:36px;border-radius:8px;object-fit:contain;flex-shrink:0;}
@@ -1056,7 +1110,7 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 
 .productgrid .ptile.unavailable{
   opacity:.45;cursor:not-allowed;position:relative;
-  background:#EDEBE4;border-color:var(--line);
+  background:var(--surface3);border-color:var(--line);
 }
 .productgrid .ptile .unavailtag{
   position:absolute;bottom:2px;left:2px;right:2px;
@@ -1081,8 +1135,8 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .stocklegend span{display:flex;align-items:center;gap:4px;}
 .stocklegend i{width:10px;height:10px;border-radius:3px;display:inline-block;}
 .currentctx{
-  background:#EEF0FA;
-  color:var(--navy-deep);
+  background:var(--surface3);
+  color:var(--ink);
   border:1.3px solid var(--line);
   border-radius:10px;
   padding:8px 12px;
@@ -1094,7 +1148,7 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .currentctx b{color:var(--navy);font-weight:800;}
 .chip.disabled{
   opacity:.5;cursor:not-allowed;
-  background:#EDEBE4;border-color:var(--line);color:var(--muted);
+  background:var(--surface3);border-color:var(--line);color:var(--muted);
 }
 /* لون مفيش منه رصيد: أحمر واضح + كلمة "غير متوفر" تحته */
 /* لون مفيش منه رصيد خالص: أسود واضح */
@@ -1138,7 +1192,7 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 /* staged product block */
 .stagedblock{
   border:1.5px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;
-  background:#FCFBF8;transition:.3s;
+  background:var(--surface2);transition:.3s;
 }
 .stagedblock.cancelling{
   opacity:.4;
@@ -1172,7 +1226,7 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .cqselect{
-  width:64px;border:1.3px solid var(--line);border-radius:8px;background:#fff;
+  width:64px;border:1.3px solid var(--line);border-radius:8px;background:var(--card);
   font-family:'Cairo',sans-serif;font-size:10.6px;padding:5px 1px;color:var(--ink);text-align:center;
 }
 .cqunitfixed{width:64px;text-align:center;font-size:10.6px;color:var(--muted);font-weight:700;}
@@ -1199,7 +1253,7 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
    وخلاص. */
 .inlineqtyrow{
   grid-column:1/-1;
-  background:#F7F5F0;border:1.3px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:-4px;
+  background:var(--surface3);border:1.3px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:-4px;
 }
 /* ===== صف الكمية 3 أسطر (قطاعات + اكسسوارات) ===== */
 .qty3{display:flex;flex-direction:column;gap:8px;}
@@ -1207,7 +1261,7 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .qty3-unitqty{justify-content:flex-start;}
 .qty3-price{
   justify-content:space-between;gap:8px;
-  background:#fff;border:1.2px solid var(--line);border-radius:8px;padding:7px 10px;
+  background:var(--card);border:1.2px solid var(--line);border-radius:8px;padding:7px 10px;
 }
 .qty3-cell{font-size:12.6px;font-weight:700;color:var(--ink);}
 .qty3-cell b{color:var(--muted);font-weight:800;font-size:11px;}
@@ -1223,14 +1277,14 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 /* صفوف الاكسسوارات المكدّسة (لون + سطر وحدة/كمية + سطر سعر/إجمالي) */
 .colorqtytable.stacked{margin-top:8px;display:flex;flex-direction:column;gap:8px;}
 .cqrow2{
-  background:#F7F5F0;border:1.3px solid var(--line);border-radius:10px;padding:9px 10px;
+  background:var(--surface3);border:1.3px solid var(--line);border-radius:10px;padding:9px 10px;
   display:flex;flex-direction:column;gap:8px;
 }
 .cqrow2-color{font-size:13px;font-weight:800;color:var(--navy);}
 .cqrow2-line{display:flex;align-items:center;gap:8px;}
 .cqrow2-price{
   justify-content:space-between;
-  background:#fff;border:1.2px solid var(--line);border-radius:8px;padding:7px 10px;
+  background:var(--card);border:1.2px solid var(--line);border-radius:8px;padding:7px 10px;
 }
 .chipwrap.chipgrid3{display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:7px;}
 .chipwrap.chipgrid3 .chip{padding:9px 6px;text-align:center;}
@@ -1258,7 +1312,7 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 }
 @keyframes modalbgin{0%{opacity:0;}100%{opacity:1;}}
 .modalcard{
-  background:#fff;border-radius:18px;padding:26px 22px;max-width:360px;width:100%;
+  background:var(--card);border-radius:var(--radius);padding:26px 22px;max-width:360px;width:100%;
   text-align:center;box-shadow:var(--shadow-lg);
   animation:modalcardin .22s cubic-bezier(.22,.8,.32,1) both;
 }
@@ -1268,14 +1322,17 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .modalcard p{color:var(--muted);font-size:14px;line-height:1.7;margin:0 0 20px;}
 .modalbtns{display:flex;flex-direction:column;gap:8px;}
 .modalbtn{
-  border:1.5px solid var(--line);background:#fff;color:var(--ink);
+  border:1.5px solid var(--line);background:var(--card);color:var(--ink);
   border-radius:11px;padding:12px;font-family:'Cairo',sans-serif;font-weight:700;font-size:15.1px;cursor:pointer;
 }
 .modalbtn.primary{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:var(--shadow-md);}
 
 /* in-app PDF preview */
 .previewmodal{
-  background:#fff;border-radius:16px;width:100%;max-width:520px;
+  /* ⚠️ خليناه var(--radius-lg) الأول (24px) بس ده خلّى الزاوية المدوّرة
+     تاكل من مساحة اللمس عند حافة اللوحة (زرار الإغلاق ✕ قريب من الزاوية) —
+     رجّعناه لقيمة أصغر أأمن عشان مايبوظش النقر قرب الحواف. */
+  background:var(--card);border-radius:16px;width:100%;max-width:520px;
   max-height:88dvh;display:flex;flex-direction:column;overflow:hidden;
   box-shadow:var(--shadow-lg);
   animation:modalcardin .22s cubic-bezier(.22,.8,.32,1) both;
@@ -1316,6 +1373,18 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 </style>
 </head>
 <body>
+<script>
+// 🌙 لازم يتطبّق فورًا هنا (قبل أي حاجة تانية) عشان الشاشة متلمعش بالوضع
+// الفاتح لجزء من الثانية قبل ما تتحول للداكن لو المستخدم مختار داكن أو
+// جهازه أصلاً شغال بوضع داكن (prefers-color-scheme).
+(function(){
+  try{
+    var saved = localStorage.getItem('qurashi_theme');
+    var mode = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    if(mode === 'dark') document.documentElement.setAttribute('data-theme','dark');
+  }catch(e){}
+})();
+</script>
 <div id="app"></div>
 <script>
 // ===== الكتالوج الاحتياطي واللوجو =====
@@ -1457,6 +1526,7 @@ const LS_BIOMETRIC_CREDID_KEY = 'qurashi_biometric_credid';
 const LS_BIOMETRIC_VAULT_KEY = 'qurashi_biometric_vault';
 const LS_USER_TOKEN_KEY = 'qurashi_user_token';
 const LS_CATALOG_CACHE_KEY = 'qurashi_catalog_cache';
+const LS_THEME_KEY = 'qurashi_theme';
 const ADMIN_WHATSAPP = '201067765483';
 
 // ===== state =====
@@ -1670,6 +1740,8 @@ const ICONS_ = {
   boxesIcon: '<path d="M4 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><path d="M4 7h6v6H4z"/><path d="M14 7v-3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><path d="M14 7h6v6h-6z"/><path d="M9 13v7"/><path d="M15 13v7"/><path d="M4 20h16"/>',
   sendIcon: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
   imageIcon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',
+  moonIcon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  sunIcon: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
 };
 const COLOR_STYLES_MAP = {
   'أبيض': 'background:#FFF;color:#333;border-color:#D0D0D0;',
@@ -2934,6 +3006,21 @@ function loadUserSession(){
 }
 function markSessionAuthed_(){
   try{ sessionStorage.setItem(SS_AUTHED_KEY, '1'); }catch(e){}
+}
+
+// ===== الوضع الداكن =====
+// التطبيق الفعلي (تغيير data-theme) بيحصل بسكريبت صغير جوه <body> قبل ما
+// حتى الصفحة دي تتفسّر، عشان منمنعش "ومضة" وضع غلط. الدالة دي بترجّع
+// state.theme متوافق مع اللي اتطبّق فعلاً، وبتستخدم برضه للتبديل من الزرار.
+function currentTheme_(){
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+}
+function toggleTheme(){
+  const next = currentTheme_() === 'dark' ? 'light' : 'dark';
+  if(next === 'dark') document.documentElement.setAttribute('data-theme','dark');
+  else document.documentElement.removeAttribute('data-theme');
+  try{ localStorage.setItem(LS_THEME_KEY, next); }catch(e){}
+  render();
 }
 
 // ===== الدخول بالبصمة (WebAuthn - platform authenticator) =====
@@ -5824,6 +5911,7 @@ function renderHeader(){
             value="${state.extraDiscount||''}" placeholder="0"
             data-extradiscount>
         </span>` : ''}
+        <button class="toolbtn themebtn" data-act="toggle-theme" title="${currentTheme_()==='dark'?'رجّع الوضع الفاتح':'فعّل الوضع الداكن'}">${currentTheme_()==='dark'?ico_('sunIcon',15):ico_('moonIcon',15)}</button>
         <button class="toolbtn logoutbtn exitbtn" data-act="logout" title="تسجيل خروج">${ico_('door',15)} exit</button>
       </div>
     </nav>
@@ -8195,6 +8283,7 @@ async function onActionInner(act, el){
 
     case 'request-submit': await requestSubmit(); break;
     case 'toggle-discount': state.discountVisible = !state.discountVisible; render(); break;
+    case 'toggle-theme': toggleTheme(); break;
     // set-extra-discount: handled via blur in bindEvents
     // 📤 بطلب صريح: المشاركة بقت إجبارية مش زرار اختياري ممكن يتنسى — بتتفتح
     // تلقائيًا فور الضغط على "مراجعة الطلب" على طول (نفس الضغطة، عشان
