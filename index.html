@@ -683,7 +683,7 @@ textarea{resize:vertical;min-height:60px;}
 .pricetable th,.pricetable td{padding:8px 10px;text-align:center;border-bottom:1px solid var(--line);}
 .pricetable th{background:var(--navy);color:#fff;font-weight:700;font-size:12.9px;}
 .pricetable td:nth-child(2){text-align:right;white-space:normal;min-width:140px;}
-.pricetable tbody tr:nth-child(even){background:#FAF9F5;}
+.pricetable tbody tr:nth-child(even){background:var(--surface2);}
 .pricetable tbody tr:last-child td{border-bottom:none;}
 .carttotal{
   display:flex;justify-content:space-between;align-items:center;
@@ -734,7 +734,7 @@ textarea{resize:vertical;min-height:60px;}
   margin:16px 0;padding:14px;border-radius:14px;
   background:#E9F7EF;border:1.5px solid #25D366;text-align:center;
 }
-.wanote-t{font-size:13px;color:var(--ink);margin:0 0 12px;line-height:1.6;}
+.wanote-t{font-size:13px;color:#1F6B32;margin:0 0 12px;line-height:1.6;}
 .wanote-btn{
   width:100%;background:#25D366;color:#fff;border:none;border-radius:12px;
   padding:15px;font-family:'Cairo',sans-serif;font-weight:800;font-size:15.5px;cursor:pointer;
@@ -1100,11 +1100,15 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
    أحمر  = مفيش منه رصيد (لسه ينفع تختاره وتاخد سعره)
    رمادي = موقوف من الأدمن (مش هينفع تختاره خالص) */
 .productgrid .ptile.instock{
-  background:#EDF7EE;border-color:var(--success);
+  /* 🐞 بق حقيقي: مفيش color صريح هنا، فالنص كان بياخد لون النص الافتراضي
+     (بيبقى أبيض مع الوضع الداكن الثابت) فوق الخلفية الفاتحة دي — نص أبيض
+     على أخضر فاتح = مش باين خالص. الشارات دي لوّنها ثابت عمدًا (بادجات
+     معلوماتية) فمحتاجة لون كتابة غامق ثابت برضه، مش var(--ink). */
+  background:#EDF7EE;border-color:var(--success);color:#1E5B33;
 }
 .productgrid .ptile.instock:hover{background:#DFF0E1;}
 
-.productgrid .ptile.lowstock{background:#FFFBE8;}
+.productgrid .ptile.lowstock{background:#FFFBE8;color:#8A6D0B;}
 .productgrid .ptile.lowstock:hover{background:#FFF3C4;}
 .productgrid .ptile.outstock,
 .productgrid .ptile.critstock{
@@ -1189,7 +1193,7 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
   display:block;font-size:9.5px;font-weight:800;line-height:1.2;margin-top:1px;opacity:.9;
 }
 .chip.gold.lowstockchip{
-  border-color:#E0A800;background:#FFF8E6;
+  border-color:#E0A800;background:#FFF8E6;color:#8A5A00;
 }
 .chip.gold.lowstockchip small{color:#8A5A00;}
 .chip.gold.lowstockchip.active small{color:#fff;}
@@ -1356,7 +1360,7 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .previewclose{
   background:transparent;border:none;color:#fff;font-size:20.2px;cursor:pointer;line-height:1;
 }
-.previewbody{overflow:auto;padding:10px;background:#F3F6FA;flex:1;}
+.previewbody{overflow:auto;padding:10px;background:var(--surface2);flex:1;}
 .previewfoot{padding:10px 14px;border-top:1px solid var(--line);}
 .previewfoot .savebtn{width:100%;}
 
@@ -4069,6 +4073,14 @@ function stockTableHTML_(forPdf){
   const line = forPdf ? '#DCE4EC' : 'var(--line)';
   const navy = forPdf ? '#002050' : 'var(--navy)';
   const gold = forPdf ? '#4FA8DC' : 'var(--gold-light)';
+  // 🐞 بق حقيقي: لون خلفية الصفوف كان هيكس ثابت (#FFFFFF/#F3F6FA) حتى في
+  // العرض جوه التطبيق (forPdf=false) — بينما اسم الصنف نفسه من غير لون
+  // كتابة صريح (بيورث لون النص الافتراضي، وده بقى فاتح مع الوضع الداكن
+  // الثابت). النتيجة: كتابة بيضا فوق خلفية بيضا. الجدول اللي بيتصدّر PDF
+  // (forPdf=true) لازم يفضل هيكس ثابت زي الطباعة بالظبط.
+  const ink = forPdf ? '#0F1F38' : 'var(--ink)';
+  const rowBg1 = forPdf ? '#FFFFFF' : 'var(--card)';
+  const rowBg2 = forPdf ? '#F3F6FA' : 'var(--surface2)';
 
   return mats.map(m=>`
     <div style="margin-bottom:16px;">
@@ -4084,8 +4096,8 @@ function stockTableHTML_(forPdf){
         </thead>
         <tbody>
           ${m.rows.map(([prod, byColor], i)=>`
-            <tr style="background:${i%2===0 ? '#FFFFFF' : '#F3F6FA'};">
-              <td style="padding:7px 6px;border-bottom:1px solid ${line};">${esc(prod)}</td>
+            <tr style="background:${i%2===0 ? rowBg1 : rowBg2};">
+              <td style="padding:7px 6px;border-bottom:1px solid ${line};color:${ink};">${esc(prod)}</td>
               ${m.colors.map(c=>{
                 const v = fmtRolls_(byColor[c]);
                 return `<td style="padding:7px 4px;border-bottom:1px solid ${line};text-align:center;font-weight:${v?'800':'400'};color:${v?navy:'#C9C5BA'};">${v || '—'}</td>`;
@@ -4110,7 +4122,7 @@ function renderCartReviewModal(){
         <span>🛒 السلة (${state.cart.length})</span>
         <button class="previewclose" data-act="close-cart-review">✕</button>
       </div>
-      <div class="previewbody" style="background:#fff;">
+      <div class="previewbody">
         ${renderCartItemsHtml(state.cart)}
       </div>
       ${state.cart.length ? `
@@ -4148,7 +4160,7 @@ function renderPwRequestsModal(){
         <span>🔑 طلبات تغيير الباسورد</span>
         <button class="previewclose" data-act="close-pwreq">✕</button>
       </div>
-      <div class="previewbody" style="background:#fff;">
+      <div class="previewbody">
         ${state.pwRequestsLoading ? '<div class="loading">جارٍ التحميل...</div>' : body}
       </div>
     </div>
@@ -4179,7 +4191,7 @@ function renderArchiveModal(){
         <span>📦 أرشيف الطلبات (${list.length})</span>
         <button class="previewclose" data-act="close-archive">✕</button>
       </div>
-      <div class="previewbody" style="background:#fff;">
+      <div class="previewbody">
         ${state.archiveLoading ? '<div class="loading">جارٍ التحميل...</div>' : body}
       </div>
     </div>
@@ -4200,7 +4212,7 @@ function renderStockModal(){
         <input type="text" placeholder="ابحث عن صنف أو لون..." value="${esc(state.stockSearch)}" data-act="stock-search">
         <div style="font-size:11.8px;color:var(--muted);margin:4px 0 6px;">الكميات باللفة · المتاح = الرصيد − المحجوز · الصنف الصفر مش ظاهر</div>
       </div>
-      <div class="previewbody" style="background:#fff;overflow:auto;">
+      <div class="previewbody">
         ${body || '<div class="loading">مفيش أرصدة</div>'}
       </div>
       <div class="previewfoot">
@@ -4223,7 +4235,7 @@ function renderCatalogUploadModal(){
         <span>${ico_('downloadIcon',14)} رفع الأصناف / الرصيد</span>
         <button class="previewclose" data-act="close-catalog-upload">✕</button>
       </div>
-      <div class="previewbody" style="background:#fff;">
+      <div class="previewbody">
         <div class="chipwrap" style="margin-bottom:10px;">
           <button class="chip ${state.catalogUploadMode==='full'?'active':''}" data-act="catalog-upload-mode" data-val="full">تحديث كامل (كل الأعمدة)</button>
           <button class="chip ${state.catalogUploadMode==='stock'?'active':''}" data-act="catalog-upload-mode" data-val="stock">الرصيد بس</button>
@@ -4241,7 +4253,7 @@ function renderCatalogUploadModal(){
         ${state.catalogUploadFileName ? `<div style="font-size:12.5px;color:var(--navy);font-weight:700;">${ico_('fileIcon',13)} ${esc(state.catalogUploadFileName)} — ${rowsCount} صنف اتقروا</div>` : ''}
         ${r ? (r.error
             ? `<div class="err" style="margin-top:10px;">${esc(r.error)}</div>`
-            : `<div style="margin-top:10px;background:#EAF7EC;border:1px solid var(--success);border-radius:8px;padding:10px;font-size:13px;line-height:1.8;">
+            : `<div style="margin-top:10px;background:#EAF7EC;color:#1F6B32;border:1px solid var(--success);border-radius:8px;padding:10px;font-size:13px;line-height:1.8;">
                  ✅ اتحدّث: ${r.updated} · اتضاف: ${r.added}
                  ${r.notFound && r.notFound.length ? `<br>⚠️ ${r.notFound.length} اسم مش موجود في الشيت اتجاهل: ${esc(r.notFound.slice(0,8).join('، '))}${r.notFound.length>8?' ...':''}` : ''}
                </div>`
