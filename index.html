@@ -4315,6 +4315,14 @@ async function exportStockPDF(){
   wrap.style.fontFamily = "'Cairo', sans-serif";
   wrap.style.direction='rtl';
   wrap.style.background='#FFFFFF';
+  // 🐞 بق حقيقي: أي خلية جوه الجدول من غير color صريح كانت بترث لون النص
+  // الافتراضي بتاع الصفحة نفسها (var(--ink))، واللي بقى فاتح مع الوضع
+  // الداكن الثابت — يعني كتابة فاتحة تقريبًا فوق ورقة العرض/الفاتورة
+  // البيضاء دي (مش باينة خالص، زي الكمية وسعر الوحدة في عرض السعر). الورقة
+  // دي مفروض تفضل شكلها زي الطباعة بالظبط بغض النظر عن ثيم التطبيق، فبنحط
+  // لون كتابة أساسي غامق صريح هنا عشان أي خلية ناسية تحدد لونها تورثه هو
+  // بدل لون الثيم.
+  wrap.style.color='#0F1F38';
 
   const dateStr = new Date().toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
   wrap.innerHTML = `
@@ -4794,6 +4802,14 @@ async function buildQuotePDF(order){
   wrap.style.fontFamily = "'Cairo', sans-serif";
   wrap.style.direction='rtl';
   wrap.style.background='#FFFFFF';
+  // 🐞 بق حقيقي: أي خلية جوه الجدول من غير color صريح كانت بترث لون النص
+  // الافتراضي بتاع الصفحة نفسها (var(--ink))، واللي بقى فاتح مع الوضع
+  // الداكن الثابت — يعني كتابة فاتحة تقريبًا فوق ورقة العرض/الفاتورة
+  // البيضاء دي (مش باينة خالص، زي الكمية وسعر الوحدة في عرض السعر). الورقة
+  // دي مفروض تفضل شكلها زي الطباعة بالظبط بغض النظر عن ثيم التطبيق، فبنحط
+  // لون كتابة أساسي غامق صريح هنا عشان أي خلية ناسية تحدد لونها تورثه هو
+  // بدل لون الثيم.
+  wrap.style.color='#0F1F38';
 
   const date = new Date(order.ts);
   const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
@@ -5125,6 +5141,14 @@ async function buildOrderImagePages(order){
     wrap.style.fontFamily = "'Cairo', sans-serif";
     wrap.style.direction='rtl';
     wrap.style.background='#FFFFFF';
+  // 🐞 بق حقيقي: أي خلية جوه الجدول من غير color صريح كانت بترث لون النص
+  // الافتراضي بتاع الصفحة نفسها (var(--ink))، واللي بقى فاتح مع الوضع
+  // الداكن الثابت — يعني كتابة فاتحة تقريبًا فوق ورقة العرض/الفاتورة
+  // البيضاء دي (مش باينة خالص، زي الكمية وسعر الوحدة في عرض السعر). الورقة
+  // دي مفروض تفضل شكلها زي الطباعة بالظبط بغض النظر عن ثيم التطبيق، فبنحط
+  // لون كتابة أساسي غامق صريح هنا عشان أي خلية ناسية تحدد لونها تورثه هو
+  // بدل لون الثيم.
+  wrap.style.color='#0F1F38';
 
     wrap.innerHTML = `
       <div style="padding:26px 30px;background:#FFFFFF;">
@@ -5369,6 +5393,14 @@ async function buildShortageImageGroup(order, groupKey){
     wrap.style.fontFamily = "'Cairo', sans-serif";
     wrap.style.direction='rtl';
     wrap.style.background='#FFFFFF';
+  // 🐞 بق حقيقي: أي خلية جوه الجدول من غير color صريح كانت بترث لون النص
+  // الافتراضي بتاع الصفحة نفسها (var(--ink))، واللي بقى فاتح مع الوضع
+  // الداكن الثابت — يعني كتابة فاتحة تقريبًا فوق ورقة العرض/الفاتورة
+  // البيضاء دي (مش باينة خالص، زي الكمية وسعر الوحدة في عرض السعر). الورقة
+  // دي مفروض تفضل شكلها زي الطباعة بالظبط بغض النظر عن ثيم التطبيق، فبنحط
+  // لون كتابة أساسي غامق صريح هنا عشان أي خلية ناسية تحدد لونها تورثه هو
+  // بدل لون الثيم.
+  wrap.style.color='#0F1F38';
 
     wrap.innerHTML = `
     <div style="padding:28px 34px;">
@@ -5447,6 +5479,14 @@ async function buildWarehouseImage(order, mainGroup, rows, pageNo, pageCount){
   wrap.style.fontFamily = "'Cairo', sans-serif";
   wrap.style.direction='rtl';
   wrap.style.background='#FFFFFF';
+  // 🐞 بق حقيقي: أي خلية جوه الجدول من غير color صريح كانت بترث لون النص
+  // الافتراضي بتاع الصفحة نفسها (var(--ink))، واللي بقى فاتح مع الوضع
+  // الداكن الثابت — يعني كتابة فاتحة تقريبًا فوق ورقة العرض/الفاتورة
+  // البيضاء دي (مش باينة خالص، زي الكمية وسعر الوحدة في عرض السعر). الورقة
+  // دي مفروض تفضل شكلها زي الطباعة بالظبط بغض النظر عن ثيم التطبيق، فبنحط
+  // لون كتابة أساسي غامق صريح هنا عشان أي خلية ناسية تحدد لونها تورثه هو
+  // بدل لون الثيم.
+  wrap.style.color='#0F1F38';
 
   const date = new Date(order.ts);
   const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
