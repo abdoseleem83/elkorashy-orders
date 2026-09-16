@@ -7743,8 +7743,8 @@ function renderRegisterForm(){
     <input type="tel" placeholder="01xxxxxxxxx" value="${esc(state.regDistPhone)}" data-act="reg-distphone">
     <label>نوع الحساب</label>
     <div style="display:flex;gap:8px;margin:2px 0 4px;">
-      <button type="button" data-act="reg-type-dist" style="flex:1;padding:9px;border-radius:8px;border:1.5px solid var(--navy);background:${state.regDistType==='موزع'?'var(--navy)':'#fff'};color:${state.regDistType==='موزع'?'#fff':'var(--navy)'};font-weight:700;cursor:pointer;">موزع</button>
-      <button type="button" data-act="reg-type-client" style="flex:1;padding:9px;border-radius:8px;border:1.5px solid var(--navy);background:${state.regDistType==='عميل'?'var(--navy)':'#fff'};color:${state.regDistType==='عميل'?'#fff':'var(--navy)'};font-weight:700;cursor:pointer;">عميل</button>
+      <button type="button" data-act="reg-type-dist" style="flex:1;padding:9px;border-radius:8px;border:1.5px solid var(--navy);background:${state.regDistType==='موزع'?'var(--navy)':'var(--card)'};color:${state.regDistType==='موزع'?'#fff':'var(--navy)'};font-weight:700;cursor:pointer;">موزع</button>
+      <button type="button" data-act="reg-type-client" style="flex:1;padding:9px;border-radius:8px;border:1.5px solid var(--navy);background:${state.regDistType==='عميل'?'var(--navy)':'var(--card)'};color:${state.regDistType==='عميل'?'#fff':'var(--navy)'};font-weight:700;cursor:pointer;">عميل</button>
     </div>
     ${state.authError ? `<div class="err">${esc(state.authError)}</div>` : ''}
     <button data-act="register-submit" ${state.authLoading?'disabled':''}>${state.authLoading?'جارٍ التسجيل...':'تسجيل وإرسال طلب التفعيل'}</button>
