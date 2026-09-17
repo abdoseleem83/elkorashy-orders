@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v218';
+const APP_VERSION = 'v219';
 
 const SHEET_NAME = 'Orders';
 const ARCHIVE_SHEET_NAME = 'الأرشيف';
@@ -399,12 +399,19 @@ function getPwRequestsSheet_() {
   return sheet;
 }
 
+// 🐞 بق حقيقي (نمو غير محدود): زي شيت طابور الواتساب بالظبط — كان بيتضاف
+// له صف مع كل خطأ للأبد من غير أي حد أقصى. ERRORS_MAX_ROWS_ بيحافظ على
+// آخر عدد معقول بس (getLastRow بس، مش قراءة كامل الشيت، فالتكلفة زهيدة).
+const ERRORS_MAX_ROWS_ = 1000;
+
 function logError_(where, err, extra) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let s = ss.getSheetByName(ERRORS_SHEET_NAME);
     if (!s) { s = ss.insertSheet(ERRORS_SHEET_NAME); s.appendRow(['التاريخ', 'الخطأ', 'البيانات']); s.setFrozenRows(1); }
     s.appendRow([new Date(), where + ': ' + String(err && err.stack ? err.stack : err), String(extra || '').slice(0, 400)]);
+    const n = s.getLastRow() - 1;
+    if (n > ERRORS_MAX_ROWS_) s.deleteRows(2, n - ERRORS_MAX_ROWS_);
   } catch (e2) {}
 }
 
@@ -1094,6 +1101,29 @@ function processWhatsAppQueue() {
       markQueueAttempt_(sheet, i + 1, attempts, String(err));
     }
   }
+
+  // 🐞 بق حقيقي (نمو غير محدود): الشيت ده كان بيتقرا **كامل** (getDataRange)
+  // كل دقيقة للأبد، من غير أي تنظيف — كل طلب وكل تغيير حالة بيضيف صف، وبعد
+  // شهور/سنين من الاستخدام الشيت ممكن يبقى آلاف الصفوف ويبطّئ الـ trigger
+  // (وفي النهاية يتخطى حد الـ٦ دقايق بتاع Apps Script). بننضّف الرسايل
+  // اللي اتبعتت بنجاح ومر عليها كذا يوم بس (اللي فشلت بتفضل ظاهرة عمدًا
+  // عشان تتراجع).
+  cleanupOldQueueRows_(sheet, rows);
+}
+
+const WA_QUEUE_KEEP_SENT_DAYS_ = 3;
+
+function cleanupOldQueueRows_(sheet, rows) {
+  try {
+    const cutoff = Date.now() - WA_QUEUE_KEEP_SENT_DAYS_ * 24 * 60 * 60 * 1000;
+    const rowNums = [];
+    for (let i = 1; i < rows.length; i++) {
+      if (String(rows[i][1] || '').trim() !== 'اتبعتت') continue;
+      const t = new Date(rows[i][0]).getTime();
+      if (isFinite(t) && t < cutoff) rowNums.push(i + 1);
+    }
+    if (rowNums.length) deleteRowsBatch_(sheet, rowNums);
+  } catch (e) { logError_('cleanupOldQueueRows_', e, ''); }
 }
 
 function markQueueAttempt_(sheet, rowNum, attempts, reason) {
