@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v217';
+const APP_VERSION = 'v218';
 
 const SHEET_NAME = 'Orders';
 const ARCHIVE_SHEET_NAME = 'الأرشيف';
@@ -172,11 +172,23 @@ function verifyToken_(token, wantRole) {
     if (dot < 1) return null;
     const payload = b64uDecode_(t.slice(0, dot));
     if (hmacB64u_(payload) !== t.slice(dot + 1)) return null;
-    const parts = payload.split('|');
-    if (parts.length !== 3) return null;
-    if (parts[0] !== wantRole) return null;
-    if (Date.now() > Number(parts[2])) return null;
-    return parts[1];
+    // 🐞 بق حقيقي: كان بيقسّم الـ payload بـ split('|') وبيرفض أي نتيجة
+    // عددها مش 3 بالظبط. لو موزّع اختار اسم مستخدم فيه حرف "|" (مفيش أي
+    // منع من ده وقت التسجيل)، التوكن بتاعه كان هيتقسّم لأكتر من 3 حتة
+    // فتفشل verifyToken_ **للأبد** — يعني يدخل بنجاح بس أي نداء بعد كده
+    // (حفظ طلب، عرض طلباته...) يترفض كـ unauthorized من غير أي طريقة يصلحها
+    // غير تغيير اسم المستخدم بنفسه. الدور (role) والصلاحية (expiry) معروفين
+    // إنهم مش هيحتووا "|" (قيم ثابتة / رقم)، فبنستخرجهم من أول/آخر حرف "|"
+    // في النص ونسيب اللي في النص (اسم المستخدم) زي ما هو مهما كان محتواه.
+    const first = payload.indexOf('|');
+    const last = payload.lastIndexOf('|');
+    if (first < 0 || last <= first) return null;
+    const role = payload.slice(0, first);
+    const subject = payload.slice(first + 1, last);
+    const expiry = payload.slice(last + 1);
+    if (role !== wantRole) return null;
+    if (Date.now() > Number(expiry)) return null;
+    return subject;
   } catch (e) { return null; }
 }
 
@@ -618,8 +630,14 @@ function updateOrderStatus_(id, status) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
   const rows = sheet.getDataRange().getValues();
   let notified = false;
+  // 🐞 بق حقيقي: الدالة كانت بترجّع { ok: true } دايمًا حتى لو الـ id مش
+  // موجود خالص (مثلًا حد أدمن تاني مسحه أو أرشفه في نفس اللحظة) — يعني
+  // الواجهة كانت بتصدّق إن التحديث نجح وهو أصلاً مالمسش أي صف. found
+  // بترجّع الحقيقة عشان الواجهة تقدر ترجّع الحالة القديمة وتنبّه المستخدم.
+  let found = false;
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][COL_ID - 1]) !== String(id)) continue;
+    found = true;
     sheet.getRange(i + 1, COL_STATUS).setValue(status);
 
     // إشعار واتساب للموزّع نفسه (مش للأدمن) — بيشتغل بس لو الموزع ليه
@@ -649,7 +667,7 @@ function updateOrderStatus_(id, status) {
     break;
   }
   markReservedDirty_();   // الحالة اتغيّرت — الحجز لازم يتحدّث
-  return { ok: true, notified: notified };
+  return { ok: true, found: found, notified: notified };
 }
 
 function deleteOrderById_(id) {
@@ -1373,9 +1391,14 @@ function bulkUpdateCatalog_(rows, mode) {
     if (!name) return;
     const idx = nameToIdx[name];
     if (idx !== undefined) {
+      // 🐞 بق حقيقي: هنا كان أي mode غير 'stock' (حتى لو قيمة غريبة/غير
+      // متوقعة) بياخد مسار "full" كامل بالغلط، بينما الصنف الجديد تحت
+      // بيتضاف بس لو mode==='full' بالظبط — عدم تناسق كان ممكن يمسح أعمدة
+      // صنف موجود (سعر/رصيد...) لو وصل mode غريب، رغم إن الواجهة حاليًا
+      // بتبعت 'full' أو 'stock' بس. بقى الشرط صريح زي الطرف التاني بالظبط.
       if (mode === 'stock') {
         if (row.stock !== undefined) data[idx][7] = (row.stock === '' ? '' : Number(row.stock));
-      } else {
+      } else if (mode === 'full') {
         data[idx][1] = row.main || '';
         data[idx][2] = row.sub || '';
         data[idx][3] = Number(row.unit) || 1;
@@ -1384,6 +1407,8 @@ function bulkUpdateCatalog_(rows, mode) {
         data[idx][6] = (row.price === '' || row.price == null) ? '' : Number(row.price);
         data[idx][7] = (row.stock === '' || row.stock == null) ? '' : Number(row.stock);
         data[idx][8] = row.disabled ? 'لا' : '';
+      } else {
+        return;   // mode غير معروف — منلمسش الصف خالص
       }
       updated++;
     } else if (mode === 'full') {

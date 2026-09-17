@@ -1452,7 +1452,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v217';
+const APP_BUILD = 'v218';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2731,11 +2731,20 @@ async function searchMyOrdersByPhone(){
 async function updateOrderStatus(id, status){
   const ord = state.orders.find(o=>o.id===id);
   if(!ord) return;
+  // 🐞 بق حقيقي: كنا بنغيّر الحالة هنا فورًا (تحديث متفائل) ومش بنراجع رد
+  // السيرفر خالص — لو الطلب اتمسح/اتأرشف من أدمن تاني في نفس اللحظة، السيرفر
+  // كان برضه بيرجّع ok:true (بق في السيرفر اتصلح كمان)، فالشاشة كانت بتوري
+  // "اتحدّثت" رغم إن السيرفر مالمسش أي حاجة فعليًا. دلوقتي بنحتفظ بالحالة
+  // القديمة عشان نرجّعها لو السيرفر قال found:false.
+  const prevStatus = ord.status;
   ord.status = status;
   try{
     let d = {};
     try{ d = await apiPost({ action:'updateStatus', token:getAdminToken(), id:id, status:status }); }catch(e){}
-    if(d.notified){
+    if(d.found === false){
+      ord.status = prevStatus;
+      showToast('الطلب ده اتغيّر أو اتمسح من مكان تاني — حدّث الصفحة');
+    } else if(d.notified){
       showToast('اتحدّثت ✅ واتبعت إشعار للموزع تلقائيًا');
     } else {
       // الموزع مش مفعّل الإشعار التلقائي — نسأل الأدمن يبعتها بإيده فورًا،
