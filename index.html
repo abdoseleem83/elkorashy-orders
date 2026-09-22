@@ -988,6 +988,7 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 }
 .statusbadge.pending{background:#FBEBD1;color:#8A5A00;}
 .statusbadge.received{background:#E7EEFB;color:#1F4E9C;}
+.statusbadge.preparing{background:#FBEBD1;color:#8A5A00;}
 .statusbadge.done{background:var(--success-bg);color:var(--success);}
 .statusbadge.edited{background:#ECECEC;color:#6B6B6B;}
 .oheadside{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
@@ -1439,33 +1440,38 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v221';
+const APP_BUILD = 'v222';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
 
 // ===== مراحل الطلب التلاتة =====
-// ⚠️ المراحل بقت اتنين بس بطلب صريح: "تم استلام الطلب" ثم "تم تنفيذ الطلب".
-// مرحلة "تحت التنفيذ" القديمة اتشالت — أي طلب قديم متسجّل بيها في الشيت
-// بيتحوّل تلقائيًا لـ"تم استلام الطلب" عند العرض (normStatus_).
+// ⚠️ ثلاث مراحل: "تم استلام الطلب" → "جاري تجهيز الطلب" → "تم تنفيذ الطلب".
+// أول مرحلتين بيتحسبوا في الحجز (الرصيد)، والمرحلة الأخيرة بس اللي بتتحرر
+// من الحجز (البضاعة خرجت فعليًا). مرحلة "تحت التنفيذ" القديمة اتشالت — أي
+// طلب قديم متسجّل بيها في الشيت بيتحوّل تلقائيًا لـ"تم استلام الطلب" عند
+// العرض (normStatus_).
 const STATUS_LEGACY_PENDING = 'تحت التنفيذ';
 const STATUS_RECEIVED = 'تم استلام الطلب';
+const STATUS_PREPARING = 'جاري تجهيز الطلب';
 const STATUS_DONE = 'تم تنفيذ الطلب';
 const STATUS_EDITED = 'مُعدّل';   // حالة قديمة (قبل v216) — الطلب القديم دلوقتي بيتمسح تمامًا
                                   // بدل ما يتعلّم الحالة دي، بس لسه محتاجينها لطلبات قديمة
                                   // في الشيت من قبل الترقية (شوف editedFrom للتاج الجديد)
 const STATUS_PENDING = STATUS_RECEIVED;   // اسم قديم — سايبينه عشان أي كود بيناديه
-const STATUS_ORDER = [STATUS_RECEIVED, STATUS_DONE];
+const STATUS_ORDER = [STATUS_RECEIVED, STATUS_PREPARING, STATUS_DONE];
 function normStatus_(st){
   const v = String(st == null ? '' : st).trim();
   if(v === STATUS_DONE) return STATUS_DONE;
+  if(v === STATUS_PREPARING) return STATUS_PREPARING;
   if(v === STATUS_EDITED) return STATUS_EDITED;   // نحافظ عليها زي ما هي
   return STATUS_RECEIVED;
 }
 function statusInfo_(status){
   const s = normStatus_(status);
   if(s===STATUS_DONE) return {cls:'done', icon:ico_('checkCircle',14), label:STATUS_DONE};
+  if(s===STATUS_PREPARING) return {cls:'preparing', icon:ico_('boxIcon',14), label:STATUS_PREPARING};
   if(s===STATUS_EDITED) return {cls:'edited', icon:ico_('editIcon',14), label:'مُعدّل (نسخة قديمة)'};
   return {cls:'received', icon:ico_('boxIcon',14), label:STATUS_RECEIVED};
 }
@@ -7203,6 +7209,7 @@ function renderAdminView(){
               ${si.icon} ${esc(si.label)}
             </button>
             ${normStatus_(o.status)===STATUS_EDITED ? `<button class="delquick" data-act="delete-order" data-id="${esc(o.id)}" title="حذف النسخة القديمة">${ico_('trashIcon',12)} حذف</button>` : ''}
+            ${normStatus_(o.status)===STATUS_PREPARING ? `<button class="delquick" data-act="delete-order" data-id="${esc(o.id)}" title="حذف الطلب وهو قيد التجهيز">${ico_('trashIcon',12)} حذف</button>` : ''}
           </div>
         </div>
         ${!isOpen ? '' : `
@@ -7242,7 +7249,7 @@ function renderAdminView(){
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
       <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
       <button class="exportbtn" data-act="goto-manage-inline">${ico_('manageIcon',13)} إدارة الأصناف</button>
-      <button class="exportbtn" data-act="export-excel-received">تصدير Excel (${STATUS_RECEIVED})</button>
+      <button class="exportbtn" data-act="export-excel-preparing">تصدير Excel (${STATUS_PREPARING})</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُنفَّذ</button>
       <button class="exportbtn" data-act="reactivate-wa-notify" title="لو بطلت إشعارات الواتساب توصل، دوس هنا وابعت الرسالة اللي هتفتح عشان تفعّلها تاني">🔔 فعّل إشعارات الواتساب تاني</button>
       <button class="exportbtn" data-act="open-callmebot-page" title="لو الرقم قال دعوه للواتساب يبقى الرقم اتغيّر — هنا هتلاقي الرقم الجديد من موقعهم الرسمي">🌐 الصفحة الرسمية (لو الرقم اتغيّر)</button>
@@ -7254,6 +7261,7 @@ function renderAdminView(){
     <div class="statuschips">
       <button class="chip ${state.adminStatusFilter==='all'?'active':''}" data-act="admin-status" data-val="all">الكل (${state.orders.length})</button>
       <button class="chip ${state.adminStatusFilter===STATUS_RECEIVED?'active':''}" data-act="admin-status" data-val="${esc(STATUS_RECEIVED)}">📦 ${STATUS_RECEIVED}</button>
+      <button class="chip ${state.adminStatusFilter===STATUS_PREPARING?'active':''}" data-act="admin-status" data-val="${esc(STATUS_PREPARING)}">🔧 ${STATUS_PREPARING}</button>
       <button class="chip ${state.adminStatusFilter===STATUS_DONE?'active':''}" data-act="admin-status" data-val="${esc(STATUS_DONE)}">✅ ${STATUS_DONE}</button>
     </div>
     ${list}
@@ -8702,7 +8710,7 @@ async function onActionInner(act, el){
       break;
     }
     case 'admin-status': state.adminStatusFilter = el.getAttribute('data-val'); render(); break;
-    case 'export-excel-received': exportExcel(STATUS_RECEIVED); break;
+    case 'export-excel-preparing': exportExcel(STATUS_PREPARING); break;
     case 'export-excel-delivered': exportExcel(STATUS_DONE); break;
     case 'refresh-orders': loadOrders(); showToast('جارٍ التحديث...'); break;
     case 'install-app': installApp(); break;
