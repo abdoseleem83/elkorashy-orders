@@ -2763,6 +2763,12 @@ async function deleteMyOrder(id){
     if(!d || d.ok !== true) throw new Error(d && d.error ? d.error : 'server refused');
     state.myOrders = state.myOrders.filter(o=>o.id!==id);
     removeOrderRef(id);
+    // 🐞 لو الطلب المحذوف ده هو نفسه "آخر طلب النهارده" اللي التنبيه
+    // الاستباقي فوق فورم الطلب بيتحسب عليه — ننضّف المفتاحين على طول
+    // عشان التنبيه مايفضلش يوري "عندك طلب لسه لم يستلم" لطلب اتحذف فعلاً.
+    if(String(id).toUpperCase() === localStorage.getItem(LS_LAST_ID_KEY)){
+      try{ localStorage.removeItem(LS_LAST_DATE_KEY); localStorage.removeItem(LS_LAST_ID_KEY); }catch(e2){}
+    }
     showToast('تم حذف الطلب');
   }catch(e){
     showToast(e && e.message === 'unauthorized' ? 'الطلب ده مش بتاعك أو جلستك انتهت' : ('حصل خطأ في الحذف: ' + (e && e.message ? e.message : e)));
@@ -3653,7 +3659,15 @@ async function resolveLastOrderForMergeAsk_(lastId){
       const results = await loadMyOrdersByIds([lastId]);
       last = results.find(o=>String(o.id).toLowerCase()===String(lastId).toLowerCase());
     }
-    if(!last || normStatus_(last.status) !== STATUS_RECEIVED) return null;
+    if(!last || normStatus_(last.status) !== STATUS_RECEIVED){
+      // 🐞 بق حقيقي: كنا بنرجّع null هنا بس من غير ما ننضّف LS_LAST_DATE_KEY/
+      // LS_LAST_ID_KEY — يعني سؤال الدمج نفسه بيبقى صح (مش بيظهر)، بس
+      // التنبيه الاستباقي فوق فورم الطلب ("عندك طلب النهارده لسه لم
+      // يستلم") كان بيفضل ظاهر للأبد حتى لو الطلب اتحذف أو اتنفّذ فعلاً،
+      // لأنه بيتحسب من نفس المفتاحين دول بس من غير أي تحقق حقيقي.
+      try{ localStorage.removeItem(LS_LAST_DATE_KEY); localStorage.removeItem(LS_LAST_ID_KEY); }catch(e2){}
+      return null;
+    }
     return last;
   }catch(e){
     // أي فشل في التحقق (نت، توكن، إلخ) — الأأمن إننا نسيب السؤال ونبعته
