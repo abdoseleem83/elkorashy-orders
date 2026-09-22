@@ -1609,6 +1609,7 @@ const state = {
   catalogUploadBusy:false,
   catalogUploadResult:null,       // {updated, added, notFound} أو {error}
   showCartReview:false,
+  showPriceChoiceModal:false,     // سؤال "بأسعار ولا من غير؟" قبل مشاركة عرض السعر
   waSent:false,
   waImgPreparing:false,
   discountVisible:false,
@@ -3257,7 +3258,7 @@ async function previewCartInvoice(){
     items: state.cart
   };
   try{
-    const result = await buildQuotePDF(tempOrder, false);
+    const result = await buildQuotePDF(tempOrder, true);
     if(result && result.blob){
       previewPdfBlob(result, 'معاينة_عرض_سعر.pdf');
     } else {
@@ -3274,8 +3275,12 @@ async function previewCartInvoice(){
 // 📤 بطلب صريح: زرار "مشاركة" في مودال "مراجعة الطلب" — بيبني صورة عرض
 // السعر من السلة الحالية (قبل الإرسال) ويفتح شاشة المشاركة على طول
 // (نفس مبدأ shareQuotePDF)، عشان الموزّع يقدر يبعتها لحد يستأذنه قبل
-// ما يأكّد الطلب فعليًا.
-async function shareCartReview_(){
+// ما يأكّد الطلب فعليًا. withPrices بييجي من سؤال "بأسعار ولا من غير؟"
+// (renderPriceChoiceModal) — الموزّع هو اللي يختار، ومفيش نواقص بتتبعت
+// خالص هنا (كانت بتتبعت تلقائيًا مع عرض السعر بعد الإرسال — اتشالت
+// بطلب صريح، النواقص بقت زرار يدوي اختياري بس في شاشة النجاح/طلباتي).
+async function shareCartReview_(withPrices){
+  if(withPrices === undefined) withPrices = true;
   if(state.cart.length===0){ showToast('لسه محضتش أي صنف تقدر تشاركه'); return; }
   if(!navigator.canShare) reserveWaWindow();
   state.cartShareBusy = true; render();
@@ -3288,7 +3293,7 @@ async function shareCartReview_(){
     items: state.cart
   };
   try{
-    const q = await buildQuotePDF(tempOrder);
+    const q = await buildQuotePDF(tempOrder, withPrices);
     if(!q){ showToast('حصل خطأ في تجهيز المشاركة، حاول تاني'); releaseWaWindow(); return; }
     if(await shareAsImage_(q, 'معاينة_عرض_سعر', 'معاينة الطلب')){ releaseWaWindow(); return; }
     if(q.imgBlob){
@@ -3699,14 +3704,15 @@ async function actuallySubmit(){
     // 📲 مابقناش نبعت واتساب تلقائيًا ولا إجباري — بطلب صريح من المستخدم.
     // بس بنعرض في شاشة النجاح ملاحظة + سهم بيشاور على زرار واتساب،
     // والموزع هو اللي يدوس بنفسه.
+    // ⚠️ كانت المشاركة (عرض السعر + النواقص مع بعض) بتتفتح تلقائيًا هنا فور
+    // نجاح الإرسال — اتشالت بطلب صريح: كانت بتخلط النواقص (لتنسيق المخزن)
+    // مع عرض السعر (للعميل) في نفس المشاركة، فالموزّع في عجلته كان ممكن
+    // يبعت النواقص لحد مش المفروض يشوفها. المشاركة الوحيدة بقت في "مراجعة
+    // الطلب" (عرض سعر بس، بالأسعار أو من غيرها). النواقص+عرض السعر فضلوا
+    // زرار يدوي اختياري في شاشة النجاح/طلباتي لمين محتاجه فعلاً.
     finalizeOrderSuccess_(order, isUpdate, oldId, id, orderNo, isUpdate
       ? '✅ تم استلام تعديلك — جاري المراجعة والتأكيد بالمتاح'
       : '✅ تم استلام طلبك — جاري المراجعة والتأكيد بالمتاح');
-    // 📲 بطلب صريح: شاشة المشاركة تفتح تلقائيًا فور نجاح الإرسال — من غير
-    // ما الموزّع يحتاج يدوس على أي زرار. بتتنادى هنا (استكمال مباشر
-    // لنفس سلسلة async اللي بدأت من ضغطة "إرسال الطلب") عشان تفضل جوه
-    // نفس تفاعل المستخدم وnavigator.share يقبلها.
-    shareQuoteAndShortage_(order, 'shareQuoteShortageBusy');
   }catch(e){
     // 🔒 "unauthorized" معناها جلسة الموزّع خلصت أو مش صالحة — مش خطأ نت
     // ولا خطأ سيرفر. الطلب (السلة) لسه محفوظ في state، فبنرجّعه لشاشة
@@ -3726,7 +3732,6 @@ async function actuallySubmit(){
         '📶 مفيش نت دلوقتي — الطلب اتحفظ عندك وهيتبعت تلقائيًا أول ما النت يرجع');
       state.submitting = false;
       render();
-      if(state.lastOrder && state.successOrderId) shareQuoteAndShortage_(state.lastOrder, 'shareQuoteShortageBusy');
       return;
     }
     // صندوق خطأ ثابت (مش toast بيختفي) فيه السبب الخام — عشان نعرف السبب الحقيقي
@@ -3859,7 +3864,7 @@ async function previewMyOrderPDF(id){
   state.adminPdfGeneratingId = id;
   render();
   try{
-    const result = await buildQuotePDF(order, false);
+    const result = await buildQuotePDF(order, true);
     if(result && result.blob){
       previewPdfBlob(result, 'عرض_سعر_' + orderNoDisplay_(order) + '.pdf');
     } else {
@@ -3979,6 +3984,25 @@ function renderNewOrdersPopup(){
       <div class="modalbtns">
         <button class="modalbtn primary" data-act="goto-new-orders">📦 روح للطلبات</button>
         <button class="modalbtn" data-act="dismiss-new-orders">تجاهل دلوقتي</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// 💰 سؤال "بأسعار ولا من غير؟" — بيظهر أول ما يفتح مودال "مراجعة الطلب"
+// (بدل المشاركة التلقائية القديمة اللي كانت دايمًا بالأسعار). مفيش
+// data-act على الخلفية عمدًا (زي renderMergeAskModal): قرار لازم يتاخد.
+function renderPriceChoiceModal(){
+  if(!state.showPriceChoiceModal) return '';
+  return `
+  <div class="modalbg">
+    <div class="modalcard" data-act="noop">
+      <div class="modalic">📤</div>
+      <h3>تم تأكيد الطلب — جاري التجهيز للمشاركة</h3>
+      <p>تحب تشارك عرض السعر بالأسعار ولا من غيرها؟ بعد ما تختار هتفتح شاشة المشاركة وتختار إنت هتبعتها لمين.</p>
+      <div class="modalbtns">
+        <button class="modalbtn primary" data-act="share-price-yes">💰 بالأسعار</button>
+        <button class="modalbtn" data-act="share-price-no">📋 من غير أسعار</button>
       </div>
     </div>
   </div>`;
@@ -4788,7 +4812,8 @@ function computeQuoteRows_(order){
   return { rows, subtotal, eligible, customPct, showDiscount, discountTotal, netTotal, rollSummary, hasMissing };
 }
 
-async function buildQuotePDF(order){
+async function buildQuotePDF(order, withPrices){
+  if(withPrices === undefined) withPrices = true;
   if(!(await ensureLibs_('html2canvas','jspdf'))) return null;
   if(!order || !order.items || !order.items.length){ showToast('الطلب مفيهوش أصناف — مش هينفع نطلع عرض سعر'); return null; }
 
@@ -4823,7 +4848,7 @@ async function buildQuotePDF(order){
           <div style="font-size:13.4px;color:#6B7A8C;margin-top:2px;">وكيل AXA مصر</div>
         </div>
         <div style="text-align:left;">
-          <div style="font-size:16.8px;font-weight:800;color:#1080C0;">عرض سعر</div>
+          <div style="font-size:16.8px;font-weight:800;color:#1080C0;">${withPrices ? 'عرض سعر' : 'قائمة الأصناف المطلوبة'}</div>
           <div style="font-size:12.3px;color:#6B7A8C;">#${esc(orderNoDisplay_(order))}</div>
         </div>
       </div>
@@ -4853,12 +4878,12 @@ async function buildQuotePDF(order){
             <th style="padding:9px 5px;text-align:center;width:26px;">م</th>
             <th style="padding:9px 5px;text-align:right;">اسم الصنف</th>
             <th style="padding:9px 5px;text-align:center;">الكمية</th>
+            ${withPrices ? (showDiscount ? `
             <th style="padding:9px 5px;text-align:center;">سعر الوحدة</th>
-            ${showDiscount ? `
             <th style="padding:9px 5px;text-align:center;">نسبة الخصم</th>
             <th style="padding:9px 5px;text-align:center;">خصم مبلغ</th>
             <th style="padding:9px 5px;text-align:center;">الصافي</th>
-            ` : `<th style="padding:9px 5px;text-align:center;">الإجمالي</th>`}
+            ` : `<th style="padding:9px 5px;text-align:center;">سعر الوحدة</th><th style="padding:9px 5px;text-align:center;">الإجمالي</th>`) : ''}
           </tr>
         </thead>
         <tbody>
@@ -4869,7 +4894,7 @@ async function buildQuotePDF(order){
               groupsMap.get(r.main).push(r);
             });
             const orderedMains = orderGroups_(groupsMap);
-            const colspan = showDiscount ? 7 : 5;
+            const colspan = !withPrices ? 3 : (showDiscount ? 7 : 5);
             let html = '';
             let rowIndex = 0;
             let serialCounter = 0;
@@ -4902,7 +4927,14 @@ async function buildQuotePDF(order){
                 const lineAmt = it.rawPrice==null ? null : it.rawPrice*qty;
                 serialCounter++;
                 const rowBg = rowIndex%2===0?'#FFFFFF':'#F3F6FA';
-                if(showDiscount){
+                if(!withPrices){
+                  html += `
+                  <tr style="background:${rowBg};">
+                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;color:#8A8470;">${serialCounter}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;font-weight:600;color:#002050;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
+                  </tr>`;
+                } else if(showDiscount){
                   const pct = it.noRollDiscount ? 0 : (customPct>0 ? customPct : getDiscount(it.main));
                   const discAmt = (lineAmt!=null && pct>0) ? lineAmt*(pct/100) : 0;
                   const net = lineAmt==null ? null : lineAmt - discAmt;
@@ -4945,6 +4977,7 @@ async function buildQuotePDF(order){
         ● الأصناف المعلّمة بالأحمر غير متاحة حاليًا في المخزن — محتاجة تأكيد قبل التحميل.
       </div>` : ''}
 
+      ${withPrices ? `
       <div style="display:flex;justify-content:flex-end;margin-top:18px;">
         <div style="width:280px;">
           ${showDiscount && discountTotal>0 ? `
@@ -4965,6 +4998,7 @@ async function buildQuotePDF(order){
           ${hasMissing ? '<div style="font-size:11.8px;color:#8A5A00;margin-top:6px;text-align:left;">⚠️ فيه أصناف بدون سعر متاح مش داخلة في الإجمالي</div>' : ''}
         </div>
       </div>
+      ` : ''}
 
       ${rollSummary.length ? `
       <div style="margin-top:14px;display:flex;justify-content:flex-end;">
@@ -4985,7 +5019,7 @@ async function buildQuotePDF(order){
       ${order.note ? `<div style="margin-top:18px;padding-top:12px;border-top:1px dashed #DCE4EC;font-size:12.9px;color:#6B7A8C;">ملاحظات: ${esc(order.note)}</div>` : ''}
 
       <div style="margin-top:16px;padding:10px 14px;background:#FBEBD1;border-radius:8px;font-size:11.8px;color:#8A5A00;line-height:1.7;">
-        هذه الأسعار سارية ما لم يحدث تعديل في القوائم والأسعار قبل التنفيذ.<br>
+        ${withPrices ? 'هذه الأسعار سارية ما لم يحدث تعديل في القوائم والأسعار قبل التنفيذ.<br>' : ''}
         الكميات وفقًا لرصيد المخزن وقت التنفيذ.
         ${!STOCK_TRACKED_WAREHOUSES_.includes(asText(order.warehouse)) ? `<br><b>⚠ الأصناف في مخزن "${esc(asText(order.warehouse))}" غير معتمدة إلا وقت التحميل فقط، نظرًا لعدم حجز بضاعة مسبقًا.</b>` : ''}
       </div>
@@ -7615,7 +7649,7 @@ function render(){
     else if(state.view==='manage') view = renderManageView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
-    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderMergeAskModal() + renderNewOrdersPopup() + renderGlobalError();
+    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderPriceChoiceModal() + renderMergeAskModal() + renderNewOrdersPopup() + renderGlobalError();
     bindEvents();
     applyFixedHeaderSpacing_();
     applyFixedFooterSpacing_();
@@ -8314,17 +8348,22 @@ async function onActionInner(act, el){
     case 'toggle-discount': state.discountVisible = !state.discountVisible; render(); break;
     // set-extra-discount: handled via blur in bindEvents
     // 📤 بطلب صريح: المشاركة بقت إجبارية مش زرار اختياري ممكن يتنسى — بتتفتح
-    // تلقائيًا فور الضغط على "مراجعة الطلب" على طول (نفس الضغطة، عشان
-    // navigator.share يقبلها). زرار "📤 مشاركة" في المودال فضل موجود
-    // كـ"جرّب تاني" احتياطي بس (لو رفض أو الجهاز مش بيدعم المشاركة التلقائية).
+    // تلقائيًا فور الضغط على "مراجعة الطلب"، بس قبلها بنسأل "بأسعار ولا من
+    // غير؟" (renderPriceChoiceModal). القرار بيتاخد في نفس ضغطة الزرار
+    // اللي بيجاوب على السؤال، فـ navigator.share لسه جوه نفس تفاعل
+    // المستخدم ومش بيترفض. مفيش نواقص بتتبعت هنا خالص — دي بقت زرار
+    // يدوي اختياري بس في شاشة النجاح/طلباتي (شوف shareQuoteAndShortage_).
     case 'open-cart-review':
       if(state.pendingDraft && !state.cart.length){ resumeDraft(); state.showResumeModal=false; }
-      state.showCartReview=true; render();
-      shareCartReview_();
+      state.showCartReview=true;
+      state.showPriceChoiceModal=true;
+      render();
       break;
     case 'close-cart-review': state.showCartReview=false; render(); break;
     case 'cart-add-more': state.showCartReview=false; render(); break;
-    case 'cart-share': await shareCartReview_(); break;
+    case 'cart-share': state.showPriceChoiceModal=true; render(); break;
+    case 'share-price-yes': state.showPriceChoiceModal=false; render(); await shareCartReview_(true); break;
+    case 'share-price-no': state.showPriceChoiceModal=false; render(); await shareCartReview_(false); break;
     case 'cart-send':
       state.showCartReview=false;
       await requestSubmit(); // نفس مسار "إرسال الطلب" العادي: تأكيد ثم إرسال فعلي
