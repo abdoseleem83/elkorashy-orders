@@ -1610,6 +1610,7 @@ const state = {
   catalogUploadResult:null,       // {updated, added, notFound} أو {error}
   showCartReview:false,
   showPriceChoiceModal:false,     // سؤال "بأسعار ولا من غير؟" قبل مشاركة عرض السعر
+  pendingShareOrder:null,         // الطلب الحقيقي المستنّي يشارك بعد السؤال (null = معاينة السلة قبل الإرسال)
   waSent:false,
   waImgPreparing:false,
   discountVisible:false,
@@ -3272,38 +3273,47 @@ async function previewCartInvoice(){
   render();
 }
 
-// 📤 بطلب صريح: زرار "مشاركة" في مودال "مراجعة الطلب" — بيبني صورة عرض
-// السعر من السلة الحالية (قبل الإرسال) ويفتح شاشة المشاركة على طول
-// (نفس مبدأ shareQuotePDF)، عشان الموزّع يقدر يبعتها لحد يستأذنه قبل
-// ما يأكّد الطلب فعليًا. withPrices بييجي من سؤال "بأسعار ولا من غير؟"
-// (renderPriceChoiceModal) — الموزّع هو اللي يختار، ومفيش نواقص بتتبعت
-// خالص هنا (كانت بتتبعت تلقائيًا مع عرض السعر بعد الإرسال — اتشالت
-// بطلب صريح، النواقص بقت زرار يدوي اختياري بس في شاشة النجاح/طلباتي).
-async function shareCartReview_(withPrices){
+// 📤 مشاركة عرض السعر — إما معاينة قبل الإرسال (من زرار "مشاركة" جوه
+// مودال "مراجعة الطلب"، realOrder=null فبيبني من state.cart)، أو الطلب
+// الحقيقي فور ما يتبعت فعليًا (realOrder موجود، شوف actuallySubmit —
+// دي المشاركة الأساسية اللي بتحصل "من عند إرسال الطلب" مباشرة، بطلب
+// صريح، بدل ما تتربط بشاشة "مراجعة الطلب"). withPrices بييجي من سؤال
+// "بأسعار ولا من غير؟" (renderPriceChoiceModal) — الموزّع هو اللي
+// يختار. مفيش نواقص بتتبعت خالص هنا — دي بقت زرار يدوي اختياري بس في
+// شاشة النجاح/طلباتي (shareQuoteAndShortage_).
+async function shareCartReview_(withPrices, realOrder){
   if(withPrices === undefined) withPrices = true;
-  if(state.cart.length===0){ showToast('لسه محضتش أي صنف تقدر تشاركه'); return; }
+  const isReal = !!realOrder;
+  let order = realOrder;
+  if(!isReal){
+    if(state.cart.length===0){ showToast('لسه محضتش أي صنف تقدر تشاركه'); return; }
+    order = {
+      id: 'PREVIEW', ts: Date.now(),
+      distName: asText(state.distName).trim() || 'معاينة',
+      distRegion: asText(state.distRegion).trim(),
+      distPhone: asText(state.distPhone).trim(),
+      note: asText(state.note).trim(),
+      items: state.cart
+    };
+  }
   if(!navigator.canShare) reserveWaWindow();
   state.cartShareBusy = true; render();
-  const tempOrder = {
-    id: 'PREVIEW', ts: Date.now(),
-    distName: asText(state.distName).trim() || 'معاينة',
-    distRegion: asText(state.distRegion).trim(),
-    distPhone: asText(state.distPhone).trim(),
-    note: asText(state.note).trim(),
-    items: state.cart
-  };
+  const orderNo = isReal ? orderNoDisplay_(order) : '';
+  const baseName = isReal ? ('عرض_سعر_' + orderNo) : 'معاينة_عرض_سعر';
+  const title = isReal ? ('طلب #' + orderNo) : 'معاينة الطلب';
+  const waText_ = isReal ? ('عرض السعر — طلب #' + orderNo) : 'معاينة طلب قبل الإرسال';
   try{
-    const q = await buildQuotePDF(tempOrder, withPrices);
+    const q = await buildQuotePDF(order, withPrices);
     if(!q){ showToast('حصل خطأ في تجهيز المشاركة، حاول تاني'); releaseWaWindow(); return; }
-    if(await shareAsImage_(q, 'معاينة_عرض_سعر', 'معاينة الطلب')){ releaseWaWindow(); return; }
+    if(await shareAsImage_(q, baseName, title)){ releaseWaWindow(); return; }
     if(q.imgBlob){
-      downloadBlob(q.imgBlob, 'معاينة_عرض_سعر.png');
+      downloadBlob(q.imgBlob, baseName + '.png');
       showToast('اتحملت الصورة — هتفتح واتساب، ارفقها من المعرض');
     } else {
-      downloadBlob(q.blob, 'معاينة_عرض_سعر.pdf');
+      downloadBlob(q.blob, baseName + '.pdf');
       showToast('اتحمل الملف — هتفتح واتساب، ارفقه يدويًا');
     }
-    const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent('معاينة طلب قبل الإرسال');
+    const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent(waText_);
     if(__waWin && !__waWin.closed){
       try{ __waWin.location.href = waUrl_; }catch(e){ setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900); }
       __waWin = null;
@@ -3705,14 +3715,17 @@ async function actuallySubmit(){
     // بس بنعرض في شاشة النجاح ملاحظة + سهم بيشاور على زرار واتساب،
     // والموزع هو اللي يدوس بنفسه.
     // ⚠️ كانت المشاركة (عرض السعر + النواقص مع بعض) بتتفتح تلقائيًا هنا فور
-    // نجاح الإرسال — اتشالت بطلب صريح: كانت بتخلط النواقص (لتنسيق المخزن)
-    // مع عرض السعر (للعميل) في نفس المشاركة، فالموزّع في عجلته كان ممكن
-    // يبعت النواقص لحد مش المفروض يشوفها. المشاركة الوحيدة بقت في "مراجعة
-    // الطلب" (عرض سعر بس، بالأسعار أو من غيرها). النواقص+عرض السعر فضلوا
-    // زرار يدوي اختياري في شاشة النجاح/طلباتي لمين محتاجه فعلاً.
+    // نجاح الإرسال — بس بتضم النواقص (لتنسيق المخزن) مع عرض السعر (للعميل)
+    // في نفس المشاركة، فالموزّع في عجلته كان ممكن يبعت النواقص لحد مش
+    // المفروض يشوفها. اتشالت النواقص من هنا، بس المشاركة نفسها فضلت هنا
+    // بالظبط — بطلب صريح إنها تحصل "من عند إرسال الطلب" مباشرة، مش تتنقل
+    // لشاشة تانية ("مراجعة الطلب" بقت استعراض بس من غير مشاركة تلقائية).
+    // سؤال "بأسعار ولا من غير؟" (renderPriceChoiceModal) بيظهر فورًا هنا.
     finalizeOrderSuccess_(order, isUpdate, oldId, id, orderNo, isUpdate
       ? '✅ تم استلام تعديلك — جاري المراجعة والتأكيد بالمتاح'
       : '✅ تم استلام طلبك — جاري المراجعة والتأكيد بالمتاح');
+    state.pendingShareOrder = order;
+    state.showPriceChoiceModal = true;
   }catch(e){
     // 🔒 "unauthorized" معناها جلسة الموزّع خلصت أو مش صالحة — مش خطأ نت
     // ولا خطأ سيرفر. الطلب (السلة) لسه محفوظ في state، فبنرجّعه لشاشة
@@ -3744,9 +3757,9 @@ async function actuallySubmit(){
   state.submitting = false;
   render();
   // ✅ نولّد عرض السعر تلقائياً بعد ما الطلب يتبعت — ده بس لدعم زرارات
-  // "عرض السعر" اليدوية (معاينة/تنزيل) في شاشة النجاح كـfallback. المشاركة
-  // التلقائية الفعلية (اللي بتفتح شاشة اختيار التطبيق على طول) اتنادت
-  // بالفعل فوق جوه try، فور نجاح الحفظ — شوف shareQuoteAndShortage_.
+  // "عرض السعر" اليدوية (معاينة/تنزيل) في شاشة النجاح كـfallback. سؤال
+  // "بأسعار ولا من غير؟" وفتح شاشة المشاركة الفعلية اتنادوا بالفعل فوق
+  // جوه try، فور نجاح الحفظ.
   if(state.lastOrder && state.successOrderId) generateBothQuotes(state.lastOrder);
   // ⛔ مابقناش نولّد الـ PDF تلقائيًا هنا. html2canvas بيجمّد الشاشة وهو شغال،
   // فكانت شاشة النجاح متظهرش والمستخدم يفتكر إن الحفظ فشل — مع إنه نجح فعلاً.
@@ -8347,23 +8360,32 @@ async function onActionInner(act, el){
     case 'request-submit': await requestSubmit(); break;
     case 'toggle-discount': state.discountVisible = !state.discountVisible; render(); break;
     // set-extra-discount: handled via blur in bindEvents
-    // 📤 بطلب صريح: المشاركة بقت إجبارية مش زرار اختياري ممكن يتنسى — بتتفتح
-    // تلقائيًا فور الضغط على "مراجعة الطلب"، بس قبلها بنسأل "بأسعار ولا من
-    // غير؟" (renderPriceChoiceModal). القرار بيتاخد في نفس ضغطة الزرار
-    // اللي بيجاوب على السؤال، فـ navigator.share لسه جوه نفس تفاعل
-    // المستخدم ومش بيترفض. مفيش نواقص بتتبعت هنا خالص — دي بقت زرار
-    // يدوي اختياري بس في شاشة النجاح/طلباتي (شوف shareQuoteAndShortage_).
+    // "مراجعة الطلب" بترجع تفتح كارت الأصناف بس من غير أي مشاركة تلقائية —
+    // سؤال "بأسعار ولا من غير؟" وإجبارية المشاركة بقوا مربوطين بلحظة
+    // إرسال الطلب الفعلية (actuallySubmit) بطلب صريح، مش بشاشة المراجعة
+    // اللي هي مجرد استعراض قبل التأكيد.
     case 'open-cart-review':
       if(state.pendingDraft && !state.cart.length){ resumeDraft(); state.showResumeModal=false; }
       state.showCartReview=true;
-      state.showPriceChoiceModal=true;
       render();
       break;
     case 'close-cart-review': state.showCartReview=false; render(); break;
     case 'cart-add-more': state.showCartReview=false; render(); break;
-    case 'cart-share': state.showPriceChoiceModal=true; render(); break;
-    case 'share-price-yes': state.showPriceChoiceModal=false; render(); await shareCartReview_(true); break;
-    case 'share-price-no': state.showPriceChoiceModal=false; render(); await shareCartReview_(false); break;
+    // زرار "مشاركة" اليدوي جوه المراجعة — معاينة اختيارية قبل الإرسال
+    // (pendingShareOrder فاضي = shareCartReview_ هتبني من state.cart).
+    case 'cart-share': state.pendingShareOrder=null; state.showPriceChoiceModal=true; render(); break;
+    case 'share-price-yes':{
+      const ord = state.pendingShareOrder; state.pendingShareOrder=null;
+      state.showPriceChoiceModal=false; render();
+      await shareCartReview_(true, ord);
+      break;
+    }
+    case 'share-price-no':{
+      const ord = state.pendingShareOrder; state.pendingShareOrder=null;
+      state.showPriceChoiceModal=false; render();
+      await shareCartReview_(false, ord);
+      break;
+    }
     case 'cart-send':
       state.showCartReview=false;
       await requestSubmit(); // نفس مسار "إرسال الطلب" العادي: تأكيد ثم إرسال فعلي

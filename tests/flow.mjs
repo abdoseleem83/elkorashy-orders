@@ -96,6 +96,9 @@ const sent = await page.evaluate(async ()=>{
   state.distName='فرع طنطا'; state.distRegion='طنطا'; state.distPhone='01000000001'; state.warehouse='طنطا';
   if(!state.cart.length) state.cart=[{main:'قطاعات PVC كومبن',product:'حلق كومبن',color:'ابيض',qty:3,unitType:'لفة',name:'حلق ابيض'}];
   await actuallySubmit();
+  // مش بنختبر سؤال "بأسعار ولا من غير؟" هنا (شوف اختبار تاني)، بس لازم
+  // نقفله عشان الاختبار الجاي (مودال الأرصدة) يقدر يفتح من غير ما يتحجب.
+  state.showPriceChoiceModal = false; state.pendingShareOrder = null;
   return { successId: state.successOrderId, err: state.saveError };
 });
 console.log('٦) إرسال الطلب:', sent.successId ? ('رقم ' + sent.successId + ' ✅') : ('❌ ' + sent.err));
