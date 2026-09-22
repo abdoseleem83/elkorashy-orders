@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v220';
+const APP_VERSION = 'v222';
 
 const SHEET_NAME = 'Orders';
 const ARCHIVE_SHEET_NAME = 'الأرشيف';
@@ -26,6 +26,7 @@ const ERRORS_SHEET_NAME = 'أخطاء';
 // ===== مراحل الطلب (لازم تطابق نفس النصوص في index.html بالظبط) =====
 const STATUS_RECEIVED = 'تم استلام الطلب';
 const STATUS_PENDING = STATUS_RECEIVED;   // اسم قديم — سايبينه عشان أي كود بيناديه
+const STATUS_PREPARING = 'جاري تجهيز الطلب';   // مرحلة وسيطة — بتفضل محجوزة زي RECEIVED
 const STATUS_DONE = 'تم تنفيذ الطلب';
 const STATUS_EDITED = 'مُعدّل';            // حالة قديمة — بتفضل موجودة بس لطلبات اتعدّلت قبل v216
                                            // (شوف saveOrder_: من v216 الطلب القديم بيتمسح تمامًا
@@ -567,6 +568,9 @@ function saveOrder_(data) {
   // بنتأكد من الملكية: إما اسم المستخدم مطابق، أو (للطلبات القديمة اللي
   // مالهاش عمود اسم مستخدم) رقم التليفون مطابق. غير كده بنسيب الصف القديم
   // زي ما هو من غير ما نمسحه.
+  // 🔒 ماينفعش تعديل طلب بقى "جاري تجهيز" أو "منفَّذ" — المخزن ممكن يكون
+  // بدأ يجهّزه بالفعل. الواجهة بتخفي زرار التعديل في الحالتين دول، وهنا
+  // بنمنعها فعليًا حتى لو حد بعت الطلب مباشرة للسيرفر متخطّيًا الواجهة.
   let editedFromOrderNo = '';
   if (isUpdate && data.oldId != null && String(data.oldId)) {
     const oldId = String(data.oldId);
@@ -579,6 +583,10 @@ function saveOrder_(data) {
         ? (rowUser.toLowerCase() === String(username).trim().toLowerCase())
         : (!!myPhone && rowPhone === myPhone);
       if (mine) {
+        const oldStatus = String(sheet.getRange(i + 2, COL_STATUS).getValue() || '').trim();
+        if (oldStatus === STATUS_PREPARING || oldStatus === STATUS_DONE) {
+          return json_({ ok: false, error: 'الطلب ده بقى قيد التجهيز أو اتنفّذ — متقدرش تعدّله دلوقتي' });
+        }
         editedFromOrderNo = String(sheet.getRange(i + 2, COL_ORDERNO).getValue() || '');
         sheet.deleteRow(i + 2);   // الصف القديم بيتمسح تمامًا — الجديد بس اللي فاضل
       }
@@ -652,7 +660,7 @@ function updateOrderStatus_(id, status) {
     const st = String(status).trim();
     const distPhone = String(rows[i][COL_PHONE - 1] || '');
     const key = getDistributorWaKey_(distPhone);
-    if (key && (st === STATUS_DONE || st === STATUS_RECEIVED)) {
+    if (key && (st === STATUS_DONE || st === STATUS_RECEIVED || st === STATUS_PREPARING)) {
       const orderNo = String(rows[i][COL_ORDERNO - 1] || id);
       const distName = String(rows[i][COL_NAME - 1] || '');
       let msg;
@@ -663,8 +671,12 @@ function updateOrderStatus_(id, status) {
               '——————\n' +
               'شكرًا لتعاملك مع القرشي لأبواب وشبابيك الـ UPVC';
         if (CREDIT_LINE) msg += '\n' + CREDIT_LINE;
+      } else if (st === STATUS_PREPARING) {
+        msg = '🔧 جاري تجهيز طلبك\n' +
+              'رقم الطلب: #' + orderNo + '\n' +
+              'الموزع: ' + distName;
       } else {
-        msg = '📦 جاري تجهيز طلبك\n' +
+        msg = '✅ تم استلام طلبك\n' +
               'رقم الطلب: #' + orderNo + '\n' +
               'الموزع: ' + distName;
       }
@@ -718,6 +730,7 @@ function deleteMyOrder_(id, token) {
     if (!mine) return { ok: false, error: 'unauthorized' };
     const status = String(sheet.getRange(i + 2, COL_STATUS).getValue() || '').trim();
     if (status === STATUS_DONE) return { ok: false, error: 'الطلب ده اتنفّذ بالفعل — متقدرش تحذفه' };
+    if (status === STATUS_PREPARING) return { ok: false, error: 'الطلب ده بقى قيد التجهيز — متقدرش تحذفه، كلّم الإدارة' };
     sheet.deleteRow(i + 2);
     markReservedDirty_();
     return { ok: true };

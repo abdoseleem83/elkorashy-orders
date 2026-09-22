@@ -1001,6 +1001,7 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 }
 .statusbadge.pending{background:#FBEBD1;color:#8A5A00;}
 .statusbadge.received{background:#E7EEFB;color:#1F4E9C;}
+.statusbadge.preparing{background:#FBEBD1;color:#8A5A00;}
 .statusbadge.done{background:var(--success-bg);color:var(--success);}
 .statusbadge.edited{background:#ECECEC;color:#6B6B6B;}
 .oheadside{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
@@ -1452,33 +1453,38 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v220';
+const APP_BUILD = 'v222';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
 const OTHER_SECTOR = 'أصناف أخرى';
 
 // ===== مراحل الطلب التلاتة =====
-// ⚠️ المراحل بقت اتنين بس بطلب صريح: "تم استلام الطلب" ثم "تم تنفيذ الطلب".
-// مرحلة "تحت التنفيذ" القديمة اتشالت — أي طلب قديم متسجّل بيها في الشيت
-// بيتحوّل تلقائيًا لـ"تم استلام الطلب" عند العرض (normStatus_).
+// ⚠️ ثلاث مراحل: "تم استلام الطلب" → "جاري تجهيز الطلب" → "تم تنفيذ الطلب".
+// أول مرحلتين بيتحسبوا في الحجز (الرصيد)، والمرحلة الأخيرة بس اللي بتتحرر
+// من الحجز (البضاعة خرجت فعليًا). مرحلة "تحت التنفيذ" القديمة اتشالت — أي
+// طلب قديم متسجّل بيها في الشيت بيتحوّل تلقائيًا لـ"تم استلام الطلب" عند
+// العرض (normStatus_).
 const STATUS_LEGACY_PENDING = 'تحت التنفيذ';
 const STATUS_RECEIVED = 'تم استلام الطلب';
+const STATUS_PREPARING = 'جاري تجهيز الطلب';
 const STATUS_DONE = 'تم تنفيذ الطلب';
 const STATUS_EDITED = 'مُعدّل';   // حالة قديمة (قبل v216) — الطلب القديم دلوقتي بيتمسح تمامًا
                                   // بدل ما يتعلّم الحالة دي، بس لسه محتاجينها لطلبات قديمة
                                   // في الشيت من قبل الترقية (شوف editedFrom للتاج الجديد)
 const STATUS_PENDING = STATUS_RECEIVED;   // اسم قديم — سايبينه عشان أي كود بيناديه
-const STATUS_ORDER = [STATUS_RECEIVED, STATUS_DONE];
+const STATUS_ORDER = [STATUS_RECEIVED, STATUS_PREPARING, STATUS_DONE];
 function normStatus_(st){
   const v = String(st == null ? '' : st).trim();
   if(v === STATUS_DONE) return STATUS_DONE;
+  if(v === STATUS_PREPARING) return STATUS_PREPARING;
   if(v === STATUS_EDITED) return STATUS_EDITED;   // نحافظ عليها زي ما هي
   return STATUS_RECEIVED;
 }
 function statusInfo_(status){
   const s = normStatus_(status);
   if(s===STATUS_DONE) return {cls:'done', icon:ico_('checkCircle',14), label:STATUS_DONE};
+  if(s===STATUS_PREPARING) return {cls:'preparing', icon:ico_('boxIcon',14), label:STATUS_PREPARING};
   if(s===STATUS_EDITED) return {cls:'edited', icon:ico_('editIcon',14), label:'مُعدّل (نسخة قديمة)'};
   return {cls:'received', icon:ico_('boxIcon',14), label:STATUS_RECEIVED};
 }
@@ -3318,19 +3324,37 @@ async function shareCartReview_(withPrices, realOrder){
   if(!navigator.canShare) reserveWaWindow();
   state.cartShareBusy = true; render();
   const orderNo = isReal ? orderNoDisplay_(order) : '';
-  const baseName = isReal ? ('عرض_سعر_' + orderNo) : 'معاينة_عرض_سعر';
-  const title = isReal ? ('طلب #' + orderNo) : 'معاينة الطلب';
   const waText_ = isReal ? ('عرض السعر — طلب #' + orderNo) : 'معاينة طلب قبل الإرسال';
   try{
-    const q = await buildQuotePDF(order, withPrices);
-    if(!q){ showToast('حصل خطأ في تجهيز المشاركة، حاول تاني'); releaseWaWindow(); return; }
-    if(await shareAsImage_(q, baseName, title)){ releaseWaWindow(); return; }
-    if(q.imgBlob){
-      downloadBlob(q.imgBlob, baseName + '.png');
-      showToast('اتحملت الصورة — هتفتح واتساب، ارفقها من المعرض');
+    // 💰 بالأسعار: عرض سعر عادي (جدول PDF بالأسعار والإجمالي).
+    if(withPrices){
+      const baseName = isReal ? ('عرض_سعر_' + orderNo) : 'معاينة_عرض_سعر';
+      const title = isReal ? ('طلب #' + orderNo) : 'معاينة الطلب';
+      const q = await buildQuotePDF(order, true);
+      if(!q){ showToast('حصل خطأ في تجهيز المشاركة، حاول تاني'); releaseWaWindow(); return; }
+      if(await shareAsImage_(q, baseName, title)){ releaseWaWindow(); return; }
+      if(q.imgBlob){
+        downloadBlob(q.imgBlob, baseName + '.png');
+        showToast('اتحملت الصورة — هتفتح واتساب، ارفقها من المعرض');
+      } else {
+        downloadBlob(q.blob, baseName + '.pdf');
+        showToast('اتحمل الملف — هتفتح واتساب، ارفقه يدويًا');
+      }
     } else {
-      downloadBlob(q.blob, baseName + '.pdf');
-      showToast('اتحمل الملف — هتفتح واتساب، ارفقه يدويًا');
+      // 📋 من غير أسعار: بطلب صريح شكلها بقى قريب من ورقة النواقص (عمودين
+      // جنب بعض، صور PNG مش جدول PDF) بدل عرض السعر العادي من غير عمود
+      // السعر بس — buildItemsListImages_.
+      const blobs = await buildItemsListImages_(order);
+      if(!blobs || !blobs.length){ showToast('حصل خطأ في تجهيز المشاركة، حاول تاني'); releaseWaWindow(); return; }
+      const base = isReal ? ('قائمة_الأصناف_' + orderNo) : 'معاينة_قائمة_الأصناف';
+      const files = blobs.map((b,i)=> new File([b], base + (blobs.length>1?'_'+(i+1):'') + '.png', {type:'image/png'}));
+      if(navigator.canShare && navigator.canShare({files})){
+        releaseWaWindow();
+        await navigator.share({ files, title: isReal ? ('طلب #'+orderNo) : 'معاينة الطلب', text: waText_ });
+        return;
+      }
+      files.forEach(f=> downloadBlob(f, f.name));
+      showToast('اتحمّلت الصور — هتفتح واتساب، ارفقها يدويًا');
     }
     const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent(waText_);
     if(__waWin && !__waWin.closed){
@@ -3340,6 +3364,7 @@ async function shareCartReview_(withPrices, realOrder){
       setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900);
     }
   }catch(e){
+    if(e && e.name === 'AbortError'){ releaseWaWindow(); return; }
     console.error('shareCartReview_ failed:', e);
     showToast('حصل خطأ في المشاركة: ' + (e && e.message ? e.message : e));
     releaseWaWindow();
@@ -4852,8 +4877,7 @@ function computeQuoteRows_(order){
   return { rows, subtotal, eligible, customPct, showDiscount, discountTotal, netTotal, rollSummary, hasMissing };
 }
 
-async function buildQuotePDF(order, withPrices){
-  if(withPrices === undefined) withPrices = true;
+async function buildQuotePDF(order){
   if(!(await ensureLibs_('html2canvas','jspdf'))) return null;
   if(!order || !order.items || !order.items.length){ showToast('الطلب مفيهوش أصناف — مش هينفع نطلع عرض سعر'); return null; }
 
@@ -4888,7 +4912,7 @@ async function buildQuotePDF(order, withPrices){
           <div style="font-size:13.4px;color:#6B7A8C;margin-top:2px;">وكيل AXA مصر</div>
         </div>
         <div style="text-align:left;">
-          <div style="font-size:16.8px;font-weight:800;color:#1080C0;">${withPrices ? 'عرض سعر' : 'قائمة الأصناف المطلوبة'}</div>
+          <div style="font-size:16.8px;font-weight:800;color:#1080C0;">عرض سعر</div>
           <div style="font-size:12.3px;color:#6B7A8C;">#${esc(orderNoDisplay_(order))}</div>
         </div>
       </div>
@@ -4918,12 +4942,12 @@ async function buildQuotePDF(order, withPrices){
             <th style="padding:9px 5px;text-align:center;width:26px;">م</th>
             <th style="padding:9px 5px;text-align:right;">اسم الصنف</th>
             <th style="padding:9px 5px;text-align:center;">الكمية</th>
-            ${withPrices ? (showDiscount ? `
+            ${showDiscount ? `
             <th style="padding:9px 5px;text-align:center;">سعر الوحدة</th>
             <th style="padding:9px 5px;text-align:center;">نسبة الخصم</th>
             <th style="padding:9px 5px;text-align:center;">خصم مبلغ</th>
             <th style="padding:9px 5px;text-align:center;">الصافي</th>
-            ` : `<th style="padding:9px 5px;text-align:center;">سعر الوحدة</th><th style="padding:9px 5px;text-align:center;">الإجمالي</th>`) : ''}
+            ` : `<th style="padding:9px 5px;text-align:center;">سعر الوحدة</th><th style="padding:9px 5px;text-align:center;">الإجمالي</th>`}
           </tr>
         </thead>
         <tbody>
@@ -4934,7 +4958,7 @@ async function buildQuotePDF(order, withPrices){
               groupsMap.get(r.main).push(r);
             });
             const orderedMains = orderGroups_(groupsMap);
-            const colspan = !withPrices ? 3 : (showDiscount ? 7 : 5);
+            const colspan = showDiscount ? 7 : 5;
             let html = '';
             let rowIndex = 0;
             let serialCounter = 0;
@@ -4967,14 +4991,7 @@ async function buildQuotePDF(order, withPrices){
                 const lineAmt = it.rawPrice==null ? null : it.rawPrice*qty;
                 serialCounter++;
                 const rowBg = rowIndex%2===0?'#FFFFFF':'#F3F6FA';
-                if(!withPrices){
-                  html += `
-                  <tr style="background:${rowBg};">
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;color:#8A8470;">${serialCounter}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;font-weight:600;color:#002050;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
-                  </tr>`;
-                } else if(showDiscount){
+                if(showDiscount){
                   const pct = it.noRollDiscount ? 0 : (customPct>0 ? customPct : getDiscount(it.main));
                   const discAmt = (lineAmt!=null && pct>0) ? lineAmt*(pct/100) : 0;
                   const net = lineAmt==null ? null : lineAmt - discAmt;
@@ -5017,7 +5034,6 @@ async function buildQuotePDF(order, withPrices){
         ● الأصناف المعلّمة بالأحمر غير متاحة حاليًا في المخزن — محتاجة تأكيد قبل التحميل.
       </div>` : ''}
 
-      ${withPrices ? `
       <div style="display:flex;justify-content:flex-end;margin-top:18px;">
         <div style="width:280px;">
           ${showDiscount && discountTotal>0 ? `
@@ -5038,7 +5054,6 @@ async function buildQuotePDF(order, withPrices){
           ${hasMissing ? '<div style="font-size:11.8px;color:#8A5A00;margin-top:6px;text-align:left;">⚠️ فيه أصناف بدون سعر متاح مش داخلة في الإجمالي</div>' : ''}
         </div>
       </div>
-      ` : ''}
 
       ${rollSummary.length ? `
       <div style="margin-top:14px;display:flex;justify-content:flex-end;">
@@ -5059,7 +5074,7 @@ async function buildQuotePDF(order, withPrices){
       ${order.note ? `<div style="margin-top:18px;padding-top:12px;border-top:1px dashed #DCE4EC;font-size:12.9px;color:#6B7A8C;">ملاحظات: ${esc(order.note)}</div>` : ''}
 
       <div style="margin-top:16px;padding:10px 14px;background:#FBEBD1;border-radius:8px;font-size:11.8px;color:#8A5A00;line-height:1.7;">
-        ${withPrices ? 'هذه الأسعار سارية ما لم يحدث تعديل في القوائم والأسعار قبل التنفيذ.<br>' : ''}
+        هذه الأسعار سارية ما لم يحدث تعديل في القوائم والأسعار قبل التنفيذ.<br>
         الكميات وفقًا لرصيد المخزن وقت التنفيذ.
         ${!STOCK_TRACKED_WAREHOUSES_.includes(asText(order.warehouse)) ? `<br><b>⚠ الأصناف في مخزن "${esc(asText(order.warehouse))}" غير معتمدة إلا وقت التحميل فقط، نظرًا لعدم حجز بضاعة مسبقًا.</b>` : ''}
       </div>
@@ -5512,6 +5527,157 @@ async function buildShortageImageGroup(order, groupKey){
       const blob = await canvasToPngBlob_(canvas);
       if(blob) blobs.push(blob);
     }catch(e){ console.error('buildShortageImageGroup failed (page ' + (p+1) + '):', e); }
+    try{ document.body.removeChild(wrap); }catch(e){}
+  }
+  return blobs;
+}
+
+// ===== "قائمة الأصناف المطلوبة" (عرض السعر من غير أسعار) — بطلب صريح
+// شكلها بقى قريب من ورقة النواقص بالظبط، مش جدول عرض السعر العادي: صفحة
+// عريضة مقسومة عمودين جنب بعض، صف بسيط لكل صنف (رقم + اسم + كمية) من
+// غير حدود جدول، وعنوان قطاع/لون فوق كل مجموعة. نفس أسلوب
+// buildShortageImageGroup بالظبط، بس لكل أصناف الطلب مش مجموعة نواقص
+// واحدة بس.
+async function buildItemsListImages_(order){
+  if(!(await ensureLibs_('html2canvas'))) return null;
+  if(!order || !order.items || !order.items.length) return null;
+
+  const date = new Date(order.ts);
+  const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const { rows, rollSummary } = computeQuoteRows_(order);
+  if(!rows.length) return null;
+
+  const groupsMap = new Map();
+  rows.forEach(r=>{ if(!groupsMap.has(r.main)) groupsMap.set(r.main, []); groupsMap.get(r.main).push(r); });
+  const orderedMains = orderGroups_(groupsMap);
+
+  const flat = [];
+  orderedMains.forEach(main=>{
+    const items = groupsMap.get(main);
+    const colorOrder = [];
+    const byColor = new Map();
+    items.forEach(it=>{
+      const c = asText(it.color);
+      if(!byColor.has(c)){ byColor.set(c, []); colorOrder.push(c); }
+      byColor.get(c).push(it);
+    });
+    const multiColor = colorOrder.filter(c=>c).length > 1 || (colorOrder.length>1 && colorOrder.some(c=>c));
+    let firstInMain = true;
+    colorOrder.forEach(colorKey=>{
+      let firstInColor = true;
+      byColor.get(colorKey).forEach(it=>{
+        flat.push(Object.assign({}, it, {
+          sectionStart: firstInMain,
+          sectionLabel: main,
+          colorStart: multiColor && !!colorKey && firstInColor,
+          colorLabel: multiColor ? colorKey : null,
+          dispLabel: it.normQty + ' ' + (it.normUnit||'')
+        }));
+        firstInMain = false; firstInColor = false;
+      });
+    });
+  });
+
+  const isCompact_ = flat.length > 30;
+  const ROWS_PER_COL_ = isCompact_ ? 18 : 15;
+  const PER_PAGE_ = ROWS_PER_COL_ * 2;
+  const pages = [];
+  for(let i=0; i<flat.length; i+=PER_PAGE_) pages.push(flat.slice(i, i+PER_PAGE_));
+  if(!pages.length) pages.push([]);
+
+  const rowPad_ = isCompact_ ? '6px 8px' : '9px 8px';
+  const rowFont_ = isCompact_ ? '17px' : '20px';
+  const idxFont_ = isCompact_ ? '12px' : '14px';
+  const colorFont_ = isCompact_ ? '13px' : '15px';
+  const secPad_ = isCompact_ ? '5px 10px' : '7px 10px';
+  const secMargin_ = isCompact_ ? '7px' : '10px';
+  const colorPad_ = isCompact_ ? '4px 10px 4px 16px' : '5px 10px 5px 18px';
+  const colorMargin_ = isCompact_ ? '6px' : '8px';
+
+  function rowsHTML(list, startIndex){
+    let html = '';
+    list.forEach((it,i)=>{
+      if(it.sectionStart && orderedMains.length>1){
+        html += `<div style="padding:${secPad_};background:#4FA8DC;color:#002050;font-weight:800;font-size:15px;border-radius:6px;margin:${i===0?'0':secMargin_} 0 6px 0;">${esc(it.sectionLabel)}</div>`;
+      }
+      if(it.colorStart){
+        html += `<div style="padding:${colorPad_};background:#D6E7F8;border-right:3px solid #1080C0;color:#002050;font-weight:800;font-size:13px;border-radius:4px;margin:${(i===0||it.sectionStart)?'0':colorMargin_} 0 5px 0;">◂ ${esc(it.colorLabel)}</div>`;
+      }
+      const bg = i%2===0 ? '#FFFFFF' : '#F3F6FA';
+      html += `
+      <div style="display:flex;align-items:baseline;gap:8px;background:${bg};padding:${rowPad_};border-bottom:1px solid #DCE4EC;border-radius:4px;">
+        <span style="color:#8A8470;font-weight:800;font-size:${idxFont_};min-width:20px;">${startIndex+i+1}.</span>
+        <span style="flex:1;font-weight:800;font-size:${rowFont_};color:#002050;line-height:1.25;">
+          ${esc(it.name || it.product)}${(it.color && !it.colorLabel)?` <span style="color:#6B7A8C;font-size:${colorFont_};font-weight:700;">- ${esc(it.color)}</span>`:''}${unavailBadgeHTML_(it)}
+        </span>
+        <span style="font-weight:800;font-size:${rowFont_};color:#1080C0;white-space:nowrap;">${esc(it.dispLabel||'')}</span>
+      </div>`;
+    });
+    return html;
+  }
+
+  const blobs = [];
+  for(let p=0; p<pages.length; p++){
+    const pageItems = pages[p];
+    const pageStart = p * PER_PAGE_;
+    const colA = pageItems.slice(0, ROWS_PER_COL_);
+    const colB = pageItems.slice(ROWS_PER_COL_);
+    const isLast = (p === pages.length - 1);
+
+    const wrap = document.createElement('div');
+    wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
+    wrap.style.width = '1180px';
+    wrap.style.fontFamily = "'Cairo', sans-serif";
+    wrap.style.direction='rtl';
+    wrap.style.background='#FFFFFF';
+    wrap.style.color='#0F1F38';
+
+    wrap.innerHTML = `
+    <div style="padding:28px 34px;">
+      <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #1080C0;padding-bottom:14px;margin-bottom:16px;">
+        <img src="${logoSrc_()}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #DCE4EC;padding:4px;">
+        <div style="flex:1;">
+          <div style="font-size:22px;font-weight:800;color:#002050;">قائمة الأصناف المطلوبة — طلب #${esc(orderNoDisplay_(order))}${order.warehouse ? ` <span style="color:#1080C0;">— مخزن ${esc(asText(order.warehouse))}</span>` : ''}</div>
+          <div style="font-size:13px;color:#6B7A8C;margin-top:2px;">${esc(order.distName||'')}</div>
+        </div>
+        <div style="text-align:left;">
+          <div style="font-size:12.3px;color:#6B7A8C;">${esc(dateStr)}</div>
+          ${pages.length>1 ? `<div style="font-size:12.3px;color:#6B7A8C;font-weight:800;">صفحة ${p+1} من ${pages.length}</div>` : ''}
+        </div>
+      </div>
+
+      <div style="display:flex;gap:28px;align-items:flex-start;min-height:640px;">
+        <div style="flex:1;">${rowsHTML(colA, pageStart)}</div>
+        <div style="flex:1;">${colB.length ? rowsHTML(colB, pageStart + colA.length) : ''}</div>
+      </div>
+
+      ${(isLast && rollSummary.length) ? `
+        <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #DCE4EC;display:flex;gap:22px;flex-wrap:wrap;">
+          ${rollSummary.map(r=>{
+            const parts = [];
+            if(r.rolls>0) parts.push((r.rolls % 1 === 0 ? r.rolls : r.rolls.toFixed(1)) + ' لفة');
+            if(r.rods>0) parts.push((r.rods % 1 === 0 ? r.rods : r.rods.toFixed(1)) + ' عود');
+            return `<div style="font-size:13.4px;"><span style="color:#6B7A8C;">إجمالي ${esc(r.sector)}: </span><b style="color:#002050;">${esc(parts.join(' + '))}</b></div>`;
+          }).join('')}
+        </div>
+      ` : ''}
+      ${(isLast && !STOCK_TRACKED_WAREHOUSES_.includes(asText(order.warehouse))) ? `
+        <div style="margin-top:16px;padding:10px 14px;background:#FBEBD1;border-radius:8px;font-size:12.6px;color:#8A5A00;line-height:1.7;">
+          ⚠ الأصناف في مخزن "${esc(asText(order.warehouse))}" غير معتمدة إلا وقت التحميل فقط، نظرًا لعدم حجز بضاعة مسبقًا.
+        </div>` : ''}
+      ${PREPARED_BY_LINE ? `<div style="margin-top:8px;text-align:center;color:#A8A498;font-size:9.6px;">${esc(PREPARED_BY_LINE)}</div>` : ''}
+      ${CREDIT_LINE ? `<div style="margin-top:4px;text-align:center;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
+    </div>
+    `;
+    document.body.appendChild(wrap);
+    try{
+      const canvas = await withTimeout(
+        html2canvas(wrap, {scale: 2, backgroundColor:'#ffffff', useCORS:true, allowTaint:true}),
+        20000, 'itemslist-p' + (p+1)
+      );
+      const blob = await canvasToPngBlob_(canvas);
+      if(blob) blobs.push(blob);
+    }catch(e){ console.error('buildItemsListImages_ failed (page ' + (p+1) + '):', e); }
     try{ document.body.removeChild(wrap); }catch(e){}
   }
   return blobs;
@@ -7052,7 +7218,7 @@ function renderAdminView(){
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
       <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
       <button class="exportbtn" data-act="goto-manage-inline">${ico_('manageIcon',13)} إدارة الأصناف</button>
-      <button class="exportbtn" data-act="export-excel-received">تصدير Excel (${STATUS_RECEIVED})</button>
+      <button class="exportbtn" data-act="export-excel-preparing">تصدير Excel (${STATUS_PREPARING})</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُنفَّذ</button>
       <button class="exportbtn" data-act="reactivate-wa-notify" title="لو بطلت إشعارات الواتساب توصل، دوس هنا وابعت الرسالة اللي هتفتح عشان تفعّلها تاني">🔔 فعّل إشعارات الواتساب تاني</button>
       <button class="exportbtn" data-act="open-callmebot-page" title="لو الرقم قال دعوه للواتساب يبقى الرقم اتغيّر — هنا هتلاقي الرقم الجديد من موقعهم الرسمي">🌐 الصفحة الرسمية (لو الرقم اتغيّر)</button>
@@ -7064,6 +7230,7 @@ function renderAdminView(){
     <div class="statuschips">
       <button class="chip ${state.adminStatusFilter==='all'?'active':''}" data-act="admin-status" data-val="all">الكل (${state.orders.length})</button>
       <button class="chip ${state.adminStatusFilter===STATUS_RECEIVED?'active':''}" data-act="admin-status" data-val="${esc(STATUS_RECEIVED)}">📦 ${STATUS_RECEIVED}</button>
+      <button class="chip ${state.adminStatusFilter===STATUS_PREPARING?'active':''}" data-act="admin-status" data-val="${esc(STATUS_PREPARING)}">🔧 ${STATUS_PREPARING}</button>
       <button class="chip ${state.adminStatusFilter===STATUS_DONE?'active':''}" data-act="admin-status" data-val="${esc(STATUS_DONE)}">✅ ${STATUS_DONE}</button>
     </div>
     ${list}
@@ -7095,6 +7262,7 @@ function renderAdminOrdersColumn_(title, orders){
               ${si.icon} ${esc(si.label)}
             </button>
             ${normStatus_(o.status)===STATUS_EDITED ? `<button class="delquick" data-act="delete-order" data-id="${esc(o.id)}" title="حذف النسخة القديمة">${ico_('trashIcon',12)} حذف</button>` : ''}
+            ${normStatus_(o.status)===STATUS_PREPARING ? `<button class="delquick" data-act="delete-order" data-id="${esc(o.id)}" title="حذف الطلب وهو قيد التجهيز">${ico_('trashIcon',12)} حذف</button>` : ''}
           </div>
         </div>
         ${!isOpen ? '' : `
@@ -8577,7 +8745,7 @@ async function onActionInner(act, el){
       break;
     }
     case 'admin-status': state.adminStatusFilter = el.getAttribute('data-val'); render(); break;
-    case 'export-excel-received': exportExcel(STATUS_RECEIVED); break;
+    case 'export-excel-preparing': exportExcel(STATUS_PREPARING); break;
     case 'export-excel-delivered': exportExcel(STATUS_DONE); break;
     case 'refresh-orders': loadOrders(); showToast('جارٍ التحديث...'); break;
     case 'install-app': installApp(); break;
