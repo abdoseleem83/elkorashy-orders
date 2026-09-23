@@ -1440,7 +1440,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v222';
+const APP_BUILD = 'v223';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -4692,9 +4692,8 @@ async function shareShortageGroupOnly_(order, groupKey){
   try{
     const orderNo = orderNoDisplay_(order);
     const distName = asText(order.distName).trim();
-    // 📝 بطلب صريح: اسم الموزّع مكتوب في الملحوظة — "نواقص كرافت ونيو —
-    // طلب #349 موزع كذا"، مش رقم الطلب بس.
-    const noteText_ = 'نواقص ' + group.label + ' — طلب #' + orderNo + (distName ? ' موزع ' + distName : '');
+    // 📝 بطلب صريح: من غير كلمة "طلب" ورقمه — بس "نواقص كرافت ونيو موزع كذا".
+    const noteText_ = 'نواقص ' + group.label + (distName ? ' موزع ' + distName : '');
     const blobs = await buildShortageImageGroup(order, groupKey);
     if(!blobs || !blobs.length){ showToast('مفيش نواقص في ' + group.label + ' لهذا الطلب'); releaseWaWindow(); return; }
     const base = 'نواقص_' + group.label.replace(/\s+/g,'_') + '_' + orderNo;
