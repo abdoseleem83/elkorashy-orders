@@ -1464,7 +1464,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v226';
+const APP_BUILD = 'v227';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -6992,7 +6992,10 @@ function renderManageItemsTab(){
   <div class="card">
     <button class="savebtn" style="width:100%;margin-bottom:12px;" data-act="manage-new-item">${ico_('plusCircle',15)} إضافة صنف جديد</button>
     <button class="exportbtn" style="width:100%;margin-bottom:12px;" data-act="show-stock">${ico_('boxesIcon',14)} عرض الأرصدة المتاحة (بحث + تصدير PDF)</button>
-    <button class="exportbtn danger" style="width:100%;margin-bottom:12px;" data-act="manage-clear-all-stock-price" ${state.manageClearAllBusy?'disabled':''}>${state.manageClearAllBusy ? '⏳ جارٍ التصفير...' : '🧹 صفّر كل الأرصدة والأسعار (كل الأصناف)'}</button>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="exportbtn danger" style="flex:1;" data-act="manage-clear-all-stock" ${state.manageClearAllBusy?'disabled':''}>${state.manageClearAllBusy ? '⏳ جارٍ...' : '📦 صفّر كل الأرصدة'}</button>
+      <button class="exportbtn danger" style="flex:1;" data-act="manage-clear-all-prices" ${state.manageClearAllBusy?'disabled':''}>${state.manageClearAllBusy ? '⏳ جارٍ...' : '💲 صفّر كل الأسعار'}</button>
+    </div>
     <div style="display:flex;gap:8px;margin-bottom:12px;">
       <button class="exportbtn" style="flex:1;" data-act="manage-export-catalog" ${state.manageExportBusy?'disabled':''}>${state.manageExportBusy ? '⏳ جارٍ التصدير...' : ico_('downloadIcon',13) + ' تصدير Excel'}</button>
       <button class="exportbtn" style="flex:1;" data-act="manage-open-catalog-upload">${ico_('installIcon',13)} رفع Excel</button>
@@ -7220,20 +7223,35 @@ async function manageHidePrice(name){
   render();
 }
 
-// ⚠️ زرار واحد يصفّر الرصيد والسعر لكل صنف في الكتالوج مرة واحدة — تأثيره
-// على كل الموزّعين فورًا (كل الأصناف هتبقى "مفيش رصيد" و"جاري تعديل
-// القوائم")، فبنسأل تأكيد واضح فيه عدد الأصناف قبل ما ننفّذ.
-async function manageClearAllStockAndPrices(){
+// ⚠️ بطلب صريح: زرارين منفصلين تمامًا — واحد يصفّر الرصيد لكل الأصناف،
+// والتاني يصفّر (يخفي) السعر لكل الأصناف. كل واحد بيأثر على عموده بس ومش
+// بيلمس التاني، وتأثير كل واحد على كل الموزّعين فورًا، فبنسأل تأكيد واضح
+// فيه عدد الأصناف قبل ما ننفّذ.
+async function manageClearAllStock(){
   const n = CATALOG.length;
   if(!n){ showToast('مفيش أصناف محمّلة'); return; }
-  if(!confirm('هيتصفّر الرصيد والسعر لكل الأصناف (' + n + ' صنف) مرة واحدة — هيظهروا "مفيش رصيد" و"جاري تعديل القوائم" لحد ما تحطهم تاني. متأكد؟')) return;
+  if(!confirm('هيتصفّر الرصيد لكل الأصناف (' + n + ' صنف) — هيظهروا "مفيش رصيد" لحد ما تحطه تاني. متأكد؟')) return;
   state.manageClearAllBusy = true; render();
   try{
-    const r = await apiPost({ action:'manageClearAllStockAndPrices', token:getManageToken() });
+    const r = await apiPost({ action:'manageClearAllStock', token:getManageToken() });
     if(r && r.ok){
-      CATALOG.forEach(it=>{ it.price = null; it.stock = null; });
-      showToast('اتصفّر الرصيد والسعر لـ ' + (r.cleared!=null ? r.cleared : n) + ' صنف ✓');
-    } else showToast('تعذّر التنفيذ، حاول تاني');
+      CATALOG.forEach(it=>{ it.stock = null; });
+      showToast('اتصفّر الرصيد لـ ' + (r.cleared!=null ? r.cleared : n) + ' صنف ✓');
+    } else showToast('تعذّر التنفيذ' + (r && r.error ? ': ' + r.error : '') + ' — اتأكد إن السيرفر متحدّث (Deploy)');
+  }catch(e){ showToast('حصل خطأ، حاول تاني'); }
+  state.manageClearAllBusy = false; render();
+}
+async function manageClearAllPrices(){
+  const n = CATALOG.length;
+  if(!n){ showToast('مفيش أصناف محمّلة'); return; }
+  if(!confirm('هيتصفّر السعر لكل الأصناف (' + n + ' صنف) — هيظهر "جاري تعديل القوائم" مكانه لحد ما تحطه تاني. متأكد؟')) return;
+  state.manageClearAllBusy = true; render();
+  try{
+    const r = await apiPost({ action:'manageClearAllPrices', token:getManageToken() });
+    if(r && r.ok){
+      CATALOG.forEach(it=>{ it.price = null; });
+      showToast('اتصفّر السعر لـ ' + (r.cleared!=null ? r.cleared : n) + ' صنف ✓');
+    } else showToast('تعذّر التنفيذ' + (r && r.error ? ': ' + r.error : '') + ' — اتأكد إن السيرفر متحدّث (Deploy)');
   }catch(e){ showToast('حصل خطأ، حاول تاني'); }
   state.manageClearAllBusy = false; render();
 }
@@ -8567,7 +8585,8 @@ async function onActionInner(act, el){
     case 'manage-edit-item': manageOpenEdit_(el.getAttribute('data-val')); break;
     case 'manage-clear-stock': await manageClearStock(el.getAttribute('data-val')); break;
     case 'manage-hide-price': await manageHidePrice(el.getAttribute('data-val')); break;
-    case 'manage-clear-all-stock-price': await manageClearAllStockAndPrices(); break;
+    case 'manage-clear-all-stock': await manageClearAllStock(); break;
+    case 'manage-clear-all-prices': await manageClearAllPrices(); break;
     case 'manage-cancel-edit':
       state.manageEditingName = null;
       state.manageEditDraft = {};
