@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v226';
+const APP_VERSION = 'v227';
 
 const SHEET_NAME = 'Orders';
 const ARCHIVE_SHEET_NAME = 'الأرشيف';
@@ -461,9 +461,13 @@ function doPostInner_(e) {
     if (!isValidManageToken_(token)) return denyManage_();
     return json_({ ok: addCatalogItem_(data.item || {}) });
   }
-  if (action === 'manageClearAllStockAndPrices') {
+  if (action === 'manageClearAllStock') {
     if (!isValidManageToken_(token)) return denyManage_();
-    return json_(Object.assign({ ok: true }, clearAllStockAndPrices_()));
+    return json_(Object.assign({ ok: true }, clearAllCatalogColumn_(8)));   // H=الرصيد
+  }
+  if (action === 'manageClearAllPrices') {
+    if (!isValidManageToken_(token)) return denyManage_();
+    return json_(Object.assign({ ok: true }, clearAllCatalogColumn_(7)));   // G=السعر
   }
   if (action === 'uploadCatalog') {
     if (!isValidAdminToken_(token)) return denyAdmin_();
@@ -1478,17 +1482,18 @@ function bulkUpdateCatalog_(rows, mode) {
   return { updated: updated, added: added, notFound: notFound };
 }
 
-// ⚠️ بطلب صريح: زرار واحد يصفّر عمودي السعر والرصيد لكل الأصناف مرة واحدة
-// (مثلاً وقت مراجعة شاملة للقوائم). بيكتب عمودين بس (G=السعر, H=الرصيد)
-// بالكتلة، وبيسيب باقي أعمدة الصنف (الاسم/القطاع/اللون/موقوف) زي ما هي.
-function clearAllStockAndPrices_() {
+// ⚠️ بطلب صريح: زرارين منفصلين — واحد يصفّر الرصيد لكل الأصناف، والتاني
+// يصفّر (يخفي) السعر لكل الأصناف — كل واحد لوحده، من غير ما يأثر على التاني.
+// col: 7=السعر (G), 8=الرصيد (H). بيكتب عمود واحد بس بالكتلة، وبيسيب باقي
+// أعمدة الصنف (الاسم/القطاع/اللون/موقوف) زي ما هي.
+function clearAllCatalogColumn_(col) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CATALOG_SHEET_NAME);
   if (!sheet) return { cleared: 0 };
   const n = Math.max(0, sheet.getLastRow() - 1);
   if (n < 1) return { cleared: 0 };
   const blank = [];
-  for (let i = 0; i < n; i++) blank.push(['', '']);
-  sheet.getRange(2, 7, n, 2).setValues(blank);   // G=السعر, H=الرصيد
+  for (let i = 0; i < n; i++) blank.push(['']);
+  sheet.getRange(2, col, n, 1).setValues(blank);
   markReservedDirty_();
   return { cleared: n };
 }
