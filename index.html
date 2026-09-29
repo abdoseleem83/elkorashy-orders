@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
 <title>القرشي | طلبات الموزعين</title>
 <link rel="manifest" href="manifest.json">
+<!-- ⚠️ بنقرأ تفضيل الوضع (فاتح/داكن) ونطبّقه هنا، قبل أي CSS، عشان الصفحة
+     متبقاش تلمع بالوضع الداكن (القيمة الافتراضية على <html>) لحظة قبل ما
+     JS يشتغل لو المستخدم كان مختار فاتح آخر مرة. -->
+<script>
+try{
+  if(localStorage.getItem('qurashi_theme')==='light') document.documentElement.setAttribute('data-theme','light');
+}catch(e){}
+</script>
 <meta name="theme-color" content="#001C56">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -57,8 +65,10 @@
   color-scheme:light;
 }
 /* ============================================================
-   🌙 الوضع الداكن — ثابت دايمًا (data-theme="dark" مكتوب مباشرة على
-   <html> في أول الملف)، مفيش زرار تبديل ولا وضع فاتح خالص.
+   🌙 الوضع الداكن — الافتراضي (data-theme="dark" مكتوب على <html>)، وفيه
+   زرار تبديل في الهيدر (toggle-theme) بيرجّع الوضع الفاتح (اللي هو
+   :root فوق ده أصلاً). التفضيل بيتخزن في localStorage (qurashi_theme)
+   وبيتطبّق قبل أي رسم عشان مايحصلش "ومضة" لون غلط.
    معظم عناصر الواجهة بتستخدم المتغيرات دي أصلاً (var(--card) وvar(--ink)
    وvar(--line)...) فبمجرد ما نغيّر قيمتها هنا، كل التطبيق بيتلوّن صح
    من غير ما نلمس كل قاعدة CSS لوحدها.
@@ -1454,7 +1464,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v224';
+const APP_BUILD = 'v226';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -1587,6 +1597,7 @@ const state = {
   manageApprovalsLoaded:false,
   manageApprovalsLoading:false,
   manageExportBusy:false,
+  manageClearAllBusy:false,
   staged:[],                   // [{key, main, product, colorRequired, availableColors, selectedColors:[], qtys:{color:n}, unitType, cancelling:false}]
 
   // other-items form
@@ -6120,6 +6131,20 @@ async function exportExcel(statusFilter){
 }
 
 // ===== render: header =====
+// ===== تبديل الوضع الفاتح/الداكن =====
+const THEME_LS_KEY_ = 'qurashi_theme';
+function currentTheme_(){
+  return document.documentElement.getAttribute('data-theme')==='light' ? 'light' : 'dark';
+}
+function toggleTheme_(){
+  const next = currentTheme_()==='light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  try{ localStorage.setItem(THEME_LS_KEY_, next); }catch(e){}
+  const metaTC = document.querySelector('meta[name="theme-color"]');
+  if(metaTC) metaTC.setAttribute('content', next==='light' ? '#EEF3FA' : '#001C56');
+  render();
+}
+
 function renderHeader(){
   const bioOn = isBiometricEnabledForCurrentUser();
   const cartShown = (state.view==='order' && state.currentUser && state.currentUser.username!=='admin');
@@ -6159,6 +6184,7 @@ function renderHeader(){
             value="${state.extraDiscount||''}" placeholder="0"
             data-extradiscount>
         </span>` : ''}
+        <button class="toolbtn" data-act="toggle-theme" title="${currentTheme_()==='light'?'رجّع الوضع الداكن':'وضع فاتح'}">${currentTheme_()==='light'?'🌙':'☀️'}</button>
         <button class="toolbtn logoutbtn exitbtn" data-act="logout" title="تسجيل خروج">${ico_('door',15)} exit</button>
       </div>
     </nav>
@@ -6966,6 +6992,7 @@ function renderManageItemsTab(){
   <div class="card">
     <button class="savebtn" style="width:100%;margin-bottom:12px;" data-act="manage-new-item">${ico_('plusCircle',15)} إضافة صنف جديد</button>
     <button class="exportbtn" style="width:100%;margin-bottom:12px;" data-act="show-stock">${ico_('boxesIcon',14)} عرض الأرصدة المتاحة (بحث + تصدير PDF)</button>
+    <button class="exportbtn danger" style="width:100%;margin-bottom:12px;" data-act="manage-clear-all-stock-price" ${state.manageClearAllBusy?'disabled':''}>${state.manageClearAllBusy ? '⏳ جارٍ التصفير...' : '🧹 صفّر كل الأرصدة والأسعار (كل الأصناف)'}</button>
     <div style="display:flex;gap:8px;margin-bottom:12px;">
       <button class="exportbtn" style="flex:1;" data-act="manage-export-catalog" ${state.manageExportBusy?'disabled':''}>${state.manageExportBusy ? '⏳ جارٍ التصدير...' : ico_('downloadIcon',13) + ' تصدير Excel'}</button>
       <button class="exportbtn" style="flex:1;" data-act="manage-open-catalog-upload">${ico_('installIcon',13)} رفع Excel</button>
@@ -7191,6 +7218,24 @@ async function manageHidePrice(name){
     } else showToast('تعذّر الحفظ، حاول تاني');
   }catch(e){ showToast('حصل خطأ، حاول تاني'); }
   render();
+}
+
+// ⚠️ زرار واحد يصفّر الرصيد والسعر لكل صنف في الكتالوج مرة واحدة — تأثيره
+// على كل الموزّعين فورًا (كل الأصناف هتبقى "مفيش رصيد" و"جاري تعديل
+// القوائم")، فبنسأل تأكيد واضح فيه عدد الأصناف قبل ما ننفّذ.
+async function manageClearAllStockAndPrices(){
+  const n = CATALOG.length;
+  if(!n){ showToast('مفيش أصناف محمّلة'); return; }
+  if(!confirm('هيتصفّر الرصيد والسعر لكل الأصناف (' + n + ' صنف) مرة واحدة — هيظهروا "مفيش رصيد" و"جاري تعديل القوائم" لحد ما تحطهم تاني. متأكد؟')) return;
+  state.manageClearAllBusy = true; render();
+  try{
+    const r = await apiPost({ action:'manageClearAllStockAndPrices', token:getManageToken() });
+    if(r && r.ok){
+      CATALOG.forEach(it=>{ it.price = null; it.stock = null; });
+      showToast('اتصفّر الرصيد والسعر لـ ' + (r.cleared!=null ? r.cleared : n) + ' صنف ✓');
+    } else showToast('تعذّر التنفيذ، حاول تاني');
+  }catch(e){ showToast('حصل خطأ، حاول تاني'); }
+  state.manageClearAllBusy = false; render();
 }
 
 function renderAdminView(){
@@ -8384,6 +8429,7 @@ async function onActionInner(act, el){
       state.showBiometricGate = isBiometricEnabledForThisDevice();
       render();
       break;
+    case 'toggle-theme': toggleTheme_(); break;
     case 'goto':{
       const v = el.getAttribute('data-view');
       if(v !== state.view){ state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view); }
@@ -8521,6 +8567,7 @@ async function onActionInner(act, el){
     case 'manage-edit-item': manageOpenEdit_(el.getAttribute('data-val')); break;
     case 'manage-clear-stock': await manageClearStock(el.getAttribute('data-val')); break;
     case 'manage-hide-price': await manageHidePrice(el.getAttribute('data-val')); break;
+    case 'manage-clear-all-stock-price': await manageClearAllStockAndPrices(); break;
     case 'manage-cancel-edit':
       state.manageEditingName = null;
       state.manageEditDraft = {};
