@@ -876,9 +876,10 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .managerow-name{font-size:13px;font-weight:800;color:var(--ink);}
 .managerow-sub{font-size:11px;color:var(--muted);margin-top:2px;}
 .managerow-vals{text-align:center;font-size:13px;font-weight:800;color:var(--navy);white-space:nowrap;}
+.managerow-btns{display:flex;align-items:center;gap:5px;flex-shrink:0;}
 .managerow-edit{
   width:32px;height:32px;border-radius:50%;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
+  display:flex;align-items:center;justify-content:center;font-size:13px;
   background:var(--surface3);color:var(--navy);border:none;cursor:pointer;
 }
 .managehint{text-align:center;color:var(--muted);font-size:12px;margin-top:10px;}
@@ -1440,7 +1441,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v223';
+const APP_BUILD = 'v224';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -1592,7 +1593,6 @@ const state = {
   quotePdfGenerating:false,
   shortagePdf:null,
   previewModal:null,
-  notifyPromptId:null,
   pinChecking:false,
   orderSentToWa:false,
   orderImages:null,
@@ -2153,7 +2153,7 @@ function renderCartItemsHtml(cart){
               <div class="pname">${esc(it.product)}</div>
               <div class="pmeta">${it.color ? esc(it.color) : ''}${it.note ? (it.color?' · ':'') + esc(it.note) : ''}${it.autoBundled ? ' <span class="autotag">🔗 مضاف تلقائيًا مع الباب</span>' : ''}</div>
             </div>
-            <div class="qty">×${it.qty} ${esc(it.unitType||'')}<br><span class="linetotal">${it.lineTotal==null?'بدون سعر':Math.round(it.lineTotal).toLocaleString('en-US')+' ج.م'}</span></div>
+            <div class="qty">×${it.qty} ${esc(it.unitType||'')}<br><span class="linetotal">${it.lineTotal==null?'جاري تعديل القوائم':Math.round(it.lineTotal).toLocaleString('en-US')+' ج.م'}</span></div>
             ${it.autoBundled ? '' : `<button class="del edit" data-act="edit-cart-item" data-main="${esc(it.main)}" data-product="${esc(it.product)}">✏️</button>`}
             <button class="del" data-act="del-cart" data-idx="${it._idx}">✕</button>
           </div>
@@ -2220,7 +2220,7 @@ function renderPriceTable(cartItems){
   const rows = cartItems.map((it,idx)=>{
     const desc = esc(it.product) + (it.color ? ' - ' + esc(it.color) : '');
     const qtyTxt = esc(String(it.qty)) + ' ' + esc(it.unitType||'');
-    const priceTxt = it.lineTotal==null ? 'بدون سعر' : Math.round(it.lineTotal).toLocaleString('en-US');
+    const priceTxt = it.lineTotal==null ? 'جاري تعديل القوائم' : Math.round(it.lineTotal).toLocaleString('en-US');
     if(!eligible){
       return `<tr><td>${idx+1}</td><td>${desc}</td><td>${qtyTxt}</td><td>${priceTxt}</td></tr>`;
     }
@@ -2231,7 +2231,7 @@ function renderPriceTable(cartItems){
       <td>${idx+1}</td><td>${desc}</td><td>${qtyTxt}</td><td>${priceTxt}</td>
       <td>${pct>0 ? pct+'%' : '—'}</td>
       <td>${discAmt>0 ? Math.round(discAmt).toLocaleString('en-US') : '—'}</td>
-      <td>${net==null ? '—' : Math.round(net).toLocaleString('en-US')}</td>
+      <td>${net==null ? 'جاري تعديل القوائم' : Math.round(net).toLocaleString('en-US')}</td>
     </tr>`;
   }).join('');
   return `<div class="pricetablewrap"><table class="pricetable"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`;
@@ -2742,10 +2742,7 @@ async function updateOrderStatus(id, status){
     } else if(d.notified){
       showToast('اتحدّثت ✅ واتبعت إشعار للموزع تلقائيًا');
     } else {
-      // الموزع مش مفعّل الإشعار التلقائي — نسأل الأدمن يبعتها بإيده فورًا،
-      // في الحالتين (استلام أو تنفيذ). لازم تبقى ضغطة مباشرة من المستخدم
-      // عشان واتساب يفتح (المتصفح بيمنع فتح نافذة بعد await من غير ضغطة).
-      state.notifyPromptId = id;
+      showToast('اتحدّثت ✅');
     }
   }catch(e){ showToast('حصل خطأ، حاول تاني'); }
   render();
@@ -4006,24 +4003,6 @@ async function runDiagnostics(){
   log('انسخ ده كله وابعته');
 }
 
-function renderNotifyPrompt(){
-  if(!state.notifyPromptId) return '';
-  const ord = state.orders.find(o=>o.id===state.notifyPromptId);
-  if(!ord) return '';
-  return `
-  <div class="modalbg" data-act="skip-notify">
-    <div class="modalcard" data-act="noop">
-      <div class="modalic">📲</div>
-      <h3>تبلّغ الموزع بتحديث الطلب؟</h3>
-      <p>هيفتح واتساب برسالة جاهزة عن طلب <b>${esc(ord.distName)}</b> — تختار المستلم بنفسك</p>
-      <div class="modalbtns">
-        <button class="modalbtn primary" data-act="do-notify-dist">📲 ابعت على واتساب</button>
-        <button class="modalbtn" data-act="skip-notify">مش دلوقتي</button>
-      </div>
-    </div>
-  </div>`;
-}
-
 function renderNewOrdersPopup(){
   if(!state.newOrdersPopup) return '';
   const p = state.newOrdersPopup;
@@ -4986,10 +4965,10 @@ async function buildQuotePDF(order){
                     <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;color:#8A8470;">${serialCounter}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;font-weight:600;color:#002050;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;">${it.rawPrice==null?'جاري تعديل القوائم':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;">${pct>0?pct+'%':'—'}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;color:#1080C0;">${discAmt>0?Math.round(discAmt).toLocaleString('en-US'):'—'}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;">${net==null?'—':Math.round(net).toLocaleString('en-US')}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;">${net==null?'جاري تعديل القوائم':Math.round(net).toLocaleString('en-US')}</td>
                   </tr>`;
                 } else {
                   // لو موزع بس الزرار مخفي، لسه بيتحسب خصمه فعليًا — بنوري
@@ -5003,8 +4982,8 @@ async function buildQuotePDF(order){
                     <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;color:#8A8470;">${serialCounter}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;font-weight:600;color:#002050;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
                     <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;">${lineAmt==null?'—':Math.round(lineAmt).toLocaleString('en-US')}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;">${it.rawPrice==null?'جاري تعديل القوائم':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
+                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;">${lineAmt==null?'جاري تعديل القوائم':Math.round(lineAmt).toLocaleString('en-US')}</td>
                   </tr>`;
                 }
                 rowIndex++;
@@ -5181,10 +5160,10 @@ async function buildOrderImagePages(order){
           <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;color:#8A8470;font-size:12.5px;">${entry.serial}</td>
           <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;font-weight:700;color:#002050;font-size:14.3px;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
           <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:700;font-size:13.5px;">${qty} ${esc(it.normUnit||'')}</td>
-          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-size:12.5px;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
+          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-size:12.5px;">${it.rawPrice==null?'جاري تعديل القوائم':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
           <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-size:12.5px;">${pct>0?pct+'%':'—'}</td>
           <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;color:#1080C0;font-size:12.5px;">${discAmt>0?Math.round(discAmt).toLocaleString('en-US'):'—'}</td>
-          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;font-size:13.5px;">${net==null?'—':Math.round(net).toLocaleString('en-US')}</td>
+          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;font-size:13.5px;">${net==null?'جاري تعديل القوائم':Math.round(net).toLocaleString('en-US')}</td>
         </tr>`;
       } else {
         const pct = it.noRollDiscount ? 0 : (customPct>0 ? customPct : getDiscount(it.main));
@@ -5195,8 +5174,8 @@ async function buildOrderImagePages(order){
           <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;color:#8A8470;font-size:12.5px;">${entry.serial}</td>
           <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;font-weight:700;color:#002050;font-size:14.3px;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
           <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:700;font-size:13.5px;">${qty} ${esc(it.normUnit||'')}</td>
-          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-size:12.5px;">${it.rawPrice==null?'—':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
-          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;font-size:13.5px;">${lineAmt==null?'—':Math.round(lineAmt).toLocaleString('en-US')}</td>
+          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-size:12.5px;">${it.rawPrice==null?'جاري تعديل القوائم':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
+          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;font-size:13.5px;">${lineAmt==null?'جاري تعديل القوائم':Math.round(lineAmt).toLocaleString('en-US')}</td>
         </tr>`;
       }
     });
@@ -6087,8 +6066,8 @@ async function exportExcel(statusFilter){
         dist: idx===0?dist:'', region: idx===0?g.region:'',
         product: it.name || it.product,
         qty: norm.qty, unit: norm.unitLabel||'',
-        price: unitPriceDisp==null ? 'غير متاح' : Math.round(unitPriceDisp),
-        total: it.lineTotal==null ? 'غير متاح' : Math.round(it.lineTotal),
+        price: unitPriceDisp==null ? 'جاري تعديل القوائم' : Math.round(unitPriceDisp),
+        total: it.lineTotal==null ? 'جاري تعديل القوائم' : Math.round(it.lineTotal),
         date: idx===0?dateStr:''
       });
       row.eachCell(cell=>{
@@ -6993,10 +6972,14 @@ function renderManageItemsTab(){
             <div class="managerow-sub">${esc(it.main)}${it.sub?' — '+esc(it.sub):''}</div>
           </div>
           <div class="managerow-vals">
-            <div>${it.price==null?'—':Math.round(it.price).toLocaleString('en-US')} ج.م</div>
+            <div>${it.price==null?'جاري تعديل القوائم':Math.round(it.price).toLocaleString('en-US')+' ج.م'}</div>
             <div style="color:var(--muted);font-size:11px;">رصيد: ${it.stock==null?'—':it.stock}</div>
           </div>
-          <button class="managerow-edit" data-act="manage-edit-item" data-val="${esc(it.name||it.product)}">${ico_('editIcon',15)}</button>
+          <div class="managerow-btns">
+            <button class="managerow-edit" data-act="manage-clear-stock" data-val="${esc(it.name||it.product)}" title="امسح الرصيد (يبقى كأنه مش موجود)">📦❌</button>
+            <button class="managerow-edit" data-act="manage-hide-price" data-val="${esc(it.name||it.product)}" title="أخفِ السعر مؤقتًا (يظهر مكانه 'جاري تعديل القوائم')">💲❌</button>
+            <button class="managerow-edit" data-act="manage-edit-item" data-val="${esc(it.name||it.product)}">${ico_('editIcon',15)}</button>
+          </div>
         </div>
       `).join('') : '<div class="empty">مفيش نتائج</div>'}
     </div>
@@ -7165,6 +7148,35 @@ async function manageSaveItem(){
     showToast('حصل خطأ، حاول تاني');
   }
   state.manageSaving = false;
+  render();
+}
+
+// ⚡ إجرائين سريعين لكل صنف في قايمة "إدارة الأصناف" — من غير ما نفتح فورم
+// التعديل الكامل. الاتنين بيحدّثوا عمود واحد بس في شيت الأصناف (updateCatalogItem_
+// بتحدّث بس الحقول المبعوتة)، وبنحدّث النسخة المحلية في CATALOG فورًا عشان
+// القايمة تتحدّث على طول من غير ما نستنى تحميل كتالوج جديد.
+async function manageClearStock(name){
+  if(!confirm('تمسح رصيد "' + name + '" فعليًا؟ هيبقى غير متاح كإنه مفيش رصيد خالص.')) return;
+  try{
+    const r = await apiPost({ action:'manageUpdateCatalogItem', token:getManageToken(), item:{ name, stock:'' } });
+    if(r && r.ok){
+      const it = CATALOG.find(c=>(c.name||c.product)===name);
+      if(it) it.stock = null;
+      showToast('اتمسح الرصيد ✓');
+    } else showToast('تعذّر الحفظ، حاول تاني');
+  }catch(e){ showToast('حصل خطأ، حاول تاني'); }
+  render();
+}
+async function manageHidePrice(name){
+  if(!confirm('تخفي سعر "' + name + '" مؤقتًا؟ هيظهر مكانه "جاري تعديل القوائم" لحد ما تحط سعر جديد.')) return;
+  try{
+    const r = await apiPost({ action:'manageUpdateCatalogItem', token:getManageToken(), item:{ name, price:'' } });
+    if(r && r.ok){
+      const it = CATALOG.find(c=>(c.name||c.product)===name);
+      if(it) it.price = null;
+      showToast('اتخفى السعر ✓');
+    } else showToast('تعذّر الحفظ، حاول تاني');
+  }catch(e){ showToast('حصل خطأ، حاول تاني'); }
   render();
 }
 
@@ -7843,7 +7855,7 @@ function render(){
     else if(state.view==='manage') view = renderManageView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
-    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderNotifyPrompt() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderPriceChoiceModal() + renderMergeAskModal() + renderNewOrdersPopup() + renderGlobalError();
+    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderPriceChoiceModal() + renderMergeAskModal() + renderNewOrdersPopup() + renderGlobalError();
     bindEvents();
     applyFixedHeaderSpacing_();
     applyFixedFooterSpacing_();
@@ -8472,6 +8484,8 @@ async function onActionInner(act, el){
     case 'manage-new-item': manageOpenNew_(); break;
     case 'manage-export-catalog': manageExportCatalog(); break;
     case 'manage-edit-item': manageOpenEdit_(el.getAttribute('data-val')); break;
+    case 'manage-clear-stock': await manageClearStock(el.getAttribute('data-val')); break;
+    case 'manage-hide-price': await manageHidePrice(el.getAttribute('data-val')); break;
     case 'manage-cancel-edit':
       state.manageEditingName = null;
       state.manageEditDraft = {};
@@ -8613,14 +8627,6 @@ async function onActionInner(act, el){
     case 'notify-dist': notifyDistributorManually(el.getAttribute('data-id')); break;
     case 'reactivate-wa-notify': reactivateWhatsAppNotify(); break;
     case 'open-callmebot-page': openCallMeBotOfficialPage(); break;
-    case 'do-notify-dist':{
-      const nid = state.notifyPromptId;
-      state.notifyPromptId = null;
-      notifyDistributorManually(nid);
-      render();
-      break;
-    }
-    case 'skip-notify': state.notifyPromptId=null; render(); break;
     case 'prepare-order-img': await prepareOrderImage(); break;
     case 'prepare-wh-img': await prepareWarehouseImages(); break;
     case 'share-wh-img': await shareWarehouseImages(); break;
