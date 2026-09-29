@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v224';
+const APP_VERSION = 'v225';
 
 const SHEET_NAME = 'Orders';
 const ARCHIVE_SHEET_NAME = 'الأرشيف';
@@ -460,6 +460,10 @@ function doPostInner_(e) {
   if (action === 'manageAddCatalogItem') {
     if (!isValidManageToken_(token)) return denyManage_();
     return json_({ ok: addCatalogItem_(data.item || {}) });
+  }
+  if (action === 'manageClearAllStockAndPrices') {
+    if (!isValidManageToken_(token)) return denyManage_();
+    return json_(Object.assign({ ok: true }, clearAllStockAndPrices_()));
   }
   if (action === 'uploadCatalog') {
     if (!isValidAdminToken_(token)) return denyAdmin_();
@@ -1472,6 +1476,21 @@ function bulkUpdateCatalog_(rows, mode) {
   if (toAppend.length) sheet.getRange(sheet.getLastRow() + 1, 1, toAppend.length, width).setValues(toAppend);
   markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
   return { updated: updated, added: added, notFound: notFound };
+}
+
+// ⚠️ بطلب صريح: زرار واحد يصفّر عمودي السعر والرصيد لكل الأصناف مرة واحدة
+// (مثلاً وقت مراجعة شاملة للقوائم). بيكتب عمودين بس (G=السعر, H=الرصيد)
+// بالكتلة، وبيسيب باقي أعمدة الصنف (الاسم/القطاع/اللون/موقوف) زي ما هي.
+function clearAllStockAndPrices_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CATALOG_SHEET_NAME);
+  if (!sheet) return { cleared: 0 };
+  const n = Math.max(0, sheet.getLastRow() - 1);
+  if (n < 1) return { cleared: 0 };
+  const blank = [];
+  for (let i = 0; i < n; i++) blank.push(['', '']);
+  sheet.getRange(2, 7, n, 2).setValues(blank);   // G=السعر, H=الرصيد
+  markReservedDirty_();
+  return { cleared: n };
 }
 
 // تصدير كامل للأصناف — عشان تراجعهم/تعدّلهم في إكسيل وترفعهم تاني بنفس الشكل
