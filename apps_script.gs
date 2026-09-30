@@ -11,14 +11,13 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v227';
+const APP_VERSION = 'v228';
 
 const SHEET_NAME = 'Orders';
 const ARCHIVE_SHEET_NAME = 'الأرشيف';
 const CATALOG_SHEET_NAME = 'الأصناف';
 const DISCOUNT_SHEET_NAME = 'الخصومات';
 const USERS_SHEET_NAME = 'المستخدمين';
-const WA_QUEUE_SHEET_NAME = 'طابور إشعارات واتساب';
 const PW_REQUESTS_SHEET_NAME = 'طلبات الباسورد';
 const ORDER_COUNTER_SHEET_NAME = 'عداد الطلبات';
 const ERRORS_SHEET_NAME = 'أخطاء';
@@ -95,9 +94,7 @@ function secret_(key) {
 function setupWizard() {
   const values = {
     ADMIN_PIN:        '',   // رقم فتح "متابعة المخزن"
-    MANAGE_PIN:       '',   // رقم فتح تبويب "الإدارة"
-    CALLMEBOT_APIKEY: '',   // مفتاح CallMeBot المرتبط برقم واتساب الأدمن
-    ADMIN_WHATSAPP:   ''    // رقم واتساب الأدمن بصيغة دولية: ‎+201xxxxxxxxx
+    MANAGE_PIN:       ''    // رقم فتح تبويب "الإدارة"
   };
 
   const p = props_();
@@ -107,7 +104,7 @@ function setupWizard() {
   });
   ensureTokenSecret_();
 
-  const missing = ['ADMIN_PIN', 'MANAGE_PIN', 'CALLMEBOT_APIKEY', 'ADMIN_WHATSAPP']
+  const missing = ['ADMIN_PIN', 'MANAGE_PIN']
     .filter(function (k) { return !secret_(k); });
 
   const msg = 'اتغيّر: ' + (changed.length ? changed.join('، ') : 'لا شيء') +
@@ -353,18 +350,21 @@ function setup() {
 }
 
 /** 🔧 شغّلها مرة واحدة: بتركّب كل الـ triggers المطلوبة. */
+// ⚠️ 'processWhatsAppQueue' فضلت في القايمة دي (من غير ما نعيد تركيبها تحت)
+// قصدًا — عشان أول مرة تشغّل الدالة دي بعد إلغاء ميزة واتساب، أي trigger
+// قديم شغال عليها (من نسخة قبل الإلغاء) يتمسح. شغّلها مرة واحدة بعد النشر.
+// 'minuteSync_' بقت هي المسؤولة عن مزامنة الرصيد كل دقيقة بدل ما تكون
+// مركوبة على trigger الواتساب القديم — عشان سرعة تحديث الرصيد (المحجوز)
+// متتأثرش بإلغاء ميزة واتساب.
 function installTriggers() {
-  const wanted = { 'processWhatsAppQueue': 1, 'reconcileReserved': 10 };
+  const wanted = { 'processWhatsAppQueue': 1, 'minuteSync_': 1, 'reconcileReserved': 10 };
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (wanted.hasOwnProperty(t.getHandlerFunction())) ScriptApp.deleteTrigger(t);
   });
-  ScriptApp.newTrigger('processWhatsAppQueue').timeBased().everyMinutes(1).create();
+  ScriptApp.newTrigger('minuteSync_').timeBased().everyMinutes(1).create();
   ScriptApp.newTrigger('reconcileReserved').timeBased().everyMinutes(10).create();
-  return 'اتركّبوا: طابور الواتساب (كل دقيقة) + مزامنة المحجوز (كل ١٠ دقايق).';
+  return 'اتركّبت: مزامنة المحجوز (كل دقيقة + كل ١٠ دقايق شبكة أمان). أي trigger قديم لواتساب اتمسح.';
 }
-
-// اسم قديم — سايبينه عشان لو حد بينده عليه من المحرر
-function installWhatsAppTrigger() { return installTriggers(); }
 
 function getUsersSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -615,7 +615,6 @@ function saveOrder_(data) {
     JSON.stringify(items), data.warehouse || '', orderNo, username
   ]);
 
-  notifyWhatsApp(data, itemsSummary, isUpdate, orderNo);
   markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
   return json_({ ok: true, orderNo: orderNo });
 }
@@ -652,7 +651,6 @@ function getNextOrderNumber_(warehouse) {
 function updateOrderStatus_(id, status) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
   const rows = sheet.getDataRange().getValues();
-  let notified = false;
   // 🐞 بق حقيقي: الدالة كانت بترجّع { ok: true } دايمًا حتى لو الـ id مش
   // موجود خالص (مثلًا حد أدمن تاني مسحه أو أرشفه في نفس اللحظة) — يعني
   // الواجهة كانت بتصدّق إن التحديث نجح وهو أصلاً مالمسش أي صف. found
@@ -662,39 +660,10 @@ function updateOrderStatus_(id, status) {
     if (String(rows[i][COL_ID - 1]) !== String(id)) continue;
     found = true;
     sheet.getRange(i + 1, COL_STATUS).setValue(status);
-
-    // إشعار واتساب للموزّع نفسه (مش للأدمن) — بيشتغل بس لو الموزع ليه
-    // مفتاح CallMeBot في شيت المستخدمين (عمود J).
-    const st = String(status).trim();
-    const distPhone = String(rows[i][COL_PHONE - 1] || '');
-    const key = getDistributorWaKey_(distPhone);
-    if (key && (st === STATUS_DONE || st === STATUS_RECEIVED || st === STATUS_PREPARING)) {
-      const orderNo = String(rows[i][COL_ORDERNO - 1] || id);
-      const distName = String(rows[i][COL_NAME - 1] || '');
-      let msg;
-      if (st === STATUS_DONE) {
-        msg = '✅ طلبك اتنفّذ بالكامل\n' +
-              'رقم الطلب: #' + orderNo + '\n' +
-              'الموزع: ' + distName + '\n' +
-              '——————\n' +
-              'شكرًا لتعاملك مع القرشي لأبواب وشبابيك الـ UPVC';
-        if (CREDIT_LINE) msg += '\n' + CREDIT_LINE;
-      } else if (st === STATUS_PREPARING) {
-        msg = '🔧 جاري تجهيز طلبك\n' +
-              'رقم الطلب: #' + orderNo + '\n' +
-              'الموزع: ' + distName;
-      } else {
-        msg = '✅ تم استلام طلبك\n' +
-              'رقم الطلب: #' + orderNo + '\n' +
-              'الموزع: ' + distName;
-      }
-      queueWhatsApp_(msg, normalizePhone(distPhone), key);
-      notified = true;
-    }
     break;
   }
   markReservedDirty_();   // الحالة اتغيّرت — الحجز لازم يتحدّث
-  return { ok: true, found: found, notified: notified };
+  return { ok: true, found: found };
 }
 
 function deleteOrderById_(id) {
@@ -912,7 +881,6 @@ function handleRegister(data) {
     username, makePwHash_(password), data.distName || '', data.distRegion || '',
     String(data.distPhone || ''), 'قيد المراجعة', new Date(), distType
   ]);
-  notifyRegisterWhatsApp(data);
   return json_({ ok: true });
 }
 
@@ -935,9 +903,6 @@ function handleRequestPasswordReset(data) {
   getPwRequestsSheet_().appendRow([
     Utilities.getUuid(), new Date(), username, makePwHash_(newPassword), 'قيد المراجعة'
   ]);
-
-  queueWhatsApp_('🔑 طلب تغيير باسورد\n👤 اسم المستخدم: ' + username +
-    '\nافتح التطبيق → الإدارة → الموافقات عشان توافق أو ترفض.');
   return json_({ ok: true });
 }
 
@@ -1029,130 +994,23 @@ function decideRegRequest_(username, approve) {
 
 
 // ═══════════════════════════════════════════════════════════════════
-//  إشعارات واتساب (CallMeBot) — عن طريق طابور
+//  إشعارات واتساب (CallMeBot) — اتلغت بالكامل بطلب صريح
 // ═══════════════════════════════════════════════════════════════════
 //
-// ⚠️ مابنبعتش الواتساب جوه طلب الحفظ نفسه. CallMeBot بيبقى بطيء أحيانًا
-// (ثواني طويلة) وكان بيأخّر رد السيرفر لدرجة إن التطبيق يعتبر الحفظ فشل —
-// مع إن الطلب اتسجل فعلاً. بنسجّل الرسالة في طابور (شيت) ونرجّع الرد فورًا،
-// و trigger كل دقيقة بيبعت اللي في الطابور.
+// ⚠️ كانت هنا منظومة طابور (شيت "طابور إشعارات واتساب" + trigger كل دقيقة)
+// بتبعت عبر CallMeBot. اتلغت خالص — مفيش أي إرسال واتساب تلقائي (لا للأدمن
+// ولا للموزّع) دلوقتي. الموزّع/الأدمن لسه يقدر يستخدم أزرار المشاركة
+// اليدوية العادية (wa.me) اللي مش مرتبطة بـ CallMeBot خالص. لو حابب ترجّع
+// الميزة يومًا ما، هتحتاج خدمة بديلة (رسمية زي WhatsApp Business API، أو
+// أي حاجة غير CallMeBot) — شوف تاريخ git للكود القديم لو محتاجه كمرجع.
+//
+// شيت "طابور إشعارات واتساب" ممكن يتمسح يدويًا من الجوجل شيت — مش بيتلمس
+// تلقائيًا هنا عشان مانمسحش بيانات من غير طلب صريح.
 
-function getWhatsAppQueueSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(WA_QUEUE_SHEET_NAME);
-  if (!sheet) {
-    sheet = ss.insertSheet(WA_QUEUE_SHEET_NAME);
-    sheet.appendRow(['التاريخ', 'الحالة', 'محاولات', 'نص الرسالة', 'آخر خطأ', 'المستلم', 'المفتاح']);
-    sheet.setFrozenRows(1);
-  }
-  return sheet;
-}
-
-// phone/apikey اختياريين — لو مفيش، بنبعت للأدمن.
-function queueWhatsApp_(msg, phone, apikey) {
-  try {
-    getWhatsAppQueueSheet_().appendRow([
-      new Date(), 'في الانتظار', 0, msg, '',
-      String(phone || secret_('ADMIN_WHATSAPP')),
-      String(apikey || secret_('CALLMEBOT_APIKEY'))
-    ]);
-  } catch (e) {
-    // لو حتى التسجيل في الطابور فشل، الطلب نفسه لازم يفضل متسجل — مانوقفش حاجة
-  }
-}
-
-function notifyWhatsApp(data, itemsSummary, isUpdate, orderNo) {
-  queueWhatsApp_(
-    (isUpdate ? '✏️ تعديل على طلب #' : '📦 طلب جديد #') + (orderNo || '') + '\n' +
-    '👤 الموزع: ' + data.distName + '\n' +
-    '🏬 مكان التحميل: ' + (data.warehouse || '—')
-  );
-}
-
-function notifyRegisterWhatsApp(data) {
-  let msg = '🆕 طلب تسجيل مستخدم جديد\n';
-  msg += '👤 اسم المستخدم: ' + data.username + '\n';
-  msg += '🏬 الموزع: ' + (data.distName || '') + '\n';
-  msg += '📍 المنطقة: ' + (data.distRegion || '') + '\n';
-  if (data.distPhone) msg += '📞 ' + data.distPhone + '\n';
-  queueWhatsApp_(msg);
-}
-
-// بيدوّر على الموزع في شيت المستخدمين برقم تليفونه ويرجّع مفتاح الواتساب
-// بتاعه (عمود J). الموزع لازم يكون فعّل CallMeBot لنفسه عشان يبقى ليه مفتاح.
-function getDistributorWaKey_(phone) {
-  const target = normalizePhone(phone);
-  if (!target) return null;
-  try {
-    const rows = getUsersSheet_().getDataRange().getValues();
-    for (let i = 1; i < rows.length; i++) {
-      if (normalizePhone(rows[i][4]) === target) {
-        const key = String(rows[i][9] || '').trim();
-        return key ? key : null;
-      }
-    }
-  } catch (e) {}
-  return null;
-}
-
-// بيشتغل تلقائيًا كل دقيقة: بياخد الرسايل المستنية ويبعتها.
-function processWhatsAppQueue() {
-  // بنركب المزامنة المؤجّلة على نفس الـ trigger بدل ما نعمل تاني — أرخص وأبسط
+// بتتنادى من trigger الدقيقة — نفس الوظيفة اللي كانت مركوبة على trigger
+// الواتساب القديم، دلوقتي لوحدها.
+function minuteSync_() {
   syncReservedIfDirty_();
-  if (!secret_('CALLMEBOT_APIKEY')) return;
-  const sheet = getWhatsAppQueueSheet_();
-  const rows = sheet.getDataRange().getValues();
-
-  for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][1] || '').trim() !== 'في الانتظار') continue;
-
-    const attempts = Number(rows[i][2]) || 0;
-    const msg = String(rows[i][3] || '');
-    if (!msg) { sheet.getRange(i + 1, 2).setValue('اتلغت'); continue; }
-
-    const toPhone = String(rows[i][5] || secret_('ADMIN_WHATSAPP'));
-    const toKey = String(rows[i][6] || secret_('CALLMEBOT_APIKEY'));
-    const url = 'https://api.callmebot.com/whatsapp.php?phone=' + encodeURIComponent(toPhone) +
-                '&text=' + encodeURIComponent(msg) + '&apikey=' + encodeURIComponent(toKey);
-    try {
-      const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-      if (res.getResponseCode() === 200) sheet.getRange(i + 1, 2).setValue('اتبعتت');
-      else markQueueAttempt_(sheet, i + 1, attempts, 'HTTP ' + res.getResponseCode());
-    } catch (err) {
-      markQueueAttempt_(sheet, i + 1, attempts, String(err));
-    }
-  }
-
-  // 🐞 بق حقيقي (نمو غير محدود): الشيت ده كان بيتقرا **كامل** (getDataRange)
-  // كل دقيقة للأبد، من غير أي تنظيف — كل طلب وكل تغيير حالة بيضيف صف، وبعد
-  // شهور/سنين من الاستخدام الشيت ممكن يبقى آلاف الصفوف ويبطّئ الـ trigger
-  // (وفي النهاية يتخطى حد الـ٦ دقايق بتاع Apps Script). بننضّف الرسايل
-  // اللي اتبعتت بنجاح ومر عليها كذا يوم بس (اللي فشلت بتفضل ظاهرة عمدًا
-  // عشان تتراجع).
-  cleanupOldQueueRows_(sheet, rows);
-}
-
-const WA_QUEUE_KEEP_SENT_DAYS_ = 3;
-
-function cleanupOldQueueRows_(sheet, rows) {
-  try {
-    const cutoff = Date.now() - WA_QUEUE_KEEP_SENT_DAYS_ * 24 * 60 * 60 * 1000;
-    const rowNums = [];
-    for (let i = 1; i < rows.length; i++) {
-      if (String(rows[i][1] || '').trim() !== 'اتبعتت') continue;
-      const t = new Date(rows[i][0]).getTime();
-      if (isFinite(t) && t < cutoff) rowNums.push(i + 1);
-    }
-    if (rowNums.length) deleteRowsBatch_(sheet, rowNums);
-  } catch (e) { logError_('cleanupOldQueueRows_', e, ''); }
-}
-
-function markQueueAttempt_(sheet, rowNum, attempts, reason) {
-  const next = attempts + 1;
-  sheet.getRange(rowNum, 3).setValue(next);
-  sheet.getRange(rowNum, 5).setValue(reason);
-  // بعد ٥ محاولات فاشلة بنوقف ونسيبها ظاهرة في الشيت عشان تراجعها
-  if (next >= 5) sheet.getRange(rowNum, 2).setValue('فشلت');
 }
 
 
@@ -1678,7 +1536,6 @@ function doGetInner_(e) {
   if (action === 'version') {
     return json_({
       version: APP_VERSION,
-      hasQueue: !!SpreadsheetApp.getActiveSpreadsheet().getSheetByName(WA_QUEUE_SHEET_NAME),
       configured: !!(secret_('ADMIN_PIN') && secret_('MANAGE_PIN')),
       time: new Date()
     });

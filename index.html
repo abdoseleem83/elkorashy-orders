@@ -1464,7 +1464,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v227';
+const APP_BUILD = 'v228';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2763,8 +2763,6 @@ async function updateOrderStatus(id, status){
     if(d.found === false){
       ord.status = prevStatus;
       showToast('الطلب ده اتغيّر أو اتمسح من مكان تاني — حدّث الصفحة');
-    } else if(d.notified){
-      showToast('اتحدّثت ✅ واتبعت إشعار للموزع تلقائيًا');
     } else {
       showToast('اتحدّثت ✅');
     }
@@ -7294,8 +7292,6 @@ function renderAdminView(){
       <button class="exportbtn" data-act="goto-manage-inline">${ico_('manageIcon',13)} إدارة الأصناف</button>
       <button class="exportbtn" data-act="export-excel-preparing">تصدير Excel (${STATUS_PREPARING})</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُنفَّذ</button>
-      <button class="exportbtn" data-act="reactivate-wa-notify" title="لو بطلت إشعارات الواتساب توصل، دوس هنا وابعت الرسالة اللي هتفتح عشان تفعّلها تاني">🔔 فعّل إشعارات الواتساب تاني</button>
-      <button class="exportbtn" data-act="open-callmebot-page" title="لو الرقم قال دعوه للواتساب يبقى الرقم اتغيّر — هنا هتلاقي الرقم الجديد من موقعهم الرسمي">🌐 الصفحة الرسمية (لو الرقم اتغيّر)</button>
     </div>
     <div class="polldiag">
       <span>${state.pollDiag ? esc(state.pollDiag) : 'الإشعار شغّال — بيفحص كل 45 ثانية'}</span>
@@ -7577,29 +7573,6 @@ function openOrderWhatsApp(order){
   try{ window.location.href = url; state.waSent = true; render(); return true; }catch(e){}
   showToast('المتصفح منع فتح واتساب — جرّب تاني', 5000);
   return false;
-}
-
-// إشعارات الواتساب بتتبعت عن طريق CallMeBot، واللي بيحصل إن أحيانًا تفعيل
-// الرقم عند CallMeBot بيقف (خصوصًا لو مفيش رسايل اتبعتت لفترة)، فالإشعارات
-// بتوقف من غير أي خطأ ظاهر في التطبيق. الحل: يبعت رسالة التفعيل دي تاني
-// لرقم CallMeBot الرسمي، ويرجع يشتغل عادي خلال دقايق.
-// إشعارات الواتساب بتتبعت عن طريق CallMeBot، واللي بيحصل إن أحيانًا تفعيل
-// الرقم عند CallMeBot بيقف (خصوصًا لو مفيش رسايل اتبعتت لفترة)، فالإشعارات
-// بتوقف من غير أي خطأ ظاهر في التطبيق. الحل: يبعت رسالة التفعيل دي تاني
-// لرقم CallMeBot الرسمي، ويرجع يشتغل عادي خلال دقايق.
-// ⚠️ مهم: رقم CallMeBot بيتغيّر من فترة للتانية من عندهم (مش حاجة إحنا
-// بنتحكم فيها)، فلو الرقم ده بقى قديم وواتساب قال "دعوه للواتساب" (يعني
-// الرقم مش موجود عليهم بالرقم ده دلوقتي)، لازم تاخد الرقم الجديد من
-// صفحتهم الرسمية وتحدّثه هنا.
-const CALLMEBOT_ACTIVATION_NUMBER = '34623789580'; // آخر تحديث معروف من callmebot.com
-function reactivateWhatsAppNotify(){
-  const msg = 'I allow callmebot to send me messages';
-  const opened = window.open('https://wa.me/' + CALLMEBOT_ACTIVATION_NUMBER + '?text=' + encodeURIComponent(msg), '_blank');
-  showToast('لو واتساب قال "دعوه للواتساب" يبقى رقم CallMeBot اتغيّر — دوس على "الصفحة الرسمية" تحت وهاتلك الرقم الجديد', 6000);
-  return opened;
-}
-function openCallMeBotOfficialPage(){
-  window.open('https://www.callmebot.com/blog/free-api-whatsapp-messages/', '_blank');
 }
 
 function notifyDistributorManually(id){
@@ -8726,8 +8699,6 @@ async function onActionInner(act, el){
     case 'make-docs': if(state.lastOrder) generateBothQuotes(state.lastOrder); break;
     case 'clear-save-error': state.saveError=''; render(); break;
     case 'notify-dist': notifyDistributorManually(el.getAttribute('data-id')); break;
-    case 'reactivate-wa-notify': reactivateWhatsAppNotify(); break;
-    case 'open-callmebot-page': openCallMeBotOfficialPage(); break;
     case 'prepare-order-img': await prepareOrderImage(); break;
     case 'prepare-wh-img': await prepareWarehouseImages(); break;
     case 'share-wh-img': await shareWarehouseImages(); break;
