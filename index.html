@@ -986,7 +986,14 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .card h2 .num{width:26px;height:26px;border-radius:50%;background:var(--brand-gradient);box-shadow:0 2px 6px rgba(0,36,104,.3);}
 .chip{transition:transform .15s,box-shadow .15s;}
 .chip:active{transform:scale(.96);}
-.whtile{border-radius:18px;}
+.whgrid{gap:14px;}
+.whtile{border-radius:22px;padding:26px 10px;font-size:17px;font-weight:800;border:0;color:#fff;box-shadow:0 6px 18px rgba(0,36,104,.18);transition:transform .15s,box-shadow .15s;}
+.whtile:nth-child(odd){background:linear-gradient(135deg,#25A55A,#1E7A54);}
+.whtile:nth-child(even){background:linear-gradient(135deg,#8A4BEA,#5B28C4);}
+.whtile:active{transform:scale(.95);}
+.whtile .whicon{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:34px;}
+.whtile.active{background:var(--brand-gradient);box-shadow:0 0 0 3px rgba(255,255,255,.9),0 8px 22px rgba(0,36,104,.35);}
+.whhint2027{font-size:13px;color:var(--muted);margin:-4px 0 14px;}
 .stat2027 b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ministrip2027{display:flex;gap:6px;padding:6px 10px;background:var(--bg);}
 .mini2027{flex:1 1 0;min-width:0;border:0;border-radius:10px;padding:4px 4px;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;font-family:inherit;}
@@ -1494,7 +1501,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v233';
+const APP_BUILD = 'v234';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -6189,10 +6196,10 @@ function renderHeader(){
     && !state.successOrderId && (state.warehouse || isClientAccount());
   const stripHtml_ = showStrip_ ? `
   <div class="ministrip2027">
-    ${miniTile_('s-green', (state.cart||[]).length, 'السلة', (state.cart||[]).length?'open-cart-review':'')}
-    ${miniTile_('s-gold', (state.staged||[]).length, 'قيد الاختيار', '')}
-    ${miniTile_('s-purple', esc(state.warehouse||'—'), 'المخزن', '')}
-    ${miniTile_('s-navy', esc(state.mainGroup||'—'), 'القطاع', '')}
+    ${miniTile_('s-green', (state.cart||[]).length, 'السلة', 'strip-go" data-val="cart')}
+    ${miniTile_('s-gold', (state.staged||[]).length, 'قيد الاختيار', 'strip-go" data-val="staged')}
+    ${miniTile_('s-purple', esc(state.warehouse||'—'), 'المخزن', 'strip-go" data-val="wh')}
+    ${miniTile_('s-navy', esc(state.mainGroup||'—'), 'القطاع', 'strip-go" data-val="group')}
   </div>` : '';
   const cartCount = (state.cart && state.cart.length) || (state.pendingDraft && state.pendingDraft.cart && state.pendingDraft.cart.length) || 0;
   return `
@@ -6758,6 +6765,7 @@ function renderOrderView(){
   const warehouseCard = `
     <div class="card">
       <h2><span class="num">1</span>برجاء اختيار المخزن لسهولة توجيهه للمسؤول</h2>
+      <div class="whhint2027">دوس على المخزن اللي هتستلم منه، وتقدر ترجع تغيّره من الشريط فوق.</div>
       <div class="whgrid">
         ${WAREHOUSES.map(w=>`
           <button class="whtile ${state.warehouse===w?'active':''}" data-act="pick-warehouse-inline" data-val="${esc(w)}">
@@ -6816,7 +6824,7 @@ function renderOrderView(){
     </div>`;
 
   const groupCard = `
-    <div class="card">
+    <div class="card" id="sec-group">
       <h2><span class="num">3</span>اختار القطاع</h2>
       <div class="chipwrap chipgrid4">${sectorChips}</div>
     </div>`;
@@ -8542,6 +8550,28 @@ async function onActionInner(act, el){
       state.warehouse = '';
       render();
       break;
+    // 📌 مربعات الشريط الثابت: كل واحد بيودّي لمكانه
+    case 'strip-go':{
+      const v = el.getAttribute('data-val');
+      const scrollTo_ = node => {
+        const head = document.querySelector('.fixedhead-outer');
+        const y = window.scrollY + node.getBoundingClientRect().top - (head ? head.offsetHeight : 0) - 10;
+        window.scrollTo({ top: Math.max(0, y), behavior:'smooth' });
+      };
+      if(v==='cart'){
+        if(state.cart.length || state.pendingDraft){ if(state.pendingDraft && !state.cart.length){ resumeDraft(); state.showResumeModal=false; } state.showCartReview=true; render(); }
+        else showToast('السلة فاضية — ضيف أصناف الأول');
+      } else if(v==='wh'){
+        if(state.editingOrderId){ showToast('مينفعش تغيّر المخزن وانت بتعدّل طلب'); }
+        else { state.warehouse = ''; render(); }
+      } else if(v==='group'){
+        const n = document.getElementById('sec-group'); if(n) scrollTo_(n);
+      } else if(v==='staged'){
+        const n = document.querySelector('[data-stagedkey]') || document.querySelector('.currentctx');
+        if(n) scrollTo_(n); else showToast('مفيش أصناف قيد الاختيار — اختار قطاع وصنف');
+      }
+      break;
+    }
     case 'set-group':{
       state.mainGroup = el.getAttribute('data-val');
       state.productSearch='';
