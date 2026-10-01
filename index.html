@@ -971,6 +971,12 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .adminbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
 .adminbar input{flex:1 1 100%;}
 .adminbar .exportbtn{flex:1 1 auto;padding:7px 6px;}
+.card{border-radius:20px;border:0;box-shadow:0 4px 16px rgba(0,36,104,.09);}
+.card h2 .num{width:26px;height:26px;border-radius:50%;background:var(--brand-gradient);box-shadow:0 2px 6px rgba(0,36,104,.3);}
+.chip{transition:transform .15s,box-shadow .15s;}
+.chip:active{transform:scale(.96);}
+.whtile{border-radius:18px;}
+.stat2027 b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .stats2027{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:0 0 12px;}
 @media(min-width:700px){.stats2027{grid-template-columns:repeat(4,1fr);}}
 .stat2027{border:0;border-radius:14px;padding:14px 8px;color:#fff;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:transform .15s,box-shadow .15s;}
@@ -1472,7 +1478,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v230';
+const APP_BUILD = 'v231';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -6803,8 +6809,21 @@ function renderOrderView(){
     ${stagedSection}
   `;
 
+  const homeTile_ = (cls, num, label, act) => `
+      <${act?'button':'div'} class="stat2027 ${cls}" ${act?`data-act="${act}"`:''}>
+        <b>${num}</b><span>${label}</span>
+      </${act?'button':'div'}>`;
+  const homeStats = `
+    <div class="stats2027">
+      ${homeTile_('s-green', state.cart.length, 'صنف في السلة', state.cart.length?'open-cart-review':'')}
+      ${homeTile_('s-gold', state.staged.length, 'قيد الاختيار', '')}
+      ${homeTile_('s-purple', esc(state.warehouse||'—'), 'المخزن', '')}
+      ${homeTile_('s-navy', esc(state.mainGroup||'—'), 'القطاع الحالي', '')}
+    </div>`;
+
   return `
   <main>
+    ${homeStats}
     ${saveErrorBanner}
     ${catalogErrorBanner}
     ${distSection}
