@@ -968,6 +968,17 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .authlinks .muted{color:var(--muted);}
 .authcard .err{color:var(--danger);font-size:14px;margin:6px 0 0;text-align:center;}
 
+.authwrap{background:radial-gradient(420px 320px at 85% 0%,rgba(41,182,246,.35),transparent 70%),linear-gradient(160deg,var(--navy) 0%,var(--navy-deep) 70%);}
+.authcard{max-width:400px;border-radius:26px;border:0;box-shadow:0 24px 56px rgba(0,16,72,.45);}
+.authbanner{background:var(--brand-gradient);padding:26px 22px 22px;}
+.authlogo{width:72px;height:72px;border-radius:20px;box-shadow:0 6px 18px rgba(0,0,0,.25);}
+.authfeat2027{display:flex;gap:8px;padding:12px 16px 0;}
+.authfeat2027 .mini2027{padding:8px 4px;border-radius:12px;}
+.authfeat2027 .mini2027 b{font-size:18px;}
+.authfeat2027 .mini2027 span{font-size:11px;}
+.authcard input{border-radius:14px;padding:13px 14px;}
+.authcard button:not([type=button]){background:var(--brand-gradient);border-radius:14px;padding:14px;box-shadow:0 6px 16px rgba(0,88,184,.35);}
+.authcard button:not([type=button]):active{transform:scale(.98);}
 .adminbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
 .adminbar input{flex:1 1 100%;}
 .adminbar .exportbtn{flex:1 1 auto;padding:7px 6px;}
@@ -977,6 +988,11 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .chip:active{transform:scale(.96);}
 .whtile{border-radius:18px;}
 .stat2027 b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ministrip2027{display:flex;gap:6px;padding:6px 10px;background:var(--bg);}
+.mini2027{flex:1 1 0;min-width:0;border:0;border-radius:10px;padding:4px 4px;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;font-family:inherit;}
+.mini2027 b{font-size:14px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mini2027 span{font-size:10px;opacity:.9;}
+button.mini2027{cursor:pointer;}
 .stats2027{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:0 0 12px;}
 @media(min-width:700px){.stats2027{grid-template-columns:repeat(4,1fr);}}
 .stat2027{border:0;border-radius:14px;padding:14px 8px;color:#fff;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:transform .15s,box-shadow .15s;}
@@ -1478,7 +1494,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v231';
+const APP_BUILD = 'v233';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -6165,6 +6181,19 @@ function toggleTheme_(){
 function renderHeader(){
   const bioOn = isBiometricEnabledForCurrentUser();
   const cartShown = (state.view==='order' && state.currentUser && state.currentUser.username!=='admin');
+  // 📌 شريط ملخص مصغّر وثابت: جوه الهيدر الـfixed نفسه عشان يفضل ظاهر مع التمرير
+  // (sticky اتجرّب قبل كده ومنفعش — شوف تعليق .fixedhead-outer).
+  const miniTile_ = (cls, num, label, act) => `
+      <${act?'button':'div'} class="mini2027 ${cls}" ${act?`data-act="${act}"`:''}><b>${num}</b><span>${label}</span></${act?'button':'div'}>`;
+  const showStrip_ = state.view==='order' && state.currentUser && state.currentUser.username!=='admin'
+    && !state.successOrderId && (state.warehouse || isClientAccount());
+  const stripHtml_ = showStrip_ ? `
+  <div class="ministrip2027">
+    ${miniTile_('s-green', (state.cart||[]).length, 'السلة', (state.cart||[]).length?'open-cart-review':'')}
+    ${miniTile_('s-gold', (state.staged||[]).length, 'قيد الاختيار', '')}
+    ${miniTile_('s-purple', esc(state.warehouse||'—'), 'المخزن', '')}
+    ${miniTile_('s-navy', esc(state.mainGroup||'—'), 'القطاع', '')}
+  </div>` : '';
   const cartCount = (state.cart && state.cart.length) || (state.pendingDraft && state.pendingDraft.cart && state.pendingDraft.cart.length) || 0;
   return `
   <div class="fixedhead-outer"><div class="fixedhead-inner">
@@ -6207,6 +6236,7 @@ function renderHeader(){
     </nav>
   </header>
   <div class="profile-bar"><span></span><span></span><span></span><span></span><span></span></div>
+  ${stripHtml_}
   </div></div>
   <div class="versionline" style="text-align:center;font-size:11.2px;color:var(--muted);padding:2px;">نسخة ${APP_BUILD}${CREDIT_LINE ? ` · ${esc(CREDIT_LINE)}` : ''}</div>
   `;
@@ -6809,21 +6839,8 @@ function renderOrderView(){
     ${stagedSection}
   `;
 
-  const homeTile_ = (cls, num, label, act) => `
-      <${act?'button':'div'} class="stat2027 ${cls}" ${act?`data-act="${act}"`:''}>
-        <b>${num}</b><span>${label}</span>
-      </${act?'button':'div'}>`;
-  const homeStats = `
-    <div class="stats2027">
-      ${homeTile_('s-green', state.cart.length, 'صنف في السلة', state.cart.length?'open-cart-review':'')}
-      ${homeTile_('s-gold', state.staged.length, 'قيد الاختيار', '')}
-      ${homeTile_('s-purple', esc(state.warehouse||'—'), 'المخزن', '')}
-      ${homeTile_('s-navy', esc(state.mainGroup||'—'), 'القطاع الحالي', '')}
-    </div>`;
-
   return `
   <main>
-    ${homeStats}
     ${saveErrorBanner}
     ${catalogErrorBanner}
     ${distSection}
@@ -8024,6 +8041,12 @@ function renderAuthView(){
       ${state.offlineQueueCount>0 ? `
       <div class="editbanner" style="margin:0 16px 0;background:#FBEBD1;">
         📶 عندك ${state.offlineQueueCount} طلب اتحفظ عندك وهيتبعت تلقائيًا فور ما تسجّل دخول — مش ضايع
+      </div>` : ''}
+      ${mode==='login' ? `
+      <div class="authfeat2027">
+        <div class="mini2027 s-green"><b>⚡</b><span>طلب سريع</span></div>
+        <div class="mini2027 s-purple"><b>📦</b><span>تابع طلباتك</span></div>
+        <div class="mini2027 s-gold"><b>📄</b><span>عرض سعر PDF</span></div>
       </div>` : ''}
       <div class="authbody">${inner}</div>
     </div>
