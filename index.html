@@ -1464,7 +1464,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v228';
+const APP_BUILD = 'v229';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -6032,6 +6032,7 @@ async function exportExcel(statusFilter){
     { header:'الموزع', key:'dist', width:18 },
     { header:'المنطقة', key:'region', width:14 },
     { header:'الصنف', key:'product', width:32 },
+    { header:'المخزن', key:'wh', width:12 },
     { header:'الكمية', key:'qty', width:8 },
     { header:'الوحدة', key:'unit', width:10 },
     { header:'سعر الوحدة', key:'price', width:11 },
@@ -6055,7 +6056,7 @@ async function exportExcel(statusFilter){
   const groups = new Map();
   ordersForFile.forEach(o=>{
     const key = o.id;   // مفتاح فريد لكل طلب
-    if(!groups.has(key)) groups.set(key, { dist:o.distName||'', region:o.distRegion||'', ts:o.ts, items:[] });
+    if(!groups.has(key)) groups.set(key, { dist:o.distName||'', region:o.distRegion||'', wh:o.warehouse||'', ts:o.ts, items:[] });
     o.items.forEach(it => groups.get(key).items.push(it));
   });
 
@@ -6087,6 +6088,7 @@ async function exportExcel(statusFilter){
         serial,
         dist: idx===0?dist:'', region: idx===0?g.region:'',
         product: it.name || it.product,
+        wh: g.wh || '—',
         qty: norm.qty, unit: norm.unitLabel||'',
         price: unitPriceDisp==null ? 'جاري تعديل القوائم' : Math.round(unitPriceDisp),
         total: it.lineTotal==null ? 'جاري تعديل القوائم' : Math.round(it.lineTotal),
@@ -6101,17 +6103,20 @@ async function exportExcel(statusFilter){
       rowIdx++;
     });
     if(g.items.length>1){
-      ws.mergeCells(startRow,2,rowIdx-1,2); ws.mergeCells(startRow,3,rowIdx-1,3); ws.mergeCells(startRow,9,rowIdx-1,9);
+      ws.mergeCells(startRow,2,rowIdx-1,2); ws.mergeCells(startRow,3,rowIdx-1,3); ws.mergeCells(startRow,10,rowIdx-1,10);
     }
     const distCell = ws.getCell(startRow,2);
     distCell.font = { bold:true, color:{argb:NAVY}, size:11, name:'Arial' };
     distCell.alignment = { horizontal:'right', vertical:'middle', wrapText:true };
     toggle = !toggle;
   });
-  ws.autoFilter = { from:'A1', to:'I1' };
+  ws.autoFilter = { from:'A1', to:'J1' };
 
-  const totalRow = ws.addRow({ product:'الإجمالي الكلي', total: Math.round(grandTotal) });
-  ws.mergeCells(rowIdx, 1, rowIdx, 7);
+  // ⚠️ كان النص 'الإجمالي الكلي' متحط في عمود الصنف، والدمج بيحتفظ بقيمة أول
+  // خلية بس — فالكلمة كانت بتختفي. دلوقتي بنحطها في أول خلية قبل الدمج.
+  const totalRow = ws.addRow({ total: Math.round(grandTotal) });
+  totalRow.getCell(1).value = 'الإجمالي الكلي';
+  ws.mergeCells(rowIdx, 1, rowIdx, 8);
   totalRow.eachCell(cell=>{
     cell.font = { bold:true, color:{argb:WHITE}, size:12, name:'Arial' };
     cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:GOLD} };
