@@ -973,7 +973,10 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .authbanner{background:var(--brand-gradient);padding:26px 22px 22px;}
 .authlogo{width:72px;height:72px;border-radius:20px;box-shadow:0 6px 18px rgba(0,0,0,.25);}
 .authfeat2027{display:flex;gap:8px;padding:12px 16px 0;}
-.authfeat2027 .mini2027{padding:8px 4px;border-radius:12px;}
+.authfeat2027 .mini2027{padding:8px 4px;border-radius:12px;border:0;font-family:inherit;cursor:pointer;transition:transform .15s,box-shadow .15s;}
+.authfeat2027 .mini2027:active{transform:scale(.95);}
+.authfeat2027 .mini2027.on{box-shadow:0 0 0 3px var(--navy),0 4px 12px rgba(0,36,104,.3);}
+.destHint2027{margin:10px 16px 0;padding:8px 12px;border-radius:10px;background:var(--surface2);color:var(--navy);font-size:13px;text-align:center;}
 .authfeat2027 .mini2027 b{font-size:18px;}
 .authfeat2027 .mini2027 span{font-size:11px;}
 .authcard input{border-radius:14px;padding:13px 14px;}
@@ -1501,7 +1504,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v234';
+const APP_BUILD = 'v235';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -1593,6 +1596,7 @@ const state = {
 
   // auth
   currentUser:null,            // {username, distName, distRegion, distPhone}
+  postLoginView:'',            // الصفحة اللي الموزع اختارها من مربعات شاشة الدخول
   authView:'login',            // login | register | forgot
   showBiometricGate:false,     // لو true بيظهر شاشة "افتح بالبصمة" بدل فورم الدخول
   biometricBusy:false,
@@ -3176,6 +3180,7 @@ async function unlockWithBiometric(){
       checkForResumableDraft(); // 🛒 لو في مسودة محفوظة، نعرض إشعار بعد فتح البصمة
       ensurePushRegistered();
       flushOfflineQueue_(); // 📶 نحاول نبعت أي طلبات كانت واقفة بسبب unauthorized
+      applyPostLoginView_();
     }
   }catch(e){
     showToast('تعذّر التحقق بالبصمة، جرّب تاني أو ادخل بكلمة المرور');
@@ -3230,12 +3235,24 @@ async function submitLogin(){
     checkForResumableDraft(); // 🛒 لو في مسودة محفوظة، نعرض إشعار بعد الدخول مباشرة
     ensurePushRegistered();
     flushOfflineQueue_(); // 📶 نحاول نبعت أي طلبات كانت واقفة بسبب unauthorized
+    applyPostLoginView_();
     render();
   }catch(e){
     state.authLoading = false;
     state.authError = 'في مشكلة في الاتصال، حاول تاني';
     render();
   }
+}
+
+// بعد نجاح الدخول: لو الموزع كان داس على مربع من شاشة الدخول، نوديه لصفحته
+function applyPostLoginView_(){
+  const dest = state.postLoginView;
+  state.postLoginView = '';
+  if(!dest) return;
+  const v = (dest==='quote') ? 'myorders' : dest;
+  state.view = v;
+  state.viewHistory = [];
+  if(v==='myorders') setTimeout(()=>{ try{ refreshMyOrders(); }catch(e){} }, 0);
 }
 
 async function submitRegister(){
@@ -8052,10 +8069,11 @@ function renderAuthView(){
       </div>` : ''}
       ${mode==='login' ? `
       <div class="authfeat2027">
-        <div class="mini2027 s-green"><b>⚡</b><span>طلب سريع</span></div>
-        <div class="mini2027 s-purple"><b>📦</b><span>تابع طلباتك</span></div>
-        <div class="mini2027 s-gold"><b>📄</b><span>عرض سعر PDF</span></div>
-      </div>` : ''}
+        <button type="button" class="mini2027 s-green${state.postLoginView==='order'?' on':''}" data-act="login-dest" data-val="order"><b>⚡</b><span>طلب سريع</span></button>
+        <button type="button" class="mini2027 s-purple${state.postLoginView==='myorders'?' on':''}" data-act="login-dest" data-val="myorders"><b>📦</b><span>تابع طلباتك</span></button>
+        <button type="button" class="mini2027 s-gold${state.postLoginView==='quote'?' on':''}" data-act="login-dest" data-val="quote"><b>📄</b><span>عرض سعر PDF</span></button>
+      </div>
+      ${state.postLoginView ? `<div class="destHint2027">🎯 بعد الدخول هتروح لـ: <b>${state.postLoginView==='order'?'طلب سريع':(state.postLoginView==='myorders'?'تابع طلباتك':'عروض الأسعار PDF (من طلباتك)')}</b></div>` : ''}` : ''}
       <div class="authbody">${inner}</div>
     </div>
   </div>`;
@@ -8412,6 +8430,15 @@ async function onActionInner(act, el){
     case 'goto-register': state.authView='register'; state.authError=''; render(); break;
     case 'goto-forgot': state.authView='forgot'; state.authError=''; state.forgotSent=false; render(); break;
     case 'login-submit': await submitLogin(); break;
+    case 'login-dest':{
+      state.postLoginView = el.getAttribute('data-val');
+      state.authView = 'login'; state.authError = '';
+      state.showBiometricGate = isBiometricEnabledForThisDevice();
+      render();
+      // لو البصمة مفعّلة على الجهاز نطلّعها فورًا، وإلا تظهر خانات الدخول
+      if(state.showBiometricGate) await unlockWithBiometric();
+      break;
+    }
     case 'biometric-unlock': await unlockWithBiometric(); break;
     case 'use-password-login': state.showBiometricGate=false; render(); break;
     case 'enable-biometric': await enableBiometricLogin(); break;
