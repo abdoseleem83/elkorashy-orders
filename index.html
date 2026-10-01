@@ -971,6 +971,14 @@ nav.tabs .tabbtn.managetab.active{background:var(--navy-soft);border-color:var(-
 .adminbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
 .adminbar input{flex:1 1 100%;}
 .adminbar .exportbtn{flex:1 1 auto;padding:7px 6px;}
+.stats2027{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:0 0 12px;}
+@media(min-width:700px){.stats2027{grid-template-columns:repeat(4,1fr);}}
+.stat2027{border:0;border-radius:14px;padding:14px 8px;color:#fff;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:transform .15s,box-shadow .15s;}
+.stat2027 b{font-size:28px;line-height:1.1;}
+.stat2027 span{font-size:13px;opacity:.92;}
+.stat2027:active{transform:scale(.97);}
+.stat2027.on{box-shadow:0 0 0 3px rgba(255,255,255,.85),0 4px 12px rgba(0,0,0,.25);}
+.s-green{background:#1E8E3E;}.s-gold{background:#C9921A;}.s-purple{background:#6B2FD6;}.s-navy{background:var(--navy);}
 .exportbtn{
   background:var(--navy);color:#fff;border:none;border-radius:8px;padding:0 10px;
   font-family:'Cairo',sans-serif;font-weight:700;font-size:11.6px;cursor:pointer;white-space:nowrap;
@@ -1464,7 +1472,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v229';
+const APP_BUILD = 'v230';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -7289,8 +7297,22 @@ function renderAdminView(){
       ${renderAdminOrdersColumn_('🏭 اكسا', aksaOrders)}
     </div>`;
 
+  const cntBy_ = st => state.orders.filter(o=>o.status===st).length;
+  const statTile_ = (val, label, cls, num) => `
+      <button class="stat2027 ${cls}${state.adminStatusFilter===val?' on':''}" data-act="admin-status" data-val="${esc(val)}">
+        <b>${num}</b><span>${label}</span>
+      </button>`;
+  const stats = `
+    <div class="stats2027">
+      ${statTile_(STATUS_RECEIVED, 'طلبات جديدة', 's-green', cntBy_(STATUS_RECEIVED))}
+      ${statTile_(STATUS_PREPARING, 'قيد التجهيز', 's-gold', cntBy_(STATUS_PREPARING))}
+      ${statTile_(STATUS_DONE, 'تم التنفيذ', 's-purple', cntBy_(STATUS_DONE))}
+      ${statTile_('all', 'كل الطلبات', 's-navy', state.orders.length)}
+    </div>`;
+
   return `
   <main>
+    ${stats}
     <div class="adminbar">
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
       <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
