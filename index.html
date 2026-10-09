@@ -1438,6 +1438,307 @@ button.mini2027{cursor:pointer;}
 @media (min-width:900px){
   #app, .fixedhead-inner, .submitbar.fixed .submitbar-inner{max-width:1400px;}
 }
+
+/* ============================================================
+   ✨ تصميم v236 — "منتصف الليل الزجاجي"
+   طبقة تجديد شكل بس: بتتحط آخر الـCSS فتغلب على اللي قبلها من غير ما
+   نلمس القواعد القديمة. الهوية لسه من لوجو القرشي (أزرق كحلي + سماوي)،
+   والإحساس العام: خلفية كحلي غامقة بإضاءة زرقاء، كروت بحواف مضيئة،
+   أيقونات في مربعات ملونة، وشريط تنقل سفلي عائم بزرار ＋ بارز.
+   ⚠️ مفيش backdrop-filter عن قصد (html2canvas بيتعطل معاه — شوف تعليق الهيدر).
+   ============================================================ */
+:root{
+  --glow-line:rgba(41,182,246,.0);
+  --navh:0px;
+  --r-card:22px;
+  --r-ctl:14px;
+  --ok:#2FD08A; --warn:#FFC53D; --violet:#A98BFF; --sky:#4FB6FF;
+}
+html[data-theme="dark"]{
+  --bg:#050A18;
+  --card:#0E1830;
+  --surface2:#13213F;
+  --surface3:#1A2C52;
+  --line:rgba(94,150,240,.22);
+  --ink:#EAF1FF;
+  --muted:#8FA3C8;
+  --header-bg:#070E20;
+  --glow-line:rgba(41,182,246,.55);
+}
+html[data-theme="dark"] body{
+  background:
+    radial-gradient(820px 460px at 88% -8%, rgba(0,114,214,.30), transparent 62%),
+    radial-gradient(640px 420px at -12% 38%, rgba(41,182,246,.11), transparent 60%),
+    radial-gradient(700px 500px at 60% 108%, rgba(0,60,160,.22), transparent 62%),
+    #050A18;
+  background-attachment:fixed;
+}
+#app{background:transparent;}
+body{letter-spacing:0;}
+
+/* ---------- الهيدر: سطر واحد نحيف ---------- */
+.fixedhead-outer{background:var(--header-bg);box-shadow:0 8px 24px rgba(0,0,0,.28);}
+header.top{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 12px;border-bottom:0;background:transparent;
+}
+header.top .brand{flex:1 1 auto;min-width:0;gap:10px;}
+header.top .logoimg{width:38px;height:38px;border-radius:12px;padding:3px;border:0;
+  box-shadow:0 0 0 1px rgba(41,182,246,.45),0 4px 14px rgba(0,114,214,.35);}
+header.top .brandtxt{min-width:0;}
+header.top h1{font-size:13.4px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+header.top p.sub{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+header.top.has-cart{padding-left:12px;}
+.topacts{display:flex;gap:7px;flex:0 0 auto;}
+.iconbtn{
+  width:38px;height:38px;border-radius:13px;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:center;padding:0;
+  background:var(--surface2);border:1px solid var(--line);color:var(--ink);cursor:pointer;position:relative;
+}
+.iconbtn .ico-svg{top:0;}
+.iconbtn.on{background:linear-gradient(135deg,#1E8CF0,#0A4DB0);border-color:transparent;color:#fff;box-shadow:0 0 16px rgba(0,114,214,.55);}
+header.top .backnav{width:38px;height:38px;border-radius:13px;padding:0;font-size:0;
+  background:var(--surface2);color:var(--sky);box-shadow:none;}
+.profile-bar{height:2px;background:linear-gradient(90deg,transparent,var(--glow-line),rgba(0,114,214,.9),var(--glow-line),transparent);opacity:.9;}
+.versionline{opacity:.55;font-size:10.5px !important;}
+
+/* قايمة الأدوات — لوحة بتطلع فوق الشريط السفلي */
+.toolscrim{position:fixed;inset:0;z-index:94;background:rgba(2,6,20,.55);animation:modalbgin .15s ease both;}
+.toolpanel{
+  position:fixed;left:12px;right:12px;bottom:calc(var(--navh,76px) + 12px);z-index:96;
+  max-width:536px;margin:0 auto;
+  background:linear-gradient(170deg,#12234A,#0B1630);
+  border:1px solid rgba(94,150,240,.35);border-radius:22px;padding:12px;
+  box-shadow:0 18px 44px rgba(0,0,0,.55),0 0 0 1px rgba(0,114,214,.15);
+  animation:toolin .18s ease-out both;
+}
+@keyframes toolin{0%{opacity:0;transform:translateY(10px);}100%{opacity:1;transform:none;}}
+.toolgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.tooltile{
+  display:flex;flex-direction:row;align-items:center;gap:9px;
+  min-height:50px;padding:8px 12px;border-radius:14px;
+  background:var(--surface2);border:1px solid var(--line);color:var(--ink);
+  font-family:'Cairo',sans-serif;font-weight:700;font-size:12px;cursor:pointer;text-align:right;
+}
+.tooltile span{min-width:0;}
+.tooltile.on{background:linear-gradient(135deg,rgba(34,199,224,.28),rgba(0,114,214,.22));border-color:rgba(41,182,246,.6);color:#fff;}
+.tooltile.off{opacity:.8;}
+.tooltile.discounttogglebtn.off span{text-decoration:line-through;}
+.tooltile.logoutbtn{color:#FF8A80;border-color:rgba(255,107,96,.35);background:rgba(255,107,96,.08);}
+.tooltile.extradiscwrap{cursor:text;margin:0;}
+.tooltile.extradiscwrap .pctsign{color:var(--warn);font-size:18px;font-weight:800;}
+.tooltile.extradiscwrap input{flex:1;min-width:0;width:auto;background:transparent !important;border:0 !important;padding:0;
+  color:#fff;font-size:13px;font-weight:700;text-align:right;box-shadow:none !important;margin:0;}
+.tooltile.extradiscwrap input:focus{outline:0;}
+.bn-dot{position:absolute;top:-3px;left:-5px;width:9px;height:9px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 2px #09122A;}
+
+/* ---------- شريط الملخص (السلة / قيد الاختيار / المخزن / القطاع) ---------- */
+.ministrip2027{gap:8px;padding:8px 12px 10px;background:transparent;}
+.mini2027{
+  --c:#4FB6FF;--cbg:rgba(79,182,255,.14);
+  border:1px solid color-mix(in srgb,var(--c) 38%,transparent);
+  background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));
+  border-radius:14px;padding:6px 4px;color:var(--c);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+}
+.mini2027 b{font-size:15.5px;font-weight:800;color:var(--c);}
+.mini2027 span{font-size:10px;opacity:1;color:var(--muted);font-weight:600;}
+.mini2027.s-green{--c:#2FD08A;--cbg:rgba(47,208,138,.15);background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));}
+.mini2027.s-gold{--c:#FFC53D;--cbg:rgba(255,197,61,.15);background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));}
+.mini2027.s-purple{--c:#B497FF;--cbg:rgba(169,139,255,.16);background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));}
+.mini2027.s-navy{--c:#4FB6FF;--cbg:rgba(79,182,255,.15);background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));}
+/* الصفحات اللي ماتستخدمش الشريط (شاشة الدخول) بتفضل بألوانها المصمتة */
+.authfeat2027 .mini2027{color:#fff;border:0;}
+.authfeat2027 .mini2027 b{color:#fff;}
+.authfeat2027 .mini2027 span{color:rgba(255,255,255,.9);}
+.authfeat2027 .mini2027.s-green{background:#1E8E3E;}
+.authfeat2027 .mini2027.s-gold{background:#C9921A;}
+.authfeat2027 .mini2027.s-purple{background:#6B2FD6;}
+
+/* ---------- الكروت ---------- */
+html[data-theme="dark"] .card{
+  background:linear-gradient(165deg,#112042 0%,#0B1630 100%);
+  border:1px solid rgba(94,150,240,.20);border-radius:var(--r-card);
+  box-shadow:0 12px 30px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.05);
+}
+.card{border-radius:var(--r-card);}
+.card h2{font-size:15.6px;}
+html[data-theme="dark"] .card h2{color:#EAF1FF;}
+.card h2 .num{
+  width:28px;height:28px;border-radius:10px;
+  background:linear-gradient(135deg,#29B6F6,#0A55C8);color:#fff;
+  box-shadow:0 4px 12px rgba(0,114,214,.5);font-size:13px;
+}
+main{padding-left:12px;padding-right:12px;}
+
+/* ---------- حقول الإدخال ---------- */
+input[type=text],input[type=tel],input[type=number],input[type=password],textarea,select{
+  border-radius:var(--r-ctl);border-color:var(--line);
+}
+html[data-theme="dark"] input[type=text],html[data-theme="dark"] input[type=tel],
+html[data-theme="dark"] input[type=number],html[data-theme="dark"] input[type=password],
+html[data-theme="dark"] textarea,html[data-theme="dark"] select{
+  background:#0A1428;color:var(--ink);border:1px solid var(--line);
+}
+input:focus,textarea:focus,select:focus{
+  outline:0;border-color:#29B6F6 !important;box-shadow:0 0 0 3px rgba(41,182,246,.22);
+}
+
+/* ---------- الشرائح (قطاعات / ألوان / أصناف) ---------- */
+.chip{border-radius:14px;border:1px solid var(--line);}
+html[data-theme="dark"] .chip{background:#13213F;}
+.chip.active{
+  background:linear-gradient(135deg,#1E8CF0,#0A4DB0);border-color:transparent;color:#fff;
+  box-shadow:0 6px 18px rgba(0,114,214,.45);
+}
+
+/* شريحة نشطة بتغلب على قاعدة الداكن الأعلى تخصيصًا */
+html[data-theme="dark"] .chip.active,.chipwrap .chip.active,.statuschips .chip.active{
+  background:linear-gradient(135deg,#1E8CF0,#0A4DB0);border-color:transparent;color:#fff;
+  box-shadow:0 6px 18px rgba(0,114,214,.45);
+}
+/* أزرار الرجوع داخل الصفحات */
+main .backnav{
+  background:var(--surface2);color:var(--sky);border:1px solid var(--line);border-radius:12px;
+  padding:7px 14px;font-family:'Cairo',sans-serif;font-weight:700;font-size:12px;cursor:pointer;box-shadow:none;
+}
+/* زرار ＋ بيتوسّط بدل ما يبقى له عنوان تحته */
+.bn-fab{padding-bottom:0;justify-content:center;}
+.fab-btn{margin-top:-34px;}
+
+/* ---------- اختيار المخزن: أيقونة في مربع ملوّن زي التصميم ---------- */
+.whgrid{gap:12px;}
+.whtile{
+  flex-direction:row;justify-content:flex-start;gap:14px;text-align:right;
+  padding:16px 16px;border-radius:20px;font-size:17px;
+  background:linear-gradient(165deg,rgba(47,208,138,.16),rgba(255,255,255,.02)) !important;
+  border:1px solid rgba(47,208,138,.45);color:#EAF1FF;
+  box-shadow:0 10px 26px rgba(0,0,0,.35),0 0 22px rgba(47,208,138,.12);
+}
+.whtile:nth-child(even){
+  background:linear-gradient(165deg,rgba(169,139,255,.18),rgba(255,255,255,.02)) !important;
+  border-color:rgba(169,139,255,.5);box-shadow:0 10px 26px rgba(0,0,0,.35),0 0 22px rgba(169,139,255,.14);
+}
+.whtile .whicon{
+  width:58px;height:58px;border-radius:18px;font-size:30px;flex:0 0 auto;
+  background:linear-gradient(135deg,#2FD08A,#168A5A);box-shadow:0 6px 16px rgba(47,208,138,.4);
+}
+.whtile:nth-child(even) .whicon{background:linear-gradient(135deg,#A98BFF,#6A3FE0);box-shadow:0 6px 16px rgba(169,139,255,.45);}
+.whtile.active{box-shadow:0 0 0 2px #29B6F6,0 10px 26px rgba(0,114,214,.4);}
+
+/* ---------- كروت الأرقام (الإدارة) ---------- */
+.stats2027{gap:10px;}
+.stat2027{
+  --c:#4FB6FF;--cbg:rgba(79,182,255,.16);
+  align-items:flex-start;padding:12px 14px;border-radius:18px;color:var(--muted);
+  background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));
+  border:1px solid color-mix(in srgb,var(--c) 40%,transparent);
+  box-shadow:0 8px 20px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.05);
+}
+.stat2027 b{font-size:30px;color:var(--c);}
+.stat2027 span{font-size:12.5px;color:var(--muted);opacity:1;font-weight:600;}
+.stat2027.s-green{--c:#2FD08A;--cbg:rgba(47,208,138,.16);background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));}
+.stat2027.s-gold{--c:#FFC53D;--cbg:rgba(255,197,61,.16);background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));}
+.stat2027.s-purple{--c:#B497FF;--cbg:rgba(169,139,255,.17);background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));}
+.stat2027.s-navy{--c:#4FB6FF;--cbg:rgba(79,182,255,.16);background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));}
+.stat2027.on{box-shadow:0 0 0 2px var(--c),0 10px 24px rgba(0,0,0,.35);}
+
+/* ---------- الأزرار الأساسية ---------- */
+.exportbtn,.cartbar-btn,.pingate button,.polldiag button{
+  background:linear-gradient(135deg,#1E8CF0,#0A4DB0);border-radius:12px;
+  box-shadow:0 6px 16px rgba(0,88,184,.38);
+}
+.exportbtn.danger{background:linear-gradient(135deg,#F0564A,#B3261E);box-shadow:0 6px 16px rgba(179,38,30,.35);}
+.cartbar{border-radius:16px;border:1px solid rgba(41,182,246,.45);}
+html[data-theme="dark"] .cartbar{background:linear-gradient(165deg,#112042,#0B1630);}
+.submitbar.fixed{
+  bottom:var(--navh,0px);
+  background:linear-gradient(180deg,rgba(5,10,24,0),var(--bg) 24%);
+  border-top:0;box-shadow:none;
+  padding-bottom:28px;   /* مساحة لبروز زرار ＋ من غير ما يغطي الأزرار */
+}
+.modalbg{background:rgba(2,6,20,.72);}
+.modalcard,.previewmodal{border-radius:16px;border:1px solid rgba(94,150,240,.25);}
+.toast{bottom:calc(var(--navh,0px) + 18px);border-radius:14px;border:1px solid rgba(41,182,246,.4);background:#0B1630;}
+
+/* ---------- شريط التنقل السفلي العائم ---------- */
+.bottomnav{
+  position:fixed;left:0;right:0;bottom:0;z-index:95;pointer-events:none;
+  padding:0 12px calc(10px + env(safe-area-inset-bottom,0px));
+}
+.bottomnav-in{
+  pointer-events:auto;max-width:560px;margin:0 auto;height:64px;
+  display:grid;grid-template-columns:1fr 1fr 84px 1fr 1fr;align-items:center;
+  background:linear-gradient(180deg,#0F1D3C,#09122A);
+  border:1px solid rgba(94,150,240,.30);border-radius:26px;
+  box-shadow:0 16px 36px rgba(0,0,0,.55),0 0 0 1px rgba(0,114,214,.10),inset 0 1px 0 rgba(255,255,255,.06);
+}
+.bn{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  background:transparent;border:0;height:100%;padding:6px 2px 4px;min-width:0;
+  color:var(--muted);font-family:'Cairo',sans-serif;cursor:pointer;position:relative;
+}
+.bn-ic{position:relative;display:flex;}
+.bn-ic .ico-svg{top:0;}
+.bn-t{font-size:10.2px;font-weight:700;line-height:1;white-space:nowrap;}
+.bn.on{color:#4FD3FF;}
+.bn.on:not(.bn-fab)::before{
+  content:"";position:absolute;top:0;left:30%;right:30%;height:3px;border-radius:0 0 4px 4px;
+  background:linear-gradient(90deg,#29B6F6,#0072D6);box-shadow:0 2px 10px rgba(41,182,246,.8);
+}
+.bn-badge{
+  position:absolute;top:-6px;left:-9px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;
+  background:#FF5A4F;color:#fff;font-style:normal;font-size:10px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #09122A;
+}
+.fab-btn{
+  width:58px;height:58px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;color:#fff;
+  background:linear-gradient(135deg,#38C6FF 0%,#0A6AE0 55%,#0A3FA0 100%);
+  box-shadow:0 10px 26px rgba(0,114,214,.65),0 0 0 5px var(--bg),0 0 0 6px rgba(94,150,240,.35);
+}
+.bn-fab .fab-btn .ico-svg{top:0;}
+.bn-fab.on .fab-btn{box-shadow:0 10px 30px rgba(41,182,246,.85),0 0 0 5px var(--bg),0 0 0 6px rgba(41,182,246,.8);}
+.bn-fab .bn-t{color:var(--muted);}
+.bn-fab.on .bn-t{color:#4FD3FF;}
+.bn:active:not(.bn-fab){transform:scale(.94);}
+.bn-fab:active .fab-btn{transform:scale(.93);}
+
+
+/* ---------- شاشة الدخول بنفس الهوية ---------- */
+html[data-theme="dark"] .authwrap{
+  background:
+    radial-gradient(520px 380px at 88% -4%, rgba(0,114,214,.42), transparent 66%),
+    radial-gradient(480px 360px at -10% 62%, rgba(41,182,246,.14), transparent 62%),
+    #050A18;
+}
+html[data-theme="dark"] .authcard{
+  background:linear-gradient(165deg,#112042,#0B1630);
+  border:1px solid rgba(94,150,240,.28);
+  box-shadow:0 24px 56px rgba(0,0,0,.55),0 0 0 1px rgba(0,114,214,.10);
+}
+.authbanner{background:linear-gradient(135deg,#0A6AE0 0%,#0A3FA0 55%,#061C52 100%);}
+.authlogo{box-shadow:0 0 0 1px rgba(41,182,246,.5),0 10px 26px rgba(0,114,214,.5);}
+.authfeat2027 .mini2027{border-radius:16px;padding:10px 4px;}
+.authcard button:not([type=button]){background:linear-gradient(135deg,#1E8CF0,#0A4DB0);}
+html[data-theme="dark"] .authcard h3{color:#EAF1FF;}
+
+/* ---------- الوضع الفاتح: نفس الهيكل بألوان نهارية ---------- */
+html[data-theme="light"] .fixedhead-outer,html:not([data-theme]) .fixedhead-outer{box-shadow:0 6px 20px rgba(0,36,104,.10);}
+html[data-theme="light"] .bottomnav-in,html:not([data-theme]) .bottomnav-in{
+  background:#fff;border-color:var(--line);box-shadow:0 14px 32px rgba(0,36,104,.18);}
+html[data-theme="light"] .toolpanel,html:not([data-theme]) .toolpanel{background:#fff;border-color:var(--line);}
+html[data-theme="light"] .bn-fab .fab-btn,html:not([data-theme]) .bn-fab .fab-btn{box-shadow:0 10px 24px rgba(0,114,214,.45),0 0 0 5px var(--bg);}
+html[data-theme="light"] .bn.on,html:not([data-theme]) .bn.on{color:#0072D6;}
+html[data-theme="light"] .mini2027 b,html:not([data-theme]) .mini2027 b{filter:brightness(.7);}
+html[data-theme="light"] .tooltile.on,html:not([data-theme]) .tooltile.on{color:#003E7E;}
+html[data-theme="light"] .tooltile.extradiscwrap input,html:not([data-theme]) .tooltile.extradiscwrap input{color:var(--ink);}
+
+@media (prefers-reduced-motion:reduce){
+  .toolpanel{animation:none;}
+  .bn,.fab-btn{transition:none;}
+}
+@media(min-width:700px){.bottomnav-in{max-width:520px;}}
 </style>
 </head>
 <body>
@@ -1504,7 +1805,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v235';
+const APP_BUILD = 'v236';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -1802,6 +2103,12 @@ const ICONS_ = {
   checkSquare: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
   boxesIcon: '<path d="M4 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><path d="M4 7h6v6H4z"/><path d="M14 7v-3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><path d="M14 7h6v6h-6z"/><path d="M9 13v7"/><path d="M15 13v7"/><path d="M4 20h16"/>',
   sendIcon: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+  plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+  cart: '<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.4 12.2a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.5L21 8H6"/>',
+  dots: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
+  backArrow: '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
+  moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.9 4.9 1.4 1.4"/><path d="m17.7 17.7 1.4 1.4"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m4.9 19.1 1.4-1.4"/><path d="m17.7 6.3 1.4-1.4"/>',
   imageIcon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',
 };
 const COLOR_STYLES_MAP = {
@@ -6203,13 +6510,12 @@ function toggleTheme_(){
 }
 
 function renderHeader(){
-  const bioOn = isBiometricEnabledForCurrentUser();
-  const cartShown = (state.view==='order' && state.currentUser && state.currentUser.username!=='admin');
+  const isAdminUser_ = !!(state.currentUser && state.currentUser.username==='admin');
   // 📌 شريط ملخص مصغّر وثابت: جوه الهيدر الـfixed نفسه عشان يفضل ظاهر مع التمرير
   // (sticky اتجرّب قبل كده ومنفعش — شوف تعليق .fixedhead-outer).
   const miniTile_ = (cls, num, label, act) => `
       <${act?'button':'div'} class="mini2027 ${cls}" ${act?`data-act="${act}"`:''}><b>${num}</b><span>${label}</span></${act?'button':'div'}>`;
-  const showStrip_ = state.view==='order' && state.currentUser && state.currentUser.username!=='admin'
+  const showStrip_ = state.view==='order' && state.currentUser && !isAdminUser_
     && !state.successOrderId && (state.warehouse || isClientAccount());
   const stripHtml_ = showStrip_ ? `
   <div class="ministrip2027">
@@ -6218,52 +6524,86 @@ function renderHeader(){
     ${miniTile_('s-purple', esc(state.warehouse||'—'), 'المخزن', 'strip-go" data-val="wh')}
     ${miniTile_('s-navy', esc(state.mainGroup||'—'), 'القطاع', 'strip-go" data-val="group')}
   </div>` : '';
-  const cartCount = (state.cart && state.cart.length) || (state.pendingDraft && state.pendingDraft.cart && state.pendingDraft.cart.length) || 0;
+  const hasBack_ = !!(state.viewHistory && state.viewHistory.length);
   return `
   <div class="fixedhead-outer"><div class="fixedhead-inner">
-  <header class="top ${cartShown?'has-cart':''}">
-    ${cartShown ? `
-    <button class="cartbtn-float" data-act="open-cart-review" title="السلة">
-      🛒${cartCount ? `<span class="cartbadge">${cartCount}</span>` : ''}
-    </button>` : ''}
+  <header class="top">
+    ${hasBack_ ? `<button class="iconbtn backnav" data-act="go-back" title="رجوع للصفحة السابقة" aria-label="رجوع">${ico_('backArrow',20)}</button>` : ''}
     <div class="brand">
       <img class="logoimg" src="${logoSrc_()}" alt="القرشي">
-      <div>
+      <div class="brandtxt">
         <h1>القرشي لأبواب وشبابيك الـ UPVC</h1>
         <p class="sub">وكيل AXA مصر — نظام طلبات الموزعين</p>
       </div>
     </div>
-    <nav class="tabs">
-      ${(state.viewHistory && state.viewHistory.length) ? `
-      <button class="backnav" data-act="go-back" title="رجوع للصفحة السابقة">→ رجوع للصفحة السابقة</button>` : ''}
-      <div class="tabgrid">
-        <button class="tabbtn ${state.view==='order'?'active':''}" data-act="goto" data-view="order">${ico_('newOrder',14)} طلب جديد</button>
-        <button class="tabbtn ${state.view==='myorders'?'active':''}" data-act="goto" data-view="myorders">${ico_('track',14)} طلباتي</button>
-        <button class="tabbtn ${(state.view==='admin'||state.view==='manage')?'active':''}" data-act="goto" data-view="admin">${ico_('warehouse',14)} الإدارة${state.adminNewCount>0 ? `<span class="navbadge">${state.adminNewCount}</span>` : ''}</button>
-        <button class="tabbtn" data-act="force-update" title="تحديث إجباري">${ico_('cloudRefresh',14)} تحديث</button>
-      </div>
-      <div class="toolrow">
-        ${isWebAuthnSupported() ? `
-        <button class="toolbtn fingerbtn ${bioOn?'on':'off'}" data-act="${bioOn?'disable-biometric':'enable-biometric'}" title="${bioOn?'البصمة مفعّلة — دوس عشان تلغيها':'البصمة غير مفعّلة — دوس عشان تفعّلها'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></svg></button>
-        ` : ''}
-        ${isDiscountEligible() ? `
-        <button class="toolbtn discounttogglebtn small ${state.discountVisible?'on':'off'}" data-act="toggle-discount" title="دوس تغيّر — خط فوق الكلمة يعني الخصم مخفي عن الموزع">${ico_('percent',13)} خصم</button>
-        <span class="extradiscwrap mini" title="خصم مخصص % — يحل محل خصم القطاع لو كتبت قيمة">
-          <span class="pctsign">%</span>
-          <input id="extraDiscInput" type="number" min="0" max="100" step="0.5"
-            value="${state.extraDiscount||''}" placeholder="0"
-            data-extradiscount>
-        </span>` : ''}
-        <button class="toolbtn" data-act="toggle-theme" title="${currentTheme_()==='light'?'رجّع الوضع الداكن':'وضع فاتح'}">${currentTheme_()==='light'?'🌙':'☀️'}</button>
-        <button class="toolbtn logoutbtn exitbtn" data-act="logout" title="تسجيل خروج">${ico_('door',15)} exit</button>
-      </div>
-    </nav>
+    <div class="topacts">
+      <button class="iconbtn" data-act="toggle-theme" title="${currentTheme_()==='light'?'رجّع الوضع الداكن':'وضع فاتح'}" aria-label="تبديل الوضع">${ico_(currentTheme_()==='light'?'moon':'sun',19)}</button>
+    </div>
   </header>
   <div class="profile-bar"><span></span><span></span><span></span><span></span><span></span></div>
   ${stripHtml_}
   </div></div>
   <div class="versionline" style="text-align:center;font-size:11.2px;color:var(--muted);padding:2px;">نسخة ${APP_BUILD}${CREDIT_LINE ? ` · ${esc(CREDIT_LINE)}` : ''}</div>
   `;
+}
+
+function renderToolsPanel_(){
+  if(!state.toolsOpen) return '';
+  const bioOn = isBiometricEnabledForCurrentUser();
+  // 🛠️ الأدوات (بصمة / خصم / تحديث / خروج) اتنقلت من صفين فوق الشاشة لقايمة
+  // بتتفتح من زرار ⋯ — كده الهيدر بقى سطر واحد والمحتوى بياخد المساحة.
+  return `
+    <div class="toolscrim" data-act="toggle-tools"></div>
+    <div class="toolpanel">
+      <div class="toolgrid">
+        ${isWebAuthnSupported() ? `
+        <button class="tooltile fingerbtn ${bioOn?'on':'off'}" data-act="${bioOn?'disable-biometric':'enable-biometric'}" title="${bioOn?'البصمة مفعّلة — دوس عشان تلغيها':'البصمة غير مفعّلة — دوس عشان تفعّلها'}">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></svg>
+          <span>${bioOn?'البصمة شغالة':'فعّل البصمة'}</span>
+        </button>` : ''}
+        <button class="tooltile" data-act="force-update" title="تحديث إجباري">${ico_('cloudRefresh',20)}<span>تحديث التطبيق</span></button>
+        ${isDiscountEligible() ? `
+        <button class="tooltile discounttogglebtn ${state.discountVisible?'on':'off'}" data-act="toggle-discount" title="الخصم ظاهر للموزع ولا مخفي">${ico_('percent',20)}<span>${state.discountVisible?'الخصم ظاهر':'الخصم مخفي'}</span></button>
+        <label class="tooltile extradiscwrap" title="خصم مخصص % — يحل محل خصم القطاع لو كتبت قيمة">
+          <span class="pctsign">%</span>
+          <input id="extraDiscInput" type="number" min="0" max="100" step="0.5"
+            value="${state.extraDiscount||''}" placeholder="خصم مخصص"
+            data-extradiscount>
+        </label>` : ''}
+        <button class="tooltile logoutbtn" data-act="logout" title="تسجيل خروج">${ico_('door',20)}<span>تسجيل خروج</span></button>
+      </div>
+    </div>`;
+}
+
+// 🧭 شريط التنقل السفلي (v236) — تصميم عائم: طلباتي | الإدارة | ＋ طلب جديد | السلة | المزيد.
+// نفس الأفعال القديمة بالظبط (data-act="goto" / "open-cart-review" / "toggle-tools")
+// فمفيش منطق جديد — بس مكانها ومظهرها اتغيّروا.
+function renderBottomNav_(){
+  const u = state.currentUser;
+  if(!u) return '';
+  const isAdminUser_ = u.username==='admin';
+  const cartCount = (state.cart && state.cart.length) || (state.pendingDraft && state.pendingDraft.cart && state.pendingDraft.cart.length) || 0;
+  const onOrder = state.view==='order';
+  const onAdmin = (state.view==='admin'||state.view==='manage');
+  const item_ = (act, attrs, icon, label, active, badge) => `
+      <button class="bn ${active?'on':''}" data-act="${act}" ${attrs} aria-label="${label}">
+        <span class="bn-ic">${ico_(icon,22)}${badge||''}</span><span class="bn-t">${label}</span>
+      </button>`;
+  const slot4_ = isAdminUser_
+    ? item_('force-update', '', 'cloudRefresh', 'تحديث', false, '')
+    : item_('open-cart-review', '', 'cart', 'السلة', false, cartCount ? `<i class="bn-badge">${cartCount}</i>` : '');
+  const discOn_ = isDiscountEligible() && (state.discountVisible || state.extraDiscount);
+  return `
+  ${renderToolsPanel_()}
+  <nav class="bottomnav" aria-label="التنقل الرئيسي"><div class="bottomnav-in">
+    ${item_('goto', 'data-view="myorders"', 'track', 'طلباتي', state.view==='myorders', '')}
+    ${item_('goto', 'data-view="admin"', 'warehouse', 'الإدارة', onAdmin, state.adminNewCount>0 ? `<i class="bn-badge">${state.adminNewCount}</i>` : '')}
+    <button class="bn bn-fab ${onOrder?'on':''}" data-act="goto" data-view="order" aria-label="طلب جديد">
+      <span class="fab-btn">${ico_('plus',30)}</span>
+    </button>
+    ${slot4_}
+    ${item_('toggle-tools', '', 'dots', 'المزيد', !!state.toolsOpen, discOn_ ? '<i class="bn-dot"></i>' : '')}
+  </div></nav>`;
 }
 
 // ===== render: staged product block =====
@@ -7961,10 +8301,15 @@ function scrollToStagedDetail_(key){
 // بيحط مساحة تحت المحتوى بقد ارتفاع شريط الأزرار الثابت بالظبط،
 // عشان آخر كارت في الصفحة يفضل قابل للوصول ومايتغطّاش وراه.
 function applyFixedFooterSpacing_(){
+  // الشريط السفلي العائم: نقيس ارتفاعه ونحطه في متغير CSS (--navh) عشان
+  // شريط الإرسال الثابت يقعد فوقه، والمحتوى ياخد مسافة تحته.
+  const nav = document.querySelector('.bottomnav');
+  const navH = nav ? nav.offsetHeight : 0;
+  document.documentElement.style.setProperty('--navh', navH + 'px');
   const bar = document.querySelector('.submitbar.fixed');
   const main = document.querySelector('#app > main');
   if(!main) return;
-  main.style.paddingBottom = bar ? (bar.offsetHeight + 10) + 'px' : '';
+  main.style.paddingBottom = (navH + (bar ? bar.offsetHeight + 10 : 0) + 18) + 'px';
 }
 
 function applyFixedHeaderSpacing_(){
@@ -8014,7 +8359,7 @@ function render(){
     else if(state.view==='manage') view = renderManageView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
-    app.innerHTML = renderHeader() + banner + view + renderPreviewModal() + renderDiagModal() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderPriceChoiceModal() + renderMergeAskModal() + renderNewOrdersPopup() + renderGlobalError();
+    app.innerHTML = renderHeader() + banner + view + renderBottomNav_() + renderPreviewModal() + renderDiagModal() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderPriceChoiceModal() + renderMergeAskModal() + renderNewOrdersPopup() + renderGlobalError();
     bindEvents();
     applyFixedHeaderSpacing_();
     applyFixedFooterSpacing_();
@@ -8525,7 +8870,9 @@ async function onActionInner(act, el){
       render();
       break;
     case 'toggle-theme': toggleTheme_(); break;
+    case 'toggle-tools': state.toolsOpen = !state.toolsOpen; render(); break;
     case 'goto':{
+      state.toolsOpen = false;   // قايمة الأدوات تتقفل أول ما نتنقل
       const v = el.getAttribute('data-view');
       if(v !== state.view){ state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view); }
       state.view = v; render();
