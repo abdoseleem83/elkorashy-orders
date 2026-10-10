@@ -1794,6 +1794,85 @@ input[type=text],input[type=tel],input[type=number],input[type=password],textare
 .pzmodal .submitbtn:disabled{background:var(--surface3);color:var(--muted);box-shadow:none;opacity:.8;}
 .pzmodal .savebtn{background:var(--surface2);color:var(--ink);border:1px solid var(--line);border-radius:14px;font-family:'Cairo',sans-serif;font-weight:800;}
 
+
+/* ============================================================
+   📐 ضغط وترتيب (v236) — أيقونات وأزرار أصغر، وصفوف منظّمة
+   ============================================================ */
+/* الهيدر */
+header.top{padding:7px 10px;gap:7px;}
+header.top .logoimg{width:32px;height:32px;border-radius:10px;}
+header.top .brand{gap:8px;}
+header.top h1{font-size:12.8px;white-space:normal;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+header.top p.sub{font-size:10.5px;}
+.iconbtn,header.top .backnav{width:34px;height:34px;border-radius:11px;}
+.iconbtn .ico-svg,header.top .backnav .ico-svg{width:17px;height:17px;}
+.versionline{font-size:10px !important;padding:0 !important;}
+.ministrip2027{padding:6px 10px 8px;gap:6px;}
+.mini2027{padding:4px 3px;border-radius:12px;}
+.mini2027 b{font-size:14.5px;}
+.mini2027 span{font-size:10.5px;}
+
+/* الشريط السفلي */
+.bottomnav{padding:0 14px calc(8px + env(safe-area-inset-bottom,0px));}
+.bottomnav-in{height:54px;border-radius:22px;grid-template-columns:1fr 1fr 66px 1fr 1fr;}
+.bn{gap:2px;padding:4px 2px 3px;}
+.bn .ico-svg{width:19px;height:19px;}
+.bn-t{font-size:10.5px;}
+.fab-btn{width:48px;height:48px;margin-top:-26px;box-shadow:0 8px 20px rgba(0,114,214,.6),0 0 0 4px var(--bg),0 0 0 5px rgba(94,150,240,.35);}
+.bn-fab.on .fab-btn{box-shadow:0 8px 24px rgba(41,182,246,.8),0 0 0 4px var(--bg),0 0 0 5px rgba(41,182,246,.8);}
+.fab-btn .ico-svg{width:24px;height:24px;}
+.bn-badge{top:-5px;left:-8px;min-width:15px;height:15px;font-size:9.5px;}
+.bn.on:not(.bn-fab)::before{height:2px;}
+
+/* قايمة المزيد */
+.toolpanel{padding:9px;border-radius:18px;}
+.toolgrid{gap:6px;}
+.tooltile{min-height:42px;padding:6px 10px;gap:8px;border-radius:12px;font-size:12px;}
+.tooltile .ico-svg,.tooltile svg{width:17px;height:17px;}
+.tooltile.extradiscwrap .pctsign{font-size:15px;}
+
+/* شاشة الإدارة: أرقام في صف واحد */
+.stats2027,.stats2027{grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 10px;}
+@media(min-width:700px){.stats2027{grid-template-columns:repeat(4,1fr);}}
+.stat2027{align-items:center;text-align:center;padding:8px 2px;border-radius:14px;gap:0;}
+.stat2027 b{font-size:21px;}
+.stat2027 span{font-size:10.5px;line-height:1.25;}
+.stat2027.on{box-shadow:0 0 0 2px var(--c),0 6px 14px rgba(0,0,0,.28);}
+
+/* شريط البحث والأزرار: بحث فوق، وتلات أزرار في صف واحد */
+.adminbar{gap:6px;margin-bottom:10px;}
+.adminbar input{padding:9px 12px;font-size:14px;}
+.adminbar .exportbtn{flex:1 1 0;min-width:0;min-height:38px;padding:0 6px;font-size:12px;border-radius:11px;gap:4px;}
+.adminbar .exportbtn svg{width:14px;height:14px;}
+.exportbtn{min-height:38px;font-size:12.5px;}
+.polldiag{padding:4px 8px;font-size:11px;margin-bottom:8px;border-radius:10px;}
+.polldiag button{padding:4px 10px;font-size:11px;}
+
+/* شرايح الحالة: سطر واحد قابل للسحب */
+.statuschips{flex-wrap:nowrap;overflow-x:auto;gap:6px;margin-bottom:10px;padding-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.statuschips::-webkit-scrollbar{display:none;}
+.statuschips .chip{flex:0 0 auto;padding:6px 11px;font-size:12px;white-space:nowrap;}
+
+/* عناوين المخازن وكروت الطلبات */
+.whcol .whcolhead{padding:6px 10px;font-size:13px;border-radius:10px;margin-bottom:8px;}
+.whcol .whcolhead .whcount{font-size:11px;padding:0 7px;}
+.ordercard{padding:12px;border-radius:16px;}
+.ordercard .dname{font-size:15.5px;}
+.ordercard .dmeta,.ordercard .oid{font-size:12.5px;}
+.ordercard .items,.ordercard .item-row{font-size:13.5px;}
+.statusbadge{font-size:11.5px;padding:3px 9px;}
+.adminbtnrow-compact .delbtn{min-height:36px;padding:6px 8px;font-size:12px;border-radius:10px;}
+
+/* الكروت والشرائح عمومًا */
+.card{padding:13px;border-radius:18px;margin-bottom:11px;}
+.card h2{font-size:15px;margin-bottom:10px;}
+.card h2 .num{width:24px;height:24px;border-radius:8px;font-size:12px;}
+.chip{padding:7px 12px;font-size:12.5px;border-radius:12px;}
+.whtile{padding:12px 14px;font-size:17px;border-radius:18px;gap:12px;}
+.whtile .whicon{width:46px;height:46px;border-radius:14px;font-size:25px;}
+.whhint2027{font-size:12.5px;}
+label{font-size:13px;}
+
 /* ---------- الوضع الفاتح: نفس الهيكل بألوان نهارية ---------- */
 html[data-theme="light"] .fixedhead-outer,html:not([data-theme]) .fixedhead-outer{box-shadow:0 6px 20px rgba(0,36,104,.10);}
 html[data-theme="light"] .bottomnav-in,html:not([data-theme]) .bottomnav-in{
@@ -1805,6 +1884,9 @@ html[data-theme="light"] .mini2027 b,html:not([data-theme]) .mini2027 b{filter:b
 html[data-theme="light"] .tooltile.on,html:not([data-theme]) .tooltile.on{color:#003E7E;}
 html[data-theme="light"] .tooltile.extradiscwrap input,html:not([data-theme]) .tooltile.extradiscwrap input{color:var(--ink);}
 
+html[data-theme="light"] .stat2027 b,html:not([data-theme]) .stat2027 b{filter:brightness(.62) saturate(1.2);}
+html[data-theme="light"] .stat2027 span,html:not([data-theme]) .stat2027 span{color:var(--ink);}
+html[data-theme="light"] .mini2027 span,html:not([data-theme]) .mini2027 span{color:var(--ink);}
 @media (prefers-reduced-motion:reduce){
   .toolpanel{animation:none;}
   .bn,.fab-btn{transition:none;}
@@ -7860,9 +7942,9 @@ function renderAdminView(){
     ${stats}
     <div class="adminbar">
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
-      <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
-      <button class="exportbtn" data-act="export-excel-preparing">تصدير Excel (${STATUS_PREPARING})</button>
-      <button class="exportbtn danger" data-act="delete-delivered">مسح المُنفَّذ</button>
+      <button class="exportbtn" data-act="refresh-orders">${ico_('refresh',14)} تحديث</button>
+      <button class="exportbtn" data-act="export-excel-preparing" title="تصدير Excel (${STATUS_PREPARING})">${ico_('downloadIcon',14)} Excel</button>
+      <button class="exportbtn danger" data-act="delete-delivered">${ico_('trashIcon',14)} مسح المُنفَّذ</button>
     </div>
     <div class="polldiag">
       <span>${state.pollDiag ? esc(state.pollDiag) : 'الإشعار شغّال — بيفحص كل 45 ثانية'}</span>
