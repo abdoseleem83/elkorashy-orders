@@ -1612,7 +1612,7 @@ main .backnav{
   flex-direction:row;justify-content:flex-start;gap:14px;text-align:right;
   padding:16px 16px;border-radius:20px;font-size:17px;
   background:linear-gradient(165deg,rgba(47,208,138,.16),rgba(255,255,255,.02)) !important;
-  border:1px solid rgba(47,208,138,.45);color:#EAF1FF;
+  border:1px solid rgba(47,208,138,.55);color:var(--ink);
   box-shadow:0 10px 26px rgba(0,0,0,.35),0 0 22px rgba(47,208,138,.12);
 }
 .whtile:nth-child(even){
@@ -1722,6 +1722,77 @@ html[data-theme="dark"] .authcard{
 .authfeat2027 .mini2027{border-radius:16px;padding:10px 4px;}
 .authcard button:not([type=button]){background:linear-gradient(135deg,#1E8CF0,#0A4DB0);}
 html[data-theme="dark"] .authcard h3{color:#EAF1FF;}
+
+
+/* ---------- كروت الطلبات (طلباتي + الإدارة) ---------- */
+.exportbtn{min-height:42px;padding:0 14px;font-size:12.5px;}
+.adminbtnrow-compact .delbtn{min-height:40px;padding:8px 10px;font-size:12px;border-radius:12px;}
+.ordercard{border-radius:20px;}
+html[data-theme="dark"] .ordercard .dname{color:#6CC4FF;}
+html[data-theme="dark"] .ordercard .item-row b{color:#6CC4FF;}
+html[data-theme="dark"] .delbtn.pdf{color:#4FD3FF;border-color:rgba(41,182,246,.55);background:rgba(41,182,246,.08);}
+html[data-theme="dark"] .delbtn.edit{color:#6CC4FF;border-color:rgba(108,196,255,.55);background:rgba(79,182,255,.08);}
+html[data-theme="dark"] .delbtn{background:rgba(255,255,255,.02);}
+html[data-theme="dark"] .statusbadge.pending,html[data-theme="dark"] .statusbadge.preparing{background:rgba(255,197,61,.16);color:#FFC53D;}
+html[data-theme="dark"] .statusbadge.received{background:rgba(79,182,255,.16);color:#7CCBFF;}
+html[data-theme="dark"] .statusbadge.edited{background:rgba(255,255,255,.08);color:var(--muted);}
+
+
+/* ---------- وضوح الخط (v236) ---------- */
+body{font-size:13px;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;}
+:root{--ink:#0A1730;--muted:#4A5C78;}
+html[data-theme="dark"]{--ink:#F2F6FF;--muted:#A9BBDC;}
+header.top h1{font-size:14.5px;font-weight:900;}
+header.top p.sub{font-size:11.5px;font-weight:700;}
+.versionline{opacity:.75;font-size:11.5px !important;}
+.card h2{font-size:17px;font-weight:900;}
+.whhint2027,.whtile{font-weight:800;}
+.whhint2027{font-size:14px;color:var(--muted);}
+.whtile{font-size:19px;font-weight:900;}
+label{font-size:14.5px;font-weight:800;}
+input[type=text],input[type=tel],input[type=number],input[type=password],textarea,select{font-weight:700;}
+.chip{font-size:13.5px;font-weight:800;}
+.mini2027 b{font-size:16px;font-weight:900;}
+.mini2027 span{font-size:11.5px;font-weight:800;}
+.bn-t{font-size:11.5px;font-weight:800;}
+.tooltile{font-size:13.5px;font-weight:800;}
+.ordercard .dname{font-size:17.5px;font-weight:900;}
+.ordercard .dmeta,.ordercard .oid{font-size:13.5px;font-weight:700;}
+.ordercard .items,.ordercard .item-row{font-size:15px;font-weight:700;}
+.ordercard .item-row b{font-weight:900;}
+.statusbadge{font-size:12.5px;font-weight:800;}
+.exportbtn{font-size:13.5px;font-weight:800;}
+.adminbtnrow-compact .delbtn{font-size:13px;font-weight:800;}
+.stat2027 span{font-size:14px;font-weight:800;}
+.cartbar-txt{font-size:13px;}
+.cartbar-btn{font-size:13px;}
+/* عناوين أعمدة الإدارة بدل الأزرق الصريح */
+.whcol .whcolhead{background:linear-gradient(135deg,#1E8CF0,#0A4DB0);border-radius:12px;font-size:14.5px;box-shadow:0 6px 16px rgba(0,88,184,.3);}
+
+
+/* ---------- مودال تصفير أسعار مجموعة + عدّاد الموافقات ---------- */
+.tilecount{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#FF5A4F;color:#fff;font-size:11px;margin-right:6px;}
+.pzgroup{margin-top:10px;}
+.pzrow{
+  width:100%;display:flex;align-items:center;gap:10px;text-align:right;
+  background:var(--surface2);border:1px solid var(--line);color:var(--ink);
+  border-radius:12px;padding:10px 12px;margin-top:6px;min-height:44px;
+  font-family:'Cairo',sans-serif;font-size:14px;font-weight:800;cursor:pointer;
+}
+.pzrow span:nth-child(2){flex:1;}
+.pzrow b{font-size:12px;color:var(--muted);background:rgba(127,150,190,.18);border-radius:8px;padding:1px 8px;}
+.pzck{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;flex:0 0 auto;}
+.pzrow.on{border-color:#FF6B60;background:rgba(255,107,96,.12);}
+.pzrow.on .pzck,.pzrow.some .pzck{background:#E5483C;border-color:#E5483C;}
+.pzrow.some{border-color:rgba(255,107,96,.55);}
+.pzmain{font-size:15px;background:var(--surface3);}
+.pzsub{margin-right:22px;width:calc(100% - 22px);font-weight:700;}
+.pzall{margin-top:0;}
+
+.previewhead{background:linear-gradient(135deg,#1E8CF0,#0A4DB0);}
+.pzmodal .submitbtn{background:linear-gradient(135deg,#F0564A,#B3261E);color:#fff;border:0;border-radius:14px;font-family:'Cairo',sans-serif;font-weight:900;font-size:14.5px;box-shadow:0 8px 20px rgba(179,38,30,.4);}
+.pzmodal .submitbtn:disabled{background:var(--surface3);color:var(--muted);box-shadow:none;opacity:.8;}
+.pzmodal .savebtn{background:var(--surface2);color:var(--ink);border:1px solid var(--line);border-radius:14px;font-family:'Cairo',sans-serif;font-weight:800;}
 
 /* ---------- الوضع الفاتح: نفس الهيكل بألوان نهارية ---------- */
 html[data-theme="light"] .fixedhead-outer,html:not([data-theme]) .fixedhead-outer{box-shadow:0 6px 20px rgba(0,36,104,.10);}
@@ -6561,6 +6632,8 @@ function renderToolsPanel_(){
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></svg>
           <span>${bioOn?'البصمة شغالة':'فعّل البصمة'}</span>
         </button>` : ''}
+        <button class="tooltile" data-act="open-manage-items" title="محمي بالرقم السري">${ico_('boxesIcon',20)}<span>إدارة الأصناف</span></button>
+        <button class="tooltile" data-act="open-manage-approvals" title="محمي بالرقم السري">${ico_('checkSquare',20)}<span>طلبات الموافقة${((state.manageRegRequests||[]).length + (state.managePwRequests||[]).length) ? ` <b class="tilecount">${((state.manageRegRequests||[]).length + (state.managePwRequests||[]).length)}</b>` : ''}</span></button>
         <button class="tooltile" data-act="force-update" title="تحديث إجباري">${ico_('cloudRefresh',20)}<span>تحديث التطبيق</span></button>
         ${isDiscountEligible() ? `
         <button class="tooltile discounttogglebtn ${state.discountVisible?'on':'off'}" data-act="toggle-discount" title="الخصم ظاهر للموزع ولا مخفي">${ico_('percent',20)}<span>${state.discountVisible?'الخصم ظاهر':'الخصم مخفي'}</span></button>
@@ -7406,7 +7479,7 @@ function renderManageItemsTab(){
     <button class="exportbtn" style="width:100%;margin-bottom:12px;" data-act="show-stock">${ico_('boxesIcon',14)} عرض الأرصدة المتاحة (بحث + تصدير PDF)</button>
     <div style="display:flex;gap:8px;margin-bottom:12px;">
       <button class="exportbtn danger" style="flex:1;" data-act="manage-clear-all-stock" ${state.manageClearAllBusy?'disabled':''}>${state.manageClearAllBusy ? '⏳ جارٍ...' : '📦 صفّر كل الأرصدة'}</button>
-      <button class="exportbtn danger" style="flex:1;" data-act="manage-clear-all-prices" ${state.manageClearAllBusy?'disabled':''}>${state.manageClearAllBusy ? '⏳ جارٍ...' : '💲 صفّر كل الأسعار'}</button>
+      <button class="exportbtn danger" style="flex:1;" data-act="pz-open" ${state.manageClearAllBusy?'disabled':''}>${state.manageClearAllBusy ? '⏳ جارٍ...' : '💲 صفّر أسعار مجموعة'}</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:12px;">
       <button class="exportbtn" style="flex:1;" data-act="manage-export-catalog" ${state.manageExportBusy?'disabled':''}>${state.manageExportBusy ? '⏳ جارٍ التصدير...' : ico_('downloadIcon',13) + ' تصدير Excel'}</button>
@@ -7653,6 +7726,77 @@ async function manageClearAllStock(){
   }catch(e){ showToast('حصل خطأ، حاول تاني'); }
   state.manageClearAllBusy = false; render();
 }
+
+// 💲 تصفير أسعار مجموعة (قطاع / تصنيف فرعي) بدل تصفير الكل — بتختار اللي عايزه.
+function pzGroups_(){
+  const src = manageCatalogSource_();
+  const byMain = {};
+  src.forEach(it=>{
+    const main = it.main || 'أخرى', sub = it.sub || '';
+    byMain[main] = byMain[main] || {};
+    byMain[main][sub] = (byMain[main][sub]||0) + 1;
+  });
+  const order = (typeof SECTOR_CHIPS!=='undefined' && SECTOR_CHIPS.length) ? SECTOR_CHIPS : [];
+  const mains = Object.keys(byMain).sort((a,b)=>{ const ia=order.indexOf(a), ib=order.indexOf(b); return (ia<0?999:ia)-(ib<0?999:ib); });
+  return mains.map(m=>({ main:m, subs:Object.keys(byMain[m]).map(sub=>({sub, n:byMain[m][sub]})) }));
+}
+function pzSelectedCount_(){
+  const sel = state.pzSel || {};
+  return manageCatalogSource_().filter(it=>sel[(it.main||'أخرى')+'||'+(it.sub||'')]).length;
+}
+function renderPriceZeroModal(){
+  if(!state.showPriceZero) return '';
+  const sel = state.pzSel || {};
+  const groups = pzGroups_();
+  const total = pzSelectedCount_();
+  const allKeys = groups.flatMap(g=>g.subs.map(x=>g.main+'||'+x.sub));
+  const allOn = allKeys.length && allKeys.every(k=>sel[k]);
+  return `
+  <div class="modalbg" data-act="pz-close">
+    <div class="previewmodal pzmodal" data-act="noop" style="max-width:560px;">
+      <div class="previewhead">
+        <span>💲 اختار المجموعات اللي هتتصفّر أسعارها</span>
+        <button class="previewclose" data-act="pz-close">✕</button>
+      </div>
+      <div class="previewbody">
+        <button class="pzrow pzall ${allOn?'on':''}" data-act="pz-all"><span class="pzck">${allOn?'✓':''}</span><span>تحديد الكل</span></button>
+        ${groups.map(g=>{
+          const keys = g.subs.map(x=>g.main+'||'+x.sub);
+          const on = keys.every(k=>sel[k]), some = keys.some(k=>sel[k]);
+          const cnt = g.subs.reduce((a,x)=>a+x.n,0);
+          return `
+          <div class="pzgroup">
+            <button class="pzrow pzmain ${on?'on':(some?'some':'')}" data-act="pz-main" data-val="${esc(g.main)}"><span class="pzck">${on?'✓':(some?'–':'')}</span><span>${esc(g.main)}</span><b>${cnt}</b></button>
+            ${g.subs.filter(x=>x.sub).map(x=>`
+            <button class="pzrow pzsub ${sel[g.main+'||'+x.sub]?'on':''}" data-act="pz-sub" data-val="${esc(g.main+'||'+x.sub)}"><span class="pzck">${sel[g.main+'||'+x.sub]?'✓':''}</span><span>${esc(x.sub)}</span><b>${x.n}</b></button>`).join('')}
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="previewfoot" style="display:flex;gap:8px;">
+        <button class="submitbtn" style="flex:1;min-height:52px;" data-act="pz-confirm" ${(!total||state.manageClearAllBusy)?'disabled':''}>${total ? 'صفّر سعر '+total+' صنف' : 'اختار مجموعة الأول'}</button>
+        <button class="savebtn" style="flex:0 0 90px;min-height:52px;" data-act="pz-close">إلغاء</button>
+      </div>
+    </div>
+  </div>`;
+}
+async function manageClearPricesByGroups(){
+  const sel = state.pzSel || {};
+  const groups = Object.keys(sel).map(k=>{ const i=k.indexOf('||'); return { main:k.slice(0,i), sub:k.slice(i+2) }; });
+  const n = pzSelectedCount_();
+  if(!groups.length || !n){ showToast('اختار مجموعة الأول'); return; }
+  if(!confirm('هيتصفّر السعر لـ ' + n + ' صنف في ' + groups.length + ' مجموعة — هيظهر "جاري تعديل القوائم" مكانه لحد ما تحطه تاني. متأكد؟')) return;
+  state.manageClearAllBusy = true; render();
+  try{
+    const r = await apiPost({ action:'manageClearPricesByGroups', token:getManageToken(), groups });
+    if(r && r.ok){
+      CATALOG.forEach(it=>{ if(sel[(it.main||'أخرى')+'||'+(it.sub||'')]) it.price = null; });
+      state.showPriceZero = false; state.pzSel = {};
+      showToast('اتصفّر السعر لـ ' + (r.cleared!=null ? r.cleared : n) + ' صنف ✓');
+    } else showToast('تعذّر التنفيذ' + (r && r.error ? ': ' + r.error : '') + ' — اتأكد إن السيرفر متحدّث (Deploy)');
+  }catch(e){ showToast('حصل خطأ، حاول تاني'); }
+  state.manageClearAllBusy = false; render();
+}
+
 async function manageClearAllPrices(){
   const n = CATALOG.length;
   if(!n){ showToast('مفيش أصناف محمّلة'); return; }
@@ -7717,7 +7861,6 @@ function renderAdminView(){
     <div class="adminbar">
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
       <button class="exportbtn" data-act="refresh-orders">🔄 تحديث</button>
-      <button class="exportbtn" data-act="goto-manage-inline">${ico_('manageIcon',13)} إدارة الأصناف</button>
       <button class="exportbtn" data-act="export-excel-preparing">تصدير Excel (${STATUS_PREPARING})</button>
       <button class="exportbtn danger" data-act="delete-delivered">مسح المُنفَّذ</button>
     </div>
@@ -8359,7 +8502,7 @@ function render(){
     else if(state.view==='manage') view = renderManageView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
-    app.innerHTML = renderHeader() + banner + view + renderBottomNav_() + renderPreviewModal() + renderDiagModal() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderPriceChoiceModal() + renderMergeAskModal() + renderNewOrdersPopup() + renderGlobalError();
+    app.innerHTML = renderHeader() + banner + view + renderBottomNav_() + renderPreviewModal() + renderDiagModal() + renderWarehouseModal() + renderStockModal() + renderPriceZeroModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderPriceChoiceModal() + renderMergeAskModal() + renderNewOrdersPopup() + renderGlobalError();
     bindEvents();
     applyFixedHeaderSpacing_();
     applyFixedFooterSpacing_();
@@ -9017,6 +9160,36 @@ async function onActionInner(act, el){
       if(!getManageToken()) ensureManageToken_();
       break;
     }
+    case 'open-manage-items':
+    case 'open-manage-approvals':{
+      // من قايمة "المزيد": بنفتح شاشة الإدارة على التبويب المطلوب. الرقم السري
+      // بتطلبه الشاشة نفسها (renderManageView) لو الجلسة لسه مادخلتش بيه.
+      state.toolsOpen = false;
+      state.manageTab = (act==='open-manage-approvals') ? 'approvals' : 'items';
+      if(state.view !== 'manage'){ state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view); }
+      state.view = 'manage';
+      if(state.manageTab==='approvals') state.manageApprovalsLoaded = false;
+      render();
+      break;
+    }
+    case 'pz-open': state.showPriceZero = true; state.pzSel = {}; render(); break;
+    case 'pz-close': state.showPriceZero = false; render(); break;
+    case 'pz-sub':{ const k = el.getAttribute('data-val'); state.pzSel = state.pzSel || {}; if(state.pzSel[k]) delete state.pzSel[k]; else state.pzSel[k] = true; render(); break; }
+    case 'pz-main':{
+      const m = el.getAttribute('data-val'); state.pzSel = state.pzSel || {};
+      const keys = pzGroups_().filter(g=>g.main===m).flatMap(g=>g.subs.map(x=>m+'||'+x.sub));
+      const allOn = keys.every(k=>state.pzSel[k]);
+      keys.forEach(k=>{ if(allOn) delete state.pzSel[k]; else state.pzSel[k]=true; });
+      render(); break;
+    }
+    case 'pz-all':{
+      state.pzSel = state.pzSel || {};
+      const keys = pzGroups_().flatMap(g=>g.subs.map(x=>g.main+'||'+x.sub));
+      const allOn = keys.length && keys.every(k=>state.pzSel[k]);
+      state.pzSel = {}; if(!allOn) keys.forEach(k=>{ state.pzSel[k]=true; });
+      render(); break;
+    }
+    case 'pz-confirm': await manageClearPricesByGroups(); break;
     case 'submit-manage-pin': submitManagePin(); break;
     case 'manage-set-tab':
       state.manageTab = el.getAttribute('data-val');

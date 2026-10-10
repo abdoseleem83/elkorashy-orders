@@ -469,6 +469,10 @@ function doPostInner_(e) {
     if (!isValidManageToken_(token)) return denyManage_();
     return json_(Object.assign({ ok: true }, clearAllCatalogColumn_(7)));   // G=السعر
   }
+  if (action === 'manageClearPricesByGroups') {
+    if (!isValidManageToken_(token)) return denyManage_();
+    return json_(Object.assign({ ok: true }, clearCatalogPricesByGroups_(data.groups || [])));
+  }
   if (action === 'uploadCatalog') {
     if (!isValidAdminToken_(token)) return denyAdmin_();
     return json_(Object.assign({ ok: true }, bulkUpdateCatalog_(data.rows || [], data.mode || 'full')));
@@ -1354,6 +1358,28 @@ function clearAllCatalogColumn_(col) {
   sheet.getRange(2, col, n, 1).setValues(blank);
   markReservedDirty_();
   return { cleared: n };
+}
+
+// 💲 تصفير السعر (عمود G) لمجموعات محددة بس. كل عنصر: { main, sub } —
+// الصنف بيتصفّر لو قطاعه (عمود B) وتصنيفه الفرعي (عمود C) مطابقين لواحد منهم.
+function clearCatalogPricesByGroups_(groups) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CATALOG_SHEET_NAME);
+  if (!sheet || !groups || !groups.length) return { cleared: 0 };
+  const n = Math.max(0, sheet.getLastRow() - 1);
+  if (n < 1) return { cleared: 0 };
+  const want = {};
+  groups.forEach(function (g) { want[String(g.main || '').trim() + '||' + String(g.sub || '').trim()] = true; });
+  const bc = sheet.getRange(2, 2, n, 2).getValues();   // B=القطاع, C=التصنيف الفرعي
+  const cells = [];
+  for (let i = 0; i < n; i++) {
+    const key = String(bc[i][0] || 'أخرى').trim() + '||' + String(bc[i][1] || '').trim();
+    if (want[key]) cells.push('G' + (i + 2));
+  }
+  if (cells.length) {
+    sheet.getRangeList(cells).setValue('');
+    markReservedDirty_();
+  }
+  return { cleared: cells.length };
 }
 
 // تصدير كامل للأصناف — عشان تراجعهم/تعدّلهم في إكسيل وترفعهم تاني بنفس الشكل
