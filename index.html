@@ -1873,6 +1873,81 @@ header.top p.sub{font-size:10.5px;}
 .whhint2027{font-size:12.5px;}
 label{font-size:13px;}
 
+
+/* ---------- 🏠 الشاشة الرئيسية (v237) ---------- */
+.homeview{padding-top:4px;}
+.homehero{
+  position:relative;overflow:hidden;border-radius:22px;padding:16px;margin-bottom:12px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;color:#fff;
+  background:
+    radial-gradient(220px 140px at 12% -10%, rgba(255,255,255,.22), transparent 70%),
+    radial-gradient(260px 180px at 100% 120%, rgba(41,182,246,.45), transparent 70%),
+    linear-gradient(135deg,#0A6AE0 0%,#0A3FA0 55%,#061C52 100%);
+  box-shadow:0 14px 32px rgba(0,60,160,.38),inset 0 1px 0 rgba(255,255,255,.18);
+  border:1px solid rgba(120,180,255,.35);
+}
+.herotxt{min-width:0;}
+.herohi{font-size:12.5px;font-weight:800;opacity:.9;}
+.homehero h2{margin:2px 0 2px;font-size:19px;font-weight:900;line-height:1.25;color:#fff;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.homehero p{margin:0;font-size:12px;font-weight:700;opacity:.85;}
+.herocta{
+  flex:0 0 auto;display:flex;align-items:center;gap:6px;border:0;cursor:pointer;
+  background:#fff;color:#0A3FA0;font-family:'Cairo',sans-serif;font-weight:900;font-size:13.5px;
+  padding:10px 14px;border-radius:14px;box-shadow:0 8px 18px rgba(0,20,80,.35);
+}
+.herocta .ico-svg{top:0;}
+.homekpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px;}
+.hkpi{
+  --c:#4FB6FF;--cbg:rgba(79,182,255,.15);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  padding:9px 4px;border-radius:15px;cursor:pointer;font-family:'Cairo',sans-serif;
+  background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));
+  border:1px solid color-mix(in srgb,var(--c) 40%,transparent);
+}
+.hkpi b{font-size:19px;font-weight:900;color:var(--c);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2;}
+.hkpi span{font-size:11px;font-weight:800;color:var(--muted);}
+.hkpi.s-green{--c:#2FD08A;--cbg:rgba(47,208,138,.15);}
+.hkpi.s-purple{--c:#B497FF;--cbg:rgba(169,139,255,.16);}
+.hkpi.s-navy{--c:#4FB6FF;--cbg:rgba(79,182,255,.15);}
+.homesec{margin:14px 2px 8px;font-size:14px;font-weight:900;color:var(--ink);display:flex;align-items:center;gap:8px;}
+.homesec span{font-size:11px;font-weight:800;color:var(--muted);}
+.hometiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.hometile{
+  --c:#29B6F6;--cbg:rgba(41,182,246,.14);
+  position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;text-align:right;
+  padding:12px;border-radius:18px;cursor:pointer;font-family:'Cairo',sans-serif;color:var(--ink);
+  background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));
+  border:1px solid color-mix(in srgb,var(--c) 42%,transparent);
+  box-shadow:0 8px 20px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.05);
+}
+.hometile:active{transform:scale(.97);}
+.hticon{
+  width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;
+  background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 55%,#000));
+  box-shadow:0 6px 14px color-mix(in srgb,var(--c) 45%,transparent);
+}
+.hticon .ico-svg{top:0;}
+.httext{display:flex;flex-direction:column;gap:1px;min-width:0;}
+.httext b{font-size:14.5px;font-weight:900;line-height:1.25;}
+.httext small{font-size:11px;font-weight:700;color:var(--muted);line-height:1.3;}
+.htbadge{position:absolute;top:10px;left:10px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#FF5A4F;color:#fff;font-style:normal;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;}
+.hometile.c-blue{--c:#29B6F6;--cbg:rgba(41,182,246,.15);}
+.hometile.c-purple{--c:#A98BFF;--cbg:rgba(169,139,255,.16);}
+.hometile.c-green{--c:#2FD08A;--cbg:rgba(47,208,138,.15);}
+.hometile.c-amber{--c:#FFB92E;--cbg:rgba(255,197,61,.15);}
+.hometile.c-teal{--c:#19C3B1;--cbg:rgba(25,195,177,.15);}
+.hometile.c-pink{--c:#FF6FA5;--cbg:rgba(255,111,165,.15);}
+/* مربعات أفقية: الأيقونة جنب النص، والمربع الأخير الفردي ياخد العرض كله */
+.hometile{flex-direction:row;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;min-height:62px;}
+.hometile:last-child:nth-child(odd){grid-column:1/-1;}
+.hticon{width:38px;height:38px;border-radius:12px;flex:0 0 auto;}
+.hticon .ico-svg{width:20px;height:20px;}
+.httext{flex:1;}
+.httext b{font-size:14px;}
+.htbadge{top:8px;left:8px;}
+html[data-theme="light"] .hkpi b,html:not([data-theme]) .hkpi b{filter:brightness(.65) saturate(1.2);}
+html[data-theme="light"] .hometile,html:not([data-theme]) .hometile{box-shadow:0 6px 16px rgba(0,36,104,.10);}
+
 /* ---------- الوضع الفاتح: نفس الهيكل بألوان نهارية ---------- */
 html[data-theme="light"] .fixedhead-outer,html:not([data-theme]) .fixedhead-outer{box-shadow:0 6px 20px rgba(0,36,104,.10);}
 html[data-theme="light"] .bottomnav-in,html:not([data-theme]) .bottomnav-in{
@@ -1958,7 +2033,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v236';
+const APP_BUILD = 'v238';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2045,7 +2120,7 @@ const ADMIN_WHATSAPP = '201067765483';
 
 // ===== state =====
 const state = {
-  view:'order',                // order | myorders | admin
+  view:'home',                 // home | order | myorders | admin | manage
   viewHistory:[],              // تاريخ الصفحات لسهم الرجوع
 
   // auth
@@ -2256,6 +2331,7 @@ const ICONS_ = {
   checkSquare: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
   boxesIcon: '<path d="M4 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><path d="M4 7h6v6H4z"/><path d="M14 7v-3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><path d="M14 7h6v6h-6z"/><path d="M9 13v7"/><path d="M15 13v7"/><path d="M4 20h16"/>',
   sendIcon: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+  home: '<path d="m3 10.5 9-7.5 9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/>',
   plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
   cart: '<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.4 12.2a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.5L21 8H6"/>',
   dots: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
@@ -3676,6 +3752,7 @@ async function submitLogin(){
       return;
     }
     setUserToken(data.token || '');
+    state.view = 'home'; state.viewHistory = [];
     state.currentUser = { username: data.username || username, distName: data.distName||'', distRegion: data.distRegion||'', distPhone: data.distPhone||'', distType: data.distType||'موزع', token: data.token||'' };
     try{ localStorage.setItem(LS_USER_KEY, JSON.stringify(state.currentUser)); }catch(e){}
     markSessionAuthed_();
@@ -6714,6 +6791,7 @@ function renderToolsPanel_(){
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></svg>
           <span>${bioOn?'البصمة شغالة':'فعّل البصمة'}</span>
         </button>` : ''}
+        <button class="tooltile" data-act="goto" data-view="admin" title="محمي بالرقم السري">${ico_('warehouse',20)}<span>الطلبات الواردة${state.adminNewCount>0 ? ` <b class="tilecount">${state.adminNewCount}</b>` : ''}</span></button>
         <button class="tooltile" data-act="open-manage-items" title="محمي بالرقم السري">${ico_('boxesIcon',20)}<span>إدارة الأصناف</span></button>
         <button class="tooltile" data-act="open-manage-approvals" title="محمي بالرقم السري">${ico_('checkSquare',20)}<span>طلبات الموافقة${((state.manageRegRequests||[]).length + (state.managePwRequests||[]).length) ? ` <b class="tilecount">${((state.manageRegRequests||[]).length + (state.managePwRequests||[]).length)}</b>` : ''}</span></button>
         <button class="tooltile" data-act="force-update" title="تحديث إجباري">${ico_('cloudRefresh',20)}<span>تحديث التطبيق</span></button>
@@ -6733,6 +6811,48 @@ function renderToolsPanel_(){
 // 🧭 شريط التنقل السفلي (v236) — تصميم عائم: طلباتي | الإدارة | ＋ طلب جديد | السلة | المزيد.
 // نفس الأفعال القديمة بالظبط (data-act="goto" / "open-cart-review" / "toggle-tools")
 // فمفيش منطق جديد — بس مكانها ومظهرها اتغيّروا.
+
+// 🏠 الشاشة الرئيسية (v237): ترحيب + أرقام سريعة + مربعات الأقسام. مفيش منطق جديد —
+// كل مربع بينفّذ نفس data-act القديم (goto / open-cart-review / open-manage-*).
+function renderHomeView(){
+  const u = state.currentUser || {};
+  const h = new Date().getHours();
+  const greet = h < 5 ? 'سهرانين النهاردة' : h < 12 ? 'صباح الخير' : h < 18 ? 'نهارك سعيد' : 'مساء الخير';
+  const name = asText(u.distName) || asText(u.username) || '';
+  const cartN = (state.cart||[]).length || (state.pendingDraft && state.pendingDraft.cart && state.pendingDraft.cart.length) || 0;
+  const myN = state.myOrdersSearched ? (state.myOrders||[]).length : '—';
+  const tile_ = (cls, icon, title, sub, act, attrs, badge) => `
+    <button class="hometile ${cls}" data-act="${act}" ${attrs||''}>
+      <span class="hticon">${ico_(icon,22)}</span>
+      <span class="httext"><b>${title}</b><small>${sub}</small></span>
+      ${badge ? `<i class="htbadge">${badge}</i>` : ''}
+    </button>`;
+  return `
+  <main class="homeview">
+    <section class="homehero">
+      <div class="herotxt">
+        <span class="herohi">${greet} 👋</span>
+        <h2>${esc(name) || 'أهلاً بيك'}</h2>
+        <p>اختار اللي عايز تعمله من هنا</p>
+      </div>
+      <button class="herocta" data-act="goto" data-view="order">${ico_('plus',18)} طلب جديد</button>
+    </section>
+
+    <div class="homekpis">
+      <button class="hkpi s-green" data-act="open-cart-review"><b>${cartN}</b><span>في السلة</span></button>
+      <button class="hkpi s-purple" data-act="goto" data-view="myorders"><b>${myN}</b><span>طلباتي</span></button>
+      <button class="hkpi s-navy" data-act="goto" data-view="order"><b>${esc(state.warehouse||'—')}</b><span>المخزن</span></button>
+    </div>
+
+    <div class="homesec">الأقسام</div>
+    <div class="hometiles">
+      ${tile_('c-blue','newOrder','طلب جديد','اختار الأصناف وابعت','goto','data-view="order"')}
+      ${tile_('c-purple','track','طلباتي','تابع حالة طلباتك','goto','data-view="myorders"')}
+      ${tile_('c-green','cart','السلة', cartN ? cartN+' صنف جاهز للإرسال' : 'فاضية دلوقتي','open-cart-review','', cartN||'')}
+    </div>
+  </main>`;
+}
+
 function renderBottomNav_(){
   const u = state.currentUser;
   if(!u) return '';
@@ -6744,15 +6864,16 @@ function renderBottomNav_(){
       <button class="bn ${active?'on':''}" data-act="${act}" ${attrs} aria-label="${label}">
         <span class="bn-ic">${ico_(icon,22)}${badge||''}</span><span class="bn-t">${label}</span>
       </button>`;
+  const adminBadge_ = state.adminNewCount>0 ? `<i class="bn-badge">${state.adminNewCount}</i>` : '';
   const slot4_ = isAdminUser_
-    ? item_('force-update', '', 'cloudRefresh', 'تحديث', false, '')
+    ? item_('goto', 'data-view="admin"', 'warehouse', 'الإدارة', onAdmin, adminBadge_)
     : item_('open-cart-review', '', 'cart', 'السلة', false, cartCount ? `<i class="bn-badge">${cartCount}</i>` : '');
   const discOn_ = isDiscountEligible() && (state.discountVisible || state.extraDiscount);
   return `
   ${renderToolsPanel_()}
   <nav class="bottomnav" aria-label="التنقل الرئيسي"><div class="bottomnav-in">
+    ${item_('goto', 'data-view="home"', 'home', 'الرئيسية', state.view==='home', '')}
     ${item_('goto', 'data-view="myorders"', 'track', 'طلباتي', state.view==='myorders', '')}
-    ${item_('goto', 'data-view="admin"', 'warehouse', 'الإدارة', onAdmin, state.adminNewCount>0 ? `<i class="bn-badge">${state.adminNewCount}</i>` : '')}
     <button class="bn bn-fab ${onOrder?'on':''}" data-act="goto" data-view="order" aria-label="طلب جديد">
       <span class="fab-btn">${ico_('plus',30)}</span>
     </button>
@@ -8579,7 +8700,8 @@ function render(){
       return;
     }
     let view;
-    if(state.view==='order') view = renderOrderView();
+    if(state.view==='home') view = renderHomeView();
+    else if(state.view==='order') view = renderOrderView();
     else if(state.view==='myorders') view = renderMyOrdersView();
     else if(state.view==='manage') view = renderManageView();
     else view = renderAdminView();
@@ -9084,6 +9206,7 @@ async function onActionInner(act, el){
       render();
       break;
     case 'logout':
+      state.view = 'home'; state.viewHistory = [];
       state.currentUser = null;
       setAdminToken('');
       state.adminUnlocked = false;
@@ -9099,7 +9222,8 @@ async function onActionInner(act, el){
     case 'goto':{
       state.toolsOpen = false;   // قايمة الأدوات تتقفل أول ما نتنقل
       const v = el.getAttribute('data-view');
-      if(v !== state.view){ state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view); }
+      if(v === 'home') state.viewHistory = [];
+      else if(v !== state.view){ state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view); }
       state.view = v; render();
       if(v==='admin' && state.adminUnlocked){ loadOrders(); markAdminOrdersSeen_(); }
       if(v==='myorders' && !state.myOrdersSearched) refreshMyOrders();
