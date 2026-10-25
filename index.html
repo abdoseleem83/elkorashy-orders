@@ -2033,7 +2033,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v238';
+const APP_BUILD = 'v239';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2171,7 +2171,7 @@ const state = {
   staged:[],                   // [{key, main, product, colorRequired, availableColors, selectedColors:[], qtys:{color:n}, unitType, cancelling:false}]
 
   // other-items form
-  otherName:'', otherNote:'', otherQty:1, otherUnit:'قطعة', otherPrice:'',
+  otherName:'', otherNote:'', otherQty:1, otherUnit:'قطعة',
 
   cart:[],
   distName:'',
@@ -2183,8 +2183,6 @@ const state = {
   successOrderId:null,
   successMode:'new',           // new | updated
   lastOrder:null,
-  quotePdfPlain:null,
-  quotePdfGenerating:false,
   shortagePdf:null,
   previewModal:null,
   pinChecking:false,
@@ -2209,12 +2207,8 @@ const state = {
   catalogUploadBusy:false,
   catalogUploadResult:null,       // {updated, added, notFound} أو {error}
   showCartReview:false,
-  showPriceChoiceModal:false,     // سؤال "بأسعار ولا من غير؟" قبل مشاركة عرض السعر
-  pendingShareOrder:null,         // الطلب الحقيقي المستنّي يشارك بعد السؤال (null = معاينة السلة قبل الإرسال)
   waSent:false,
   waImgPreparing:false,
-  discountVisible:false,
-  extraDiscount:0,  // خصم إضافي % يكتبه الموزع وقت التسعير
   pwRequests:[],
   pwRequestsLoading:false,
   pwRequestsCount:0,
@@ -2717,19 +2711,6 @@ function findCatalogItemAnyMain(product, color){
   if(!item && nc==='' && byProduct && byProduct.length===1) item = byProduct[0];
   return item;
 }
-function getDiscount(main){
-  const v = DISCOUNTS[main];
-  if(typeof v!=='number' || isNaN(v)) return 0;
-  // ⚠️ السيرفر بيحوّل الكسر العشري لنسبة مئوية (×100)، وده بيولّد صور مشوّهة
-  // زي 7.000000000000001% بسبب دقة الأرقام العشرية في الكمبيوتر. بنقرّبها
-  // هنا لأقرب رقمين عشريين عشان تتعرض نضيفة (7%) في كل حتة بتستخدمها.
-  return Math.round(v * 100) / 100;
-}
-// الخصم يتفصل ويتحسب بس للموزع (النوع من شيت المستخدمين)؛ العميل يشوف السعر
-// من غير أي خصم خالص.
-function isDiscountEligible(){
-  return !!(state.currentUser && state.currentUser.distType === 'موزع');
-}
 // نفس محتوى بلوك "الأصناف المطلوبة" — استخرجناها لدالة مستقلة عشان نقدر
 // نستخدمها في مكانين: الكارت جوه فورم الطلب، وشاشة مراجعة السلة الجديدة
 // (اللي بتفتح لما تدوس على أيقونة السلة فوق).
@@ -2741,8 +2722,6 @@ function renderCartItemsHtml(cart){
     cartGroups.get(it.main).push({...it, _idx: idx});
   });
   const orderedMains = orderGroups_(cartGroups);
-  const pricing = computeCartPricing(cart);
-  const hasMissingPrice = cart.some(it=>it.lineTotal==null);
 
   return `
     ${orderedMains.map(main=>`
@@ -2754,103 +2733,18 @@ function renderCartItemsHtml(cart){
               <div class="pname">${esc(it.product)}</div>
               <div class="pmeta">${it.color ? esc(it.color) : ''}${it.note ? (it.color?' · ':'') + esc(it.note) : ''}${it.autoBundled ? ' <span class="autotag">🔗 مضاف تلقائيًا مع الباب</span>' : ''}</div>
             </div>
-            <div class="qty">×${it.qty} ${esc(it.unitType||'')}<br><span class="linetotal">${it.lineTotal==null?'جاري تعديل القوائم':Math.round(it.lineTotal).toLocaleString('en-US')+' ج.م'}</span></div>
+            <div class="qty">×${it.qty} ${esc(it.unitType||'')}</div>
             ${it.autoBundled ? '' : `<button class="del edit" data-act="edit-cart-item" data-main="${esc(it.main)}" data-product="${esc(it.product)}">✏️</button>`}
             <button class="del" data-act="del-cart" data-idx="${it._idx}">✕</button>
           </div>
         `).join('')}
       </div>
     `).join('')}
-    ${renderPriceTable(cart)}
-    ${(()=>{
-      // ⚠️ البق الحقيقي: الملخص ده (الإجمالي قبل/بعد الخصم) كان بيتحكم فيه
-      // بس بشرط "فيه خصم أصلاً" (discountAmount>0) — من غير ما يتأكد إن
-      // زرار "إظهار الخصم" مفعّل. فحتى لو الزرار بيقول "مخفي"، الملخص كان
-      // بيوري تفاصيل الخصم بره الجدول نفسه. دلوقتي بيتأكد من الزرار كمان.
-      const showDiscountBreakdown = isDiscountEligible() && pricing.discountAmount>0 && (state.discountVisible || pricing.customPct>0);
-      return showDiscountBreakdown;
-    })() ? `
-      <div class="carttotal">
-        <span>الإجمالي قبل الخصم</span>
-        <b>${Math.round(pricing.subtotal).toLocaleString('en-US')} ج.م</b>
-      </div>
-      ${pricing.discountAmount>0?`<div class="carttotal" style="color:var(--gold);">
-        <span>${pricing.customPct>0 ? 'خصم مخصص ('+pricing.customPct+'%)' : 'خصم القطاع'}</span>
-        <b>- ${Math.round(pricing.discountAmount).toLocaleString('en-US')} ج.م</b>
-      </div>`:''}
-      <div class="carttotal">
-        <span>الإجمالي بعد الخصم</span>
-        <b>${Math.round(pricing.total).toLocaleString('en-US')} ج.م</b>
-      </div>
-      ` : `
-      <div class="carttotal">
-        <span>الإجمالي</span>
-        <b>${Math.round(state.discountVisible ? pricing.total : pricing.subtotal).toLocaleString('en-US')} ج.م</b>
-      </div>
-      `
-    }
-    ${hasMissingPrice ? '<div class="pricenote">⚠️ في أصناف بدون سعر مش داخلة في الإجمالي</div>' : ''}
+    <div class="carttotal">
+      <span>عدد الأصناف</span>
+      <b>${cart.length}</b>
+    </div>
   `;
-}
-
-function computeCartPricing(cartItems){
-  const subtotal = cartItems.reduce((s,it)=> s + (it.lineTotal||0), 0);
-  const customPct = (isDiscountEligible() && state.extraDiscount>0) ? state.extraDiscount : 0;
-  let discountAmount = 0;
-  if(isDiscountEligible()){
-    cartItems.forEach(it=>{
-      if(it.lineTotal==null) return;
-      // لو في خصم مخصص → يحل محل خصم القطاع الأصلي
-      const pct = customPct>0 ? customPct : getDiscount(it.main);
-      if(pct>0) discountAmount += it.lineTotal * (pct/100);
-    });
-  }
-  return { subtotal, discountAmount, customPct, total: subtotal - discountAmount };
-}
-// جدول عرض سعر رسمي: م / بيان / الكمية / السعر (+ نسبة الخصم / خصم مبلغ / الصافي للموزع بس).
-// العميل يشوف نفس الجدول من غير أعمدة الخصم خالص.
-function renderPriceTable(cartItems){
-  if(!cartItems.length) return '';
-  // الخصم مابيتعرضش غير لو الحساب موزع أصلاً (isDiscountEligible)، وحتى
-  // ساعتها بس لو دوس على أيقونة "إظهار الخصم" — عشان يقدر يوري الشاشة
-  // لعميل من غير ما نسبة الخصم تبان له بالغلط.
-  const eligible = isDiscountEligible() && state.discountVisible;
-  const head = eligible
-    ? `<tr><th>م</th><th>بيان</th><th>الكمية</th><th>السعر</th><th>نسبة الخصم</th><th>خصم مبلغ</th><th>الصافي</th></tr>`
-    : `<tr><th>م</th><th>بيان</th><th>الكمية</th><th>السعر</th></tr>`;
-  const rows = cartItems.map((it,idx)=>{
-    const desc = esc(it.product) + (it.color ? ' - ' + esc(it.color) : '');
-    const qtyTxt = esc(String(it.qty)) + ' ' + esc(it.unitType||'');
-    const priceTxt = it.lineTotal==null ? 'جاري تعديل القوائم' : Math.round(it.lineTotal).toLocaleString('en-US');
-    if(!eligible){
-      return `<tr><td>${idx+1}</td><td>${desc}</td><td>${qtyTxt}</td><td>${priceTxt}</td></tr>`;
-    }
-    const pct = (state.extraDiscount>0) ? state.extraDiscount : getDiscount(it.main);
-    const discAmt = (it.lineTotal!=null && pct>0) ? it.lineTotal*(pct/100) : 0;
-    const net = it.lineTotal==null ? null : it.lineTotal - discAmt;
-    return `<tr>
-      <td>${idx+1}</td><td>${desc}</td><td>${qtyTxt}</td><td>${priceTxt}</td>
-      <td>${pct>0 ? pct+'%' : '—'}</td>
-      <td>${discAmt>0 ? Math.round(discAmt).toLocaleString('en-US') : '—'}</td>
-      <td>${net==null ? 'جاري تعديل القوائم' : Math.round(net).toLocaleString('en-US')}</td>
-    </tr>`;
-  }).join('');
-  return `<div class="pricetablewrap"><table class="pricetable"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`;
-}
-function calcUnitPrice(main, product, color, unitType){
-  const item = findCatalogItem(main, product, color);
-  if(!item || item.price==null) return null;
-  const bigUnits = ['لفة','كرتونة'];
-  const multiplier = bigUnits.includes(unitType) ? (item.unit || 1) : 1;
-  // السعر المعروض في الشاشة دايمًا قبل الخصم — الخصم بيتحسب ويتفصل بس في عرض السعر النهائي
-  return item.price * multiplier;
-}
-function renderOrderTotalLine(o){
-  if(!o.items || !o.items.length) return '';
-  const total = o.items.reduce((s,it)=> s + (it.lineTotal||0), 0);
-  const hasPricing = o.items.some(it=>it.lineTotal!=null);
-  if(!hasPricing) return '';
-  return `<div class="ordertotalline">الإجمالي: <b>${Math.round(total).toLocaleString('en-US')} ج.م</b></div>`;
 }
 
 let toastTimer=null;
@@ -3786,7 +3680,7 @@ function applyPostLoginView_(){
   const dest = state.postLoginView;
   state.postLoginView = '';
   if(!dest) return;
-  const v = (dest==='quote') ? 'myorders' : dest;
+  const v = (dest==='shortage') ? 'myorders' : dest;
   state.view = v;
   state.viewHistory = [];
   if(v==='myorders') setTimeout(()=>{ try{ refreshMyOrders(); }catch(e){} }, 0);
@@ -3867,107 +3761,6 @@ function loadProfile(){
     if(!state.distRegion) state.distRegion = asText(p.distRegion);
     if(!state.distPhone) state.distPhone = asText(p.distPhone);
   }catch(e){}
-}
-
-async function previewCartInvoice(){
-  if(state.cart.length===0){ showToast('لسه محضتش أي صنف تقدر تعاينه'); return; }
-  state.previewGenerating = true; render();
-  const tempOrder = {
-    id: 'PREVIEW', ts: Date.now(),
-    distName: asText(state.distName).trim() || 'معاينة',
-    distRegion: asText(state.distRegion).trim(),
-    distPhone: asText(state.distPhone).trim(),
-    note: asText(state.note).trim(),
-    items: state.cart
-  };
-  try{
-    const result = await buildQuotePDF(tempOrder, true);
-    if(result && result.blob){
-      previewPdfBlob(result, 'معاينة_عرض_سعر.pdf');
-    } else {
-      showToast('حصل خطأ في تجهيز المعاينة، حاول تاني');
-    }
-  }catch(e){
-    console.error('previewCartInvoice failed:', e);
-    showToast('حصل خطأ في تجهيز المعاينة: ' + (e && e.message ? e.message : e));
-  }
-  state.previewGenerating = false;
-  render();
-}
-
-// 📤 مشاركة عرض السعر — إما معاينة قبل الإرسال (من زرار "مشاركة" جوه
-// مودال "مراجعة الطلب"، realOrder=null فبيبني من state.cart)، أو الطلب
-// الحقيقي فور ما يتبعت فعليًا (realOrder موجود، شوف actuallySubmit —
-// دي المشاركة الأساسية اللي بتحصل "من عند إرسال الطلب" مباشرة، بطلب
-// صريح، بدل ما تتربط بشاشة "مراجعة الطلب"). withPrices بييجي من سؤال
-// "بأسعار ولا من غير؟" (renderPriceChoiceModal) — الموزّع هو اللي
-// يختار. مفيش نواقص بتتبعت خالص هنا — دي بقت زرار يدوي اختياري بس في
-// شاشة النجاح/طلباتي (shareQuoteAndShortage_).
-async function shareCartReview_(withPrices, realOrder){
-  if(withPrices === undefined) withPrices = true;
-  const isReal = !!realOrder;
-  let order = realOrder;
-  if(!isReal){
-    if(state.cart.length===0){ showToast('لسه محضتش أي صنف تقدر تشاركه'); return; }
-    order = {
-      id: 'PREVIEW', ts: Date.now(),
-      distName: asText(state.distName).trim() || 'معاينة',
-      distRegion: asText(state.distRegion).trim(),
-      distPhone: asText(state.distPhone).trim(),
-      note: asText(state.note).trim(),
-      items: state.cart
-    };
-  }
-  if(!navigator.canShare) reserveWaWindow();
-  state.cartShareBusy = true; render();
-  const orderNo = isReal ? orderNoDisplay_(order) : '';
-  const waText_ = isReal ? ('عرض السعر — طلب #' + orderNo) : 'معاينة طلب قبل الإرسال';
-  try{
-    // 💰 بالأسعار: عرض سعر عادي (جدول PDF بالأسعار والإجمالي).
-    if(withPrices){
-      const baseName = isReal ? ('عرض_سعر_' + orderNo) : 'معاينة_عرض_سعر';
-      const title = isReal ? ('طلب #' + orderNo) : 'معاينة الطلب';
-      const q = await buildQuotePDF(order, true);
-      if(!q){ showToast('حصل خطأ في تجهيز المشاركة، حاول تاني'); releaseWaWindow(); return; }
-      if(await shareAsImage_(q, baseName, title)){ releaseWaWindow(); return; }
-      if(q.imgBlob){
-        downloadBlob(q.imgBlob, baseName + '.png');
-        showToast('اتحملت الصورة — هتفتح واتساب، ارفقها من المعرض');
-      } else {
-        downloadBlob(q.blob, baseName + '.pdf');
-        showToast('اتحمل الملف — هتفتح واتساب، ارفقه يدويًا');
-      }
-    } else {
-      // 📋 من غير أسعار: بطلب صريح شكلها بقى قريب من ورقة النواقص (عمودين
-      // جنب بعض، صور PNG مش جدول PDF) بدل عرض السعر العادي من غير عمود
-      // السعر بس — buildItemsListImages_.
-      const blobs = await buildItemsListImages_(order);
-      if(!blobs || !blobs.length){ showToast('حصل خطأ في تجهيز المشاركة، حاول تاني'); releaseWaWindow(); return; }
-      const base = isReal ? ('قائمة_الأصناف_' + orderNo) : 'معاينة_قائمة_الأصناف';
-      const files = blobs.map((b,i)=> new File([b], base + (blobs.length>1?'_'+(i+1):'') + '.png', {type:'image/png'}));
-      if(navigator.canShare && navigator.canShare({files})){
-        releaseWaWindow();
-        await navigator.share({ files, title: isReal ? ('طلب #'+orderNo) : 'معاينة الطلب', text: waText_ });
-        return;
-      }
-      files.forEach(f=> downloadBlob(f, f.name));
-      showToast('اتحمّلت الصور — هتفتح واتساب، ارفقها يدويًا');
-    }
-    const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent(waText_);
-    if(__waWin && !__waWin.closed){
-      try{ __waWin.location.href = waUrl_; }catch(e){ setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900); }
-      __waWin = null;
-    } else {
-      setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900);
-    }
-  }catch(e){
-    if(e && e.name === 'AbortError'){ releaseWaWindow(); return; }
-    console.error('shareCartReview_ failed:', e);
-    showToast('حصل خطأ في المشاركة: ' + (e && e.message ? e.message : e));
-    releaseWaWindow();
-  }finally{
-    state.cartShareBusy = false; render();
-  }
 }
 
 function saveOrderRef(id, distName){
@@ -4166,14 +3959,13 @@ function confirmStaged(key){
     const unitType = s.units[color] || s.unitOptions[0];
     const qty = s.qtys[color];
     const catItem = findCatalogItem(s.main, s.product, color);
-    const unitPrice = calcUnitPrice(s.main, s.product, color, unitType);
     // ⚠️ بنصوّر حالة التوفر في نفس لحظة الإضافة للسلة، ونخزّنها جوه الصنف.
     // قبل كده كنا بنحاول نحسبها تاني وقت بناء رسالة الواتساب باستخدام
     // findCatalogItem — وده بيفشل بسهولة (لون فاضي، اسم صنف اتغيّر، الكتالوج
     // اتحدّث بعد الإضافة...) فكانت اللافتة مش بتظهر خالص. دلوقتي بقت مضمونة.
     state.cart.push({
       main:s.main, product:s.product, name: catItem ? catItem.name : s.product, color: color||'',
-      unitType, qty, unitPrice, lineTotal: unitPrice==null ? null : unitPrice*qty,
+      unitType, qty,
       unavailable: computeUnavailable_(s.main, s.product, color)
     });
 
@@ -4182,11 +3974,9 @@ function confirmStaged(key){
         const accQty = acc.perDoor * qty;
         const accCatItem = findCatalogItem(s.main, acc.product, '') || findCatalogItemAnyMain(acc.product, '');
         const accMain = accCatItem ? accCatItem.main : s.main;
-        const accPrice = accCatItem ? calcUnitPrice(accMain, acc.product, '', 'قطعة') : null;
         state.cart.push({
           main: accMain, product:acc.product, name: accCatItem ? accCatItem.name : acc.product, color:'',
-          unitType:'قطعة', qty: accQty, unitPrice: accPrice,
-          lineTotal: accPrice==null ? null : accPrice*accQty, autoBundled:true
+          unitType:'قطعة', qty: accQty, autoBundled:true
         });
       });
     }
@@ -4226,14 +4016,11 @@ function removeFromCart(idx){
 // ===== other items =====
 function addOtherItem(){
   if(!state.otherName.trim()){ showToast('اكتب اسم الصنف الأول'); return; }
-  const price = state.otherPrice.trim() ? parseFloat(state.otherPrice) : null;
-  const unitPrice = (price!=null && !isNaN(price)) ? price : null;
   state.cart.push({
     main:OTHER_SECTOR, product: state.otherName.trim(), name: state.otherName.trim(), color:'',
-    unitType: state.otherUnit, qty: state.otherQty, note: state.otherNote.trim(),
-    unitPrice, lineTotal: unitPrice==null ? null : unitPrice*state.otherQty
+    unitType: state.otherUnit, qty: state.otherQty, note: state.otherNote.trim()
   });
-  state.otherName=''; state.otherNote=''; state.otherQty=1; state.otherUnit='قطعة'; state.otherPrice='';
+  state.otherName=''; state.otherNote=''; state.otherQty=1; state.otherUnit='قطعة';
   showToast('تمت الإضافة للسلة');
   autoSaveDraft();
   render();
@@ -4332,7 +4119,6 @@ function finalizeOrderSuccess_(order, isUpdate, oldId, id, orderNo, toastMsg){
   state.waSent = false;
   state.waImgPreparing = false;
   state.orderImages = null;
-  prepareOrderImage();
 }
 
 async function actuallySubmit(){
@@ -4363,18 +4149,11 @@ async function actuallySubmit(){
     // 📲 مابقناش نبعت واتساب تلقائيًا ولا إجباري — بطلب صريح من المستخدم.
     // بس بنعرض في شاشة النجاح ملاحظة + سهم بيشاور على زرار واتساب،
     // والموزع هو اللي يدوس بنفسه.
-    // ⚠️ كانت المشاركة (عرض السعر + النواقص مع بعض) بتتفتح تلقائيًا هنا فور
-    // نجاح الإرسال — بس بتضم النواقص (لتنسيق المخزن) مع عرض السعر (للعميل)
-    // في نفس المشاركة، فالموزّع في عجلته كان ممكن يبعت النواقص لحد مش
-    // المفروض يشوفها. اتشالت النواقص من هنا، بس المشاركة نفسها فضلت هنا
-    // بالظبط — بطلب صريح إنها تحصل "من عند إرسال الطلب" مباشرة، مش تتنقل
-    // لشاشة تانية ("مراجعة الطلب" بقت استعراض بس من غير مشاركة تلقائية).
-    // سؤال "بأسعار ولا من غير؟" (renderPriceChoiceModal) بيظهر فورًا هنا.
+    // 📲 مابقناش نبعت واتساب تلقائيًا — الموزع هو اللي يدوس زرار «نواقص» في
+    // شاشة النجاح بنفسه (مفيش أسعار ولا عرض سعر في التطبيق خالص).
     finalizeOrderSuccess_(order, isUpdate, oldId, id, orderNo, isUpdate
       ? '✅ تم استلام تعديلك — جاري المراجعة والتأكيد بالمتاح'
       : '✅ تم استلام طلبك — جاري المراجعة والتأكيد بالمتاح');
-    state.pendingShareOrder = order;
-    state.showPriceChoiceModal = true;
   }catch(e){
     // 🔒 "unauthorized" معناها جلسة الموزّع خلصت أو مش صالحة — مش خطأ نت
     // ولا خطأ سيرفر. الطلب (السلة) لسه محفوظ في state، فبنرجّعه لشاشة
@@ -4405,11 +4184,6 @@ async function actuallySubmit(){
   }
   state.submitting = false;
   render();
-  // ✅ نولّد عرض السعر تلقائياً بعد ما الطلب يتبعت — ده بس لدعم زرارات
-  // "عرض السعر" اليدوية (معاينة/تنزيل) في شاشة النجاح كـfallback. سؤال
-  // "بأسعار ولا من غير؟" وفتح شاشة المشاركة الفعلية اتنادوا بالفعل فوق
-  // جوه try، فور نجاح الحفظ.
-  if(state.lastOrder && state.successOrderId) generateBothQuotes(state.lastOrder);
   // ⛔ مابقناش نولّد الـ PDF تلقائيًا هنا. html2canvas بيجمّد الشاشة وهو شغال،
   // فكانت شاشة النجاح متظهرش والمستخدم يفتكر إن الحفظ فشل — مع إنه نجح فعلاً.
   // دلوقتي شاشة النجاح بتظهر فورًا، والملفات بتتولّد بضغطة زرار وقت ما تحتاجها.
@@ -4423,9 +4197,8 @@ function resetOrderForm(){
   state.warehouseImages = [];
   state.successOrderId = null;
   state.lastOrder = null;
-  state.quotePdfPlain = null;
   state.shortagePdf = null;
-  state.quoteShortageReady = null;
+  state.shortageReady = null;
   render();
 }
 
@@ -4489,76 +4262,6 @@ function normalizeItemToSmallUnit(it){
   if(bigUnits.includes(it.unitType)) return { qty: it.qty * content, unitLabel: label };
   return { qty: it.qty, unitLabel: label };
 }
-function rawPriceForItem(it){
-  const catItem = findCatalogItem(it.main, it.product, it.color);
-  if(catItem && catItem.price!=null) return catItem.price;
-  if(it.main===OTHER_SECTOR && it.unitPrice!=null) return it.unitPrice;
-  return null;
-}
-
-async function handleOrderPDF(id, mode){
-  const order = state.orders.find(o=>o.id===id) || state.myOrders.find(o=>o.id===id);
-  if(!order) return;
-  state.adminPdfGeneratingId = id;
-  render();
-  try{
-    const result = await buildQuotePDF(order, true);
-    if(result && result.blob){
-      if(mode==='download'){
-        downloadBlob(result.blob, 'عرض_سعر_' + orderNoDisplay_(order) + '.pdf');
-      } else {
-        previewPdfBlob(result, 'عرض_سعر_' + orderNoDisplay_(order) + '.pdf');
-      }
-    } else {
-      showToast('حصل خطأ في تجهيز الملف، حاول تاني');
-    }
-  }catch(e){
-    console.error('handleOrderPDF failed:', e);
-    showToast('حصل خطأ في تجهيز الملف: ' + (e && e.message ? e.message : e));
-  }
-  state.adminPdfGeneratingId = null;
-  render();
-}
-
-async function previewMyOrderPDF(id){
-  const order = state.myOrders.find(o=>o.id===id);
-  if(!order) return;
-  state.adminPdfGeneratingId = id;
-  render();
-  try{
-    const result = await buildQuotePDF(order, true);
-    if(result && result.blob){
-      previewPdfBlob(result, 'عرض_سعر_' + orderNoDisplay_(order) + '.pdf');
-    } else {
-      showToast('حصل خطأ في تجهيز الملف، حاول تاني');
-    }
-  }catch(e){
-    console.error('previewMyOrderPDF failed:', e);
-    showToast('حصل خطأ في تجهيز الملف: ' + (e && e.message ? e.message : e));
-  }
-  state.adminPdfGeneratingId = null;
-  render();
-}
-
-// ✂️ بقت بتجهّز عرض السعر بس — طلبية النواقص مبقتش تتولّد هنا خالص
-// (الدالة buildShortagePDF لسه موجودة في الكود لو احتجناها تاني بعدين).
-async function generateBothQuotes(order){
-  if(state.quotePdfGenerating) return; // منتنادوش مرتين في نفس الوقت
-  state.quotePdfGenerating = true; render();
-  try{
-    const result = await buildQuotePDF(order);
-    state.quotePdfPlain = result || null;
-    if(!result) showToast('تعذّر تجهيز عرض السعر — حاول تاني');
-  }catch(e){
-    console.error('generateBothQuotes:', e);
-    state.quotePdfPlain = null;
-    showToast('خطأ في تجهيز عرض السعر: ' + (e&&e.message?e.message:e));
-  }finally{
-    state.quotePdfGenerating = false; // دايماً بيخلص حتى لو فيه خطأ
-    render();
-  }
-}
-
 function downloadBlob(blob, filename){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -4597,7 +4300,7 @@ async function runDiagnostics(){
     action:'create', id:'TEST'+Date.now().toString(36), ts:Date.now(), token:getUserToken(),
     distName:'اختبار تشخيص', distRegion:'اختبار', distPhone:'0000000000',
     note:'صف تجريبي — امسحه', status: STATUS_PENDING,
-    items:[{ main:'أصناف أخرى', product:'اختبار', name:'اختبار', color:'', unitType:'قطعة', qty:1, unitPrice:0, lineTotal:0 }]
+    items:[{ main:'أصناف أخرى', product:'اختبار', name:'اختبار', color:'', unitType:'قطعة', qty:1 }]
   };
   try{
     const r = await fetch(APPS_SCRIPT_URL, {
@@ -4628,25 +4331,6 @@ function renderNewOrdersPopup(){
       <div class="modalbtns">
         <button class="modalbtn primary" data-act="goto-new-orders">📦 روح للطلبات</button>
         <button class="modalbtn" data-act="dismiss-new-orders">تجاهل دلوقتي</button>
-      </div>
-    </div>
-  </div>`;
-}
-
-// 💰 سؤال "بأسعار ولا من غير؟" — بيظهر أول ما يفتح مودال "مراجعة الطلب"
-// (بدل المشاركة التلقائية القديمة اللي كانت دايمًا بالأسعار). مفيش
-// data-act على الخلفية عمدًا (زي renderMergeAskModal): قرار لازم يتاخد.
-function renderPriceChoiceModal(){
-  if(!state.showPriceChoiceModal) return '';
-  return `
-  <div class="modalbg">
-    <div class="modalcard" data-act="noop">
-      <div class="modalic">📤</div>
-      <h3>تم تأكيد الطلب — جاري التجهيز للمشاركة</h3>
-      <p>تحب تشارك عرض السعر بالأسعار ولا من غيرها؟ بعد ما تختار هتفتح شاشة المشاركة وتختار إنت هتبعتها لمين.</p>
-      <div class="modalbtns">
-        <button class="modalbtn primary" data-act="share-price-yes">💰 بالأسعار</button>
-        <button class="modalbtn" data-act="share-price-no">📋 من غير أسعار</button>
       </div>
     </div>
   </div>`;
@@ -4792,9 +4476,6 @@ function renderCartReviewModal(){
       ${state.cart.length ? `
       <div class="previewfoot" style="display:flex;flex-wrap:wrap;gap:8px;">
         <button class="savebtn" style="flex:1;min-height:56px;" data-act="cart-add-more">➕ زود أصناف</button>
-        <button class="savebtn" style="flex:1;min-height:56px;" data-act="cart-share" ${state.cartShareBusy?'disabled':''}>
-          ${state.cartShareBusy ? '⏳ جارٍ...' : '📤 مشاركة'}
-        </button>
         <button class="submitbtn" style="flex:1 1 100%;min-height:56px;" data-act="cart-send">📨 ابعت الطلب</button>
       </div>` : ''}
     </div>
@@ -5152,43 +4833,19 @@ function renderPreviewModal(){
   </div>`;
 }
 
-function downloadQuote(){
-  const q = state.quotePdfPlain;
-  if(!q) return;
-  downloadBlob(q.blob, 'عرض_سعر_' + (state.successOrderId||'order') + '.pdf');
-}
-
 // ═══════════════════════════════════════════════════════════════════
-//  مشاركة موحّدة: عرض السعر + كل مجموعات النواقص المتاحة في الطلب —
-//  دفعة واحدة في شاشة مشاركة الموبايل، بطلب صريح من المستخدم.
+//  مشاركة «نواقص» — كل مجموعات النواقص المتاحة في الطلب (كرافت+نيو /
+//  كومبن+اكسسوارات) دفعة واحدة في شاشة مشاركة الموبايل، بضغطة واحدة.
+//  مفيش أسعار ولا عرض سعر في التطبيق خالص.
 // ═══════════════════════════════════════════════════════════════════
 //
-// ⚠️ ملحوظة تقنية مهمة: navigator.share (معيار الويب القياسي) بيفتح قايمة
-// كل تطبيقات المشاركة المتاحة على الجهاز — مفيش أي API في المتصفح يقدر
-// "يفرض" واتساب تحديدًا أو يتخطى اختيار المستخدم. أقصى حاجة ممكنة: نخلي
-// واتساب هو الخيار المتاح فورًا (عن طريق wa.me) في حالة الـ fallback لو
-// المشاركة الأصلية مش مدعومة على الجهاز (أجهزة سطح المكتب مثلًا).
-// ═══════════════════════════════════════════════════════════════════
-//  🔑 مقسّمة لخطوتين (زي shareAsImage_ بالظبط) — نفس القيد الموثّق فوقها:
-//  navigator.share لازم يتنده مباشرة جوه نفس لحظة الضغطة (نفس الـ user
-//  gesture)، وإلا المتصفح بيعتبرها ضغطة "قديمة" ويرفض المشاركة بصمت
-//  ويسقط على أقرب سلوك احتياطي (فتح واتساب مباشرة من غير ما يوري شاشة
-//  المشاركة خالص). بناء PDF + الصور بياخد ثانية أو اتنين (async حقيقي)،
-//  فمينفعش نستناه قبل ما ننادي navigator.share — لازم "جهّز" الأول
-//  (يخزّن الملفات جاهزة)، وبعدين "ابعت" في ضغطة منفصلة تالية.
-// 🔑 بطلب صريح: ضغطة واحدة بس تفتح شاشة المشاركة على طول — من غير
-// خطوتين منفصلتين (جهّز ثم ابعت). التجربة الفعلية أثبتت إن navigator.share
-// بتقبل المشاركة حتى بعد تأخير التجهيز (ثانية أو اتنين) طالما لسه جوه
-// نفس تفاعل المستخدم، فمفيش داعي نقسمها. لو نادرًا وحصل رفض من المتصفح،
-// بنخزّن الملفات الجاهزة ونسيب زرار "ابعت تاني" كخطة احتياط بس.
-// includeQuote=false بتستخدم في شاشة الإدارة بس (بطلب صريح: الأدمن محتاج
-// النواقص بس عشان يوجّه المخزن، مش عرض السعر). باقي الشاشات (شاشة النجاح
-// وطلباتي) بتفضل تبعت الاتنين مع بعض زي ما هو الافتراضي.
-async function shareQuoteAndShortage_(order, busyStateKey, includeQuote){
-  if(includeQuote === undefined) includeQuote = true;
-  // لو الملفات already جاهزة من محاولة سابقة فشلت (fallback نادر) — نحاول
-  // نبعتها تاني على طول من غير ما نعيد بناء أي حاجة.
-  if(state.quoteShortageReady && order && state.quoteShortageReady.orderId===order.id && state.quoteShortageReady.includeQuote===includeQuote){
+// ⚠️ navigator.share (معيار الويب) بيفتح قايمة كل تطبيقات المشاركة — مفيش API
+// يقدر يفرض واتساب تحديدًا. أقصى حاجة: نخلي واتساب هو الخيار المتاح (wa.me)
+// في الـ fallback لو المشاركة الأصلية مش مدعومة (سطح المكتب مثلًا).
+// 🔑 ضغطة واحدة بس تفتح شاشة المشاركة. لو المتصفح رفض نادرًا، بنخزّن الملفات
+// الجاهزة (state.shortageReady) ونسيب الزرار يبعتها تاني من غير إعادة بناء.
+async function shareShortage_(order, busyStateKey){
+  if(state.shortageReady && order && state.shortageReady.orderId===order.id){
     return trySendReadyFiles_();
   }
   if(!order || !order.items || !order.items.length){ showToast('الطلب مفيهوش أصناف'); releaseWaWindow(); return; }
@@ -5196,20 +4853,6 @@ async function shareQuoteAndShortage_(order, busyStateKey, includeQuote){
   try{
     const files = [];
     const orderNo = orderNoDisplay_(order);
-
-    if(includeQuote){
-      const quote = await buildQuotePDF(order);
-      if(quote){
-        if(quote.imgBlob) files.push(new File([quote.imgBlob], 'عرض_سعر_' + orderNo + '.png', {type:'image/png'}));
-        else files.push(new File([quote.blob], 'عرض_سعر_' + orderNo + '.pdf', {type:'application/pdf'}));
-      } else {
-        // 🐞 بق حقيقي كان هنا: buildQuotePDF بترجع null بصمت لو فشلت (خصوصًا
-        // timeout في html2canvas على طلبات كبيرة أو جهاز/نت بطيء) — وكنا
-        // بنتجاهل الفشل ده تمامًا ونكمل على النواقص بس. النتيجة إن المشاركة
-        // كانت بتفتح بالنواقص بس من غير عرض السعر، من غير أي تفسير للموزّع.
-        showToast('تعذّر تجهيز عرض السعر — هيتبعت النواقص بس، جرّب تاني بعدين');
-      }
-    }
 
     for(const groupKey of Object.keys(SHORTAGE_IMG_GROUPS_)){
       const group = SHORTAGE_IMG_GROUPS_[groupKey];
@@ -5220,11 +4863,11 @@ async function shareQuoteAndShortage_(order, busyStateKey, includeQuote){
       blobs.forEach((b,i)=> files.push(new File([b], base + (blobs.length>1 ? '_'+(i+1) : '') + '.png', {type:'image/png'})));
     }
 
-    if(!files.length){ showToast(includeQuote ? 'مفيش عرض سعر ولا نواقص لهذا الطلب' : 'مفيش نواقص لهذا الطلب'); releaseWaWindow(); return; }
-    state.quoteShortageReady = { files, orderNo, orderId: order.id, includeQuote, distName: asText(order.distName).trim() };
+    if(!files.length){ showToast('مفيش نواقص لهذا الطلب'); releaseWaWindow(); return; }
+    state.shortageReady = { files, orderNo, orderId: order.id, distName: asText(order.distName).trim() };
     await trySendReadyFiles_();
   }catch(e){
-    console.error('shareQuoteAndShortage_ failed:', e);
+    console.error('shareShortage_ failed:', e);
     showToast('حصل خطأ في تجهيز الملفات: ' + (e && e.message ? e.message : e));
     releaseWaWindow();
   }finally{
@@ -5233,23 +4876,24 @@ async function shareQuoteAndShortage_(order, busyStateKey, includeQuote){
 }
 
 async function trySendReadyFiles_(){
-  const ready = state.quoteShortageReady;
+  const ready = state.shortageReady;
   if(!ready) return;
   const { files, orderNo, distName } = ready;
   // 📝 بطلب صريح: اسم الموزّع مكتوب في الملحوظة، مش رقم الطلب بس — أسهل
   // للمخزن إنه يعرف الطلب ده مين ورا غير ما يدوّر على الاسم في مكان تاني.
-  const noteText_ = 'عرض السعر والنواقص — طلب #' + orderNo + (distName ? ' موزع ' + distName : '');
+  const noteText_ = 'نواقص — طلب #' + orderNo + (distName ? ' موزع ' + distName : '');
   if(navigator.canShare && navigator.canShare({files})){
     releaseWaWindow();   // مش محتاجينها في المسار ده — لو كانت متحجزة من الضغطة
     try{
       await navigator.share({ files, title:'طلب #'+orderNo, text: noteText_ });
-      state.quoteShortageReady = null; render();
+      state.shortageReady = null; render();
+      afterShortageSent_(ready.orderId);
       return;
     }catch(e){
       // رفض نادر من المتصفح — الملفات لسه محفوظة، نوري الموزّع إنه يجرّب
       // تاني بضغطة واحدة تانية بدل ما نضيّع الشغل. الزرار بقى أول حاجة
       // ظاهرة في شاشة النجاح (شوف renderOrderView) فمحتاجش يدوّر عليه.
-      showToast('دوس "نواقص + عرض سعر" فوق عشان تبعت', 5000);
+      showToast('دوس "نواقص" فوق عشان تبعت', 5000);
       render();
       return;
     }
@@ -5267,7 +4911,17 @@ async function trySendReadyFiles_(){
   } else {
     setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900);
   }
-  state.quoteShortageReady = null; render();
+  state.shortageReady = null; render();
+  afterShortageSent_(ready.orderId);
+}
+
+// بعد ما النواقص تتبعت من شاشة النجاح: نعلّم الزرار «تم» ونرجّع الموزع
+// للشاشة الرئيسية تلقائيًا (زي ما كان بيحصل مع زرار «ابعت الطلب واتساب»).
+function afterShortageSent_(orderId){
+  if(state.successOrderId && state.lastOrder && state.lastOrder.id===orderId){
+    state.waSent = true; render();
+    autoReturnHomeAfterSend_();
+  }
 }
 
 // 📦 بطلب صريح: مجموعة نواقص واحدة بس (كرافت+نيو، أو كومبن+اكسسوارات) —
@@ -5315,590 +4969,6 @@ async function shareShortageGroupOnly_(order, groupKey){
 
 // الإرسال على واتساب بقى بصورة (PNG) مش PDF — الصورة بتتفتح في الشات على طول
 // من غير ما حد ينزّل ملف. لو الجهاز مش بيدعم مشاركة الصور، بنرجع للـ PDF.
-async function shareAsImage_(q, baseName, title){
-  if(!q) return false;
-  // 1) الأفضل: مشاركة صورة
-  if(q.imgBlob){
-    try{
-      const img = new File([q.imgBlob], baseName + '.png', {type:'image/png'});
-      if(navigator.canShare && navigator.canShare({files:[img]})){
-        await navigator.share({ files:[img], title: title, text:'طلب رقم #' + (state.successOrderId||'') });
-        return true;
-      }
-    }catch(e){ /* المستخدم لغى أو الجهاز مش داعم */ }
-  }
-  // 2) احتياطي: مشاركة PDF
-  try{
-    const file = new File([q.blob], baseName + '.pdf', {type:'application/pdf'});
-    if(navigator.canShare && navigator.canShare({files:[file]})){
-      await navigator.share({ files:[file], title: title, text:'طلب رقم #' + (state.successOrderId||'') });
-      return true;
-    }
-  }catch(e){ /* fallthrough */ }
-  return false;
-}
-
-async function shareQuotePDF(){
-  const q = state.quotePdfPlain;
-  if(!q){ releaseWaWindow(); return; }
-  const name = 'عرض_سعر_' + (state.successOrderId||'order');
-  if(await shareAsImage_(q, name, 'عرض سعر')){ releaseWaWindow(); return; }
-  // 3) آخر حل: ننزّل الصورة ونفتح واتساب عشان يرفقها بإيده
-  if(q.imgBlob){
-    downloadBlob(q.imgBlob, name + '.png');
-    showToast('اتحملت الصورة — هتفتح واتساب، ارفقها من المعرض');
-  } else {
-    downloadQuote();
-    showToast('اتحمل الملف — هتفتح واتساب، ارفقه يدويًا');
-  }
-  const o = state.lastOrder;
-  let msg = 'طلب #' + (state.successOrderId||'') + '\n';
-  if(o) msg += 'الموزع: ' + asText(o.distName) + '\nالمنطقة: ' + asText(o.distRegion) + '\n';
-  const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent(msg);
-  if(__waWin && !__waWin.closed){
-    try{ __waWin.location.href = waUrl_; }catch(e){ setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900); }
-    __waWin = null;
-  } else {
-    setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900);
-  }
-}
-
-// ===== quote PDF (عرض سعر) =====
-// ⚠️ حساب صفوف عرض السعر (الكميات المعروضة/الأسعار/الخصومات/ملخص اللفات)
-// اتفصل هنا في دالة واحدة عشان يتشارك فيها أكتر من مكان (PDF عرض السعر،
-// وصور الطلب المتعددة اللي بتتبعت واتساب) من غير ما نكرر نفس المنطق المالي
-// الحساس ده في أكتر من نسخة (لو غيّرناه، هيتغيّر في الاتنين مع بعض تلقائيًا).
-function computeQuoteRows_(order){
-  // ⚠️ عرض السعر بيتعرض باللفة لأصناف القطاعات لو الكمية لفة كاملة
-  // أو أكتر — لكن لو الكمية أقل من لفة، بتتعرض بالعود عشان متبقاش كسر لفة
-  // (زي 0.3 لفة) — بعكس تصدير الإكسيل اللي فضل بالعود زي ما هو (متلمسناهوش).
-  // السعر بيتحوّل لسعر اللفة (سعر العود × محتوى اللفة) بس لما تكون العرض
-  // فعلًا لفات، عشان الإجمالي يفضل مطابق للحقيقي بالظبط في الحالتين.
-  const rows = [];
-  order.items.forEach(it=>{
-    const raw = rawPriceForItem(it); // سعر القطعة الصغيرة (عود/قطعة) — الأساس المالي الصحيح
-    const norm = normalizeItemToSmallUnit(it);
-    const unavailNow = unavailableForWarehouse_(it.main, it.product, it.color, asText(order.warehouse));
-    if(ROLL_GROUPS_.includes(it.main)){
-      // ⚠️ قاعدة الخصم: الخصم بيتطبق بس على اللفات الكاملة. لو الموزع طلب
-      // مثلًا 7 عود ومحتوى اللفة 6 عود، بيتقسم لصفين: 1 لفة (بسعر اللفة +
-      // خصم لو مؤهل) و1 عود باقي (بسعر العود العادي من غير خصم خالص) —
-      // بدل ما يتحسب الكل بسعر واحد أو خصم واحد غلط.
-      const catItem = findCatalogItem(it.main, it.product, it.color);
-      const content = Number(catItem && catItem.unit) || 1;
-      const split = splitRollsAndRods_(norm.qty, content);
-      if(split.rolls>0){
-        const dispPrice = raw==null ? null : raw*content;
-        const lineRaw = dispPrice==null ? null : dispPrice*split.rolls;
-        rows.push(Object.assign({}, it, { normQty: split.rolls, normUnit: 'لفة', rawPrice: dispPrice, lineRaw, unavailable: unavailNow, noRollDiscount:false }));
-      }
-      if(split.rods>0 || split.rolls===0){
-        const dispQty = split.rods; // لو مفيش لفات خالص، دي كل الكمية بالعود
-        const lineRaw = raw==null ? null : raw*dispQty;
-        rows.push(Object.assign({}, it, { normQty: dispQty, normUnit: 'عود', rawPrice: raw, lineRaw, unavailable: unavailNow, noRollDiscount:true }));
-      }
-      return;
-    }
-    let dispQty = norm.qty, dispUnit = norm.unitLabel, dispPrice = raw;
-    if(it.unitType === 'كرتونة'){
-      // ⚠️ البق: الاكسسوارات بتتطلب بالكرتونة، لكن سعر الكتالوج سعر القطعة.
-      // كان الإجمالي = عدد الكراتين × سعر القطعة (غلط). الصح: سعر الكرتونة =
-      // سعر القطعة × عدد القطع في الكرتونة (عمود المحتوى D)، زي ما القطاعات
-      // بتعمل مع اللفة، وزي ما السيرفر بيخصم المخزن (كرتونة = محتوى قطع).
-      const catItem = findCatalogItem(it.main, it.product, it.color);
-      const content = Number(catItem && catItem.unit) || 1;
-      dispQty = it.qty;              // نفضل نعرض بالكرتونة زي ما الموزع طلب
-      dispUnit = 'كرتونة';
-      dispPrice = raw==null ? null : raw*content;   // سعر الكرتونة كاملة
-    }
-    const lineRaw = dispPrice==null ? null : dispPrice*dispQty;
-    // ⚠️ الشارة "غير متاح" لازم تتحسب على مخزن الطلب نفسه (order.warehouse)
-    // والرصيد الحالي — مش نعتمد على اللقطة القديمة المخزّنة وقت الإضافة (اللي
-    // ممكن تكون false لو الرصيد اتغيّر بعد كده، أو لو state.warehouse وقت
-    // الطباعة مش نفس مخزن الطلب). ده اللي كان بيخلي الملاحظات ماتظهرش للأدمن.
-    rows.push(Object.assign({}, it, { normQty: dispQty, normUnit: dispUnit, rawPrice: dispPrice, lineRaw, unavailable: unavailNow, noRollDiscount:false }));
-  });
-  const subtotal = rows.reduce((s,r)=> s + (r.lineRaw||0), 0);
-  // ⚠️ فرّقنا بين حاجتين هنا: "الخصم موجود أصلاً" (بيتحسب دايمًا لو موزع،
-  // بغض النظر عن الزرار) و"نوريه ولا لأ" (ده بس اللي بيتحكم فيه الزرار).
-  // لو الزرار "مخفي"، السعر النهائي المعروض لازم يفضل السعر بعد الخصم
-  // (الموزع أخد خصمه فعلًا)، بس من غير ما نوري تفاصيل إزاي اتحسب.
-  const eligible = isDiscountEligible(); // فيه خصم أصلاً لنوع الحساب ده؟
-  const customPct = (eligible && state.extraDiscount>0) ? state.extraDiscount : 0;
-  const showDiscount = eligible && (state.discountVisible || customPct>0); // نوري التفاصيل ولا لأ؟
-  let discountTotal = 0;
-  if(eligible){
-    rows.forEach(r=>{
-      if(r.lineRaw==null) return;
-      if(r.noRollDiscount) return; // باقي العود اللي ملوش لفة كاملة — من غير خصم
-      // لو في خصم مخصص → يحل محل خصم القطاع
-      const pct = customPct>0 ? customPct : getDiscount(r.main);
-      if(pct>0) discountTotal += r.lineRaw * (pct/100);
-    });
-  }
-  const netTotal = subtotal - discountTotal;
-
-  // ملخص عدد اللفات لكل قطاع (كومبن / كرافت لاين / نيو لاين / شاتر) — لو فيه
-  // صنف كميته أقل من لفة هيبقى معروض بالعود، فبنجمع اللفات لوحدها والعيدان
-  // لوحدها وبنوريهم مع بعض لو الاتنين موجودين.
-  const ROLL_SUMMARY_SECTORS = ['قطاعات PVC كومبن', 'قطاعات كرافت لاين', 'نيو لاين', 'شاتر'];
-  const rollSummary = [];
-  ROLL_SUMMARY_SECTORS.forEach(sector=>{
-    const items = rows.filter(r=>r.main===sector);
-    if(!items.length) return;
-    const totalRolls = items.filter(it=>it.normUnit==='لفة').reduce((a,it)=>a+it.normQty, 0);
-    const totalRods = items.filter(it=>it.normUnit==='عود').reduce((a,it)=>a+it.normQty, 0);
-    if(totalRolls>0 || totalRods>0) rollSummary.push({ sector, rolls: totalRolls, rods: totalRods });
-  });
-  const hasMissing = rows.some(r=>r.lineRaw==null);
-
-  return { rows, subtotal, eligible, customPct, showDiscount, discountTotal, netTotal, rollSummary, hasMissing };
-}
-
-async function buildQuotePDF(order){
-  if(!(await ensureLibs_('html2canvas','jspdf'))) return null;
-  if(!order || !order.items || !order.items.length){ showToast('الطلب مفيهوش أصناف — مش هينفع نطلع عرض سعر'); return null; }
-
-  const wrap = document.createElement('div');
-  wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
-  wrap.style.width='760px';
-  wrap.style.fontFamily = "'Cairo', sans-serif";
-  wrap.style.direction='rtl';
-  wrap.style.background='#FFFFFF';
-  // 🐞 بق حقيقي: أي خلية جوه الجدول من غير color صريح كانت بترث لون النص
-  // الافتراضي بتاع الصفحة نفسها (var(--ink))، واللي بقى فاتح مع الوضع
-  // الداكن الثابت — يعني كتابة فاتحة تقريبًا فوق ورقة العرض/الفاتورة
-  // البيضاء دي (مش باينة خالص، زي الكمية وسعر الوحدة في عرض السعر). الورقة
-  // دي مفروض تفضل شكلها زي الطباعة بالظبط بغض النظر عن ثيم التطبيق، فبنحط
-  // لون كتابة أساسي غامق صريح هنا عشان أي خلية ناسية تحدد لونها تورثه هو
-  // بدل لون الثيم.
-  wrap.style.color='#0F1F38';
-
-  const date = new Date(order.ts);
-  const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
-
-  const { rows, subtotal, eligible, customPct, showDiscount, discountTotal, netTotal, rollSummary, hasMissing } = computeQuoteRows_(order);
-
-  wrap.innerHTML = `
-    <div style="padding:30px 36px;background:#FFFFFF;">
-      <div style="display:flex;justify-content:center;margin-bottom:14px;">
-        <img src="${logoSrc_()}" style="width:88px;height:88px;border-radius:16px;object-fit:contain;background:#fff;border:1px solid #DCE4EC;padding:6px;box-shadow:0 4px 14px rgba(0,36,104,.12);">
-      </div>
-      <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #1080C0;padding-bottom:18px;margin-bottom:20px;">
-        <div style="flex:1;">
-          <div style="font-size:22.4px;font-weight:800;color:#002050;">القرشي لأبواب وشبابيك الـ UPVC</div>
-          <div style="font-size:13.4px;color:#6B7A8C;margin-top:2px;">وكيل AXA مصر</div>
-        </div>
-        <div style="text-align:left;">
-          <div style="font-size:16.8px;font-weight:800;color:#1080C0;">عرض سعر</div>
-          <div style="font-size:12.3px;color:#6B7A8C;">#${esc(orderNoDisplay_(order))}</div>
-        </div>
-      </div>
-
-      <div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:14px;">
-        <div>
-          <div style="color:#6B7A8C;">الموزع</div>
-          <div style="font-weight:800;color:#002050;">${esc(order.distName)}</div>
-        </div>
-        <div>
-          <div style="color:#6B7A8C;">المنطقة</div>
-          <div style="font-weight:800;color:#002050;">${esc(order.distRegion||'')}</div>
-        </div>
-        <div>
-          <div style="color:#6B7A8C;">المخزن</div>
-          <div style="font-weight:800;color:#1080C0;">${esc(asText(order.warehouse) || '—')}</div>
-        </div>
-        <div>
-          <div style="color:#6B7A8C;">التاريخ</div>
-          <div style="font-weight:800;color:#002050;">${esc(dateStr)}</div>
-        </div>
-      </div>
-
-      <table style="width:100%;border-collapse:collapse;font-size:12.3px;">
-        <thead>
-          <tr style="background:#002050;color:#fff;">
-            <th style="padding:9px 5px;text-align:center;width:26px;">م</th>
-            <th style="padding:9px 5px;text-align:right;">اسم الصنف</th>
-            <th style="padding:9px 5px;text-align:center;">الكمية</th>
-            ${showDiscount ? `
-            <th style="padding:9px 5px;text-align:center;">سعر الوحدة</th>
-            <th style="padding:9px 5px;text-align:center;">نسبة الخصم</th>
-            <th style="padding:9px 5px;text-align:center;">خصم مبلغ</th>
-            <th style="padding:9px 5px;text-align:center;">الصافي</th>
-            ` : `<th style="padding:9px 5px;text-align:center;">سعر الوحدة</th><th style="padding:9px 5px;text-align:center;">الإجمالي</th>`}
-          </tr>
-        </thead>
-        <tbody>
-          ${(()=>{
-            const groupsMap = new Map();
-            rows.forEach(r=>{
-              if(!groupsMap.has(r.main)) groupsMap.set(r.main, []);
-              groupsMap.get(r.main).push(r);
-            });
-            const orderedMains = orderGroups_(groupsMap);
-            const colspan = showDiscount ? 7 : 5;
-            let html = '';
-            let rowIndex = 0;
-            let serialCounter = 0;
-            orderedMains.forEach(main=>{
-              html += `
-                <tr>
-                  <td colspan="${colspan}" style="padding:7px 6px;background:#4FA8DC;color:#002050;font-weight:800;font-size:12.3px;">${esc(main)}</td>
-                </tr>`;
-              // 🎨 تقسيم فرعي بالألوان جوه كل قطاع — بدل ما كل ألوان الصنف
-              // (أبيض/بيج...) يتلموا تحت بعض من غير فصل، بنجمعهم في مجموعات
-              // بلون واحد وبنحط عنوان فرعي رفيع فوق كل مجموعة لون (أخف من
-              // عنوان القطاع البرتقالي). بنحافظ على ترتيب أول ظهور للون.
-              const colorOrder = [];
-              const byColor = new Map();
-              groupsMap.get(main).forEach(it=>{
-                const c = asText(it.color);
-                if(!byColor.has(c)){ byColor.set(c, []); colorOrder.push(c); }
-                byColor.get(c).push(it);
-              });
-              const multiColor = colorOrder.filter(c=>c).length > 1 || (colorOrder.length>1 && colorOrder.some(c=>c));
-              colorOrder.forEach(colorKey=>{
-                if(colorKey && multiColor){
-                  html += `
-                  <tr>
-                    <td colspan="${colspan}" style="padding:5px 6px 5px 16px;background:#EEF0FA;color:#002050;font-weight:800;font-size:11.3px;">◂ ${esc(colorKey)}</td>
-                  </tr>`;
-                }
-                byColor.get(colorKey).forEach(it=>{
-                const qty = it.normQty;
-                const lineAmt = it.rawPrice==null ? null : it.rawPrice*qty;
-                serialCounter++;
-                const rowBg = rowIndex%2===0?'#FFFFFF':'#F3F6FA';
-                if(showDiscount){
-                  const pct = it.noRollDiscount ? 0 : (customPct>0 ? customPct : getDiscount(it.main));
-                  const discAmt = (lineAmt!=null && pct>0) ? lineAmt*(pct/100) : 0;
-                  const net = lineAmt==null ? null : lineAmt - discAmt;
-                  html += `
-                  <tr style="background:${rowBg};">
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;color:#8A8470;">${serialCounter}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;font-weight:600;color:#002050;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;">${it.rawPrice==null?'جاري تعديل القوائم':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;">${pct>0?pct+'%':'—'}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;color:#1080C0;">${discAmt>0?Math.round(discAmt).toLocaleString('en-US'):'—'}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;">${net==null?'جاري تعديل القوائم':Math.round(net).toLocaleString('en-US')}</td>
-                  </tr>`;
-                } else {
-                  // لو موزع بس الزرار مخفي، لسه بيتحسب خصمه فعليًا — بنوري
-                  // السعر الصافي بعد الخصم هنا، مش السعر الخام، عشان الرقم
-                  // النهائي يفضل صحيح حتى من غير ما نوري تفاصيل الخصم.
-                  const pct = it.noRollDiscount ? 0 : (customPct>0 ? customPct : getDiscount(it.main));
-                  const discAmt = (eligible && lineAmt!=null && pct>0) ? lineAmt*(pct/100) : 0;
-                  const net = lineAmt==null ? null : lineAmt - discAmt;
-                  html += `
-                  <tr style="background:${rowBg};">
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;color:#8A8470;">${serialCounter}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;font-weight:600;color:#002050;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:700;">${qty} ${esc(it.normUnit||'')}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;">${it.rawPrice==null?'جاري تعديل القوائم':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
-                    <td style="padding:8px 5px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;">${lineAmt==null?'جاري تعديل القوائم':Math.round(lineAmt).toLocaleString('en-US')}</td>
-                  </tr>`;
-                }
-                rowIndex++;
-              });
-              });
-            });
-            return html;
-          })()}
-        </tbody>
-      </table>
-      ${rows.some(r=>itemUnavailable_(r)) ? `
-      <div style="margin-top:12px;padding:9px 12px;background:#FDECEA;border:1.5px solid #C0392B;border-radius:8px;color:#C0392B;font-weight:800;font-size:13px;">
-        ● الأصناف المعلّمة بالأحمر غير متاحة حاليًا في المخزن — محتاجة تأكيد قبل التحميل.
-      </div>` : ''}
-
-      <div style="display:flex;justify-content:flex-end;margin-top:18px;">
-        <div style="width:280px;">
-          ${showDiscount && discountTotal>0 ? `
-          <div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:16px;font-weight:800;color:#20242B;">
-            <span>الإجمالي قبل الخصم</span><span>${Math.round(subtotal).toLocaleString('en-US')} ج.م</span>
-          </div>
-          ${discountTotal>0?`<div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:16px;color:#1080C0;font-weight:800;">
-            <span>${customPct>0 ? 'خصم مخصص ('+customPct+'%)' : 'خصم القطاع'}</span><span>- ${Math.round(discountTotal).toLocaleString('en-US')} ج.م</span>
-          </div>`:''}
-          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#002050;color:#fff;border-radius:8px;font-size:17px;font-weight:800;margin-top:4px;">
-            <span>الإجمالي بعد الخصم</span><span>${Math.round(netTotal).toLocaleString('en-US')} ج.م</span>
-          </div>
-          ` : `
-          <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#002050;color:#fff;border-radius:8px;font-size:17px;font-weight:800;margin-top:8px;">
-            <span>الإجمالي</span><span>${Math.round(subtotal).toLocaleString('en-US')} ج.م</span>
-          </div>
-          `}
-          ${hasMissing ? '<div style="font-size:11.8px;color:#8A5A00;margin-top:6px;text-align:left;">⚠️ فيه أصناف بدون سعر متاح مش داخلة في الإجمالي</div>' : ''}
-        </div>
-      </div>
-
-      ${rollSummary.length ? `
-      <div style="margin-top:14px;display:flex;justify-content:flex-end;">
-        <div style="width:280px;background:#F3F6FA;border-radius:8px;padding:10px 14px;">
-          <div style="font-size:12.3px;font-weight:800;color:#002050;margin-bottom:6px;">عدد اللفات حسب القطاع</div>
-          ${rollSummary.map(r=>{
-            const parts = [];
-            if(r.rolls>0) parts.push((r.rolls % 1 === 0 ? r.rolls : r.rolls.toFixed(1)) + ' لفة');
-            if(r.rods>0) parts.push((r.rods % 1 === 0 ? r.rods : r.rods.toFixed(1)) + ' عود');
-            return `
-            <div style="display:flex;justify-content:space-between;font-size:12.3px;color:#20242B;padding:3px 0;">
-              <span>${esc(r.sector)}</span><span style="font-weight:700;">${esc(parts.join(' + '))}</span>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>` : ''}
-
-      ${order.note ? `<div style="margin-top:18px;padding-top:12px;border-top:1px dashed #DCE4EC;font-size:12.9px;color:#6B7A8C;">ملاحظات: ${esc(order.note)}</div>` : ''}
-
-      <div style="margin-top:16px;padding:10px 14px;background:#FBEBD1;border-radius:8px;font-size:11.8px;color:#8A5A00;line-height:1.7;">
-        هذه الأسعار سارية ما لم يحدث تعديل في القوائم والأسعار قبل التنفيذ.<br>
-        الكميات وفقًا لرصيد المخزن وقت التنفيذ.
-        ${!STOCK_TRACKED_WAREHOUSES_.includes(asText(order.warehouse)) ? `<br><b>⚠ الأصناف في مخزن "${esc(asText(order.warehouse))}" غير معتمدة إلا وقت التحميل فقط، نظرًا لعدم حجز بضاعة مسبقًا.</b>` : ''}
-      </div>
-
-      <div style="margin-top:26px;padding-top:14px;border-top:1px solid #DCE4EC;text-align:center;font-size:11.2px;color:#6B7A8C;">
-        المستند ده تم إنشاؤه تلقائيًا وقت إرسال الطلب — القرشي لأبواب وشبابيك الـ UPVC
-        ${CREDIT_LINE ? `<div style="margin-top:5px;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
-      </div>
-    </div>
-  `;
-  document.body.appendChild(wrap);
-
-  let result = null;
-  try{
-    const canvas = await withTimeout(
-      html2canvas(wrap, {scale: pdfScale_(rows.length), backgroundColor:'#ffffff', useCORS:true, allowTaint:true}),
-      35000, 'quote-pdf'
-    );
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p','mm','a4');
-    const imgData = canvas.toDataURL('image/png');
-    const imgWidth = 210;
-    const pageHeight = 297;
-    const imgHeight = canvas.height * imgWidth / canvas.width;
-    const totalPages = pdfPageCount_(imgHeight, pageHeight);
-    let heightLeft = imgHeight;
-    let position = 0;
-    let pageNum = 1;
-    doc.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
-    stampPdfFooter_(doc, pageNum, totalPages);
-    heightLeft -= pageHeight;
-    while(heightLeft > 0){
-      position = heightLeft - imgHeight;
-      doc.addPage();
-      pageNum++;
-      doc.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
-      stampPdfFooter_(doc, pageNum, totalPages);
-      heightLeft -= pageHeight;
-    }
-    const imgBlob = await canvasToPngBlob_(canvas);
-    result = { blob: doc.output('blob'), previewUrl: imgData, imgBlob: imgBlob };
-  }catch(e){ console.error('buildQuotePDF failed:', e); result = null; }
-  try{ document.body.removeChild(wrap); }catch(e){}
-  return result;
-}
-
-// ===== صورة الطلب (بتتبعت واتساب) — مقسّمة صفحات زي عرض السعر =====
-// نفس بيانات وأسعار عرض السعر بالظبط، بس بدل ما تطلع PDF واحد بيتقسم لصفحات
-// جوه الملف، هنا كل صفحة صورة PNG لوحدها (لأن واتساب بيبعت صور منفصلة مش
-// PDF واحد طويل). العدد بيتحدد حسب عدد الأصناف تلقائيًا.
-const ORDER_IMG_ROWS_PER_PAGE_ = 14;
-
-async function buildOrderImagePages(order){
-  if(!(await ensureLibs_('html2canvas'))) return null;
-  if(!order || !order.items || !order.items.length) return null;
-
-  const date = new Date(order.ts);
-  const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
-
-  const { rows, subtotal, eligible, customPct, showDiscount, discountTotal, netTotal, rollSummary, hasMissing } = computeQuoteRows_(order);
-
-  // نفس ترتيب عرض السعر: بالقطاع، وجوه القطاع بالألوان — بس هنا كصفوف مسطّحة
-  // عشان نقدر نقسّمها على صفحات بعدد ثابت من الأصناف للصفحة.
-  const groupsMap = new Map();
-  rows.forEach(r=>{ if(!groupsMap.has(r.main)) groupsMap.set(r.main, []); groupsMap.get(r.main).push(r); });
-  const orderedMains = orderGroups_(groupsMap);
-  const flat = [];
-  let serial = 0;
-  orderedMains.forEach(main=>{
-    const colorOrder = [];
-    const byColor = new Map();
-    groupsMap.get(main).forEach(it=>{
-      const c = asText(it.color);
-      if(!byColor.has(c)){ byColor.set(c, []); colorOrder.push(c); }
-      byColor.get(c).push(it);
-    });
-    const multiColor = colorOrder.filter(c=>c).length > 1 || (colorOrder.length>1 && colorOrder.some(c=>c));
-    let firstInMain = true;
-    colorOrder.forEach(colorKey=>{
-      let firstInColor = true;
-      byColor.get(colorKey).forEach(it=>{
-        serial++;
-        flat.push({
-          it, serial,
-          sectionLabel: firstInMain ? main : null,
-          colorLabel: (colorKey && multiColor && firstInColor) ? colorKey : null
-        });
-        firstInMain = false; firstInColor = false;
-      });
-    });
-  });
-
-  const pages = [];
-  for(let i=0;i<flat.length;i+=ORDER_IMG_ROWS_PER_PAGE_) pages.push(flat.slice(i, i+ORDER_IMG_ROWS_PER_PAGE_));
-  if(!pages.length) pages.push([]);
-
-  const colspan = showDiscount ? 7 : 5;
-
-  function rowsHTML(list){
-    let html = '';
-    list.forEach(entry=>{
-      const it = entry.it;
-      if(entry.sectionLabel){
-        html += `<tr><td colspan="${colspan}" style="padding:7px 6px;background:#4FA8DC;color:#002050;font-weight:800;font-size:13.5px;">${esc(entry.sectionLabel)}</td></tr>`;
-      }
-      if(entry.colorLabel){
-        html += `<tr><td colspan="${colspan}" style="padding:5px 6px 5px 16px;background:#EEF0FA;color:#002050;font-weight:800;font-size:11.8px;">◂ ${esc(entry.colorLabel)}</td></tr>`;
-      }
-      const qty = it.normQty;
-      const lineAmt = it.rawPrice==null ? null : it.rawPrice*qty;
-      const rowBg = entry.serial%2===0?'#FFFFFF':'#F3F6FA';
-      if(showDiscount){
-        const pct = it.noRollDiscount ? 0 : (customPct>0 ? customPct : getDiscount(it.main));
-        const discAmt = (lineAmt!=null && pct>0) ? lineAmt*(pct/100) : 0;
-        const net = lineAmt==null ? null : lineAmt - discAmt;
-        html += `
-        <tr style="background:${rowBg};">
-          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;color:#8A8470;font-size:12.5px;">${entry.serial}</td>
-          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;font-weight:700;color:#002050;font-size:14.3px;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
-          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:700;font-size:13.5px;">${qty} ${esc(it.normUnit||'')}</td>
-          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-size:12.5px;">${it.rawPrice==null?'جاري تعديل القوائم':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
-          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-size:12.5px;">${pct>0?pct+'%':'—'}</td>
-          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;color:#1080C0;font-size:12.5px;">${discAmt>0?Math.round(discAmt).toLocaleString('en-US'):'—'}</td>
-          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;font-size:13.5px;">${net==null?'جاري تعديل القوائم':Math.round(net).toLocaleString('en-US')}</td>
-        </tr>`;
-      } else {
-        const pct = it.noRollDiscount ? 0 : (customPct>0 ? customPct : getDiscount(it.main));
-        const discAmt = (eligible && lineAmt!=null && pct>0) ? lineAmt*(pct/100) : 0;
-        const net = lineAmt==null ? null : lineAmt - discAmt;
-        html += `
-        <tr style="background:${rowBg};">
-          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;color:#8A8470;font-size:12.5px;">${entry.serial}</td>
-          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;font-weight:700;color:#002050;font-size:14.3px;${unavailNameStyle_(it)}">${esc(it.name||it.product)}${unavailBadgeHTML_(it)}${unconfirmedBadgeHTML_(order)}</td>
-          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:700;font-size:13.5px;">${qty} ${esc(it.normUnit||'')}</td>
-          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-size:12.5px;">${it.rawPrice==null?'جاري تعديل القوائم':Math.round(it.rawPrice).toLocaleString('en-US')}</td>
-          <td style="padding:9px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;font-size:13.5px;">${lineAmt==null?'جاري تعديل القوائم':Math.round(lineAmt).toLocaleString('en-US')}</td>
-        </tr>`;
-      }
-    });
-    return html;
-  }
-
-  const blobs = [];
-  for(let p=0; p<pages.length; p++){
-    const isLast = p === pages.length - 1;
-    const wrap = document.createElement('div');
-    wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
-    wrap.style.width='760px';
-    wrap.style.fontFamily = "'Cairo', sans-serif";
-    wrap.style.direction='rtl';
-    wrap.style.background='#FFFFFF';
-  // 🐞 بق حقيقي: أي خلية جوه الجدول من غير color صريح كانت بترث لون النص
-  // الافتراضي بتاع الصفحة نفسها (var(--ink))، واللي بقى فاتح مع الوضع
-  // الداكن الثابت — يعني كتابة فاتحة تقريبًا فوق ورقة العرض/الفاتورة
-  // البيضاء دي (مش باينة خالص، زي الكمية وسعر الوحدة في عرض السعر). الورقة
-  // دي مفروض تفضل شكلها زي الطباعة بالظبط بغض النظر عن ثيم التطبيق، فبنحط
-  // لون كتابة أساسي غامق صريح هنا عشان أي خلية ناسية تحدد لونها تورثه هو
-  // بدل لون الثيم.
-  wrap.style.color='#0F1F38';
-
-    wrap.innerHTML = `
-      <div style="padding:26px 30px;background:#FFFFFF;">
-        <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #1080C0;padding-bottom:14px;margin-bottom:16px;">
-          <img src="${logoSrc_()}" style="width:52px;height:52px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #DCE4EC;padding:4px;">
-          <div style="flex:1;">
-            <div style="font-size:18px;font-weight:800;color:#002050;">طلب ${esc(asText(order.distName))}</div>
-            <div style="font-size:12px;color:#6B7A8C;margin-top:2px;">${esc(asText(order.distRegion))}${order.warehouse?' · مخزن '+esc(asText(order.warehouse)):''}</div>
-          </div>
-          <div style="text-align:left;">
-            <div style="font-size:13px;font-weight:800;color:#1080C0;">#${esc(orderNoDisplay_(order))}</div>
-            <div style="font-size:11px;color:#6B7A8C;">${esc(dateStr)}</div>
-            ${pages.length>1 ? `<div style="font-size:11px;color:#6B7A8C;font-weight:800;">صفحة ${p+1} من ${pages.length}</div>` : ''}
-          </div>
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:11.8px;">
-          <thead>
-            <tr style="background:#002050;color:#fff;">
-              <th style="padding:8px 5px;text-align:center;width:24px;">م</th>
-              <th style="padding:8px 5px;text-align:right;">اسم الصنف</th>
-              <th style="padding:8px 5px;text-align:center;">الكمية</th>
-              <th style="padding:8px 5px;text-align:center;">سعر الوحدة</th>
-              ${showDiscount ? `
-              <th style="padding:8px 5px;text-align:center;">نسبة الخصم</th>
-              <th style="padding:8px 5px;text-align:center;">خصم مبلغ</th>
-              <th style="padding:8px 5px;text-align:center;">الصافي</th>
-              ` : `<th style="padding:8px 5px;text-align:center;">الإجمالي</th>`}
-            </tr>
-          </thead>
-          <tbody>${rowsHTML(pages[p])}</tbody>
-        </table>
-        ${isLast ? `
-        ${rows.some(r=>itemUnavailable_(r)) ? `
-        <div style="margin-top:12px;padding:9px 12px;background:#FDECEA;border:1.5px solid #C0392B;border-radius:8px;color:#C0392B;font-weight:800;font-size:11.8px;">
-          ● الأصناف المعلّمة بالأحمر غير متاحة حاليًا في المخزن — محتاجة تأكيد قبل التحميل.
-        </div>` : ''}
-        <div style="display:flex;justify-content:flex-end;margin-top:16px;">
-          <div style="width:250px;">
-            ${showDiscount && discountTotal>0 ? `
-            <div style="display:flex;justify-content:space-between;padding:7px 12px;font-size:13.5px;font-weight:800;color:#20242B;">
-              <span>الإجمالي قبل الخصم</span><span>${Math.round(subtotal).toLocaleString('en-US')} ج.م</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:7px 12px;font-size:13.5px;color:#1080C0;font-weight:800;">
-              <span>${customPct>0 ? 'خصم مخصص ('+customPct+'%)' : 'خصم القطاع'}</span><span>- ${Math.round(discountTotal).toLocaleString('en-US')} ج.م</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:9px 12px;background:#002050;color:#fff;border-radius:8px;font-size:14.6px;font-weight:800;margin-top:4px;">
-              <span>الإجمالي بعد الخصم</span><span>${Math.round(netTotal).toLocaleString('en-US')} ج.م</span>
-            </div>
-            ` : `
-            <div style="display:flex;justify-content:space-between;padding:9px 12px;background:#002050;color:#fff;border-radius:8px;font-size:14.6px;font-weight:800;margin-top:6px;">
-              <span>الإجمالي</span><span>${Math.round(subtotal).toLocaleString('en-US')} ج.م</span>
-            </div>
-            `}
-            ${hasMissing ? '<div style="font-size:10.7px;color:#8A5A00;margin-top:6px;text-align:left;">⚠️ فيه أصناف بدون سعر متاح مش داخلة في الإجمالي</div>' : ''}
-          </div>
-        </div>
-        ${rollSummary.length ? `
-        <div style="margin-top:12px;display:flex;justify-content:flex-end;">
-          <div style="width:250px;background:#F3F6FA;border-radius:8px;padding:9px 12px;">
-            <div style="font-size:11px;font-weight:800;color:#002050;margin-bottom:5px;">عدد اللفات حسب القطاع</div>
-            ${rollSummary.map(r=>{
-              const parts = [];
-              if(r.rolls>0) parts.push((r.rolls % 1 === 0 ? r.rolls : r.rolls.toFixed(1)) + ' لفة');
-              if(r.rods>0) parts.push((r.rods % 1 === 0 ? r.rods : r.rods.toFixed(1)) + ' عود');
-              return `<div style="display:flex;justify-content:space-between;font-size:11px;color:#20242B;padding:3px 0;"><span>${esc(r.sector)}</span><span style="font-weight:700;">${esc(parts.join(' + '))}</span></div>`;
-            }).join('')}
-          </div>
-        </div>` : ''}
-        ${order.note ? `<div style="margin-top:14px;padding-top:10px;border-top:1px dashed #DCE4EC;font-size:11.3px;color:#6B7A8C;">ملاحظات: ${esc(order.note)}</div>` : ''}
-        ` : ''}
-        ${PREPARED_BY_LINE ? `<div style="margin-top:16px;text-align:center;color:#A8A498;font-size:9.2px;">${esc(PREPARED_BY_LINE)}</div>` : ''}
-        ${CREDIT_LINE ? `<div style="margin-top:4px;text-align:center;color:#A8A498;font-size:9.2px;">${esc(CREDIT_LINE)}</div>` : ''}
-      </div>`;
-    document.body.appendChild(wrap);
-    try{
-      const canvas = await withTimeout(
-        html2canvas(wrap, {scale: 2, backgroundColor:'#ffffff', useCORS:true, allowTaint:true}),
-        20000, 'order-img-p' + (p+1)
-      );
-      const blob = await canvasToPngBlob_(canvas);
-      if(blob) blobs.push(blob);
-    }catch(e){ console.error('buildOrderImagePages failed (page ' + (p+1) + '):', e); }
-    try{ document.body.removeChild(wrap); }catch(e){}
-  }
-  return blobs;
-}
-
 // ===== طلبية نواقص (صور، مش PDF): زرارين — كرافت ونيو / كومبن واكسسوارات =====
 // كل زرار بيطلّع صورة واحدة (PNG) بدل PDF: من فوق "طلبية نواقص {اسم الفرع}"
 // والتاريخ، والأصناف باللفة (لمجموعات اللفة)، ومن تحت إجمالي كل قطاع من
@@ -6110,157 +5180,6 @@ async function buildShortageImageGroup(order, groupKey){
   return blobs;
 }
 
-// ===== "قائمة الأصناف المطلوبة" (عرض السعر من غير أسعار) — بطلب صريح
-// شكلها بقى قريب من ورقة النواقص بالظبط، مش جدول عرض السعر العادي: صفحة
-// عريضة مقسومة عمودين جنب بعض، صف بسيط لكل صنف (رقم + اسم + كمية) من
-// غير حدود جدول، وعنوان قطاع/لون فوق كل مجموعة. نفس أسلوب
-// buildShortageImageGroup بالظبط، بس لكل أصناف الطلب مش مجموعة نواقص
-// واحدة بس.
-async function buildItemsListImages_(order){
-  if(!(await ensureLibs_('html2canvas'))) return null;
-  if(!order || !order.items || !order.items.length) return null;
-
-  const date = new Date(order.ts);
-  const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
-  const { rows, rollSummary } = computeQuoteRows_(order);
-  if(!rows.length) return null;
-
-  const groupsMap = new Map();
-  rows.forEach(r=>{ if(!groupsMap.has(r.main)) groupsMap.set(r.main, []); groupsMap.get(r.main).push(r); });
-  const orderedMains = orderGroups_(groupsMap);
-
-  const flat = [];
-  orderedMains.forEach(main=>{
-    const items = groupsMap.get(main);
-    const colorOrder = [];
-    const byColor = new Map();
-    items.forEach(it=>{
-      const c = asText(it.color);
-      if(!byColor.has(c)){ byColor.set(c, []); colorOrder.push(c); }
-      byColor.get(c).push(it);
-    });
-    const multiColor = colorOrder.filter(c=>c).length > 1 || (colorOrder.length>1 && colorOrder.some(c=>c));
-    let firstInMain = true;
-    colorOrder.forEach(colorKey=>{
-      let firstInColor = true;
-      byColor.get(colorKey).forEach(it=>{
-        flat.push(Object.assign({}, it, {
-          sectionStart: firstInMain,
-          sectionLabel: main,
-          colorStart: multiColor && !!colorKey && firstInColor,
-          colorLabel: multiColor ? colorKey : null,
-          dispLabel: it.normQty + ' ' + (it.normUnit||'')
-        }));
-        firstInMain = false; firstInColor = false;
-      });
-    });
-  });
-
-  const isCompact_ = flat.length > 30;
-  const ROWS_PER_COL_ = isCompact_ ? 18 : 15;
-  const PER_PAGE_ = ROWS_PER_COL_ * 2;
-  const pages = [];
-  for(let i=0; i<flat.length; i+=PER_PAGE_) pages.push(flat.slice(i, i+PER_PAGE_));
-  if(!pages.length) pages.push([]);
-
-  const rowPad_ = isCompact_ ? '6px 8px' : '9px 8px';
-  const rowFont_ = isCompact_ ? '17px' : '20px';
-  const idxFont_ = isCompact_ ? '12px' : '14px';
-  const colorFont_ = isCompact_ ? '13px' : '15px';
-  const secPad_ = isCompact_ ? '5px 10px' : '7px 10px';
-  const secMargin_ = isCompact_ ? '7px' : '10px';
-  const colorPad_ = isCompact_ ? '4px 10px 4px 16px' : '5px 10px 5px 18px';
-  const colorMargin_ = isCompact_ ? '6px' : '8px';
-
-  function rowsHTML(list, startIndex){
-    let html = '';
-    list.forEach((it,i)=>{
-      if(it.sectionStart && orderedMains.length>1){
-        html += `<div style="padding:${secPad_};background:#4FA8DC;color:#002050;font-weight:800;font-size:15px;border-radius:6px;margin:${i===0?'0':secMargin_} 0 6px 0;">${esc(it.sectionLabel)}</div>`;
-      }
-      if(it.colorStart){
-        html += `<div style="padding:${colorPad_};background:#D6E7F8;border-right:3px solid #1080C0;color:#002050;font-weight:800;font-size:13px;border-radius:4px;margin:${(i===0||it.sectionStart)?'0':colorMargin_} 0 5px 0;">◂ ${esc(it.colorLabel)}</div>`;
-      }
-      const bg = i%2===0 ? '#FFFFFF' : '#F3F6FA';
-      html += `
-      <div style="display:flex;align-items:baseline;gap:8px;background:${bg};padding:${rowPad_};border-bottom:1px solid #DCE4EC;border-radius:4px;">
-        <span style="color:#8A8470;font-weight:800;font-size:${idxFont_};min-width:20px;">${startIndex+i+1}.</span>
-        <span style="flex:1;font-weight:800;font-size:${rowFont_};color:#002050;line-height:1.25;">
-          ${esc(it.name || it.product)}${(it.color && !it.colorLabel)?` <span style="color:#6B7A8C;font-size:${colorFont_};font-weight:700;">- ${esc(it.color)}</span>`:''}${unavailBadgeHTML_(it)}
-        </span>
-        <span style="font-weight:800;font-size:${rowFont_};color:#1080C0;white-space:nowrap;">${esc(it.dispLabel||'')}</span>
-      </div>`;
-    });
-    return html;
-  }
-
-  const blobs = [];
-  for(let p=0; p<pages.length; p++){
-    const pageItems = pages[p];
-    const pageStart = p * PER_PAGE_;
-    const colA = pageItems.slice(0, ROWS_PER_COL_);
-    const colB = pageItems.slice(ROWS_PER_COL_);
-    const isLast = (p === pages.length - 1);
-
-    const wrap = document.createElement('div');
-    wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
-    wrap.style.width = '1180px';
-    wrap.style.fontFamily = "'Cairo', sans-serif";
-    wrap.style.direction='rtl';
-    wrap.style.background='#FFFFFF';
-    wrap.style.color='#0F1F38';
-
-    wrap.innerHTML = `
-    <div style="padding:28px 34px;">
-      <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #1080C0;padding-bottom:14px;margin-bottom:16px;">
-        <img src="${logoSrc_()}" style="width:54px;height:54px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid #DCE4EC;padding:4px;">
-        <div style="flex:1;">
-          <div style="font-size:22px;font-weight:800;color:#002050;">قائمة الأصناف المطلوبة — طلب #${esc(orderNoDisplay_(order))}${order.warehouse ? ` <span style="color:#1080C0;">— مخزن ${esc(asText(order.warehouse))}</span>` : ''}</div>
-          <div style="font-size:13px;color:#6B7A8C;margin-top:2px;">${esc(order.distName||'')}</div>
-        </div>
-        <div style="text-align:left;">
-          <div style="font-size:12.3px;color:#6B7A8C;">${esc(dateStr)}</div>
-          ${pages.length>1 ? `<div style="font-size:12.3px;color:#6B7A8C;font-weight:800;">صفحة ${p+1} من ${pages.length}</div>` : ''}
-        </div>
-      </div>
-
-      <div style="display:flex;gap:28px;align-items:flex-start;min-height:640px;">
-        <div style="flex:1;">${rowsHTML(colA, pageStart)}</div>
-        <div style="flex:1;">${colB.length ? rowsHTML(colB, pageStart + colA.length) : ''}</div>
-      </div>
-
-      ${(isLast && rollSummary.length) ? `
-        <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #DCE4EC;display:flex;gap:22px;flex-wrap:wrap;">
-          ${rollSummary.map(r=>{
-            const parts = [];
-            if(r.rolls>0) parts.push((r.rolls % 1 === 0 ? r.rolls : r.rolls.toFixed(1)) + ' لفة');
-            if(r.rods>0) parts.push((r.rods % 1 === 0 ? r.rods : r.rods.toFixed(1)) + ' عود');
-            return `<div style="font-size:13.4px;"><span style="color:#6B7A8C;">إجمالي ${esc(r.sector)}: </span><b style="color:#002050;">${esc(parts.join(' + '))}</b></div>`;
-          }).join('')}
-        </div>
-      ` : ''}
-      ${(isLast && !STOCK_TRACKED_WAREHOUSES_.includes(asText(order.warehouse))) ? `
-        <div style="margin-top:16px;padding:10px 14px;background:#FBEBD1;border-radius:8px;font-size:12.6px;color:#8A5A00;line-height:1.7;">
-          ⚠ الأصناف في مخزن "${esc(asText(order.warehouse))}" غير معتمدة إلا وقت التحميل فقط، نظرًا لعدم حجز بضاعة مسبقًا.
-        </div>` : ''}
-      ${PREPARED_BY_LINE ? `<div style="margin-top:8px;text-align:center;color:#A8A498;font-size:9.6px;">${esc(PREPARED_BY_LINE)}</div>` : ''}
-      ${CREDIT_LINE ? `<div style="margin-top:4px;text-align:center;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
-    </div>
-    `;
-    document.body.appendChild(wrap);
-    try{
-      const canvas = await withTimeout(
-        html2canvas(wrap, {scale: 2, backgroundColor:'#ffffff', useCORS:true, allowTaint:true}),
-        20000, 'itemslist-p' + (p+1)
-      );
-      const blob = await canvasToPngBlob_(canvas);
-      if(blob) blobs.push(blob);
-    }catch(e){ console.error('buildItemsListImages_ failed (page ' + (p+1) + '):', e); }
-    try{ document.body.removeChild(wrap); }catch(e){}
-  }
-  return blobs;
-}
-
 // بيدوّر على الطلب بمعرّفه (لو موجود) وإلا بيرجع لآخر طلب اتبعت (state.lastOrder) —
 // عشان زرار "نواقص + عرض سعر" يشتغل من كل شاشة (النجاح / الأدمن / طلباتي)
 // بنفس الدالة.
@@ -6272,12 +5191,12 @@ function findOrderForShortage_(id){
   return state.lastOrder;
 }
 
-// نص زرار "نواقص + عرض سعر" بيتغيّر حسب مرحلته: جهّز (أول ضغطة) → جارٍ
+// نص زرار "نواقص" بيتغيّر حسب مرحلته: جهّز (أول ضغطة) → جارٍ
 // التجهيز → ابعت واتساب (لما الملفات تبقى جاهزة لنفس الطلب ده بالظبط).
-function quoteShortageBtnLabel_(orderId, label){
-  if(label === undefined) label = 'نواقص + عرض سعر';
-  if(state.shareQuoteShortageBusy) return 'جارٍ التجهيز...';
-  if(state.quoteShortageReady && state.quoteShortageReady.orderId===orderId) return 'ابعت واتساب دلوقتي';
+function shortageBtnLabel_(orderId, label){
+  if(label === undefined) label = 'نواقص';
+  if(state.shareShortageBusy) return 'جارٍ التجهيز...';
+  if(state.shortageReady && state.shortageReady.orderId===orderId) return 'ابعت واتساب دلوقتي';
   return label;
 }
 
@@ -6626,8 +5545,6 @@ async function exportExcel(statusFilter){
     { header:'المخزن', key:'wh', width:12 },
     { header:'الكمية', key:'qty', width:8 },
     { header:'الوحدة', key:'unit', width:10 },
-    { header:'سعر الوحدة', key:'price', width:11 },
-    { header:'الإجمالي', key:'total', width:11 },
     { header:'التاريخ', key:'date', width:14 },
   ];
   const headerRow = ws.getRow(1);
@@ -6651,14 +5568,13 @@ async function exportExcel(statusFilter){
     o.items.forEach(it => groups.get(key).items.push(it));
   });
 
-  let rowIdx = 2, toggle=false, grandTotal=0, serial=0;
+  let rowIdx = 2, toggle=false, serial=0;
   groups.forEach((g)=>{
     const dist = g.dist;
     const startRow = rowIdx;
     const dateStr = new Date(g.ts).toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
     const fillColor = toggle ? LIGHT : WHITE;
     g.items.forEach((it, idx)=>{
-      grandTotal += it.lineTotal||0;
       serial++;
       // بنصدّر بالوحدة الصغيرة (عود / قطعة) مش باللفة — زي عرض السعر بالظبط
       let norm = normalizeItemToSmallUnit(it);
@@ -6672,17 +5588,12 @@ async function exportExcel(statusFilter){
         const accContent = Number(accCat && accCat.unit) || 1;
         norm = { qty: it.qty * accContent, unitLabel: 'قطعة' };
       }
-      // ⚠️ سعر الوحدة المعروض لازم يطابق الإجمالي: نستخرجه من (الإجمالي ÷ الكمية)
-      // عشان الكرتونة/اللفة تظهر بسعرها الكامل مش بسعر القطعة (نفس بق عرض السعر).
-      const unitPriceDisp = (it.lineTotal!=null && norm.qty) ? (it.lineTotal / norm.qty) : rawPriceForItem(it);
       const row = ws.addRow({
         serial,
         dist: idx===0?dist:'', region: idx===0?g.region:'',
         product: it.name || it.product,
         wh: g.wh || '—',
         qty: norm.qty, unit: norm.unitLabel||'',
-        price: unitPriceDisp==null ? 'جاري تعديل القوائم' : Math.round(unitPriceDisp),
-        total: it.lineTotal==null ? 'جاري تعديل القوائم' : Math.round(it.lineTotal),
         date: idx===0?dateStr:''
       });
       row.eachCell(cell=>{
@@ -6694,25 +5605,14 @@ async function exportExcel(statusFilter){
       rowIdx++;
     });
     if(g.items.length>1){
-      ws.mergeCells(startRow,2,rowIdx-1,2); ws.mergeCells(startRow,3,rowIdx-1,3); ws.mergeCells(startRow,10,rowIdx-1,10);
+      ws.mergeCells(startRow,2,rowIdx-1,2); ws.mergeCells(startRow,3,rowIdx-1,3); ws.mergeCells(startRow,8,rowIdx-1,8);
     }
     const distCell = ws.getCell(startRow,2);
     distCell.font = { bold:true, color:{argb:NAVY}, size:11, name:'Arial' };
     distCell.alignment = { horizontal:'right', vertical:'middle', wrapText:true };
     toggle = !toggle;
   });
-  ws.autoFilter = { from:'A1', to:'J1' };
-
-  // ⚠️ كان النص 'الإجمالي الكلي' متحط في عمود الصنف، والدمج بيحتفظ بقيمة أول
-  // خلية بس — فالكلمة كانت بتختفي. دلوقتي بنحطها في أول خلية قبل الدمج.
-  const totalRow = ws.addRow({ total: Math.round(grandTotal) });
-  totalRow.getCell(1).value = 'الإجمالي الكلي';
-  ws.mergeCells(rowIdx, 1, rowIdx, 8);
-  totalRow.eachCell(cell=>{
-    cell.font = { bold:true, color:{argb:WHITE}, size:12, name:'Arial' };
-    cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:GOLD} };
-    cell.alignment = { horizontal:'center', vertical:'middle' };
-  });
+  ws.autoFilter = { from:'A1', to:'H1' };
 
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type:'application/octet-stream' });
@@ -6795,14 +5695,6 @@ function renderToolsPanel_(){
         <button class="tooltile" data-act="open-manage-items" title="محمي بالرقم السري">${ico_('boxesIcon',20)}<span>إدارة الأصناف</span></button>
         <button class="tooltile" data-act="open-manage-approvals" title="محمي بالرقم السري">${ico_('checkSquare',20)}<span>طلبات الموافقة${((state.manageRegRequests||[]).length + (state.managePwRequests||[]).length) ? ` <b class="tilecount">${((state.manageRegRequests||[]).length + (state.managePwRequests||[]).length)}</b>` : ''}</span></button>
         <button class="tooltile" data-act="force-update" title="تحديث إجباري">${ico_('cloudRefresh',20)}<span>تحديث التطبيق</span></button>
-        ${isDiscountEligible() ? `
-        <button class="tooltile discounttogglebtn ${state.discountVisible?'on':'off'}" data-act="toggle-discount" title="الخصم ظاهر للموزع ولا مخفي">${ico_('percent',20)}<span>${state.discountVisible?'الخصم ظاهر':'الخصم مخفي'}</span></button>
-        <label class="tooltile extradiscwrap" title="خصم مخصص % — يحل محل خصم القطاع لو كتبت قيمة">
-          <span class="pctsign">%</span>
-          <input id="extraDiscInput" type="number" min="0" max="100" step="0.5"
-            value="${state.extraDiscount||''}" placeholder="خصم مخصص"
-            data-extradiscount>
-        </label>` : ''}
         <button class="tooltile logoutbtn" data-act="logout" title="تسجيل خروج">${ico_('door',20)}<span>تسجيل خروج</span></button>
       </div>
     </div>`;
@@ -6868,7 +5760,6 @@ function renderBottomNav_(){
   const slot4_ = isAdminUser_
     ? item_('goto', 'data-view="admin"', 'warehouse', 'الإدارة', onAdmin, adminBadge_)
     : item_('open-cart-review', '', 'cart', 'السلة', false, cartCount ? `<i class="bn-badge">${cartCount}</i>` : '');
-  const discOn_ = isDiscountEligible() && (state.discountVisible || state.extraDiscount);
   return `
   ${renderToolsPanel_()}
   <nav class="bottomnav" aria-label="التنقل الرئيسي"><div class="bottomnav-in">
@@ -6878,7 +5769,7 @@ function renderBottomNav_(){
       <span class="fab-btn">${ico_('plus',30)}</span>
     </button>
     ${slot4_}
-    ${item_('toggle-tools', '', 'dots', 'المزيد', !!state.toolsOpen, discOn_ ? '<i class="bn-dot"></i>' : '')}
+    ${item_('toggle-tools', '', 'dots', 'المزيد', !!state.toolsOpen, '')}
   </div></nav>`;
 }
 
@@ -6919,9 +5810,6 @@ function render3LineQty(s, color, opts){
   const rawQty = s.qtys[color];
   const hasQty = rawQty != null && rawQty > 0;
   const qty = hasQty ? rawQty : 0;
-  const price = calcUnitPrice(s.main, s.product, color, unitType);
-  const lineTotal = (price==null || !hasQty) ? null : price*qty;
-  const fmt = n => n==null ? '—' : Math.round(n).toLocaleString('en-US');
   const shortageMsg = hasQty ? stockShortageWarning_(s.main, s.product, color, unitType, qty) : '';
   return `
   <div class="qty3">
@@ -6937,10 +5825,6 @@ function render3LineQty(s, color, opts){
       </div>
     </div>
     ${shortageMsg ? `<div class="qty3-shortage">${esc(shortageMsg)}</div>` : ''}
-    <div class="qty3-line qty3-price">
-      <span class="qty3-cell"><b>السعر:</b> ${fmt(price)}</span>
-      <span class="qty3-cell qty3-total"><b>الإجمالي:</b> ${fmt(lineTotal)}</span>
-    </div>
     <div class="qty3-line qty3-btns">
       <button class="confirmbtn" data-act="confirm-staged" data-key="${esc(s.key)}">✓ ضيف للسلة</button>
       <button class="cancelbtn" data-act="cancel-staged" data-key="${esc(s.key)}">✖ إلغاء</button>
@@ -7002,7 +5886,7 @@ function renderStagedBlock(s){
       if(outs.length){
         html += `<div class="lowstocknote" style="background:#FDECEC;border-color:var(--danger);color:#8A1F1F;">🚫 مفيش رصيد خالص في: ${
           outs.map(c=>esc(c)).join(' · ')
-        } — السعر متاح لو حبيت تطلبه</div>`;
+        } — لسه ينفع تطلبه</div>`;
       }
       if(partial.length){
         html += `<div class="lowstocknote">⚠️ الكمية مش كتيرة في: ${
@@ -7018,9 +5902,6 @@ function renderStagedBlock(s){
         const rawQty = s.qtys[c];
         const hasQty = rawQty != null && rawQty > 0;
         const qty = hasQty ? rawQty : 0;
-        const price = calcUnitPrice(s.main, s.product, c, unitType);
-        const lineTotal = (price==null || !hasQty) ? null : price*qty;
-        const fmt = n => n==null ? '—' : Math.round(n).toLocaleString('en-US');
         const shortageMsg = hasQty ? stockShortageWarning_(s.main, s.product, c, unitType, qty) : '';
         return `
         <div class="cqrow2">
@@ -7037,10 +5918,6 @@ function renderStagedBlock(s){
             </div>
           </div>
           ${shortageMsg ? `<div class="qty3-shortage">${esc(shortageMsg)}</div>` : ''}
-          <div class="cqrow2-line cqrow2-price">
-            <span class="qty3-cell"><b>السعر:</b> ${fmt(price)}</span>
-            <span class="qty3-cell qty3-total"><b>الإجمالي:</b> ${fmt(lineTotal)}</span>
-          </div>
         </div>`;
       }).join('')}
     </div>` : ''}
@@ -7061,7 +5938,7 @@ function renderOrderView(){
   let catalogErrorBanner = '';
   if(state.catalogError){
     catalogErrorBanner = `<div class="editbanner" style="background:#F8D7DA;border:1px solid #C24450;color:#7A1F28;">
-      ⛔ <b>مفيش اتصال بالسيرفر — الأسعار والأرصدة مش ظاهرة خالص</b>
+      ⛔ <b>مفيش اتصال بالسيرفر — الأرصدة مش ظاهرة خالص</b>
       <div style="font-size:12.5px;margin-top:4px;font-weight:400;">الأصناف اللي تحت أساميها بس. <b>ماتعتمدش على "متاح" دلوقتي</b> — ممكن يكون فيه أصناف موقوفة أو خلصت من المخزن.</div>
       <button class="chip" data-act="retry-catalog" style="margin-top:8px;">🔄 حاول تاني</button>
     </div>`;
@@ -7070,7 +5947,7 @@ function renderOrderView(){
       ? ('من ' + Math.round(state.catalogAgeMin/60) + ' ساعة')
       : ('من ' + state.catalogAgeMin + ' دقيقة');
     catalogErrorBanner = `<div class="editbanner" style="background:#FBEBD1;">
-      ⚠️ <b>مفيش نت — الأسعار والأرصدة دي محفوظة ${esc(age)}</b>
+      ⚠️ <b>مفيش نت — الأرصدة دي محفوظة ${esc(age)}</b>
       <div style="font-size:12.5px;margin-top:4px;font-weight:400;">تقدر تكمّل طلبك عادي، بس يفضل تتأكد من المتاح قبل ما تبعت.</div>
       <button class="chip" data-act="retry-catalog" style="margin-top:8px;">🔄 حدّث دلوقتي</button>
     </div>`;
@@ -7091,41 +5968,14 @@ function renderOrderView(){
         <p>هيتم مراجعة طلبك والتواصل معاك لتأكيد التنفيذ</p>
         <div class="ordid">#${esc(state.successOrderId)}</div>
 
-        <!-- 📦 زرار موحّد بارز — أول حاجة تحت رقم الطلب مباشرة. بيفتح تلقائيًا
-             فور نجاح الإرسال (شوف actuallySubmit)؛ الزرار هنا هو خطة
-             الاحتياط لو المتصفح رفض الفتح التلقائي (نادر — بيحصل لو المسافة
-             الزمنية عن ضغطة "إرسال الطلب" طالت أكتر من اللازم)، فلازم يكون
-             أول حاجة ظاهرة بدون أي تمرير. -->
-        <div class="docsection" style="border-color:var(--gold);">
-          <div class="docsectiontitle">📦 النواقص + عرض السعر</div>
-          <button class="wanote-btn" style="font-size:14px;padding:12px;" data-act="share-quote-shortage" ${state.shareQuoteShortageBusy?'disabled':''}>
-            <span class="ic">📲</span> ${quoteShortageBtnLabel_(state.lastOrder && state.lastOrder.id)}
-          </button>
-        </div>
-
+        <!-- 📦 زرار «نواقص» — الزرار الوحيد هنا: بيجهّز صور النواقص ويفتح شاشة
+             المشاركة، والموزع يختار المخزن/الجروب. مفيش عرض سعر. -->
         <div class="wanote">
-          <p class="wanote-t">📲 لو سمحت اضغط <b>«ابعت الطلب واتساب»</b> عشان المخزن يستلم طلبك.</p>
-          <button class="wanote-btn ${state.waSent?'sent':''}" data-act="send-order-img" ${state.waImgPreparing?'disabled':''}>
-            <span class="ic">📲</span> ${state.waImgPreparing ? 'جارٍ التجهيز...' : (state.waSent ? 'تم — ابعت تاني' : 'ابعت الطلب واتساب')}
+          <p class="wanote-t">📲 لو سمحت اضغط <b>«نواقص»</b> عشان المخزن يستلم طلبك.</p>
+          <button class="wanote-btn ${state.waSent?'sent':''}" data-act="share-shortage" ${state.shareShortageBusy?'disabled':''}>
+            <span class="ic">📲</span> ${shortageBtnLabel_(state.lastOrder && state.lastOrder.id, state.waSent ? 'تم — ابعت تاني' : undefined)}
           </button>
-          ${(state.waSent || state.waImgPreparing) ? '' : '<div class="wanote-arrow">⬆️</div>'}
-        </div>
-        <!-- ✂️ بناءً على طلب صريح: المستندات بقت "عرض السعر" بس، بأيقوناته
-             التلاتة (واتساب صورة / تنزيل PDF / معاينة). صورة الطلب العامة
-             وأمر صرف المخزن اتشالوا. -->
-        <div class="docsection">
-          <div class="docsectiontitle">${ico_('fileIcon',15)} عرض السعر</div>
-          <div class="iconbtnrow">
-            ${state.quotePdfGenerating ? `
-              <div class="loading" style="padding:10px 20px;">جارٍ التجهيز...</div>
-            ` : state.quotePdfPlain ? `
-              <button class="iconbtn" data-act="preview-quote-plain"><span class="ic">${ico_('eyeIcon',16)}</span><span>معاينة</span></button>
-              <button class="iconbtn" data-act="share-quote-plain"><span class="ic">${ico_('shareIcon',16)}</span><span>واتساب</span></button>
-              <button class="iconbtn" data-act="download-quote-plain"><span class="ic">⬇️</span><span>تنزيل PDF</span></button>
-            ` : `
-              <div class="loading" style="padding:10px 20px;">جارٍ التجهيز...</div>
-            `}
-          </div>
+          ${(state.waSent || state.shareShortageBusy) ? '' : '<div class="wanote-arrow">⬆️</div>'}
         </div>
         <br>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
@@ -7243,7 +6093,7 @@ function renderOrderView(){
           <span><i style="background:#C9C5BA;"></i> موقوف</span>
           ` : `
           <span><i style="background:var(--success);"></i> متوفر</span>
-          <span><i style="background:var(--danger);"></i> مفيش رصيد (السعر متاح)</span>
+          <span><i style="background:var(--danger);"></i> مفيش رصيد (لسه ينفع تطلبه)</span>
           <span><i style="background:#C9C5BA;"></i> موقوف</span>
           `}
         </div>
@@ -7369,10 +6219,6 @@ function renderOrderView(){
         <button data-act="other-qty-dec" type="button">−</button>
         <input type="number" min="1" value="${state.otherQty}" data-act="other-qty-input">
         <button data-act="other-qty-inc" type="button">+</button>
-      </div>
-      <div class="field" style="margin-top:12px;">
-        <label>السعر (اختياري، لو عارفه)</label>
-        <input type="number" min="0" placeholder="مثال: 150" value="${esc(state.otherPrice)}" data-act="set-otherprice">
       </div>
       <button class="addbtn" data-act="add-other">إضافة للسلة</button>
     </div>`;
@@ -7503,9 +6349,6 @@ function renderOrderView(){
         <button class="savebtn ${state.draftJustSaved?'saved':''}" data-act="save-draft" type="button">
           <span class="ic">${state.draftJustSaved?'✓':'🛒'}</span>${state.draftJustSaved?'اتحفظ':'حفظ للسلة'}
         </button>` : ''}
-        <button class="savebtn" data-act="preview-cart-invoice" type="button" ${state.previewGenerating?'disabled':''}>
-          <span class="ic">${state.previewGenerating?'⏳':ico_('eyeIcon',15)}</span>معاينة
-        </button>
       </div>
       </div>
     </div>
@@ -7562,17 +6405,13 @@ function renderMyOrdersView(){
             <div class="item-row"><span>${esc(it.product)}${it.color?' — '+esc(it.color):''}</span><b>×${it.qty} ${esc(it.unitType||'')}</b></div>
           `).join('')}
         </div>
-        ${renderOrderTotalLine(o)}
         <div class="adminbtnrow adminbtnrow-compact">
           ${normStatus_(o.status)===STATUS_RECEIVED ? `
           <button class="delbtn edit" data-act="edit-my-order" data-id="${esc(o.id)}" title="عدّل على الطلب ده">
             ${ico_('editIcon',13)} تعديل
           </button>` : ''}
-          <button class="delbtn pdf" data-act="preview-myorder-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
-            ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('eyeIcon',13) + ' معاينة'}
-          </button>
-          <button class="delbtn pdf" data-act="share-quote-shortage" data-id="${esc(o.id)}" ${state.shareQuoteShortageBusy?'disabled':''}>
-            ${ico_('imageIcon',13)} ${quoteShortageBtnLabel_(o.id)}
+          <button class="delbtn pdf" data-act="share-shortage" data-id="${esc(o.id)}" ${state.shareShortageBusy?'disabled':''}>
+            ${ico_('imageIcon',13)} ${shortageBtnLabel_(o.id)}
           </button>
           ${normStatus_(o.status)===STATUS_RECEIVED ? `
           <button class="delbtn" data-act="delete-my-order" data-id="${esc(o.id)}" title="احذف الطلب ده">
@@ -7638,7 +6477,7 @@ function renderManageView(){
     <div class="card pingate">
       <div class="ic">${ico_('manageIcon',34)}</div>
       <h2>تبويب الإدارة</h2>
-      <p style="color:var(--muted);font-size:13px;margin-bottom:10px;">الأصناف والأسعار والأرصدة وطلبات الموافقة — محمي برقم سري خاص منفصل عن الأدمن</p>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:10px;">الأصناف والأرصدة وطلبات الموافقة — محمي برقم سري خاص منفصل عن الأدمن</p>
       <input type="password" inputmode="numeric" placeholder="الرقم السري" value="${esc(state.managePinInput)}" data-act="set-manage-pin">
       <button data-act="submit-manage-pin" ${state.managePinChecking?'disabled':''}>${state.managePinChecking?'جارٍ التحقق...':'دخول'}</button>
       ${state.managePinError ? `<div class="err">${esc(state.managePinError)}</div>` : ''}
@@ -7653,7 +6492,7 @@ function renderManageView(){
   return `
   <div class="card" style="padding-bottom:10px;">
     <div class="managesubtabs">
-      <button class="managesubtab ${state.manageTab==='items'?'active':''}" data-act="manage-set-tab" data-val="items">${ico_('boxesIcon',15)} الأصناف والأسعار</button>
+      <button class="managesubtab ${state.manageTab==='items'?'active':''}" data-act="manage-set-tab" data-val="items">${ico_('boxesIcon',15)} الأصناف والأرصدة</button>
       <button class="managesubtab ${state.manageTab==='approvals'?'active':''}" data-act="manage-set-tab" data-val="approvals">${ico_('checkSquare',15)} طلبات الموافقة${totalApprovals ? ` <span class="navbadge" style="position:static;margin-right:4px;">${totalApprovals}</span>` : ''}</button>
     </div>
   </div>
@@ -7682,7 +6521,6 @@ function renderManageItemsTab(){
     <button class="exportbtn" style="width:100%;margin-bottom:12px;" data-act="show-stock">${ico_('boxesIcon',14)} عرض الأرصدة المتاحة (بحث + تصدير PDF)</button>
     <div style="display:flex;gap:8px;margin-bottom:12px;">
       <button class="exportbtn danger" style="flex:1;" data-act="manage-clear-all-stock" ${state.manageClearAllBusy?'disabled':''}>${state.manageClearAllBusy ? '⏳ جارٍ...' : '📦 صفّر كل الأرصدة'}</button>
-      <button class="exportbtn danger" style="flex:1;" data-act="pz-open" ${state.manageClearAllBusy?'disabled':''}>${state.manageClearAllBusy ? '⏳ جارٍ...' : '💲 صفّر أسعار مجموعة'}</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:12px;">
       <button class="exportbtn" style="flex:1;" data-act="manage-export-catalog" ${state.manageExportBusy?'disabled':''}>${state.manageExportBusy ? '⏳ جارٍ التصدير...' : ico_('downloadIcon',13) + ' تصدير Excel'}</button>
@@ -7703,12 +6541,10 @@ function renderManageItemsTab(){
             <div class="managerow-sub">${esc(it.main)}${it.sub?' — '+esc(it.sub):''}</div>
           </div>
           <div class="managerow-vals">
-            <div>${it.price==null?'جاري تعديل القوائم':Math.round(it.price).toLocaleString('en-US')+' ج.م'}</div>
-            <div style="color:var(--muted);font-size:11px;">رصيد: ${it.stock==null?'—':it.stock}</div>
+            <div>رصيد: ${it.stock==null?'—':it.stock}</div>
           </div>
           <div class="managerow-btns">
             <button class="managerow-edit" data-act="manage-clear-stock" data-val="${esc(it.name||it.product)}" title="امسح الرصيد (يبقى كأنه مش موجود)">📦❌</button>
-            <button class="managerow-edit" data-act="manage-hide-price" data-val="${esc(it.name||it.product)}" title="أخفِ السعر مؤقتًا (يظهر مكانه 'جاري تعديل القوائم')">💲❌</button>
             <button class="managerow-edit" data-act="manage-edit-item" data-val="${esc(it.name||it.product)}">${ico_('editIcon',15)}</button>
           </div>
         </div>
@@ -7740,10 +6576,6 @@ function renderManageEditForm_(){
     <div class="managereadonly">${esc(d.product||d.name)}${d.color?' — '+esc(d.color):''} <span style="color:var(--muted);">(${esc(d.main)}${d.sub?' — '+esc(d.sub):''})</span></div>
     `}
     <div class="row3" style="margin-top:10px;">
-      <div class="field">
-        <label>السعر (ج.م)</label>
-        <input type="number" inputmode="decimal" value="${d.price??''}" data-act="manage-draft-price">
-      </div>
       <div class="field">
         <label>الرصيد</label>
         <input type="number" inputmode="numeric" value="${d.stock??''}" data-act="manage-draft-stock">
@@ -7848,13 +6680,13 @@ function manageOpenEdit_(name){
   state.manageEditingName = name;
   state.manageEditDraft = {
     name: item.name||item.product, main: item.main, sub: item.sub||'', product: item.product,
-    color: item.color||'', unit: item.unit||1, price: item.price, stock: item.stock, available: item.available!==false
+    color: item.color||'', unit: item.unit||1, stock: item.stock, available: item.available!==false
   };
   render();
 }
 function manageOpenNew_(){
   state.manageEditingName = 'NEW';
-  state.manageEditDraft = { name:'', main:'', sub:'', product:'', color:'', unit:1, price:'', stock:'', available:true };
+  state.manageEditDraft = { name:'', main:'', sub:'', product:'', color:'', unit:1, stock:'', available:true };
   render();
 }
 async function manageSaveItem(){
@@ -7898,19 +6730,6 @@ async function manageClearStock(name){
   }catch(e){ showToast('حصل خطأ، حاول تاني'); }
   render();
 }
-async function manageHidePrice(name){
-  if(!confirm('تخفي سعر "' + name + '" مؤقتًا؟ هيظهر مكانه "جاري تعديل القوائم" لحد ما تحط سعر جديد.')) return;
-  try{
-    const r = await apiPost({ action:'manageUpdateCatalogItem', token:getManageToken(), item:{ name, price:'' } });
-    if(r && r.ok){
-      const it = CATALOG.find(c=>(c.name||c.product)===name);
-      if(it) it.price = null;
-      showToast('اتخفى السعر ✓');
-    } else showToast('تعذّر الحفظ، حاول تاني');
-  }catch(e){ showToast('حصل خطأ، حاول تاني'); }
-  render();
-}
-
 // ⚠️ بطلب صريح: زرارين منفصلين تمامًا — واحد يصفّر الرصيد لكل الأصناف،
 // والتاني يصفّر (يخفي) السعر لكل الأصناف. كل واحد بيأثر على عموده بس ومش
 // بيلمس التاني، وتأثير كل واحد على كل الموزّعين فورًا، فبنسأل تأكيد واضح
@@ -7925,91 +6744,6 @@ async function manageClearAllStock(){
     if(r && r.ok){
       CATALOG.forEach(it=>{ it.stock = null; });
       showToast('اتصفّر الرصيد لـ ' + (r.cleared!=null ? r.cleared : n) + ' صنف ✓');
-    } else showToast('تعذّر التنفيذ' + (r && r.error ? ': ' + r.error : '') + ' — اتأكد إن السيرفر متحدّث (Deploy)');
-  }catch(e){ showToast('حصل خطأ، حاول تاني'); }
-  state.manageClearAllBusy = false; render();
-}
-
-// 💲 تصفير أسعار مجموعة (قطاع / تصنيف فرعي) بدل تصفير الكل — بتختار اللي عايزه.
-function pzGroups_(){
-  const src = manageCatalogSource_();
-  const byMain = {};
-  src.forEach(it=>{
-    const main = it.main || 'أخرى', sub = it.sub || '';
-    byMain[main] = byMain[main] || {};
-    byMain[main][sub] = (byMain[main][sub]||0) + 1;
-  });
-  const order = (typeof SECTOR_CHIPS!=='undefined' && SECTOR_CHIPS.length) ? SECTOR_CHIPS : [];
-  const mains = Object.keys(byMain).sort((a,b)=>{ const ia=order.indexOf(a), ib=order.indexOf(b); return (ia<0?999:ia)-(ib<0?999:ib); });
-  return mains.map(m=>({ main:m, subs:Object.keys(byMain[m]).map(sub=>({sub, n:byMain[m][sub]})) }));
-}
-function pzSelectedCount_(){
-  const sel = state.pzSel || {};
-  return manageCatalogSource_().filter(it=>sel[(it.main||'أخرى')+'||'+(it.sub||'')]).length;
-}
-function renderPriceZeroModal(){
-  if(!state.showPriceZero) return '';
-  const sel = state.pzSel || {};
-  const groups = pzGroups_();
-  const total = pzSelectedCount_();
-  const allKeys = groups.flatMap(g=>g.subs.map(x=>g.main+'||'+x.sub));
-  const allOn = allKeys.length && allKeys.every(k=>sel[k]);
-  return `
-  <div class="modalbg" data-act="pz-close">
-    <div class="previewmodal pzmodal" data-act="noop" style="max-width:560px;">
-      <div class="previewhead">
-        <span>💲 اختار المجموعات اللي هتتصفّر أسعارها</span>
-        <button class="previewclose" data-act="pz-close">✕</button>
-      </div>
-      <div class="previewbody">
-        <button class="pzrow pzall ${allOn?'on':''}" data-act="pz-all"><span class="pzck">${allOn?'✓':''}</span><span>تحديد الكل</span></button>
-        ${groups.map(g=>{
-          const keys = g.subs.map(x=>g.main+'||'+x.sub);
-          const on = keys.every(k=>sel[k]), some = keys.some(k=>sel[k]);
-          const cnt = g.subs.reduce((a,x)=>a+x.n,0);
-          return `
-          <div class="pzgroup">
-            <button class="pzrow pzmain ${on?'on':(some?'some':'')}" data-act="pz-main" data-val="${esc(g.main)}"><span class="pzck">${on?'✓':(some?'–':'')}</span><span>${esc(g.main)}</span><b>${cnt}</b></button>
-            ${g.subs.filter(x=>x.sub).map(x=>`
-            <button class="pzrow pzsub ${sel[g.main+'||'+x.sub]?'on':''}" data-act="pz-sub" data-val="${esc(g.main+'||'+x.sub)}"><span class="pzck">${sel[g.main+'||'+x.sub]?'✓':''}</span><span>${esc(x.sub)}</span><b>${x.n}</b></button>`).join('')}
-          </div>`;
-        }).join('')}
-      </div>
-      <div class="previewfoot" style="display:flex;gap:8px;">
-        <button class="submitbtn" style="flex:1;min-height:52px;" data-act="pz-confirm" ${(!total||state.manageClearAllBusy)?'disabled':''}>${total ? 'صفّر سعر '+total+' صنف' : 'اختار مجموعة الأول'}</button>
-        <button class="savebtn" style="flex:0 0 90px;min-height:52px;" data-act="pz-close">إلغاء</button>
-      </div>
-    </div>
-  </div>`;
-}
-async function manageClearPricesByGroups(){
-  const sel = state.pzSel || {};
-  const groups = Object.keys(sel).map(k=>{ const i=k.indexOf('||'); return { main:k.slice(0,i), sub:k.slice(i+2) }; });
-  const n = pzSelectedCount_();
-  if(!groups.length || !n){ showToast('اختار مجموعة الأول'); return; }
-  if(!confirm('هيتصفّر السعر لـ ' + n + ' صنف في ' + groups.length + ' مجموعة — هيظهر "جاري تعديل القوائم" مكانه لحد ما تحطه تاني. متأكد؟')) return;
-  state.manageClearAllBusy = true; render();
-  try{
-    const r = await apiPost({ action:'manageClearPricesByGroups', token:getManageToken(), groups });
-    if(r && r.ok){
-      CATALOG.forEach(it=>{ if(sel[(it.main||'أخرى')+'||'+(it.sub||'')]) it.price = null; });
-      state.showPriceZero = false; state.pzSel = {};
-      showToast('اتصفّر السعر لـ ' + (r.cleared!=null ? r.cleared : n) + ' صنف ✓');
-    } else showToast('تعذّر التنفيذ' + (r && r.error ? ': ' + r.error : '') + ' — اتأكد إن السيرفر متحدّث (Deploy)');
-  }catch(e){ showToast('حصل خطأ، حاول تاني'); }
-  state.manageClearAllBusy = false; render();
-}
-
-async function manageClearAllPrices(){
-  const n = CATALOG.length;
-  if(!n){ showToast('مفيش أصناف محمّلة'); return; }
-  if(!confirm('هيتصفّر السعر لكل الأصناف (' + n + ' صنف) — هيظهر "جاري تعديل القوائم" مكانه لحد ما تحطه تاني. متأكد؟')) return;
-  state.manageClearAllBusy = true; render();
-  try{
-    const r = await apiPost({ action:'manageClearAllPrices', token:getManageToken() });
-    if(r && r.ok){
-      CATALOG.forEach(it=>{ it.price = null; });
-      showToast('اتصفّر السعر لـ ' + (r.cleared!=null ? r.cleared : n) + ' صنف ✓');
     } else showToast('تعذّر التنفيذ' + (r && r.error ? ': ' + r.error : '') + ' — اتأكد إن السيرفر متحدّث (Deploy)');
   }catch(e){ showToast('حصل خطأ، حاول تاني'); }
   state.manageClearAllBusy = false; render();
@@ -8116,13 +6850,9 @@ function renderAdminOrdersColumn_(title, orders){
             <div class="item-row"><span>${esc(it.product)}${it.color?' — '+esc(it.color):''}</span><b>×${it.qty} ${esc(it.unitType||'')}</b></div>
           `).join('')}
         </div>
-        ${renderOrderTotalLine(o)}
         ${o.note ? `<div class="note">${esc(o.note)}</div>` : ''}
         <div class="adminbtnrow adminbtnrow-compact">
           ${isDone ? `<button class="delbtn pdf" data-act="notify-dist" data-id="${esc(o.id)}">${ico_('bellIcon',11)} بلّغ الموزع</button>` : ''}
-          <button class="delbtn pdf" data-act="download-order-pdf" data-id="${esc(o.id)}" ${state.adminPdfGeneratingId===o.id?'disabled':''}>
-            ${state.adminPdfGeneratingId===o.id ? '⏳ جارٍ...' : ico_('downloadIcon',11) + ' تصدير PDF'}
-          </button>
           <!-- بطلب صريح: شاشة الإدارة بتبعت النواقص بس (من غير عرض السعر) —
                الأدمن محتاج يوجّه المخزن، مش يبعتله عرض سعر. وكل مجموعة
                (كرافت+نيو / كومبن+اكسسوارات) بقالها أيقونة منفصلة بدل ما
@@ -8368,55 +7098,6 @@ function normalizePhoneIntl_(p){
   return d;
 }
 
-// الموزع بيبعت الطلب كـ"صورة" ويختار بنفسه هيبعتها لمين (جروب / شخص).
-// مفيش رقم محدد — بنفتح شاشة المشاركة بتاعة الموبايل وهو يختار.
-//
-// ⚠️ قيد مهم: navigator.share لازم يتنده في نفس لحظة الضغطة. لو استنينا الصورة
-// تتولد الأول (بتاخد ثانية أو اتنين)، المتصفح بيعتبر إن الضغطة ضاعت وبيلغي
-// المشاركة. عشان كده فصلناها خطوتين: "جهّز الصورة" الأول، وبعدين "ابعت".
-async function prepareOrderImage(){
-  const o = state.lastOrder;
-  if(!o){ showToast('مفيش طلب'); return; }
-  state.orderImgPreparing = true; render();
-  try{
-    const blobs = await buildOrderImagePages(o);
-    state.orderImages = (blobs && blobs.length) ? blobs : null;
-    if(!state.orderImages) showToast('تعذّر تجهيز الصورة، حاول تاني');
-  }catch(e){
-    state.orderImages = null;
-    showToast('تعذّر تجهيز الصورة: ' + (e && e.message ? e.message : e));
-  }
-  state.orderImgPreparing = false;
-  render();
-}
-
-// إرسال الطلب كصور (نفس أصناف وأسعار عرض السعر، مقسّمة صفحات — كل صفحة صورة
-// لوحدها، لأن واتساب بيبعت صور منفصلة مش PDF واحد طويل). بيجهّز الصور الأول
-// لو مش متجهّزة، وبعدين يفتح شاشة مشاركة واتساب والموزع يختار المستلم.
-// لو الجهاز مبيدعمش مشاركة الملفات، بينزّل الصور واحدة واحدة.
-async function sendOrderAsImage(){
-  const o = state.lastOrder;
-  if(!o){ showToast('مفيش طلب'); return; }
-  if(!state.orderImages || !state.orderImages.length){
-    state.waImgPreparing = true; render();
-    try{
-      const blobs = await buildOrderImagePages(o);
-      state.orderImages = (blobs && blobs.length) ? blobs : null;
-    }catch(e){
-      state.orderImages = null;
-      showToast('تعذّر تجهيز الصورة: ' + (e && e.message ? e.message : e));
-    }
-    state.waImgPreparing = false; render();
-    if(!state.orderImages){ showToast('تعذّر تجهيز الصورة، حاول تاني'); return; }
-  }
-  await shareOrderImage();
-  // shareOrderImage بيعلّم state.orderSentToWa — بنزامنها مع waSent عشان الزرار
-  if(state.orderSentToWa){
-    state.waSent = true; render();
-    autoReturnHomeAfterSend_();
-  }
-}
-
 // بعد ما الموزع يبعت طلبه (واتساب) أو ينزّل مستنداته من شاشة "تم الإرسال"،
 // مفيش داعي الشاشة تفضل واقفة هناك — بترجع تلقائي للشاشة الرئيسية (طلب
 // جديد) بعد تأخير بسيط عشان يشوف رسالة التأكيد الأول.
@@ -8428,40 +7109,6 @@ function autoReturnHomeAfterSend_(){
     __autoHomeTimer = null;
     if(state.successOrderId) resetOrderForm();
   }, 2200);
-}
-
-async function shareOrderImage(){
-  const blobs = state.orderImages;
-  if(!blobs || !blobs.length){ showToast('جهّز الصور الأول'); return; }
-  const o = state.lastOrder;
-  const base = 'طلب_' + String(o ? o.id : 'order').toUpperCase();
-  const files = blobs.map((b,i)=> new File([b], base + (blobs.length>1 ? '_'+(i+1) : '') + '.png', {type:'image/png'}));
-  // ⚠️ وضع تشخيص مؤقت: عشان نعرف بالظبط فين المشكلة عند الموزع (المتصفح
-  // مش بيدعم مشاركة الملفات؟ ولا الدعم موجود بس المشاركة نفسها بترفض؟)
-  // بنجمع السبب في متغيّر واحد ونوريه في التوست الأخير (مش توست منفصل،
-  // عشان التوستات بتستبدل بعض على طول ومش بتتراكم).
-  let fallbackReason = '';
-  const canShareFiles = !!(navigator.canShare && navigator.canShare({files}));
-  if(!navigator.share) fallbackReason = ' (المتصفح مبيدعمش المشاركة خالص)';
-  else if(!canShareFiles) fallbackReason = ' (المتصفح مبيدعمش مشاركة الصور)';
-  try{
-    if(canShareFiles){
-      // مفيش رقم — شاشة المشاركة هتفتح وهو يختار الجروب أو الشخص
-      await navigator.share({ files, title:'طلبية', text:'طلب #' + (o ? orderNoDisplay_(o) : '') });
-      state.orderSentToWa = true;
-      render();
-      return;
-    }
-  }catch(e){
-    // المستخدم لغى المشاركة — مش خطأ
-    if(e && e.name === 'AbortError') return;
-    fallbackReason = ' (فشلت المشاركة: ' + (e && e.name ? e.name : 'خطأ') + ')';
-  }
-  // احتياطي: ننزّل الصور واحدة واحدة وهو يرفعهم بإيده
-  blobs.forEach((b,i)=> downloadBlob(b, base + (blobs.length>1 ? '_'+(i+1) : '') + '.png'));
-  showToast((blobs.length>1 ? ('اتحملت ' + blobs.length + ' صور') : 'اتحملت الصورة') + ' — افتح واتساب وابعتها من المعرض' + fallbackReason, 5000);
-  state.orderSentToWa = true;
-  render();
 }
 
 // تحديث إجباري: بيمسح كل الكاش ويلغي الـ Service Worker ويعيد التحميل من السيرفر.
@@ -8706,7 +7353,7 @@ function render(){
     else if(state.view==='manage') view = renderManageView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
-    app.innerHTML = renderHeader() + banner + view + renderBottomNav_() + renderPreviewModal() + renderDiagModal() + renderWarehouseModal() + renderStockModal() + renderPriceZeroModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderPriceChoiceModal() + renderMergeAskModal() + renderNewOrdersPopup() + renderGlobalError();
+    app.innerHTML = renderHeader() + banner + view + renderBottomNav_() + renderPreviewModal() + renderDiagModal() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderMergeAskModal() + renderNewOrdersPopup() + renderGlobalError();
     bindEvents();
     applyFixedHeaderSpacing_();
     applyFixedFooterSpacing_();
@@ -8763,9 +7410,9 @@ function renderAuthView(){
       <div class="authfeat2027">
         <button type="button" class="mini2027 s-green${state.postLoginView==='order'?' on':''}" data-act="login-dest" data-val="order"><b>⚡</b><span>طلب سريع</span></button>
         <button type="button" class="mini2027 s-purple${state.postLoginView==='myorders'?' on':''}" data-act="login-dest" data-val="myorders"><b>📦</b><span>تابع طلباتك</span></button>
-        <button type="button" class="mini2027 s-gold${state.postLoginView==='quote'?' on':''}" data-act="login-dest" data-val="quote"><b>📄</b><span>عرض سعر PDF</span></button>
+        <button type="button" class="mini2027 s-gold${state.postLoginView==='shortage'?' on':''}" data-act="login-dest" data-val="shortage"><b>📋</b><span>نواقص</span></button>
       </div>
-      ${state.postLoginView ? `<div class="destHint2027">🎯 بعد الدخول هتروح لـ: <b>${state.postLoginView==='order'?'طلب سريع':(state.postLoginView==='myorders'?'تابع طلباتك':'عروض الأسعار PDF (من طلباتك)')}</b></div>` : ''}` : ''}
+      ${state.postLoginView ? `<div class="destHint2027">🎯 بعد الدخول هتروح لـ: <b>${state.postLoginView==='order'?'طلب سريع':(state.postLoginView==='myorders'?'تابع طلباتك':'نواقص (من طلباتك)')}</b></div>` : ''}` : ''}
       <div class="authbody">${inner}</div>
     </div>
   </div>`;
@@ -8973,8 +7620,6 @@ function bindEvents(){
     if(act==='pin-input')       onAction('pin-submit', el);
     else if(act==='auth-password')   onAction('login-submit', el);
     else if(act==='forgot-username') onAction('forgot-submit', el);
-    // خانة الخصم المخصص: Enter = خلاص خلصت كتابة
-    if(el.hasAttribute('data-extradiscount')) el.blur();
   });
 
   // ---------- الدخول للخانة ----------
@@ -8995,14 +7640,6 @@ function bindEvents(){
     const el = e.target;
     if(!el.matches) return;
 
-    // خانة الخصم المخصص — بتتحدّث عند الخروج بس عشان مانضيعش الـ focus
-    // أثناء الكتابة (الرسم الكامل بيعيد بناء الخانة).
-    if(el.hasAttribute('data-extradiscount')){
-      const pct = parseFloat(el.value);
-      state.extraDiscount = (!isNaN(pct) && pct>=0 && pct<=100) ? pct : 0;
-      render();
-      return;
-    }
     if(!el.matches('[data-act]')) return;
     // خانة كمية "صنف آخر": نسيب الموزع يمسحها وهو بيكتب، وبس لما يسيبها
     // بنتأكد إنها مش أقل من ١.
@@ -9038,7 +7675,6 @@ function onInputChange(act, el, val){
     case 'manage-draft-sub': state.manageEditDraft.sub = val; break;
     case 'manage-draft-product': state.manageEditDraft.product = val; break;
     case 'manage-draft-color': state.manageEditDraft.color = val; break;
-    case 'manage-draft-price': state.manageEditDraft.price = val===''?'':Number(val); break;
     case 'manage-draft-stock': state.manageEditDraft.stock = val===''?'':Number(val); break;
     case 'manage-draft-unit': state.manageEditDraft.unit = val===''?1:Number(val); break;
     case 'set-distname': state.distName = val; autoSaveDraft(); saveProfile(); break;
@@ -9047,7 +7683,6 @@ function onInputChange(act, el, val){
     case 'set-note': state.note = val; autoSaveDraft(); break;
     case 'set-othername': state.otherName = val; break;
     case 'set-othernote': state.otherNote = val; break;
-    case 'set-otherprice': state.otherPrice = val; break;
     case 'other-qty-input': {
       const n = parseInt(val);
       state.otherQty = val==='' ? 0 : (isFinite(n) ? Math.max(0, n) : 0);
@@ -9378,24 +8013,6 @@ async function onActionInner(act, el){
       render();
       break;
     }
-    case 'pz-open': state.showPriceZero = true; state.pzSel = {}; render(); break;
-    case 'pz-close': state.showPriceZero = false; render(); break;
-    case 'pz-sub':{ const k = el.getAttribute('data-val'); state.pzSel = state.pzSel || {}; if(state.pzSel[k]) delete state.pzSel[k]; else state.pzSel[k] = true; render(); break; }
-    case 'pz-main':{
-      const m = el.getAttribute('data-val'); state.pzSel = state.pzSel || {};
-      const keys = pzGroups_().filter(g=>g.main===m).flatMap(g=>g.subs.map(x=>m+'||'+x.sub));
-      const allOn = keys.every(k=>state.pzSel[k]);
-      keys.forEach(k=>{ if(allOn) delete state.pzSel[k]; else state.pzSel[k]=true; });
-      render(); break;
-    }
-    case 'pz-all':{
-      state.pzSel = state.pzSel || {};
-      const keys = pzGroups_().flatMap(g=>g.subs.map(x=>g.main+'||'+x.sub));
-      const allOn = keys.length && keys.every(k=>state.pzSel[k]);
-      state.pzSel = {}; if(!allOn) keys.forEach(k=>{ state.pzSel[k]=true; });
-      render(); break;
-    }
-    case 'pz-confirm': await manageClearPricesByGroups(); break;
     case 'submit-manage-pin': submitManagePin(); break;
     case 'manage-set-tab':
       state.manageTab = el.getAttribute('data-val');
@@ -9409,9 +8026,7 @@ async function onActionInner(act, el){
     case 'manage-export-catalog': manageExportCatalog(); break;
     case 'manage-edit-item': manageOpenEdit_(el.getAttribute('data-val')); break;
     case 'manage-clear-stock': await manageClearStock(el.getAttribute('data-val')); break;
-    case 'manage-hide-price': await manageHidePrice(el.getAttribute('data-val')); break;
     case 'manage-clear-all-stock': await manageClearAllStock(); break;
-    case 'manage-clear-all-prices': await manageClearAllPrices(); break;
     case 'manage-cancel-edit':
       state.manageEditingName = null;
       state.manageEditDraft = {};
@@ -9479,7 +8094,6 @@ async function onActionInner(act, el){
     case 'add-other': addOtherItem(); break;
 
     case 'request-submit': await requestSubmit(); break;
-    case 'toggle-discount': state.discountVisible = !state.discountVisible; render(); break;
     // set-extra-discount: handled via blur in bindEvents
     // "مراجعة الطلب" بترجع تفتح كارت الأصناف بس من غير أي مشاركة تلقائية —
     // سؤال "بأسعار ولا من غير؟" وإجبارية المشاركة بقوا مربوطين بلحظة
@@ -9492,48 +8106,19 @@ async function onActionInner(act, el){
       break;
     case 'close-cart-review': state.showCartReview=false; render(); break;
     case 'cart-add-more': state.showCartReview=false; render(); break;
-    // زرار "مشاركة" اليدوي جوه المراجعة — معاينة اختيارية قبل الإرسال
-    // (pendingShareOrder فاضي = shareCartReview_ هتبني من state.cart).
-    case 'cart-share': state.pendingShareOrder=null; state.showPriceChoiceModal=true; render(); break;
-    case 'share-price-yes':{
-      const ord = state.pendingShareOrder; state.pendingShareOrder=null;
-      state.showPriceChoiceModal=false; render();
-      await shareCartReview_(true, ord);
-      break;
-    }
-    case 'share-price-no':{
-      const ord = state.pendingShareOrder; state.pendingShareOrder=null;
-      state.showPriceChoiceModal=false; render();
-      await shareCartReview_(false, ord);
-      break;
-    }
     case 'cart-send':
       state.showCartReview=false;
       await requestSubmit(); // نفس مسار "إرسال الطلب" العادي: تأكيد ثم إرسال فعلي
       break;
     case 'save-draft': saveDraft(); break;
-    case 'preview-cart-invoice': previewCartInvoice(); break;
     case 'resume-draft': resumeDraft(); break;
     case 'discard-draft': discardDraftAndStartFresh(); break;
     case 'open-saved-draft': openSavedDraftManually(); break;
 
     case 'new-order': resetOrderForm(); break;
-    case 'share-quote-plain':
+    case 'share-shortage':
       if(!navigator.canShare) reserveWaWindow();   // احتياطي سطح المكتب — شوف trySendReadyFiles_
-      if(!state.quotePdfPlain){ await generateBothQuotes(state.lastOrder); }
-      if(state.quotePdfPlain) await shareQuotePDF(); else releaseWaWindow();
-      break;
-    case 'download-quote-plain':
-      if(!state.quotePdfPlain){ await generateBothQuotes(state.lastOrder); }
-      if(state.quotePdfPlain){ downloadQuote(); autoReturnHomeAfterSend_(); }
-      break;
-    case 'preview-quote-plain':
-      if(!state.quotePdfPlain){ await generateBothQuotes(state.lastOrder); }
-      if(state.quotePdfPlain) previewPdfBlob(state.quotePdfPlain, 'عرض_سعر_' + (state.successOrderId||'order') + '.pdf');
-      break;
-    case 'share-quote-shortage':
-      if(!navigator.canShare) reserveWaWindow();   // احتياطي سطح المكتب — شوف trySendReadyFiles_
-      await shareQuoteAndShortage_(findOrderForShortage_(el.getAttribute('data-id')), 'shareQuoteShortageBusy');
+      await shareShortage_(findOrderForShortage_(el.getAttribute('data-id')), 'shareShortageBusy');
       break;
     // بطلب صريح: شاشة الإدارة بس (متابعة الطلبات) — أيقونة منفصلة لكل
     // مجموعة نواقص (كرافت+نيو / كومبن+اكسسوارات)، من غير عرض سعر.
@@ -9547,11 +8132,8 @@ async function onActionInner(act, el){
     case 'send-order-wa':
       if(openOrderWhatsApp(state.lastOrder)) autoReturnHomeAfterSend_();
       break;
-    case 'send-order-img': await sendOrderAsImage(); break;
-    case 'make-docs': if(state.lastOrder) generateBothQuotes(state.lastOrder); break;
     case 'clear-save-error': state.saveError=''; render(); break;
     case 'notify-dist': notifyDistributorManually(el.getAttribute('data-id')); break;
-    case 'prepare-order-img': await prepareOrderImage(); break;
     case 'prepare-wh-img': await prepareWarehouseImages(); break;
     case 'share-wh-img': await shareWarehouseImages(); break;
     case 'force-update': await forceUpdate(); break;
@@ -9576,16 +8158,6 @@ async function onActionInner(act, el){
     case 'delete-order':{
       const id = el.getAttribute('data-id');
       if(confirm('متأكد إنك عايز تحذف الطلب ده نهائيًا؟')) deleteOrder(id);
-      break;
-    }
-    case 'preview-order-pdf':{
-      const id = el.getAttribute('data-id');
-      if(!state.adminPdfGeneratingId) handleOrderPDF(id, 'preview');
-      break;
-    }
-    case 'preview-myorder-pdf':{
-      const id = el.getAttribute('data-id');
-      if(!state.adminPdfGeneratingId) previewMyOrderPDF(id);
       break;
     }
     // ✏️ بطلب صريح: زرار تعديل واضح على أي طلب "لم يستلم" في شاشة طلباتي —
@@ -9614,11 +8186,6 @@ async function onActionInner(act, el){
     case 'delete-my-order':{
       const id = el.getAttribute('data-id');
       if(confirm('متأكد إنك عايز تحذف الطلب ده نهائيًا؟')) await deleteMyOrder(id);
-      break;
-    }
-    case 'download-order-pdf':{
-      const id = el.getAttribute('data-id');
-      if(!state.adminPdfGeneratingId) handleOrderPDF(id, 'download');
       break;
     }
     case 'delete-delivered':
