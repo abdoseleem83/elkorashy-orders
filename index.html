@@ -2033,7 +2033,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v239';
+const APP_BUILD = 'v240';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -4124,6 +4124,11 @@ function finalizeOrderSuccess_(order, isUpdate, oldId, id, orderNo, toastMsg){
 async function actuallySubmit(){
   state.saveError = '';
   state.submitting = true; render();
+  // ⚡ نحمّل مكتبة صور النواقص من دلوقتي (بالتوازي مع الحفظ) عشان شاشة المشاركة
+  // تفتح بسرعة بعد نجاح الإرسال — المتصفح بيرفض navigator.share لو عدّت بضع ثواني
+  // من لحظة الضغطة.
+  ensureLibs_('html2canvas').catch(()=>{});
+  let savedOk_ = false;
 
   const isUpdate = !!state.editingOrderId;
   // ⚠️ التعديل بقى بيعمل طلب *جديد* برقم وتاريخ جديد (id/ts جديدين)، والطلب
@@ -4149,11 +4154,12 @@ async function actuallySubmit(){
     // 📲 مابقناش نبعت واتساب تلقائيًا ولا إجباري — بطلب صريح من المستخدم.
     // بس بنعرض في شاشة النجاح ملاحظة + سهم بيشاور على زرار واتساب،
     // والموزع هو اللي يدوس بنفسه.
-    // 📲 مابقناش نبعت واتساب تلقائيًا — الموزع هو اللي يدوس زرار «نواقص» في
-    // شاشة النجاح بنفسه (مفيش أسعار ولا عرض سعر في التطبيق خالص).
+    // 📲 بعد نجاح الإرسال بتفتح شاشة المشاركة (واتساب أو أي برنامج) تلقائيًا —
+    // شوف آخر الدالة. لو المتصفح رفض، زرار «نواقص» في شاشة النجاح هو البديل.
     finalizeOrderSuccess_(order, isUpdate, oldId, id, orderNo, isUpdate
       ? '✅ تم استلام تعديلك — جاري المراجعة والتأكيد بالمتاح'
       : '✅ تم استلام طلبك — جاري المراجعة والتأكيد بالمتاح');
+    savedOk_ = true;
   }catch(e){
     // 🔒 "unauthorized" معناها جلسة الموزّع خلصت أو مش صالحة — مش خطأ نت
     // ولا خطأ سيرفر. الطلب (السلة) لسه محفوظ في state، فبنرجّعه لشاشة
@@ -4184,6 +4190,12 @@ async function actuallySubmit(){
   }
   state.submitting = false;
   render();
+  // 📤 فتح مشاركة النواقص فورًا بعد نجاح الإرسال (موبايل بس: المشاركة الأصلية
+  // لازم تكون مدعومة، لأن فتح نافذة واتساب في سطح المكتب بعد انتظار الشبكة
+  // بيتحجب كـ popup). لو فشلت لأي سبب، الملفات بتفضل جاهزة وزرار «نواقص» بيبعتها.
+  if(savedOk_ && navigator.canShare){
+    shareShortage_(order, 'shareShortageBusy');
+  }
   // ⛔ مابقناش نولّد الـ PDF تلقائيًا هنا. html2canvas بيجمّد الشاشة وهو شغال،
   // فكانت شاشة النجاح متظهرش والمستخدم يفتكر إن الحفظ فشل — مع إنه نجح فعلاً.
   // دلوقتي شاشة النجاح بتظهر فورًا، والملفات بتتولّد بضغطة زرار وقت ما تحتاجها.
@@ -4893,7 +4905,7 @@ async function trySendReadyFiles_(){
       // رفض نادر من المتصفح — الملفات لسه محفوظة، نوري الموزّع إنه يجرّب
       // تاني بضغطة واحدة تانية بدل ما نضيّع الشغل. الزرار بقى أول حاجة
       // ظاهرة في شاشة النجاح (شوف renderOrderView) فمحتاجش يدوّر عليه.
-      showToast('دوس "نواقص" فوق عشان تبعت', 5000);
+      if(!(e && e.name === 'AbortError')) showToast('دوس "نواقص" عشان تبعت', 5000);
       render();
       return;
     }
@@ -5971,7 +5983,7 @@ function renderOrderView(){
         <!-- 📦 زرار «نواقص» — الزرار الوحيد هنا: بيجهّز صور النواقص ويفتح شاشة
              المشاركة، والموزع يختار المخزن/الجروب. مفيش عرض سعر. -->
         <div class="wanote">
-          <p class="wanote-t">📲 لو سمحت اضغط <b>«نواقص»</b> عشان المخزن يستلم طلبك.</p>
+          <p class="wanote-t">📲 لو شاشة المشاركة ماظهرتش، اضغط <b>«نواقص»</b> عشان المخزن يستلم طلبك.</p>
           <button class="wanote-btn ${state.waSent?'sent':''}" data-act="share-shortage" ${state.shareShortageBusy?'disabled':''}>
             <span class="ic">📲</span> ${shortageBtnLabel_(state.lastOrder && state.lastOrder.id, state.waSent ? 'تم — ابعت تاني' : undefined)}
           </button>
