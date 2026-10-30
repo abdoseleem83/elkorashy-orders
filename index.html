@@ -2033,7 +2033,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v240';
+const APP_BUILD = 'v241';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2878,6 +2878,7 @@ function onNewOrders_(newCount, lastOrder){
 // نداء خفيف كل فترة يجيب العدد بس (مش كل الطلبات)
 async function adminPollNewOrders_(){
   if(!state.adminUnlocked || !getAdminToken()) return;
+  refreshApprovalCounts_();
   try{
     const res = await fetch(APPS_SCRIPT_URL + '?action=ordersMeta&token=' + encodeURIComponent(getAdminToken()));
     const raw = await res.text();
@@ -3437,7 +3438,10 @@ function restoreAdminSession(){
 
 // ===== تبويب "إدارة" الجديد — نفس آلية توكن الأدمن بالظبط، بس منفصلة =====
 function getManageToken(){
-  try{ return sessionStorage.getItem(LS_MANAGE_TOKEN_KEY) || ''; }catch(e){ return ''; }
+  // 🐞 قبل كده كان بيرجّع فاضي لو الأدمن دخل بالرقم بتاعه بس (مفيش توكن إدارة منفصل)،
+  // فكل نداءات الإدارة (طلبات الإضافة والباسورد وغيرها) كانت بتتبعت من غير توكن والسيرفر
+  // يرفضها والشاشة تعرض "مفيش طلبات". السيرفر بيقبل توكن الأدمن مكان توكن الإدارة.
+  try{ return sessionStorage.getItem(LS_MANAGE_TOKEN_KEY) || sessionStorage.getItem(LS_ADMIN_TOKEN_KEY) || ''; }catch(e){ return ''; }
 }
 function setManageToken(t){
   try{ t ? sessionStorage.setItem(LS_MANAGE_TOKEN_KEY, t) : sessionStorage.removeItem(LS_MANAGE_TOKEN_KEY); }catch(e){}
@@ -4193,7 +4197,7 @@ async function actuallySubmit(){
   // 📤 فتح مشاركة النواقص فورًا بعد نجاح الإرسال (موبايل بس: المشاركة الأصلية
   // لازم تكون مدعومة، لأن فتح نافذة واتساب في سطح المكتب بعد انتظار الشبكة
   // بيتحجب كـ popup). لو فشلت لأي سبب، الملفات بتفضل جاهزة وزرار «نواقص» بيبعتها.
-  if(savedOk_ && navigator.canShare){
+  if(savedOk_ && isMobileDevice_() && navigator.canShare){
     shareShortage_(order, 'shareShortageBusy');
   }
   // ⛔ مابقناش نولّد الـ PDF تلقائيًا هنا. html2canvas بيجمّد الشاشة وهو شغال،
@@ -4274,6 +4278,25 @@ function normalizeItemToSmallUnit(it){
   if(bigUnits.includes(it.unitType)) return { qty: it.qty * content, unitLabel: label };
   return { qty: it.qty, unitLabel: label };
 }
+// 📱 شاشة المشاركة الأصلية (navigator.share) للموبايل بس. على الكمبيوتر متصفحات
+// كتير (كروم/إيدج على ويندوز) بتعرّف navigator.canShare وبتفتح قايمة مشاركة النظام
+// اللي مفيهاش واتساب — فكانت الصور «مابتتبعتش». على الكمبيوتر بنرجع للتنزيل + واتساب.
+function isMobileDevice_(){
+  try{
+    if(navigator.userAgentData && navigator.userAgentData.mobile === true) return true;
+  }catch(e){}
+  const ua = navigator.userAgent || '';
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+}
+function canNativeShareFiles_(files){
+  try{ return isMobileDevice_() && !!navigator.canShare && (!files || navigator.canShare({files})); }
+  catch(e){ return false; }
+}
+// تنزيل عدة ملفات بفاصل صغير — كروم على الكمبيوتر بيرفض التنزيلات المتتالية الفورية
+function downloadFilesStaggered_(files){
+  files.forEach((f, i)=> setTimeout(()=>{ try{ downloadBlob(f, f.name || ('ملف_' + (i+1))); }catch(e){ console.error(e); } }, i * 350));
+}
+
 function downloadBlob(blob, filename){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -4642,8 +4665,7 @@ async function loadPwRequests(){
 async function decidePwRequest(id, approve){
   try{
     const action = approve ? 'approvePasswordReset' : 'rejectPasswordReset';
-    const r = await apiPost({ action:action, token:getAdminToken(), id:id });
-    const d = await r.json();
+    const d = await apiPost({ action:action, token:getAdminToken(), id:id });
     if(d && d.ok){
       showToast(approve ? 'اتغيّر الباسورد ✅' : 'اترفض الطلب');
       state.pwRequests = state.pwRequests.filter(x=>String(x.id)!==String(id));
@@ -4811,7 +4833,7 @@ async function sharePreviewModal(){
   if(!p || !p.blob) return;
   try{
     const file = new File([p.blob], p.filename, {type: p.blob.type || 'image/png'});
-    if(navigator.canShare && navigator.canShare({files:[file]})){
+    if(canNativeShareFiles_([file])){
       await navigator.share({ files:[file], title: p.filename });
       return;
     }
@@ -4894,7 +4916,7 @@ async function trySendReadyFiles_(){
   // 📝 بطلب صريح: اسم الموزّع مكتوب في الملحوظة، مش رقم الطلب بس — أسهل
   // للمخزن إنه يعرف الطلب ده مين ورا غير ما يدوّر على الاسم في مكان تاني.
   const noteText_ = 'نواقص — طلب #' + orderNo + (distName ? ' موزع ' + distName : '');
-  if(navigator.canShare && navigator.canShare({files})){
+  if(canNativeShareFiles_(files)){
     releaseWaWindow();   // مش محتاجينها في المسار ده — لو كانت متحجزة من الضغطة
     try{
       await navigator.share({ files, title:'طلب #'+orderNo, text: noteText_ });
@@ -4914,7 +4936,7 @@ async function trySendReadyFiles_(){
   // كل حاجة ونفتح واتساب. لو كانت النافذة اتحجزت وقت الضغطة (شوف
   // reserveWaWindow فوق) بنوجّهها هي — أضمن من window.open جديد بعد كل
   // الـawait اللي فاتت، لأنها بتتفتح غالبًا بعد ما "لمسة المستخدم" تبرد.
-  files.forEach(f=> downloadBlob(f, f.name));
+  downloadFilesStaggered_(files);
   showToast('اتحمّلت ' + files.length + ' ملفات — هتفتح واتساب، ارفقهم يدويًا');
   const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent(noteText_);
   if(__waWin && !__waWin.closed){
@@ -4943,7 +4965,7 @@ async function shareShortageGroupOnly_(order, groupKey){
   if(!group || !order) return;
   const busyKey = order.id + '|' + groupKey;
   if(!state.shareShortageGroupBusy) state.shareShortageGroupBusy = {};
-  if(!navigator.canShare) reserveWaWindow();
+  if(!canNativeShareFiles_()) reserveWaWindow();
   if(!order.items || !order.items.length){ showToast('الطلب مفيهوش أصناف'); releaseWaWindow(); return; }
   if(!order.items.some(it=>group.mains.includes(it.main))){ showToast('الطلب ده مفيهوش أصناف من ' + group.label); releaseWaWindow(); return; }
   state.shareShortageGroupBusy[busyKey] = true; render();
@@ -4956,12 +4978,12 @@ async function shareShortageGroupOnly_(order, groupKey){
     if(!blobs || !blobs.length){ showToast('مفيش نواقص في ' + group.label + ' لهذا الطلب'); releaseWaWindow(); return; }
     const base = 'نواقص_' + group.label.replace(/\s+/g,'_') + '_' + orderNo;
     const files = blobs.map((b,i)=> new File([b], base + (blobs.length>1?'_'+(i+1):'') + '.png', {type:'image/png'}));
-    if(navigator.canShare && navigator.canShare({files})){
+    if(canNativeShareFiles_(files)){
       releaseWaWindow();
       await navigator.share({ files, title: group.label + ' — طلب #' + orderNo, text: noteText_ });
       return;
     }
-    files.forEach(f=> downloadBlob(f, f.name));
+    downloadFilesStaggered_(files);
     showToast('اتحمّلت الصور — هتفتح واتساب، ارفقها يدويًا');
     const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent(noteText_);
     if(__waWin && !__waWin.closed){
@@ -5343,7 +5365,7 @@ async function shareWarehouseImages(){
   const base = 'مخزن_' + String(o ? o.id : 'order').toUpperCase();
   const files = imgs.map((x, i)=> new File([x.blob], base + '_' + (i+1) + '_' + x.group + '.png', {type:'image/png'}));
   try{
-    if(navigator.canShare && navigator.canShare({files})){
+    if(canNativeShareFiles_(files)){
       await navigator.share({ files, title:'أمر صرف مخزن', text:'طلب #' + (o?orderNoDisplay_(o):'') });
       return;
     }
@@ -5351,8 +5373,8 @@ async function shareWarehouseImages(){
     if(e && e.name === 'AbortError') return;
   }
   // احتياطي: ننزّلهم واحدة واحدة
-  imgs.forEach((x,i)=> downloadBlob(x.blob, base + '_' + (i+1) + '_' + x.group + '.png'));
-  showToast('اتحملت الصور — ابعتها من المعرض');
+  downloadFilesStaggered_(imgs.map((x,i)=> new File([x.blob], base + '_' + (i+1) + '_' + x.group + '.png', {type:'image/png'})));
+  showToast(isMobileDevice_() ? 'اتحملت الصور — ابعتها من المعرض' : 'اتحملت الصور — هتلاقيها في فولدر التنزيلات');
 }
 
 // ===== excel export (admin) =====
@@ -6651,17 +6673,46 @@ async function loadManageApprovals(){
   try{
     const token = getManageToken();
     const [regRes, pwRes] = await Promise.all([
-      fetch(APPS_SCRIPT_URL + '?action=manageRegRequests&token=' + encodeURIComponent(token)).then(r=>r.json()),
-      fetch(APPS_SCRIPT_URL + '?action=managePasswordRequests&token=' + encodeURIComponent(token)).then(r=>r.json())
+      apiGet('manageRegRequests', {token}),
+      apiGet('managePasswordRequests', {token})
     ]);
+    // 🔒 التوكن منتهي/مش مقبول: نرجّع شاشة الرقم السري بدل ما نعرض "مفيش طلبات" غلط
+    if(isUnauthorized_(regRes) || isUnauthorized_(pwRes)){
+      setManageToken(''); setAdminToken('');
+      state.adminUnlocked = false; state.manageUnlocked = false;
+      state.manageApprovalsLoaded = false;
+      state.manageApprovalsLoading = false;
+      showToast('انتهت جلسة الإدارة — اكتب الرقم السري تاني');
+      render();
+      return;
+    }
     state.manageRegRequests = Array.isArray(regRes) ? regRes : [];
     state.managePwRequests = Array.isArray(pwRes) ? pwRes : [];
+    state.pwRequestsCount = state.managePwRequests.length;
     state.manageApprovalsLoaded = true;
   }catch(e){
     showToast('تعذّر تحميل طلبات الموافقة');
+    state.manageApprovalsLoaded = true;   // مانعيدش المحاولة في حلقة — زرار «تحديث» يعيدها
   }
   state.manageApprovalsLoading = false;
   render();
+}
+
+// عدّادات طلبات الإضافة والباسورد للأدمن (بتتحدّث مع فحص الطلبات الجديدة كل ٤٥ ثانية)
+async function refreshApprovalCounts_(){
+  const tok = getManageToken() || getAdminToken();
+  if(!tok) return;
+  try{
+    const [reg, pw] = await Promise.all([
+      apiGet('manageRegRequests', {token: tok}),
+      apiGet('managePasswordRequests', {token: tok})
+    ]);
+    const before = (state.manageRegRequests||[]).length + '|' + (state.managePwRequests||[]).length;
+    if(Array.isArray(reg)) state.manageRegRequests = reg;
+    if(Array.isArray(pw)){ state.managePwRequests = pw; state.pwRequests = pw; state.pwRequestsCount = pw.length; }
+    const after = (state.manageRegRequests||[]).length + '|' + (state.managePwRequests||[]).length;
+    if(before !== after) render();
+  }catch(e){ /* صامت — مش لازم نزعّج الأدمن */ }
 }
 
 async function manageDecideReg(username, approve){
@@ -6810,6 +6861,8 @@ function renderAdminView(){
     <div class="adminbar">
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
       <button class="exportbtn" data-act="refresh-orders">${ico_('refresh',14)} تحديث</button>
+      <button class="exportbtn" data-act="show-pwreq" title="طلبات تغيير كلمة السر">🔑 الباسورد${(state.managePwRequests||[]).length ? ` (${(state.managePwRequests||[]).length})` : ''}</button>
+      <button class="exportbtn" data-act="open-manage-approvals" title="طلبات إضافة حسابات جديدة">${ico_('checkSquare',14)} الإضافة${(state.manageRegRequests||[]).length ? ` (${(state.manageRegRequests||[]).length})` : ''}</button>
       <button class="exportbtn" data-act="export-excel-preparing" title="تصدير Excel (${STATUS_PREPARING})">${ico_('downloadIcon',14)} Excel</button>
       <button class="exportbtn danger" data-act="delete-delivered">${ico_('trashIcon',14)} مسح المُنفَّذ</button>
     </div>
@@ -8129,13 +8182,13 @@ async function onActionInner(act, el){
 
     case 'new-order': resetOrderForm(); break;
     case 'share-shortage':
-      if(!navigator.canShare) reserveWaWindow();   // احتياطي سطح المكتب — شوف trySendReadyFiles_
+      if(!canNativeShareFiles_()) reserveWaWindow();   // احتياطي سطح المكتب — شوف trySendReadyFiles_
       await shareShortage_(findOrderForShortage_(el.getAttribute('data-id')), 'shareShortageBusy');
       break;
     // بطلب صريح: شاشة الإدارة بس (متابعة الطلبات) — أيقونة منفصلة لكل
     // مجموعة نواقص (كرافت+نيو / كومبن+اكسسوارات)، من غير عرض سعر.
     case 'share-shortage-group':
-      if(!navigator.canShare) reserveWaWindow();
+      // (reserveWaWindow بتتنده جوه shareShortageGroupOnly_ نفسها)
       await shareShortageGroupOnly_(findOrderForShortage_(el.getAttribute('data-id')), el.getAttribute('data-group'));
       break;
     case 'close-preview': closePreviewModal(); break;
