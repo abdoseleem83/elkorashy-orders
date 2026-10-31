@@ -3229,22 +3229,27 @@ async function updateOrderStatus(id, status){
   // القديمة عشان نرجّعها لو السيرفر قال found:false.
   const prevStatus = ord.status;
   ord.status = status;
-  try{
-    let d = {};
-    try{ d = await apiPost({ action:'updateStatus', token:getAdminToken(), id:id, status:status }); }catch(e){}
-    if(d.found === false){
-      ord.status = prevStatus;
-      showToast('الطلب ده اتغيّر أو اتمسح من مكان تاني — حدّث الصفحة');
-    } else {
-      showToast('اتحدّثت ✅');
-    }
-  }catch(e){ showToast('حصل خطأ، حاول تاني'); }
+  let d = null;
+  try{ d = await apiPost({ action:'updateStatus', token:getAdminToken(), id:id, status:status }); }catch(e){ d = null; }
+  // 🐞 قبل كده أي فشل (نت فاصل / جلسة منتهية) كان بيتحوّل لـ {} ويظهر «اتحدّثت ✅» غلط
+  if(handleAdminUnauthorized_(d)){
+    ord.status = prevStatus;
+  } else if(!d || d.ok !== true){
+    ord.status = prevStatus;
+    showToast('تعذّر تحديث الحالة — اتأكد من النت وحاول تاني');
+  } else if(d.found === false){
+    ord.status = prevStatus;
+    showToast('الطلب ده اتغيّر أو اتمسح من مكان تاني — حدّث الصفحة');
+  } else {
+    showToast('اتحدّثت ✅');
+  }
   render();
 }
 
 async function deleteOrder(id){
   try{
     const d = await apiPost({ action:'delete', token:getAdminToken(), id:id });
+    if(handleAdminUnauthorized_(d)){ render(); return; }
     if(!d || d.ok !== true) throw new Error('server refused');
     state.orders = state.orders.filter(o=>o.id!==id);
     showToast('تم حذف الطلب');
@@ -3278,6 +3283,7 @@ async function deleteDeliveredOrders(){
   if(count===0){ showToast('مفيش طلبات "' + STATUS_DONE + '" حاليًا'); return; }
   try{
     const d = await apiPost({ action:'deleteDelivered', token:getAdminToken() });
+    if(handleAdminUnauthorized_(d)){ render(); return; }
     if(!d || d.ok !== true) throw new Error('server refused');
     state.orders = state.orders.filter(o=>o.status!==STATUS_DONE);
     showToast('تم مسح ' + (d.deleted != null ? d.deleted : count) + ' طلب منفَّذ');
@@ -3292,6 +3298,7 @@ async function archiveDoneOrders(){
   if(!confirm('هيتم نقل ' + count + ' طلب "' + STATUS_DONE + '" للأرشيف (مش هيتمسحوا، بس هيختفوا من القايمة الرئيسية). متأكد؟')) return;
   try{
     const d = await apiPost({ action:'archiveDone', token:getAdminToken() });
+    if(handleAdminUnauthorized_(d)){ render(); return; }
     if(d && d.ok){
       state.orders = state.orders.filter(o=>o.status!==STATUS_DONE);
       showToast('اتأرشف ' + (d.archived||count) + ' طلب ✅');
@@ -3385,6 +3392,16 @@ function setUserToken(t){
 // لشاشة الدخول بدل ما نسيبه قدام شاشة فاضية من غير أي تفسير.
 function isUnauthorized_(d){
   return !!(d && d.ok === false && d.error === 'unauthorized');
+}
+// 🔒 الجلسة بتاعة الأدمن خلصت (توكن ١٢ ساعة): نقفل الشاشة ونطلب الرقم تاني بدل
+// ما نفضل نوري رسايل نجاح غلط. بترجّع true لو الرد كان «unauthorized».
+function handleAdminUnauthorized_(d){
+  if(!isUnauthorized_(d)) return false;
+  setAdminToken(''); setManageToken('');
+  state.adminUnlocked = false; state.manageUnlocked = false;
+  stopAdminPoll_();
+  showToast('انتهت جلسة الأدمن — ادخل الرقم تاني');
+  return true;
 }
 function forceRelogin_(msg){
   setUserToken('');
@@ -3708,6 +3725,7 @@ async function submitRegister(){
     if(!data.ok){
       state.authError = data.reason==='exists' ? 'اسم المستخدم ده متسجل قبل كده'
         : data.reason==='flooded' ? 'فيه ضغط طلبات تسجيل كتير دلوقتي — حاول تاني بعد شوية'
+        : data.reason==='invalid_username' ? 'اسم المستخدم مينفعش يبدأ برمز (= + - @) ولا يزيد عن 60 حرف'
         : 'حصلت مشكلة، حاول تاني';
       render();
       return;
@@ -4666,6 +4684,7 @@ async function decidePwRequest(id, approve){
   try{
     const action = approve ? 'approvePasswordReset' : 'rejectPasswordReset';
     const d = await apiPost({ action:action, token:getAdminToken(), id:id });
+    if(handleAdminUnauthorized_(d)){ render(); return; }
     if(d && d.ok){
       showToast(approve ? 'اتغيّر الباسورد ✅' : 'اترفض الطلب');
       state.pwRequests = state.pwRequests.filter(x=>String(x.id)!==String(id));
@@ -6719,6 +6738,7 @@ async function manageDecideReg(username, approve){
   try{
     const action = approve ? 'manageApproveReg' : 'manageRejectReg';
     const d = await apiPost({ action:action, token:getManageToken(), username:username });
+    if(handleAdminUnauthorized_(d)){ render(); return; }
     if(!d || d.ok !== true) throw new Error('server refused');
     state.manageRegRequests = state.manageRegRequests.filter(x=>x.username!==username);
     showToast(approve ? 'تمت الموافقة ✓' : 'اترفض الطلب');
@@ -6729,6 +6749,7 @@ async function manageDecidePw(id, approve){
   try{
     const action = approve ? 'manageApprovePasswordReset' : 'manageRejectPasswordReset';
     const d = await apiPost({ action:action, token:getManageToken(), id:id });
+    if(handleAdminUnauthorized_(d)){ render(); return; }
     if(!d || d.ok !== true) throw new Error('server refused');
     state.managePwRequests = state.managePwRequests.filter(x=>String(x.id)!==String(id));
     showToast(approve ? 'تمت الموافقة ✓' : 'اترفض الطلب');
@@ -6864,6 +6885,9 @@ function renderAdminView(){
       <button class="exportbtn" data-act="show-pwreq" title="طلبات تغيير كلمة السر">🔑 الباسورد${(state.managePwRequests||[]).length ? ` (${(state.managePwRequests||[]).length})` : ''}</button>
       <button class="exportbtn" data-act="open-manage-approvals" title="طلبات إضافة حسابات جديدة">${ico_('checkSquare',14)} الإضافة${(state.manageRegRequests||[]).length ? ` (${(state.manageRegRequests||[]).length})` : ''}</button>
       <button class="exportbtn" data-act="export-excel-preparing" title="تصدير Excel (${STATUS_PREPARING})">${ico_('downloadIcon',14)} Excel</button>
+      <button class="exportbtn" data-act="export-excel-delivered" title="تصدير Excel (${STATUS_DONE})">${ico_('downloadIcon',14)} Excel المنفَّذ</button>
+      <button class="exportbtn" data-act="archive-done" title="نقل الطلبات المنفَّذة للأرشيف (من غير حذف)">${ico_('boxIcon',14)} أرشفة المنفَّذ</button>
+      <button class="exportbtn" data-act="open-archive" title="عرض الطلبات المؤرشفة واسترجاعها">${ico_('fileIcon',14)} الأرشيف</button>
       <button class="exportbtn danger" data-act="delete-delivered">${ico_('trashIcon',14)} مسح المُنفَّذ</button>
     </div>
     <div class="polldiag">

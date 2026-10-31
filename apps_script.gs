@@ -227,6 +227,27 @@ function json_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
+// 🔒 حقن الصيغ (Formula Injection): أي نص بيبدأ بـ = أو + أو - أو @ وبيتكتب في الشيت
+// بـ appendRow/setValues بيتفسّر كصيغة. تسجيل الحساب مفتوح من غير توكن، فأي حد كان
+// يقدر يكتب في «اسم الموزع» صيغة زي =IMPORTXML(...) تقرا شيت المستخدمين وتبعته لموقعه.
+// بنحط حرف غير مرئي (U+200E) في أول النص عشان مايتفسّرش صيغة أبدًا — حتى لو اتنقل
+// لشيت تاني (أرشيف/استرجاع). مابنلمسش الحقول اللي بتتقارن (اسم المستخدم) — دي بتترفض.
+function cellSafe_(v) {
+  const t = String(v == null ? '' : v);
+  return /^[\s\u200E]*[=+\-@]/.test(t) ? '\u200E' + t : t;
+}
+// اسم المستخدم بيتقارن حرفيًا في الدخول، فمينفعش نعدّله — بنرفض اللي بيبدأ بحرف صيغة.
+function isBadUsername_(u) {
+  return /^[=+\-@\t\r]/.test(u) || u.length > 60;
+}
+// بيشيل أي سر من جسم الطلب قبل ما يتسجّل في شيت الأخطاء
+function redactBody_(raw) {
+  try {
+    const o = JSON.parse(raw);
+    ['password', 'newPassword', 'token', 'pin'].forEach(function (k) { if (k in o) o[k] = '***'; });
+    return JSON.stringify(o);
+  } catch (e) { return '(جسم غير قابل للقراءة)'; }
+}
 function denyAdmin_()  { return json_({ ok: false, error: 'unauthorized' }); }
 function denyManage_() { return json_({ ok: false, error: 'unauthorized' }); }
 function denyAuth_()   { return json_({ ok: false, error: 'unauthorized' }); }
@@ -429,7 +450,7 @@ function doPost(e) {
   try {
     return doPostInner_(e);
   } catch (err) {
-    logError_('doPost', err, e && e.postData ? e.postData.contents : '');
+    logError_('doPost', err, e && e.postData ? redactBody_(e.postData.contents) : '');
     return json_({ ok: false, error: String(err) });
   }
 }
@@ -547,9 +568,9 @@ function saveOrder_(data) {
   if (!sheet) return json_({ ok: false, error: 'sheet not found' });
 
   const items = Array.isArray(data.items) ? data.items : [];
-  const itemsSummary = items.map(function (it) {
+  const itemsSummary = cellSafe_(items.map(function (it) {
     return it.product + (it.color ? ' - ' + it.color : '') + ' × ' + it.qty + ' ' + (it.unitType || '');
-  }).join(' | ');
+  }).join(' | '));
 
   const isUpdate = data.action === 'update';
   // اسم المستخدم بيتاخد من التوكن بس — مش من اللي الواجهة بعتته، عشان محدش
@@ -610,13 +631,13 @@ function saveOrder_(data) {
   const newRow = sheet.getLastRow() + 1;
   sheet.getRange(newRow, COL_PHONE).setNumberFormat('@');
   const noteToSave = editedFromOrderNo
-    ? (EDIT_MARK_PREFIX_ + editedFromOrderNo + EDIT_MARK_SUFFIX_ + (data.note || ''))
-    : (data.note || '');
+    ? (EDIT_MARK_PREFIX_ + editedFromOrderNo + EDIT_MARK_SUFFIX_ + cellSafe_(data.note))
+    : cellSafe_(data.note);
   sheet.appendRow([
-    data.id, new Date(data.ts), data.distName, data.distRegion || '',
+    cellSafe_(data.id), new Date(data.ts), cellSafe_(data.distName), cellSafe_(data.distRegion),
     String(data.distPhone || ''), noteToSave, itemsSummary,
     isUpdate ? STATUS_PENDING : (data.status || STATUS_PENDING),
-    JSON.stringify(items), data.warehouse || '', orderNo, username
+    JSON.stringify(items), cellSafe_(data.warehouse), orderNo, username
   ]);
 
   markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
@@ -871,6 +892,7 @@ function handleRegister(data) {
   const username = String(data.username || '').trim();
   const password = String(data.password || '');
   if (!username || !password) return json_({ ok: false, reason: 'missing' });
+  if (isBadUsername_(username)) return json_({ ok: false, reason: 'invalid_username' });
 
   const rows = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
@@ -882,7 +904,7 @@ function handleRegister(data) {
   const newRow = sheet.getLastRow() + 1;
   sheet.getRange(newRow, 5).setNumberFormat('@');
   sheet.appendRow([
-    username, makePwHash_(password), data.distName || '', data.distRegion || '',
+    username, makePwHash_(password), cellSafe_(data.distName), cellSafe_(data.distRegion),
     String(data.distPhone || ''), 'قيد المراجعة', new Date(), distType
   ]);
   return json_({ ok: true });
