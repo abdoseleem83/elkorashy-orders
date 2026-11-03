@@ -2128,6 +2128,27 @@ html[data-theme="light"] .delbtn.pdf,html[data-theme="light"] .backnav{color:var
 .hkpi b,.hkpi .n{color:var(--navy-soft) !important;}
 html[data-theme="light"] .hkpi b,html[data-theme="light"] .hkpi .n{color:var(--navy) !important;}
 .hometile.c-green .hticon,.hometile.c-gold .hticon,.hometile.c-purple .hticon{background:var(--grad) !important;}
+
+/* v243d — وضع فاتح أهدى وأوضح: أزرق أغمق وأقل سطوع، والكتابة سودا/كحلي غامق */
+html[data-theme="light"]{
+  --navy:#1E48B8; --navy-deep:#13307F; --navy-soft:#3C62C9;
+  --ink:#0B1020; --muted:#4A5568; --line:#C5D0E6;
+  --grad:linear-gradient(135deg,#3A64D0 0%,#1E48B8 55%,#13307F 100%);
+}
+html[data-theme="light"] h1,html[data-theme="light"] h2,html[data-theme="light"] h3,
+html[data-theme="light"] .card b,html[data-theme="light"] .cartgrouptitle,
+html[data-theme="light"] .step-title{color:#0B1020 !important;}
+html[data-theme="light"] .qty,html[data-theme="light"] .backnav,html[data-theme="light"] .delbtn.pdf{color:#13307F !important;}
+html[data-theme="light"] .chip:not(.active),html[data-theme="light"] .tile:not(.active),
+html[data-theme="light"] .colorchip:not(.active){border:1.5px solid #B7C4DE !important;color:#0B1020 !important;}
+html[data-theme="light"] .card{box-shadow:0 1px 3px rgba(20,40,90,.10);}
+html[data-theme="light"] .num{background:var(--grad) !important;color:#fff !important;}
+html[data-theme="light"] .emptystate .ic{color:#13307F;}
+html[data-theme="light"] .ico-svg{stroke-width:2;}
+/* شريط «إنت الآن في» وأي شريط معلومات أزرق فاتح */
+html[data-theme="light"] [class*="hint"],html[data-theme="light"] [class*="crumb"],html[data-theme="light"] [class*="whereami"],html[data-theme="light"] [class*="selbar"],html[data-theme="light"] .currentctx{
+  background:#E6ECF8 !important;color:#0B1020 !important;border:1px solid #C5D0E6 !important;}
+html[data-theme="light"] [class*="hint"] b,html[data-theme="light"] [class*="crumb"] b,html[data-theme="light"] .currentctx b{color:#13307F !important;}
 </style>
 </head>
 <body>
@@ -6182,7 +6203,7 @@ function renderOrderView(){
       <div class="card">
         <h2><span class="num">5</span>اختار الأصناف (تقدر تختار أكتر من واحد)</h2>
         <div class="currentctx">
-          📍 إنت الآن في:
+          ${ico_('mapPin',14)} إنت الآن في:
           <b>${esc(state.mainGroup)}</b>${subToUse ? ` — <b>${esc(subToUse)}</b>` : ''}${colorToUse ? ` — <b>${esc(colorToUse)}</b>` : ''}
         </div>
         <div class="searchbox">
