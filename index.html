@@ -2062,6 +2062,72 @@ html[data-theme="dark"]{--navy:#0E8791;--navy-soft:#5ED3DC;}
 /* أرقام الخطوات والأيقونات بنفس اللون الأساسي */
 .stepnum,.card h2 .num,.card h2 .n,.secnum{background:var(--navy) !important;color:#fff !important;box-shadow:none !important;}
 .whicon{display:inline-flex;align-items:center;}
+
+/* ============================================================
+   🎨 v243c — أزرق متدرّج + أبيض + أسود
+   ============================================================ */
+html[data-theme="dark"]{
+  --navy:#2F6BFF; --navy-deep:#1747C9; --navy-soft:#7FA8FF; --gold:#2F6BFF; --gold-light:#7FA8FF;
+  --bg:#000000; --card:#0D0F14; --surface2:#151922; --surface3:#1D2330;
+  --line:rgba(255,255,255,.12); --ink:#FFFFFF; --muted:#9AA3B5;
+  --grad:linear-gradient(135deg,#4F8BFF 0%,#2F6BFF 45%,#1747C9 100%);
+}
+html[data-theme="light"]{
+  --navy:#1D5BFF; --navy-deep:#0B3BB8; --navy-soft:#5B8DFF; --gold:#1D5BFF; --gold-light:#5B8DFF;
+  --bg:#FFFFFF; --card:#FFFFFF; --surface2:#F1F5FD; --surface3:#E4ECFB;
+  --line:#DCE4F3; --ink:#0A0A0A; --muted:#5C6780;
+  --grad:linear-gradient(135deg,#4F8BFF 0%,#1D5BFF 50%,#0B3BB8 100%);
+}
+html[data-theme="dark"] body{background:radial-gradient(700px 360px at 85% -8%,rgba(47,107,255,.28),transparent 65%),#000;}
+html[data-theme="light"] body{background:linear-gradient(180deg,#EEF3FF 0,#FFFFFF 260px);}
+/* كل الأزرار الأساسية: تدرّج أزرق + كتابة بيضا */
+.exportbtn,.savebtn,.submitbtn,.cartbar-btn,.fab-btn,.pingate button,.polldiag button,
+.chip.active,.previewhead,.whcolhead,.hticon,.num,.herocta:hover,
+.bn.on .bn-ic,.modalbtn.primary{
+  background:var(--grad) !important;color:#fff !important;border-color:transparent !important;box-shadow:none !important;}
+.fab-btn{box-shadow:0 8px 22px rgba(47,107,255,.45) !important;}
+.exportbtn.danger{background:linear-gradient(135deg,#3A3F4B,#111) !important;}
+html[data-theme="light"] .exportbtn.danger{background:linear-gradient(135deg,#2B3140,#000) !important;}
+.savebtn:disabled{background:var(--surface3) !important;color:var(--muted) !important;}
+.pzmodal .savebtn{background:var(--surface2) !important;color:var(--ink) !important;}
+/* كارت الترحيب: تدرّج أزرق + زرار أبيض */
+.homehero{background:var(--grad) !important;box-shadow:0 10px 26px rgba(47,107,255,.28) !important;}
+.herocta{background:#fff !important;color:#0B3BB8 !important;}
+/* الكروت والبلاطات: أبيض/أسود نضيف بحواف رفيعة */
+.card,.ordercard,.whtile,.stat2027,.mini2027,.hometile,.cartbar,.bottomnav-in{
+  background:var(--card) !important;border:1px solid var(--line) !important;}
+.stat2027,.mini2027{--c:var(--navy-soft);--cbg:rgba(47,107,255,.12);}
+.stat2027 b,.mini2027 b,.stat2027 .n{color:var(--navy-soft);}
+html[data-theme="light"] .stat2027 b,html[data-theme="light"] .mini2027 b{color:var(--navy);}
+.stat2027.on,.mini2027.on{border-color:var(--navy) !important;background:color-mix(in srgb,var(--navy) 12%,var(--card)) !important;}
+.whtile.active{border-color:var(--navy) !important;}
+.chip:not(.active){background:var(--card) !important;color:var(--ink) !important;border:1px solid var(--line) !important;}
+.bn.on,.bn.on span{color:var(--navy-soft) !important;}
+html[data-theme="light"] .bn.on,html[data-theme="light"] .bn.on span{color:var(--navy) !important;}
+.bn.on .bn-ic{color:#fff !important;}
+.statusbadge.received,.statusbadge.pending,.statusbadge.preparing{background:rgba(47,107,255,.14) !important;color:var(--navy-soft) !important;}
+html[data-theme="light"] .statusbadge.received{color:var(--navy) !important;}
+.hticon .ico-svg,.exportbtn .ico-svg,.savebtn .ico-svg,.submitbtn .ico-svg{color:#fff;}
+a,.link{color:var(--navy-soft);}
+.modalbg{background:rgba(0,0,0,.74) !important;}
+.previewmodal,.modalcard{background:var(--card) !important;border:1px solid var(--line) !important;}
+.emptystate .ic{color:var(--navy-soft);}
+.lowwarn,.stockqty{color:var(--navy-soft);}
+
+/* توحيد ألوان البلاطات والأزرار الصغيرة على الأزرق */
+.mini2027.s-green,.mini2027.s-gold,.mini2027.s-purple,.mini2027.s-navy,
+.stat2027.s-green,.stat2027.s-gold,.stat2027.s-purple,.stat2027.s-navy{
+  --c:var(--navy);--cbg:rgba(47,107,255,.10);background:var(--card) !important;border:1px solid var(--line) !important;}
+.mini2027 b,.stat2027 b{color:var(--navy-soft) !important;}
+html[data-theme="light"] .mini2027 b,html[data-theme="light"] .stat2027 b{color:var(--navy) !important;}
+.delbtn.pdf,.backnav{color:var(--navy-soft) !important;border-color:color-mix(in srgb,var(--navy) 45%,transparent) !important;background:transparent !important;}
+html[data-theme="light"] .delbtn.pdf,html[data-theme="light"] .backnav{color:var(--navy) !important;}
+.authfeat2027 .mini2027{background:var(--grad) !important;color:#fff !important;border:0 !important;}
+
+.hkpi.s-green,.hkpi.s-gold,.hkpi.s-purple,.hkpi.s-navy{--c:var(--navy-soft);background:var(--card) !important;border:1px solid var(--line) !important;}
+.hkpi b,.hkpi .n{color:var(--navy-soft) !important;}
+html[data-theme="light"] .hkpi b,html[data-theme="light"] .hkpi .n{color:var(--navy) !important;}
+.hometile.c-green .hticon,.hometile.c-gold .hticon,.hometile.c-purple .hticon{background:var(--grad) !important;}
 </style>
 </head>
 <body>
