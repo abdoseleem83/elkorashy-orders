@@ -94,7 +94,6 @@
 npx http-server -p 8099 -s .      # في تيرمينال
 node tests/shortage.mjs          # «نواقص» ومفيش أسعار (v239)
 node tests/admin.mjs              # مسار الأدمن والأرشيف
-# ⚠️ tests/flow.mjs قديم (بيفترض واجهة قبل v236) وبيفشل — محتاج تحديث
 ```
 
 محتاج `playwright` متسطّب. لو متسطّب عام مش محلي:
