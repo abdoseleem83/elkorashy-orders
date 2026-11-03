@@ -2046,6 +2046,22 @@ html[data-theme="light"] .bn.on{color:var(--navy);}
 .herocta{color:#0A5A62;}
 .hticon{background:var(--navy) !important;box-shadow:none !important;}
 .hometile{box-shadow:none !important;}
+
+/* v243b — تحسين التباين وشكل الأيقونات */
+html[data-theme="dark"]{--navy:#0E8791;--navy-soft:#5ED3DC;}
+.ico-svg{vertical-align:-0.18em;stroke-width:1.9;}
+.emptystate .ic{display:flex;justify-content:center;color:var(--muted);opacity:.8;margin-bottom:6px;}
+.statuschips .chip,.whcolhead,.adminbar .exportbtn,.polldiag button{display:inline-flex;align-items:center;gap:6px;}
+.whcolhead{display:flex;}
+.chip:not(.active){background:var(--card);border:1px solid var(--line);color:var(--ink);}
+.statuschips .chip .ico-svg{opacity:.9;}
+.bn-ic{width:36px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:12px;}
+.bn.on .bn-ic{background:color-mix(in srgb,var(--navy) 22%,transparent);}
+.hticon{border-radius:14px !important;}
+
+/* أرقام الخطوات والأيقونات بنفس اللون الأساسي */
+.stepnum,.card h2 .num,.card h2 .n,.secnum{background:var(--navy) !important;color:#fff !important;box-shadow:none !important;}
+.whicon{display:inline-flex;align-items:center;}
 </style>
 </head>
 <body>
@@ -2163,7 +2179,7 @@ const WAREHOUSE_ICONS_ = {
   'طنطا': '🕌',   // مسجد السيد البدوي، أشهر معلم في طنطا
   'اكسا': '🏭'    // مخازن اكسا (المنصورة والعاشر مدموجين)
 };
-function warehouseIcon_(w){ return WAREHOUSE_ICONS_[w] || '🏬'; }
+function warehouseIcon_(w){ return ico_(w==='اكسا'?'factory':(w==='طنطا'?'mapPin':'store'),16); }
 // 🧹 مخزن اتشال من القايمة (زي "الاسكندرية" اللي اتشال) ممكن يفضل متخزّن في
 // مسودّة محفوظة على الجهاز أو في طلب قديم بنعدّل عليه. لو سيبناه زي ما هو،
 // الموزّع يكمّل الطلب على مخزن مابقاش موجود من غير ما يلاحظ. بنفلتره هنا
@@ -2375,6 +2391,12 @@ const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','
 // في الأماكن اللي شكلها بيبان كتير (الهيدر أساسًا)، عشان تبقى ثابتة الشكل على
 // كل الأجهزة (الإيموجي بيختلف شكله من نظام لنظام) وشكلها أنضف واحترافي أكتر.
 const ICONS_ = {
+  key: '<circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8"/><path d="m17 6 3 3"/><path d="m14 9 2.5 2.5"/>',
+  wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/>',
+  factory: '<path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M17 18h1"/><path d="M12 18h1"/><path d="M7 18h1"/>',
+  store: '<path d="m2 7 1.5-4h17L22 7"/><path d="M2 7v1a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0V7"/><path d="M4 11v9h16v-9"/><path d="M10 20v-5h4v5"/>',
+  inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z"/>',
+  mapPin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
   newOrder: '<path d="M9 2h6a2 2 0 0 1 2 2v16l-4-2-4 2V4a2 2 0 0 1 2-2Z"/><path d="M9 8h6"/><path d="M9 12h6"/>',
   track: '<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73Z"/><path d="M3.27 7 12 12l8.73-5"/><path d="M12 22V12"/>',
   warehouse: '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>',
@@ -2812,7 +2834,7 @@ function renderCartItemsHtml(cart){
               <div class="pmeta">${it.color ? esc(it.color) : ''}${it.note ? (it.color?' · ':'') + esc(it.note) : ''}${it.autoBundled ? ' <span class="autotag">🔗 مضاف تلقائيًا مع الباب</span>' : ''}</div>
             </div>
             <div class="qty">×${it.qty} ${esc(it.unitType||'')}</div>
-            ${it.autoBundled ? '' : `<button class="del edit" data-act="edit-cart-item" data-main="${esc(it.main)}" data-product="${esc(it.product)}">✏️</button>`}
+            ${it.autoBundled ? '' : `<button class="del edit" data-act="edit-cart-item" data-main="${esc(it.main)}" data-product="${esc(it.product)}">${ico_('editIcon',16)}</button>`}
             <button class="del" data-act="del-cart" data-idx="${it._idx}">✕</button>
           </div>
         `).join('')}
@@ -4419,7 +4441,7 @@ function renderMergeAskModal(){
       <h3>تضيفه على الطلب القديم ولا ده طلب جديد؟</h3>
       <p>عندك طلب سابق النهارده <b>#${esc(orderNoDisplay_(last))}</b> لسه "لم يستلم". تحب الأصناف الجديدة تتضاف عليه (يتعتبر تعديل)، ولا ده طلب منفصل تمامًا؟</p>
       <div class="modalbtns">
-        <button class="modalbtn primary" data-act="merge-ask-yes">✏️ ضيفه على القديم</button>
+        <button class="modalbtn primary" data-act="merge-ask-yes">${ico_('editIcon',15)} ضيفه على القديم</button>
         <button class="modalbtn" data-act="merge-ask-no">🆕 لأ، طلب جديد منفصل</button>
       </div>
     </div>
@@ -4537,7 +4559,7 @@ function renderCartReviewModal(){
   <div class="modalbg" data-act="close-cart-review">
     <div class="previewmodal" data-act="noop" style="max-width:560px;">
       <div class="previewhead">
-        <span>🛒 السلة (${state.cart.length})</span>
+        <span>${ico_('cart',16)} السلة (${state.cart.length})</span>
         <button class="previewclose" data-act="close-cart-review">✕</button>
       </div>
       <div class="previewbody">
@@ -4545,8 +4567,8 @@ function renderCartReviewModal(){
       </div>
       ${state.cart.length ? `
       <div class="previewfoot" style="display:flex;flex-wrap:wrap;gap:8px;">
-        <button class="savebtn" style="flex:1;min-height:56px;" data-act="cart-add-more">➕ زود أصناف</button>
-        <button class="submitbtn" style="flex:1 1 100%;min-height:56px;" data-act="cart-send">📨 ابعت الطلب</button>
+        <button class="savebtn" style="flex:1;min-height:56px;" data-act="cart-add-more">${ico_('plus',16)} زود أصناف</button>
+        <button class="submitbtn" style="flex:1 1 100%;min-height:56px;" data-act="cart-send">${ico_('sendIcon',16)} ابعت الطلب</button>
       </div>` : ''}
     </div>
   </div>`;
@@ -4562,8 +4584,8 @@ function renderPwRequestsModal(){
         <div style="font-size:11px;color:var(--muted);">${r.distName ? `اسم الدخول: ${esc(r.username)} · ` : ''}${esc(r.date||'')}</div>
       </div>
       <div style="display:flex;gap:6px;">
-        <button class="chip" style="background:var(--success);color:#fff;border-color:var(--success);" data-act="approve-pwreq" data-val="${esc(r.id)}">✅ موافقة</button>
-        <button class="chip" style="background:var(--danger);color:#fff;border-color:var(--danger);" data-act="reject-pwreq" data-val="${esc(r.id)}">❌ رفض</button>
+        <button class="chip" style="background:var(--success);color:#fff;border-color:var(--success);" data-act="approve-pwreq" data-val="${esc(r.id)}">${ico_('checkCircle',14)} موافقة</button>
+        <button class="chip" style="background:var(--danger);color:#fff;border-color:var(--danger);" data-act="reject-pwreq" data-val="${esc(r.id)}">${ico_('xCircle',14)} رفض</button>
       </div>
     </div>
   `).join('') : '<div class="loading">مفيش طلبات قيد المراجعة</div>';
@@ -4572,7 +4594,7 @@ function renderPwRequestsModal(){
   <div class="modalbg" data-act="close-pwreq">
     <div class="previewmodal" data-act="noop" style="max-width:520px;">
       <div class="previewhead">
-        <span>🔑 طلبات تغيير الباسورد</span>
+        <span>${ico_('key',15)} طلبات تغيير الباسورد</span>
         <button class="previewclose" data-act="close-pwreq">✕</button>
       </div>
       <div class="previewbody">
@@ -4603,7 +4625,7 @@ function renderArchiveModal(){
   <div class="modalbg" data-act="close-archive">
     <div class="previewmodal" data-act="noop" style="max-width:560px;">
       <div class="previewhead">
-        <span>📦 أرشيف الطلبات (${list.length})</span>
+        <span>${ico_('boxIcon',16)} أرشيف الطلبات (${list.length})</span>
         <button class="previewclose" data-act="close-archive">✕</button>
       </div>
       <div class="previewbody">
@@ -5737,7 +5759,7 @@ function renderHomeView(){
   <main class="homeview">
     <section class="homehero">
       <div class="herotxt">
-        <span class="herohi">${greet} 👋</span>
+        <span class="herohi">${greet}</span>
         <h2>${esc(name) || 'أهلاً بيك'}</h2>
         <p>اختار اللي عايز تعمله من هنا</p>
       </div>
@@ -5855,7 +5877,7 @@ function renderStagedBlock(s){
   <div class="stagedblock ${s.cancelling?'cancelling':''}" data-stagedkey="${esc(s.key)}">
     <div class="stagedhead">
       <div>
-        <div class="stagedname">${esc(s.product)} ${s.isEditingExisting?'<span class="edittag">✏️ تعديل</span>':''}</div>
+        <div class="stagedname">${esc(s.product)} ${s.isEditingExisting?`<span class="edittag">${ico_('editIcon',12)} تعديل</span>`:''}</div>
         <div class="stagedmain">${esc(s.main)}</div>
       </div>
     </div>
@@ -6354,7 +6376,7 @@ function renderOrderView(){
       <div class="submitbar-inner">
       ${state.cart.length ? `
       <div class="cartbar">
-        <span class="cartbar-txt">🛒 ${state.cart.length} صنف في السلة</span>
+        <span class="cartbar-txt">${ico_('cart',16)} ${state.cart.length} صنف في السلة</span>
         <button class="cartbar-btn" data-act="open-cart-review">مراجعة الطلب</button>
       </div>` : ''}
       <div class="submitrow">
@@ -6396,10 +6418,10 @@ function renderMyOrdersView(){
   if(state.myOrdersLoading){
     content = `<div class="loading">جارٍ التحميل...</div>`;
   } else if(state.myOrdersAuthMissing){
-    content = `<div class="emptystate"><div class="ic">🔑</div><div>انتهت جلستك — سجّل دخول تاني عشان تشوف طلباتك</div>
+    content = `<div class="emptystate"><div class="ic">${ico_('key',44)}</div><div>انتهت جلستك — سجّل دخول تاني عشان تشوف طلباتك</div>
       <button class="exportbtn" style="margin-top:12px;" data-act="goto-login">تسجيل الدخول</button></div>`;
   } else if(state.myOrders.length===0 && state.myOrdersSearched){
-    content = `<div class="emptystate"><div class="ic">📭</div><div>مفيش طلبات ظاهرة — جرب تدوّر برقم الهاتف</div></div>`;
+    content = `<div class="emptystate"><div class="ic">${ico_('inbox',44)}</div><div>مفيش طلبات ظاهرة — جرب تدوّر برقم الهاتف</div></div>`;
   } else {
     content = state.myOrders.map(o=>{
       const date = new Date(o.ts);
@@ -6822,8 +6844,8 @@ function renderAdminView(){
 
   const list = `
     <div class="whsplit">
-      ${renderAdminOrdersColumn_('🕌 طنطا', tantaOrders)}
-      ${renderAdminOrdersColumn_('🏭 اكسا', aksaOrders)}
+      ${renderAdminOrdersColumn_(ico_('mapPin',14)+' طنطا', tantaOrders)}
+      ${renderAdminOrdersColumn_(ico_('factory',14)+' اكسا', aksaOrders)}
     </div>`;
 
   const cntBy_ = st => state.orders.filter(o=>o.status===st).length;
@@ -6845,7 +6867,7 @@ function renderAdminView(){
     <div class="adminbar">
       <input type="text" placeholder="بحث باسم الموزع..." value="${esc(state.adminFilter)}" data-act="admin-search">
       <button class="exportbtn" data-act="refresh-orders">${ico_('refresh',14)} تحديث</button>
-      <button class="exportbtn" data-act="show-pwreq" title="طلبات تغيير كلمة السر">🔑 الباسورد${(state.managePwRequests||[]).length ? ` (${(state.managePwRequests||[]).length})` : ''}</button>
+      <button class="exportbtn" data-act="show-pwreq" title="طلبات تغيير كلمة السر">${ico_('key',14)} الباسورد${(state.managePwRequests||[]).length ? ` (${(state.managePwRequests||[]).length})` : ''}</button>
       <button class="exportbtn" data-act="open-manage-approvals" title="طلبات إضافة حسابات جديدة">${ico_('checkSquare',14)} الإضافة${(state.manageRegRequests||[]).length ? ` (${(state.manageRegRequests||[]).length})` : ''}</button>
       <button class="exportbtn" data-act="export-excel-preparing" title="تصدير Excel (${STATUS_PREPARING})">${ico_('downloadIcon',14)} Excel</button>
       <button class="exportbtn" data-act="export-excel-delivered" title="تصدير Excel (${STATUS_DONE})">${ico_('downloadIcon',14)} Excel المنفَّذ</button>
@@ -6855,13 +6877,13 @@ function renderAdminView(){
     </div>
     <div class="polldiag">
       <span>${state.pollDiag ? esc(state.pollDiag) : 'الإشعار شغّال — بيفحص كل 45 ثانية'}</span>
-      <button data-act="test-notify">🔔 اختبار</button>
+      <button data-act="test-notify">${ico_('bellIcon',13)} اختبار</button>
     </div>
     <div class="statuschips">
       <button class="chip ${state.adminStatusFilter==='all'?'active':''}" data-act="admin-status" data-val="all">الكل (${state.orders.length})</button>
-      <button class="chip ${state.adminStatusFilter===STATUS_RECEIVED?'active':''}" data-act="admin-status" data-val="${esc(STATUS_RECEIVED)}">📦 ${STATUS_RECEIVED}</button>
-      <button class="chip ${state.adminStatusFilter===STATUS_PREPARING?'active':''}" data-act="admin-status" data-val="${esc(STATUS_PREPARING)}">🔧 ${STATUS_PREPARING}</button>
-      <button class="chip ${state.adminStatusFilter===STATUS_DONE?'active':''}" data-act="admin-status" data-val="${esc(STATUS_DONE)}">✅ ${STATUS_DONE}</button>
+      <button class="chip ${state.adminStatusFilter===STATUS_RECEIVED?'active':''}" data-act="admin-status" data-val="${esc(STATUS_RECEIVED)}">${ico_('boxIcon',14)} ${STATUS_RECEIVED}</button>
+      <button class="chip ${state.adminStatusFilter===STATUS_PREPARING?'active':''}" data-act="admin-status" data-val="${esc(STATUS_PREPARING)}">${ico_('wrench',14)} ${STATUS_PREPARING}</button>
+      <button class="chip ${state.adminStatusFilter===STATUS_DONE?'active':''}" data-act="admin-status" data-val="${esc(STATUS_DONE)}">${ico_('checkCircle',14)} ${STATUS_DONE}</button>
     </div>
     ${list}
   </main>`;
@@ -6871,7 +6893,7 @@ function renderAdminView(){
 // بتاعة المخزن ده لوحدها، الأحدث فوق زي ما هو مرتّب فعلاً في filteredAdminOrders_.
 function renderAdminOrdersColumn_(title, orders){
   const cards = orders.length===0 ? `
-    <div class="emptystate"><div class="ic">📭</div><div>مفيش طلبات مطابقة حاليًا</div></div>` : orders.map(o=>{
+    <div class="emptystate"><div class="ic">${ico_('inbox',44)}</div><div>مفيش طلبات مطابقة حاليًا</div></div>` : orders.map(o=>{
       const date = new Date(o.ts);
       const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' - ' + date.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
       const isDone = o.status===STATUS_DONE;
@@ -6883,7 +6905,7 @@ function renderAdminOrdersColumn_(title, orders){
         <div class="ohead">
           <div class="oheadmain" data-act="toggle-order" data-id="${esc(o.id)}" title="دوس عشان تفتح/تقفل الأصناف">
             <div class="dname"><span class="ochev">${isOpen?'▾':'▸'}</span> ${esc(o.distName)}</div>
-            <div class="dmeta">🏬 ${esc(o.warehouse||'—')}</div>
+            <div class="dmeta">${ico_('store',13)} ${esc(o.warehouse||'—')}</div>
             <div class="dmeta">${ico_('clockIcon',12)} ${dateStr}</div>
             <div class="oid">#${esc(orderNoDisplay_(o))} · ${nItems} صنف${o.editedFrom ? ` · <span class="statusbadge edited" style="padding:1px 6px;font-size:10.5px;" title="اتعدّل من طلب #${esc(o.editedFrom)}">${ico_('editIcon',11)} معدّل</span>` : ''}</div>
           </div>
