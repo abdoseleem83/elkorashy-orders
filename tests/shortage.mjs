@@ -8,7 +8,10 @@ let fails = 0;
 const ok = (name, cond, extra='') => { console.log((cond?'✅':'❌') + ' ' + name + (extra?(' — '+extra):'')); if(!cond) fails++; };
 
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || undefined });
-const ctx = await browser.newContext({ viewport:{width:420,height:900}, serviceWorkers:'block', acceptDownloads:true });
+// التطبيق بيستخدم مشاركة الملفات الأصلية على الموبايل بس (canNativeShareFiles_ → isMobileDevice_)،
+// وعلى الكمبيوتر بينزّل الملفات ويفتح واتساب — فالاختبار ده بيمثّل موبايل أندرويد.
+const MOBILE_UA = 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36';
+const ctx = await browser.newContext({ viewport:{width:420,height:900}, serviceWorkers:'block', acceptDownloads:true, userAgent: MOBILE_UA, isMobile:true, hasTouch:true });
 const page = await ctx.newPage();
 page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
 page.on('console', m => { if(m.type()==='error' && !m.text().includes('ERR_CONNECTION_RESET')) errors.push('CONSOLE: '+m.text()); });
