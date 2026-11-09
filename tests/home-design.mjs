@@ -56,7 +56,8 @@ for(const theme of ['light','dark']){
     fab: getComputedStyle(document.querySelector('.bn-fab .fab-btn')).color,
     nums: [...document.querySelectorAll('#app .card h2 .num')].map(n=>n.textContent.trim()) }));
   ok('طلب جديد: العرض ≤ 980px على الكمبيوتر', r.appW<=980, r.appW+'px');
-  ok('علامة + بيضا حتى والصفحة مفتوحة', rgb(r.fab)==='255,255,255', r.fab);
+  // زرار + برتقالي (v244): العلامة غامقة فوقه عشان التباين (الأبيض على البرتقالي ضعيف)، وثابتة سواء الصفحة مفتوحة أو لا
+ok('علامة + واضحة فوق البرتقالي (غامقة)', rgb(r.fab)==='43,26,0', r.fab);
   ok('أرقام الخطوات متسلسلة من غير فجوات', r.nums.length>0 && r.nums.every((n,i)=>n===String(i+1)), r.nums.join(','));
   await ctx.close();
 }

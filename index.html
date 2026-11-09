@@ -2033,6 +2033,54 @@ html[data-theme="light"] [class*="hint"] b,html[data-theme="light"] [class*="cru
   html[data-view="home"] .fixedhead-inner,html[data-view="order"] .fixedhead-inner,html[data-view="myorders"] .fixedhead-inner,
   html[data-view="order"] .submitbar.fixed .submitbar-inner{max-width:980px;}
 }
+/* ═══════════════════════════════════════════════════════════════════════════
+   v244 — هوية بصرية موحّدة (آخر طبقة، بتغلب الطبقات القديمة):
+   أزرق القرشي للهوية + برتقالي دافي للإجراء الأهم بس (قاعدة 60-30-10)، خلفيات هادية،
+   حواف أنعم، وظلال خفيفة. نفس الألوان في الفاتح والداكن.
+   ═══════════════════════════════════════════════════════════════════════════ */
+html[data-theme="light"]{
+  --bg:#F1F5FB;--card:#FFFFFF;--surface2:#E8EFFA;--surface3:#DCE6F6;--line:#D6E0F1;--ink:#0B1730;--muted:#51607C;
+  --navy:#0B3D91;--navy-deep:#072A66;--navy-soft:#1E6BD6;--gold:#F59E0B;--gold-light:#FBBF24;
+  --grad:linear-gradient(135deg,#1E6BD6,#0B3D91);--hero-a:#0B3D91;--hero-b:#1E6BD6;
+  --acc:#F59E0B;--acc-deep:#D97706;--acc-ink:#2B1A00;--card-shadow:0 10px 24px rgba(11,61,145,.09);
+}
+html[data-theme="dark"]{
+  --bg:#0A1020;--card:#121B30;--surface2:#182340;--surface3:#1F2E52;--line:rgba(120,165,235,.20);--ink:#EAF0FF;--muted:#93A2C0;
+  --navy:#6AA6FF;--navy-deep:#0B3D91;--navy-soft:#1E6BD6;--gold:#F59E0B;--gold-light:#FBBF24;
+  --grad:linear-gradient(135deg,#2A78E4,#0B3D91);--hero-a:#12347A;--hero-b:#0A1F4D;
+  --acc:#F59E0B;--acc-deep:#D97706;--acc-ink:#2B1A00;--card-shadow:0 10px 24px rgba(0,0,0,.40);
+}
+html:is([data-theme="light"],[data-theme="dark"]) body{background:var(--bg) !important;}
+/* الكارت الترحيبي */
+html:is([data-theme="light"],[data-theme="dark"]) .homehero{background:linear-gradient(135deg,var(--hero-a) 0%,var(--hero-b) 100%) !important;border-radius:26px !important;box-shadow:var(--card-shadow) !important;border:0 !important;}
+html:is([data-theme="light"],[data-theme="dark"]) .homehero h2{color:#fff !important;}
+/* زرار الإجراء الأهم: برتقالي */
+html:is([data-theme="light"],[data-theme="dark"]) .herocta{background:var(--acc) !important;color:var(--acc-ink) !important;border-radius:16px !important;box-shadow:0 8px 18px rgba(245,158,11,.40) !important;}
+html:is([data-theme="light"],[data-theme="dark"]) .herocta .ico-svg{color:var(--acc-ink) !important;}
+/* البلاطات والأرقام */
+html:is([data-theme="light"],[data-theme="dark"]) .hometile{border-radius:22px !important;box-shadow:var(--card-shadow) !important;border:0 !important;}
+html:is([data-theme="light"],[data-theme="dark"]) .hticon{border-radius:16px !important;box-shadow:none !important;}
+html:is([data-theme="light"],[data-theme="dark"]) .hometile.c-blue .hticon{background:linear-gradient(135deg,#1E6BD6,#0B3D91) !important;}
+html:is([data-theme="light"],[data-theme="dark"]) .hometile.c-purple .hticon{background:linear-gradient(135deg,#FBBF24,#F59E0B) !important;}
+html:is([data-theme="light"],[data-theme="dark"]) .hometile.c-purple .hticon .ico-svg{color:var(--acc-ink) !important;}
+html:is([data-theme="light"],[data-theme="dark"]) .hometile.c-green .hticon{background:linear-gradient(135deg,#22C55E,#15803D) !important;}
+html:is([data-theme="light"],[data-theme="dark"]) .hkpi{border-radius:18px !important;border:0 !important;box-shadow:var(--card-shadow) !important;}
+html[data-theme="light"] .hkpi.s-green b{color:#15803D !important;}
+html[data-theme="light"] .hkpi.s-purple b{color:#C2610C !important;}
+html[data-theme="light"] .hkpi.s-navy b{color:#0B3D91 !important;}
+html[data-theme="dark"] .hkpi.s-green b{color:#4ADE80 !important;}
+html[data-theme="dark"] .hkpi.s-purple b{color:#FBBF24 !important;}
+html[data-theme="dark"] .hkpi.s-navy b{color:#6AA6FF !important;}
+/* الشريط السفلي وزرار + */
+html:is([data-theme="light"],[data-theme="dark"]) .bottomnav-in{border-radius:28px !important;border:0 !important;box-shadow:0 14px 34px rgba(11,61,145,.22) !important;}
+html[data-theme="dark"] .bottomnav-in{background:#0F1830 !important;box-shadow:0 14px 34px rgba(0,0,0,.55) !important;}
+html:is([data-theme="light"],[data-theme="dark"]) .bn-fab .fab-btn,html:is([data-theme="light"],[data-theme="dark"]) .bn-fab.on .fab-btn{background:linear-gradient(135deg,#FBBF24,#F59E0B) !important;color:var(--acc-ink) !important;box-shadow:0 10px 22px rgba(245,158,11,.50) !important;}
+html:is([data-theme="light"],[data-theme="dark"]) .bn-fab .fab-btn .ico-svg{color:var(--acc-ink) !important;}
+/* الكروت وأرقام الخطوات وأزرار الإرسال */
+html:is([data-theme="light"],[data-theme="dark"]) .card{border-radius:22px !important;border:0 !important;box-shadow:var(--card-shadow) !important;}
+html:is([data-theme="light"],[data-theme="dark"]) .num{background:linear-gradient(135deg,#1E6BD6,#0B3D91) !important;color:#fff !important;}
+html:is([data-theme="light"],[data-theme="dark"]) .submitbtn{background:linear-gradient(135deg,var(--acc),var(--acc-deep)) !important;color:var(--acc-ink) !important;border-radius:16px !important;}
+html:is([data-theme="light"],[data-theme="dark"]) .savebtn{background:linear-gradient(135deg,#1E6BD6,#0B3D91) !important;color:#fff !important;border-radius:16px !important;}
 </style>
 </head>
 <body>
@@ -2099,7 +2147,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v243f';
+const APP_BUILD = 'v244';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
