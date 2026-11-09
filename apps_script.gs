@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v243e';
+const APP_VERSION = 'v243f';
 
 const SHEET_NAME = 'Orders';
 const ARCHIVE_SHEET_NAME = 'الأرشيف';

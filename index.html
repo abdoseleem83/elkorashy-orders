@@ -1998,6 +1998,41 @@ html[data-theme="light"] .ico-svg{stroke-width:2;}
 html[data-theme="light"] [class*="hint"],html[data-theme="light"] [class*="crumb"],html[data-theme="light"] [class*="whereami"],html[data-theme="light"] [class*="selbar"],html[data-theme="light"] .currentctx{
   background:#E6ECF8 !important;color:#0B1020 !important;border:1px solid #C5D0E6 !important;}
 html[data-theme="light"] [class*="hint"] b,html[data-theme="light"] [class*="crumb"] b,html[data-theme="light"] .currentctx b{color:#13307F !important;}
+/* ═══ v243f: إصلاح الشاشة الرئيسية — تباين الاسم، أيقونة «الرئيسية»، وعرض الكمبيوتر ═══ */
+/* اسم المستخدم فوق الكارت الأزرق: أبيض دايماً (قاعدة العناوين الغامقة في الفاتح كانت بتغلبه) */
+.homehero h2,html[data-theme="light"] .homehero h2{color:#fff !important;}
+.homehero .herohi,.homehero p{color:#fff !important;}
+/* الأيقونة في التبويب النشط: بيضا فوق مربعها الأزرق في الفاتح والداكن (.bn.on span الكحلية كانت بتغلبها) */
+.bn.on .bn-ic,html[data-theme="light"] .bn.on .bn-ic,html:not([data-theme]) .bn.on .bn-ic{color:#fff !important;}
+.bn.on .bn-ic .ico-svg{color:#fff !important;stroke:currentColor;}
+/* الشاشة الرئيسية: عمود في النص مش ممدود على عرض الشاشة */
+.homeview{max-width:960px;margin-inline:auto;width:100%;}
+@media (min-width:900px){
+  .homeview{padding-top:18px;}
+  .homehero{padding:26px 30px;border-radius:26px;margin-bottom:16px;}
+  .homehero h2{font-size:28px;margin:4px 0;}
+  .herohi{font-size:15px;} .homehero p{font-size:14px;}
+  .herocta{font-size:16px;padding:14px 22px;border-radius:16px;}
+  .homekpis{gap:14px;margin-bottom:10px;}
+  .hkpi{padding:16px 8px;border-radius:18px;}
+  .hkpi b{font-size:26px;} .hkpi span{font-size:13px;}
+  .homesec{font-size:17px;margin:18px 2px 10px;}
+  .hometiles{grid-template-columns:repeat(3,1fr);gap:14px;}
+  .hometile{flex-direction:column;align-items:flex-start;gap:14px;padding:20px;min-height:132px;border-radius:20px;}
+  .hometile:last-child:nth-child(odd){grid-column:auto;}
+  .hticon{width:48px;height:48px;border-radius:15px;} .hticon .ico-svg{width:24px;height:24px;}
+  .httext b{font-size:17px;} .httext small{font-size:13px;}
+}
+/* زرار + في النص: علامة + بيضا حتى لما صفحة «طلب جديد» تبقى هي المفتوحة (.bn.on span الكحلية كانت بتغلبها) */
+.bn-fab .fab-btn,.bn-fab.on .fab-btn,html[data-theme="light"] .bn-fab.on .fab-btn,html:not([data-theme]) .bn-fab.on .fab-btn{color:#fff !important;}
+.bn-fab .fab-btn .ico-svg{color:#fff !important;stroke:currentColor;}
+/* الكمبيوتر: شاشات الاستخدام اليومي (الرئيسية/طلب جديد/طلباتي) في عمود مريح مش على عرض الشاشة كله؛
+   الإدارة والجداول بتفضل على العرض الكبير */
+@media (min-width:900px){
+  html[data-view="home"] #app,html[data-view="order"] #app,html[data-view="myorders"] #app,
+  html[data-view="home"] .fixedhead-inner,html[data-view="order"] .fixedhead-inner,html[data-view="myorders"] .fixedhead-inner,
+  html[data-view="order"] .submitbar.fixed .submitbar-inner{max-width:980px;}
+}
 </style>
 </head>
 <body>
@@ -2064,7 +2099,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v243e';
+const APP_BUILD = 'v243f';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -7231,10 +7266,15 @@ function render(){
     else if(state.view==='manage') view = renderManageView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
+    document.documentElement.setAttribute('data-view', state.view);   // للـCSS: عرض الشاشة حسب نوعها
     app.innerHTML = renderHeader() + banner + view + renderBottomNav_() + renderDiagModal() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderMergeAskModal() + renderNewOrdersPopup() + renderPreviewModal() + renderGlobalError();
     bindEvents();
     applyFixedHeaderSpacing_();
     applyFixedFooterSpacing_();
+    // ترقيم الخطوات الظاهرة بس 1،2،3… (الخطوات المخفية كانت بتسيب فجوات: 1،2،3،7،8)
+    if(state.view==='order'){
+      let n=0; document.querySelectorAll('#app .card h2 .num').forEach(el=>{ if(!el.closest('.modal, .modalbg, [role="dialog"]')) el.textContent=String(++n); });
+    }
 
     // نرجّع التمرير بس لو إحنا في نفس الشاشة (مش لما ننتقل من شاشة لشاشة)
     const viewKey = state.view + '|' + (state.successOrderId ? 'success' : '') + '|' + (state.adminUnlocked ? 'a' : '');
