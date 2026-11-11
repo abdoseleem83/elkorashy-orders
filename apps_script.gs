@@ -11,10 +11,9 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v244';
+const APP_VERSION = 'v245';
 
 const SHEET_NAME = 'Orders';
-const ARCHIVE_SHEET_NAME = 'الأرشيف';
 const CATALOG_SHEET_NAME = 'الأصناف';
 const DISCOUNT_SHEET_NAME = 'الخصومات';
 const USERS_SHEET_NAME = 'المستخدمين';
@@ -40,10 +39,11 @@ const EDIT_MARK_SUFFIX_ = '⟧';
 // أعمدة شيت Orders (1-indexed) — مكان واحد بدل أرقام سايبة في الكود
 const COL_ID = 1, COL_TS = 2, COL_NAME = 3, COL_REGION = 4, COL_PHONE = 5,
       COL_NOTE = 6, COL_SUMMARY = 7, COL_STATUS = 8, COL_ITEMS = 9,
-      COL_WAREHOUSE = 10, COL_ORDERNO = 11, COL_USERNAME = 12;
+      COL_WAREHOUSE = 10, COL_ORDERNO = 11, COL_USERNAME = 12,
+      COL_DONE_AT = 13;          // وقت ما اتحوّل «تم تنفيذ الطلب» (للحذف التلقائي بعد 48 ساعة)
 const ORDERS_HEADERS = ['رقم الطلب', 'التاريخ', 'الموزع', 'المنطقة', 'الهاتف', 'ملاحظات',
                         'ملخص الأصناف', 'الحالة', 'الأصناف (JSON)', 'المخزن',
-                        'رقم الطلب بالمخزن', 'اسم المستخدم'];
+                        'رقم الطلب بالمخزن', 'اسم المستخدم', 'وقت التنفيذ'];
 
 // سطر الاعتماد في رسائل الواتساب — خليه '' لو عايز تشيله
 const CREDIT_LINE = '🤲 ادعُ لصاحب هذا العمل بظهر الغيب';
@@ -363,9 +363,9 @@ function setup() {
     // شيت قديم — نضيف عناوين الأعمدة الجديدة بس، من غير ما نلمس أي بيانات
     if (!sheet.getRange(1, COL_ORDERNO).getValue()) sheet.getRange(1, COL_ORDERNO).setValue(ORDERS_HEADERS[COL_ORDERNO - 1]);
     if (!sheet.getRange(1, COL_USERNAME).getValue()) sheet.getRange(1, COL_USERNAME).setValue(ORDERS_HEADERS[COL_USERNAME - 1]);
+    if (!sheet.getRange(1, COL_DONE_AT).getValue()) sheet.getRange(1, COL_DONE_AT).setValue(ORDERS_HEADERS[COL_DONE_AT - 1]);
   }
   getUsersSheet_();
-  getArchiveSheet_();
   ensureTokenSecret_();
   return 'تمام — الشيتات جاهزة.';
 }
@@ -378,13 +378,14 @@ function setup() {
 // مركوبة على trigger الواتساب القديم — عشان سرعة تحديث الرصيد (المحجوز)
 // متتأثرش بإلغاء ميزة واتساب.
 function installTriggers() {
-  const wanted = { 'processWhatsAppQueue': 1, 'minuteSync_': 1, 'reconcileReserved': 10 };
+  const wanted = { 'processWhatsAppQueue': 1, 'minuteSync_': 1, 'reconcileReserved': 10, 'purgeDoneOrdersTrigger_': 60 };
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (wanted.hasOwnProperty(t.getHandlerFunction())) ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger('minuteSync_').timeBased().everyMinutes(1).create();
   ScriptApp.newTrigger('reconcileReserved').timeBased().everyMinutes(10).create();
-  return 'اتركّبت: مزامنة المحجوز (كل دقيقة + كل ١٠ دقايق شبكة أمان). أي trigger قديم لواتساب اتمسح.';
+  ScriptApp.newTrigger('purgeDoneOrdersTrigger_').timeBased().everyHours(1).create();
+  return 'اتركّبت: مزامنة المحجوز (كل دقيقة + كل ١٠ دقايق شبكة أمان) + حذف المنفَّذ بعد 48 ساعة (كل ساعة). أي trigger قديم لواتساب اتمسح.';
 }
 
 function getUsersSheet_() {
@@ -394,17 +395,6 @@ function getUsersSheet_() {
     sheet = ss.insertSheet(USERS_SHEET_NAME);
     sheet.appendRow(['اسم المستخدم', 'كلمة المرور', 'اسم الموزع', 'المنطقة', 'الهاتف',
                      'الحالة', 'تاريخ التسجيل', 'النوع', '', 'مفتاح واتساب', 'اشتراك Push']);
-    sheet.setFrozenRows(1);
-  }
-  return sheet;
-}
-
-function getArchiveSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(ARCHIVE_SHEET_NAME);
-  if (!sheet) {
-    sheet = ss.insertSheet(ARCHIVE_SHEET_NAME);
-    sheet.appendRow(ORDERS_HEADERS.concat(['تاريخ الأرشفة']));
     sheet.setFrozenRows(1);
   }
   return sheet;
@@ -536,14 +526,6 @@ function doPostInner_(e) {
     if (!isValidAdminToken_(token)) return denyAdmin_();
     return json_(deleteDeliveredOrders_());
   }
-  if (action === 'archiveDone') {
-    if (!isValidAdminToken_(token)) return denyAdmin_();
-    return json_(archiveDoneOrders_());
-  }
-  if (action === 'restoreArchived') {
-    if (!isValidAdminToken_(token)) return denyAdmin_();
-    return json_(restoreArchivedOrder_(data.id));
-  }
 
   // ---------- حفظ / تعديل طلب ----------
   // 🔒 قبل كده كان بيقبل الحفظ من غير توكن خالص، ولو مفيش توكن كان بياخد
@@ -567,7 +549,7 @@ function saveOrder_(data) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
   if (!sheet) return json_({ ok: false, error: 'sheet not found' });
 
-  const items = Array.isArray(data.items) ? data.items : [];
+  const items = mergeDuplicateItems_(Array.isArray(data.items) ? data.items : []);
   const itemsSummary = cellSafe_(items.map(function (it) {
     return it.product + (it.color ? ' - ' + it.color : '') + ' × ' + it.qty + ' ' + (it.unitType || '');
   }).join(' | '));
@@ -673,6 +655,21 @@ function getNextOrderNumber_(warehouse) {
   }
 }
 
+// نفس الصنف (القطاع + المنتج + اللون + الوحدة) مايتكررش في الطلب: بنجمع الكميات في سطر واحد.
+function mergeDuplicateItems_(items) {
+  const out = [], idx = {};
+  items.forEach(function (it) {
+    if (!it || typeof it !== 'object') return;
+    const key = [it.main, it.product, it.name, it.color, it.unitType].map(function (x) { return String(x == null ? '' : x).trim(); }).join('|');
+    if (Object.prototype.hasOwnProperty.call(idx, key)) {
+      const t = out[idx[key]];
+      t.qty = Math.round(((Number(t.qty) || 0) + (Number(it.qty) || 0)) * 1000) / 1000;
+      if (it.unavailable === true) t.unavailable = true;
+    } else { idx[key] = out.length; out.push(Object.assign({}, it)); }
+  });
+  return out;
+}
+
 function updateOrderStatus_(id, status) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
   const rows = sheet.getDataRange().getValues();
@@ -685,6 +682,9 @@ function updateOrderStatus_(id, status) {
     if (String(rows[i][COL_ID - 1]) !== String(id)) continue;
     found = true;
     sheet.getRange(i + 1, COL_STATUS).setValue(status);
+    // وقت التنفيذ: بيتسجّل أول ما الحالة تبقى «تم تنفيذ الطلب» (والحذف التلقائي بيعدّ 48 ساعة منه)،
+    // وبيتمسح لو الأدمن رجّع الحالة لحاجة تانية.
+    sheet.getRange(i + 1, COL_DONE_AT).setValue(String(status).trim() === STATUS_DONE ? new Date() : '');
     break;
   }
   markReservedDirty_();   // الحالة اتغيّرت — الحجز لازم يتحدّث
@@ -772,70 +772,51 @@ function deleteDeliveredOrders_() {
   return { ok: true, deleted: rows.length };
 }
 
-
 // ═══════════════════════════════════════════════════════════════════
-//  الأرشيف
+//  الحذف التلقائي للطلبات المنفَّذة بعد 48 ساعة
 // ═══════════════════════════════════════════════════════════════════
-//
-// ⚠️ الميزة دي كانت موجودة في الواجهة من زمان (٣ زراير) بس السيرفر مكانش
-// عارف الـ actions دي خالص — فالنداء كان بيقع لآخر doGet ويرجّع قايمة كل
-// الطلبات. النتيجة إن شاشة "الأرشيف" كانت بتعرض **كل الطلبات النشطة** على
-// إنها مؤرشفة، وزراير الأرشفة/الاسترجاع كانت بتقول "حصل خطأ" كل مرة.
+// أي طلب حالته «تم تنفيذ الطلب» بيتمسح لوحده بعد 48 ساعة من وقت التنفيذ (عمود «وقت التنفيذ»).
+// الطلبات المنفَّذة القديمة (من قبل الميزة دي، ومالهاش وقت) بتاخد وقت التنفيذ = أول فحص،
+// يعني مهلتها 48 ساعة من وقتها — مفيش حاجة بتتمسح فجأة. بيشتغل:
+//   ١) كل ساعة بـ trigger (شغّل installTriggers مرة واحدة)،
+//   ٢) وكل ما الأدمن يفتح قايمة الطلبات (على الأكتر مرة كل نص ساعة) كشبكة أمان.
+const DONE_TTL_MS_ = 48 * 60 * 60 * 1000;
 
-function archiveDoneOrders_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAME);
-  const asheet = getArchiveSheet_();
-  const n = sheet.getLastRow() - 1;
-  if (n < 1) return { ok: true, archived: 0 };
-
-  const width = ORDERS_HEADERS.length;
-  const data = sheet.getRange(2, 1, n, width).getValues();
-  const toMove = [], rowNums = [];
-  const now = new Date();
-  for (let i = 0; i < data.length; i++) {
-    if (String(data[i][COL_STATUS - 1]).trim() === STATUS_DONE) {
-      toMove.push(data[i].concat([now]));
-      rowNums.push(i + 2);
+function purgeDoneOrders_() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return { ok: true, skipped: true };
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+    if (!sheet) return { ok: true, deleted: 0 };
+    const n = sheet.getLastRow() - 1;
+    if (n < 1) return { ok: true, deleted: 0 };
+    if (!sheet.getRange(1, COL_DONE_AT).getValue()) sheet.getRange(1, COL_DONE_AT).setValue(ORDERS_HEADERS[COL_DONE_AT - 1]);
+    const data = sheet.getRange(2, 1, n, COL_DONE_AT).getValues();
+    const now = Date.now();
+    const toDelete = [], toStamp = [];
+    for (let i = 0; i < data.length; i++) {
+      if (String(data[i][COL_STATUS - 1]).trim() !== STATUS_DONE) continue;
+      const raw = data[i][COL_DONE_AT - 1];
+      const ms = raw instanceof Date ? raw.getTime() : (raw ? new Date(raw).getTime() : NaN);
+      if (!isFinite(ms)) toStamp.push(i + 2);
+      else if (now - ms >= DONE_TTL_MS_) toDelete.push(i + 2);
     }
+    toStamp.forEach(function (row) { sheet.getRange(row, COL_DONE_AT).setValue(new Date(now)); });
+    if (toDelete.length) { deleteRowsBatch_(sheet, toDelete); markReservedDirty_(); }
+    return { ok: true, deleted: toDelete.length, stamped: toStamp.length };
+  } finally {
+    lock.releaseLock();
   }
-  if (!toMove.length) return { ok: true, archived: 0 };
-
-  asheet.getRange(asheet.getLastRow() + 1, 1, toMove.length, width + 1).setValues(toMove);
-  deleteRowsBatch_(sheet, rowNums);
-  markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
-  return { ok: true, archived: toMove.length };
 }
-
-function listArchivedOrders_() {
-  const asheet = getArchiveSheet_();
-  const n = asheet.getLastRow() - 1;
-  if (n < 1) return [];
-  const width = ORDERS_HEADERS.length;
-  return asheet.getRange(2, 1, n, width).getValues()
-    .filter(function (r) { return r[COL_ID - 1]; })
-    .map(rowToOrder)
-    .sort(function (a, b) { return b.ts - a.ts; });
-}
-
-function restoreArchivedOrder_(id) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAME);
-  const asheet = getArchiveSheet_();
-  const n = asheet.getLastRow() - 1;
-  if (n < 1) return { ok: false, error: 'الأرشيف فاضي' };
-
-  const width = ORDERS_HEADERS.length;
-  const data = asheet.getRange(2, 1, n, width).getValues();
-  for (let i = 0; i < data.length; i++) {
-    if (String(data[i][COL_ID - 1]) === String(id)) {
-      sheet.getRange(sheet.getLastRow() + 1, 1, 1, width).setValues([data[i]]);
-      asheet.deleteRow(i + 2);
-      markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
-      return { ok: true };
-    }
-  }
-  return { ok: false, error: 'الطلب مش موجود في الأرشيف' };
+function purgeDoneOrdersTrigger_() { try { purgeDoneOrders_(); } catch (e) { logError_ && logError_(e); } }
+// شبكة أمان: كل ما الأدمن يحمّل الطلبات — بس لو عدّى نص ساعة على آخر فحص
+function lazyPurgeDone_() {
+  try {
+    const cache = CacheService.getScriptCache();
+    if (cache.get('purgeDoneAt')) return;
+    cache.put('purgeDoneAt', '1', 1800);
+    purgeDoneOrders_();
+  } catch (e) {}
 }
 
 
@@ -1674,12 +1655,6 @@ function doGetInner_(e) {
     });
   }
 
-  // ---------- الأرشيف (قراءة) ----------
-  if (action === 'archivedOrders') {
-    if (!isAdmin) return denyAdmin_();
-    return json_(listArchivedOrders_());
-  }
-
   // ---------- قوايم الموافقات ----------
   if (action === 'passwordRequests') {
     if (!isAdmin) return denyAdmin_();
@@ -1699,8 +1674,7 @@ function doGetInner_(e) {
   }
 
   // ⛔ العمليات اللي بتغيّر بيانات بقت في doPost — مابقتش تشتغل من رابط
-  const MUTATIONS = ['updateStatus', 'delete', 'deleteDelivered', 'archiveDone',
-                     'restoreArchived', 'approvePasswordReset', 'rejectPasswordReset',
+  const MUTATIONS = ['updateStatus', 'delete', 'deleteDelivered', 'approvePasswordReset', 'rejectPasswordReset',
                      'manageApprovePasswordReset', 'manageRejectPasswordReset',
                      'manageApproveReg', 'manageRejectReg', 'login'];
   if (MUTATIONS.indexOf(action) !== -1) {
@@ -1709,6 +1683,7 @@ function doGetInner_(e) {
 
   // ---------- الافتراضي: كل الطلبات (لوحة المتابعة الإدارية) ----------
   if (!isAdmin) return denyAdmin_();
+  lazyPurgeDone_();   // حذف المنفَّذ اللي عدّى 48 ساعة (شبكة أمان بجانب الـ trigger)
   if (!sheet) return json_([]);
   const n = sheet.getLastRow() - 1;
   if (n < 1) return json_([]);

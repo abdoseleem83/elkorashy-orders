@@ -2147,7 +2147,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v244';
+const APP_BUILD = 'v245';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2303,10 +2303,6 @@ const state = {
   stockSearch:'',
   stockPdfBusy:false,
   showPwRequests:false,
-  showArchive:false,
-  archivedOrders:[],
-  archiveLoading:false,
-  archiveCount:0,
   showCatalogUpload:false,
   catalogUploadMode:'full',       // 'full' أو 'stock'
   catalogUploadContext:'admin',   // 'admin' (متابعة المخزن) أو 'manage' (تبويب الإدارة) — بيحدد أنهي توكن نستخدم
@@ -3404,56 +3400,6 @@ async function deleteDeliveredOrders(){
   }catch(e){ showToast('حصل خطأ في الحذف، حاول تاني'); }
   render();
 }
-
-// ===== أرشفة الطلبات المنفَّذة =====
-async function archiveDoneOrders(){
-  const count = state.orders.filter(o=>o.status===STATUS_DONE).length;
-  if(count===0){ showToast('مفيش طلبات "' + STATUS_DONE + '" حاليًا عشان تتأرشف'); return; }
-  if(!confirm('هيتم نقل ' + count + ' طلب "' + STATUS_DONE + '" للأرشيف (مش هيتمسحوا، بس هيختفوا من القايمة الرئيسية). متأكد؟')) return;
-  try{
-    const d = await apiPost({ action:'archiveDone', token:getAdminToken() });
-    if(handleAdminUnauthorized_(d)){ render(); return; }
-    if(d && d.ok){
-      state.orders = state.orders.filter(o=>o.status!==STATUS_DONE);
-      showToast('اتأرشف ' + (d.archived||count) + ' طلب ✅');
-    } else {
-      showToast('حصل خطأ في الأرشفة، حاول تاني');
-    }
-  }catch(e){ showToast('تعذّر الاتصال بالسيرفر، حاول تاني'); }
-  render();
-}
-
-async function loadArchivedOrders(){
-  state.showArchive = true;
-  state.archiveLoading = true;
-  render();
-  try{
-    const data = await apiGet('archivedOrders', { token: getAdminToken() });
-    state.archivedOrders = Array.isArray(data) ? data : [];
-    state.archiveCount = state.archivedOrders.length;
-  }catch(e){
-    showToast('تعذّر تحميل الأرشيف — النت');
-  }
-  state.archiveLoading = false;
-  render();
-}
-
-async function restoreArchivedOrder(id){
-  if(!confirm('هيرجع الطلب ده لقايمة "متابعة المخزن" تاني. متأكد؟')) return;
-  try{
-    const d = await apiPost({ action:'restoreArchived', token:getAdminToken(), id:id });
-    if(d && d.ok){
-      state.archivedOrders = state.archivedOrders.filter(o=>o.id!==id);
-      state.archiveCount = state.archivedOrders.length;
-      showToast('تم استرجاع الطلب — هيظهر تاني في القايمة الرئيسية بعد أول تحديث');
-      loadOrders();
-    } else {
-      showToast('حصل خطأ في الاسترجاع');
-    }
-  }catch(e){ showToast('تعذّر الاتصال بالسيرفر'); }
-  render();
-}
-
 // ═══════════════════════════════════════════════════════════════════
 //  طبقة الاتصال بالسيرفر
 // ═══════════════════════════════════════════════════════════════════
@@ -3949,7 +3895,7 @@ function resumeDraft(){
     state.distPhone = asText(draft.distPhone);
     state.note = asText(draft.note);
     state.warehouse = validWarehouse_(draft.warehouse);
-    state.cart = draft.cart || [];
+    state.cart = cartMerge_(draft.cart || []);
   }
   state.pendingDraft = null;
   state.showResumeModal = false;
@@ -3976,7 +3922,7 @@ function toggleStagedProduct(main, product){
   if(idx>=0){
     const s = state.staged[idx];
     if(s.extractedCartItems && s.extractedCartItems.length){
-      state.cart.push(...s.extractedCartItems);
+      s.extractedCartItems.forEach(cartAdd_);
     }
     state.staged.splice(idx,1);
   }else{
@@ -4055,6 +4001,29 @@ const DOOR_ACCESSORIES = [
 // (حتى لو رقم التمرير نفسه فضل ثابت)، وده اللي كان بيحس إنه "بينزل تحت".
 // بنمسك مكان شبكة الأصناف على الشاشة قبل التأكيد ونرجّعها لنفس المكان
 // بالظبط بعده، عشان يفضل شايف نفس الأصناف اللي كان بيختار منها.
+// ===== مفيش بند يتكرر في السلة: نفس القطاع/المنتج/اللون/الوحدة = سطر واحد، والإضافة التانية بتزوّد كميته بس =====
+function cartKey_(it){ return [it.main, it.product, it.name, it.color, it.unitType].map(x=>String(x==null?'':x).trim()).join('|'); }
+function cartMergeInto_(t, it){
+  t.qty = Math.round(((Number(t.qty)||0) + (Number(it.qty)||0)) * 1000) / 1000;
+  if(it.unavailable === true) t.unavailable = true;
+  if(!it.autoBundled) t.autoBundled = false;       // لو اتضاف يدوي، يبقى بند عادي مش «مصاحب تلقائي»
+  return t;
+}
+function cartAdd_(it){
+  const k = cartKey_(it), t = state.cart.find(x=>cartKey_(x)===k);
+  if(t){ cartMergeInto_(t, it); showToast('الصنف موجود في السلة — زوّدنا الكمية'); return t; }
+  state.cart.push(it); return it;
+}
+function cartMerge_(list){
+  const out = [], idx = new Map();
+  (list||[]).forEach(it=>{
+    if(!it) return;
+    const k = cartKey_(it);
+    if(idx.has(k)) cartMergeInto_(out[idx.get(k)], it); else { idx.set(k, out.length); out.push(it); }
+  });
+  return out;
+}
+
 function confirmStaged(key){
   const s = state.staged.find(x=>x.key===key);
   if(!s) return;
@@ -4081,7 +4050,7 @@ function confirmStaged(key){
     // قبل كده كنا بنحاول نحسبها تاني وقت بناء رسالة الواتساب باستخدام
     // findCatalogItem — وده بيفشل بسهولة (لون فاضي، اسم صنف اتغيّر، الكتالوج
     // اتحدّث بعد الإضافة...) فكانت اللافتة مش بتظهر خالص. دلوقتي بقت مضمونة.
-    state.cart.push({
+    cartAdd_({
       main:s.main, product:s.product, name: catItem ? catItem.name : s.product, color: color||'',
       unitType, qty,
       unavailable: computeUnavailable_(s.main, s.product, color)
@@ -4092,7 +4061,7 @@ function confirmStaged(key){
         const accQty = acc.perDoor * qty;
         const accCatItem = findCatalogItem(s.main, acc.product, '') || findCatalogItemAnyMain(acc.product, '');
         const accMain = accCatItem ? accCatItem.main : s.main;
-        state.cart.push({
+        cartAdd_({
           main: accMain, product:acc.product, name: accCatItem ? accCatItem.name : acc.product, color:'',
           unitType:'قطعة', qty: accQty, autoBundled:true
         });
@@ -4116,7 +4085,7 @@ function cancelStaged(key){
   setTimeout(()=>{
     withPositionAnchor_(productSel, ()=>{
       if(s.extractedCartItems && s.extractedCartItems.length){
-        state.cart.push(...s.extractedCartItems);
+        s.extractedCartItems.forEach(cartAdd_);
       }
       state.staged = state.staged.filter(x=>x.key!==key);
       autoSaveDraft();
@@ -4134,7 +4103,7 @@ function removeFromCart(idx){
 // ===== other items =====
 function addOtherItem(){
   if(!state.otherName.trim()){ showToast('اكتب اسم الصنف الأول'); return; }
-  state.cart.push({
+  cartAdd_({
     main:OTHER_SECTOR, product: state.otherName.trim(), name: state.otherName.trim(), color:'',
     unitType: state.otherUnit, qty: state.otherQty, note: state.otherNote.trim()
   });
@@ -4617,38 +4586,6 @@ function renderPwRequestsModal(){
     </div>
   </div>`;
 }
-
-function renderArchiveModal(){
-  if(!state.showArchive) return '';
-  const list = state.archivedOrders || [];
-  const body = list.length ? list.map(o=>{
-    const dateStr = new Date(o.ts).toLocaleDateString('ar-EG',{day:'numeric',month:'short'});
-    return `
-    <div style="padding:10px;border-bottom:1px solid var(--line);">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-        <div>
-          <div style="font-weight:800;color:var(--navy);font-size:13.5px;">${esc(o.distName)}</div>
-          <div style="font-size:11.3px;color:var(--muted);">${esc(o.distRegion||'')} · ${dateStr} · #${esc(orderNoDisplay_(o))}</div>
-        </div>
-        <button class="chip" data-act="restore-archived" data-val="${esc(o.id)}">↩️ استرجاع</button>
-      </div>
-    </div>`;
-  }).join('') : '<div class="loading">الأرشيف فاضي حاليًا</div>';
-
-  return `
-  <div class="modalbg" data-act="close-archive">
-    <div class="previewmodal" data-act="noop" style="max-width:560px;">
-      <div class="previewhead">
-        <span>${ico_('boxIcon',16)} أرشيف الطلبات (${list.length})</span>
-        <button class="previewclose" data-act="close-archive">✕</button>
-      </div>
-      <div class="previewbody">
-        ${state.archiveLoading ? '<div class="loading">جارٍ التحميل...</div>' : body}
-      </div>
-    </div>
-  </div>`;
-}
-
 function renderStockModal(){
   if(!state.showStock) return '';
   const body = stockTableHTML_(false);
@@ -5105,7 +5042,8 @@ async function buildShortageImageGroup(order, groupKey){
       return Object.assign({}, it, { rollQty: split.rolls, rodQty: (split.rods>0||split.rolls===0)?split.rods:0, dispLabel: parts.join(' + ') });
     }
     return Object.assign({}, it, { rollQty: 0, rodQty: 0, dispLabel: norm.qty + ' ' + norm.unitLabel });
-  });
+  }).map(r => Object.assign(r, { _un: isItemUnavailableForOrder_(r, order) }));
+  const unCount_ = rows.filter(r => r._un).length;
 
   const groupsMap = new Map();
   rows.forEach(r=>{
@@ -5194,14 +5132,19 @@ async function buildShortageImageGroup(order, groupKey){
       if(it.colorStart){
         html += `<div style="padding:${colorPad_};background:#D6E7F8;border-right:3px solid #1080C0;color:#002050;font-weight:800;font-size:13px;border-radius:4px;margin:${(i===0||it.sectionStart)?'0':colorMargin_} 0 5px 0;">◂ ${esc(it.colorLabel)}</div>`;
       }
-      const bg = i%2===0 ? '#FFFFFF' : '#F3F6FA';
+      // الصنف غير المتوفر: صف أحمر فاتح + اسم وكمية بالأحمر + شارة «غير متوفر»
+      const bg = it._un ? '#FDECEC' : (i%2===0 ? '#FFFFFF' : '#F3F6FA');
+      const nameClr_ = it._un ? '#B91C1C' : '#002050';
+      const qtyClr_ = it._un ? '#B91C1C' : '#1080C0';
+      const unBadge_ = it._un ? `<span style="background:#DC2626;color:#fff;border-radius:6px;padding:1px 9px;font-size:${colorFont_};font-weight:800;white-space:nowrap;">غير متوفر</span>` : '';
       html += `
-      <div style="display:flex;align-items:baseline;gap:8px;background:${bg};padding:${rowPad_};border-bottom:1px solid #DCE4EC;border-radius:4px;">
+      <div style="display:flex;align-items:baseline;gap:8px;background:${bg};padding:${rowPad_};border-bottom:1px solid ${it._un ? '#F6C9C9' : '#DCE4EC'};border-radius:4px;${it._un ? 'border-right:4px solid #DC2626;' : ''}">
         <span style="color:#8A8470;font-weight:800;font-size:${idxFont_};min-width:20px;">${startIndex+i+1}.</span>
-        <span style="flex:1;font-weight:800;font-size:${rowFont_};color:#002050;line-height:1.25;">
+        <span style="flex:1;font-weight:800;font-size:${rowFont_};color:${nameClr_};line-height:1.25;">
           ${esc(it.name || it.product)}${(it.color && !it.colorLabel)?` <span style="color:#6B7A8C;font-size:${colorFont_};font-weight:700;">- ${esc(it.color)}</span>`:''}
         </span>
-        <span style="font-weight:800;font-size:${rowFont_};color:#1080C0;white-space:nowrap;">${esc(it.dispLabel||'')}</span>
+        ${unBadge_}
+        <span style="font-weight:800;font-size:${rowFont_};color:${qtyClr_};white-space:nowrap;">${esc(it.dispLabel||'')}</span>
       </div>`;
     });
     return html;
@@ -5253,6 +5196,7 @@ async function buildShortageImageGroup(order, groupKey){
           ${totals.map(t=>`<div style="font-size:13.4px;"><span style="color:#6B7A8C;">إجمالي ${esc(t.main)}: </span><b style="color:#002050;">${esc(t.text)}</b></div>`).join('')}
         </div>
       ` : ''}
+      ${(isLast && unCount_) ? `<div style="margin-top:12px;padding:8px 12px;background:#FDECEC;border:1px solid #F6C9C9;border-radius:8px;color:#B91C1C;font-weight:800;font-size:14px;">⚠ ${unCount_} صنف غير متوفر حاليًا (معلَّم بالأحمر) — هيتجهّز لما يتوفر</div>` : ''}
       ${PREPARED_BY_LINE ? `<div style="margin-top:8px;text-align:center;color:#A8A498;font-size:9.6px;">${esc(PREPARED_BY_LINE)}</div>` : ''}
       ${CREDIT_LINE ? `<div style="margin-top:4px;text-align:center;color:#A8A498;font-size:10.1px;">${esc(CREDIT_LINE)}</div>` : ''}
     </div>
@@ -6884,9 +6828,6 @@ function renderAdminView(){
       <button class="exportbtn" data-act="show-pwreq" title="طلبات تغيير كلمة السر">${ico_('key',14)} الباسورد${(state.managePwRequests||[]).length ? ` (${(state.managePwRequests||[]).length})` : ''}</button>
       <button class="exportbtn" data-act="open-manage-approvals" title="طلبات إضافة حسابات جديدة">${ico_('checkSquare',14)} الإضافة${(state.manageRegRequests||[]).length ? ` (${(state.manageRegRequests||[]).length})` : ''}</button>
       <button class="exportbtn" data-act="export-excel-preparing" title="تصدير Excel (${STATUS_PREPARING})">${ico_('downloadIcon',14)} Excel</button>
-      <button class="exportbtn" data-act="export-excel-delivered" title="تصدير Excel (${STATUS_DONE})">${ico_('downloadIcon',14)} Excel المنفَّذ</button>
-      <button class="exportbtn" data-act="archive-done" title="نقل الطلبات المنفَّذة للأرشيف (من غير حذف)">${ico_('boxIcon',14)} أرشفة المنفَّذ</button>
-      <button class="exportbtn" data-act="open-archive" title="عرض الطلبات المؤرشفة واسترجاعها">${ico_('fileIcon',14)} الأرشيف</button>
       <button class="exportbtn danger" data-act="delete-delivered">${ico_('trashIcon',14)} مسح المُنفَّذ</button>
     </div>
     <div class="polldiag">
@@ -7022,6 +6963,16 @@ function computeUnavailable_(main, product, color){
     // أقل من لفة (بس مش صفر) كانت بتعدّي من غير ملاحظة.
     return lvl === 'out' || lvl === 'crit';
   }catch(e){ return false; }
+}
+
+// حالة «غير متوفر» لصنف جوه طلب (للصورة/المستندات): بنعتمد على اللقطة اللي اتخزنت وقت الإضافة
+// للسلة (it.unavailable) لو موجودة، وإلا بنحسبها لحظيًا على مخزن الطلب نفسه (مش مخزن الشاشة الحالي).
+function isItemUnavailableForOrder_(it, order){
+  if(it && typeof it.unavailable === 'boolean') return it.unavailable;
+  const prev = state.warehouse;
+  try{ state.warehouse = (order && order.warehouse) || prev; return computeUnavailable_(it.main, it.product, it.color); }
+  catch(e){ return false; }
+  finally{ state.warehouse = prev; }
 }
 
 // شارة "غير متاح" الحمرا اللي بتتحط جنب اسم الصنف جوه المستندات.
@@ -7315,7 +7266,7 @@ function render(){
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
     document.documentElement.setAttribute('data-view', state.view);   // للـCSS: عرض الشاشة حسب نوعها
-    app.innerHTML = renderHeader() + banner + view + renderBottomNav_() + renderDiagModal() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderArchiveModal() + renderCartReviewModal() + renderMergeAskModal() + renderNewOrdersPopup() + renderPreviewModal() + renderGlobalError();
+    app.innerHTML = renderHeader() + banner + view + renderBottomNav_() + renderDiagModal() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderCartReviewModal() + renderMergeAskModal() + renderNewOrdersPopup() + renderPreviewModal() + renderGlobalError();
     bindEvents();
     applyFixedHeaderSpacing_();
     applyFixedFooterSpacing_();
@@ -7772,10 +7723,6 @@ async function onActionInner(act, el){
       state.catalogUploadResult = null;
       render();
       break;
-    case 'archive-done': await archiveDoneOrders(); break;
-    case 'open-archive': await loadArchivedOrders(); break;
-    case 'close-archive': state.showArchive=false; render(); break;
-    case 'restore-archived': await restoreArchivedOrder(el.getAttribute('data-val')); break;
     case 'download-catalog-template': await downloadCatalogTemplate(); break;
     case 'submit-catalog-upload': await submitCatalogUpload(); break;
     case 'approve-pwreq': await decidePwRequest(el.getAttribute('data-val'), true); break;
@@ -7846,7 +7793,7 @@ async function onActionInner(act, el){
       const last = state.mergeAskLast;
       state.showMergeAskModal = false;
       if(last){
-        state.cart = (last.items||[]).map(it=>Object.assign({}, it)).concat(state.cart);
+        state.cart = cartMerge_((last.items||[]).map(it=>Object.assign({}, it)).concat(state.cart));
         state.editingOrderId = last.id;
       }
       state.mergeAskLast = null;
@@ -8112,7 +8059,7 @@ async function onActionInner(act, el){
       state.distPhone = asText(order.distPhone);
       state.note = asText(order.note);
       state.warehouse = validWarehouse_(order.warehouse) || (WAREHOUSES && WAREHOUSES[0]) || '';
-      state.cart = order.items.map(it=>Object.assign({}, it));
+      state.cart = cartMerge_(order.items.map(it=>Object.assign({}, it)));
       state.staged = [];
       state.mainGroup = null;
       state.subGroup = null;
@@ -8145,7 +8092,6 @@ async function onActionInner(act, el){
     }
     case 'admin-status': state.adminStatusFilter = el.getAttribute('data-val'); render(); break;
     case 'export-excel-preparing': exportExcel(STATUS_PREPARING); break;
-    case 'export-excel-delivered': exportExcel(STATUS_DONE); break;
     case 'refresh-orders': loadOrders(); showToast('جارٍ التحديث...'); break;
     case 'install-app': installApp(); break;
     case 'dismiss-install': dismissInstallBanner(); break;

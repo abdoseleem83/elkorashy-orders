@@ -17,7 +17,6 @@ const ORDERS = [
   { id:'a1', ts:Date.now(), distName:'فرع طنطا', distRegion:'طنطا', distPhone:'01000000001', note:'', status:'تم تنفيذ الطلب', items:[], warehouse:'طنطا', orderNo:'5', username:'test' },
   { id:'a2', ts:Date.now(), distName:'فرع اسكندرية', distRegion:'اسكندرية', distPhone:'01000000002', note:'', status:'تم استلام الطلب', items:[], warehouse:'الاسكندرية', orderNo:'6', username:'x' }
 ];
-const ARCHIVED = [{ id:'z9', ts:Date.now(), distName:'قديم', distRegion:'طنطا', distPhone:'01000000003', note:'', status:'تم تنفيذ الطلب', items:[], warehouse:'طنطا', orderNo:'1', username:'y' }];
 
 await page.route('**/script.google.com/**', async route => {
   const r = route.request();
@@ -29,9 +28,6 @@ await page.route('**/script.google.com/**', async route => {
   if(action==='catalog') p = { items:[{name:'x',main:'م',sub:'',unit:1,product:'x',color:'',price:1,available:true,inStock:true,stock:5}], discounts:{} };
   else if(action==='adminLogin') p = { ok:true, token:'ADMIN.TOK' };
   else if(action==='(default)') p = ORDERS;
-  else if(action==='archivedOrders') p = ARCHIVED;
-  else if(action==='archiveDone') p = { ok:true, archived:1 };
-  else if(action==='restoreArchived') p = { ok:true };
   else if(action==='ordersMeta') p = { count:2, last:{id:'a2',orderNo:'6',distName:'فرع اسكندرية'} };
   else p = { ok:true };
   await route.fulfill({ status:200, contentType:'application/json', body: JSON.stringify(p) });
@@ -50,17 +46,18 @@ await page.waitForTimeout(600);
 const unlocked = await page.evaluate(()=>state.adminUnlocked && state.orders.length);
 console.log('١) الأدمن دخل وحمّل الطلبات:', unlocked, unlocked?'✅':'❌');
 
-// 🔴 الميزة اللي كانت مكسورة تمامًا: الأرشفة
-const arch = await page.evaluate(async ()=>{ await archiveDoneOrders(); return state.orders.length; });
-console.log('٢) أرشفة المنفَّذ (كانت مكسورة):', arch===1 ? 'اتأرشف واتشال من القايمة ✅' : ('❌ فاضل '+arch));
-
-// 🔴 شاشة الأرشيف — كانت بتعرض كل الطلبات النشطة على إنها مؤرشفة
-const archList = await page.evaluate(async ()=>{ await loadArchivedOrders(); return state.archivedOrders.map(o=>o.id); });
-console.log('٣) شاشة الأرشيف بترجّع المؤرشف بس:', JSON.stringify(archList), archList.length===1 && archList[0]==='z9' ? '✅' : '❌');
-
-// 🔴 الاسترجاع
-const restored = await page.evaluate(async ()=>{ await restoreArchivedOrder('z9'); return state.archivedOrders.length; });
-console.log('٤) استرجاع من الأرشيف:', restored===0 ? '✅' : '❌');
+// الأرشفة اتشالت (الطلبات المنفَّذة بتتحذف تلقائي بعد 48 ساعة) — الأزرار والكود لازم يكونوا اختفوا
+const gone = await page.evaluate(()=>{
+  const html = renderAdminView ? renderAdminView() : document.body.innerHTML;
+  return { buttons: /archive-done|open-archive|export-excel-delivered/.test(html),
+           fns: typeof archiveDoneOrders!=='undefined' || typeof loadArchivedOrders!=='undefined' || typeof restoreArchivedOrder!=='undefined',
+           state: 'showArchive' in state || 'archivedOrders' in state };
+});
+console.log('٢) أزرار الأرشفة + Excel المنفَّذ اختفت من لوحة الأدمن:', !gone.buttons ? '✅' : '❌');
+console.log('٣) دوال/حالة الأرشفة اتشالت من الكود:', (!gone.fns && !gone.state) ? '✅' : '❌ '+JSON.stringify(gone));
+// «مسح المُنفَّذ» لسه موجود (يدوي)
+const stillDel = await page.evaluate(()=>/delete-delivered/.test(renderAdminView()));
+console.log('٤) زرار «مسح المُنفَّذ» اليدوي لسه موجود:', stillDel ? '✅' : '❌');
 
 // انتهاء صلاحية توكن المستخدم بيرجّعه لشاشة الدخول
 await page.unroute('**/script.google.com/**');
@@ -79,7 +76,7 @@ console.log('٥) التوكن المنتهي بيسيب المستخدم داخ�
 
 console.log('\nنداءات السيرفر:');
 calls.forEach(c=>console.log('   ', c.m.padEnd(5), c.action.padEnd(18), c.token?('token='+c.token):''));
-const mutationsViaGet = calls.filter(c=>c.m==='GET' && ['archiveDone','restoreArchived','delete','deleteDelivered','updateStatus','login'].includes(c.action));
+const mutationsViaGet = calls.filter(c=>c.m==='GET' && ['delete','deleteDelivered','updateStatus','login'].includes(c.action));
 console.log('\n٦) مفيش عمليات تعديل بـ GET:', mutationsViaGet.length===0 ? '✅' : ('❌ '+JSON.stringify(mutationsViaGet)));
 console.log('\n' + (errors.length ? '❌ أخطاء:\n'+errors.join('\n') : '✅ مفيش أخطاء'));
 await browser.close();
