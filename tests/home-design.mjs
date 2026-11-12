@@ -18,7 +18,7 @@ async function open(vp, theme){
     let p;
     if(action==='catalog') p={items:[{name:'حلق ابيض',main:'قطاعات PVC كومبن',sub:'كومبن ابيض',unit:4,product:'حلق كومبن',color:'ابيض',price:100,available:true,inStock:true,stock:40}],discounts:{}};
     else if(action==='login') p={ok:true,username:'test',distName:'محاسب',distRegion:'طنطا',distPhone:'01000000001',distType:'موزع',token:'FAKE.TOKEN'};
-    else if(action==='lookup'||action==='myOrders') p=[]; else p={ok:true};
+    else if(action==='lookup'||action==='myOrders') p=[{id:'a1',orderNo:213,ts:Date.now()-2*86400000,status:'جاري تجهيز الطلب',warehouse:'طنطا',items:[{main:'قطاعات PVC كومبن',product:'حلق كومبن',name:'حلق كومبن',color:'ابيض',unitType:'لفة',qty:4}]}]; else p={ok:true};
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(p)});
   });
   await page.addInitScript(t=>{ try{ localStorage.setItem('theme',t); localStorage.setItem('qurashi_theme',t); }catch(e){} }, theme);
@@ -39,12 +39,14 @@ for(const theme of ['light','dark']){
       name: cs(document.querySelector('.homehero h2'),'color'),
       icon: cs(document.querySelector('.bn.on .bn-ic'),'color'),
       appW: Math.round(app.width),
-      tiles: new Set([...document.querySelectorAll('.hometile')].map(t=>Math.round(t.getBoundingClientRect().top))).size };
+      qrows: document.querySelectorAll('.qrow').length,
+      recent: document.querySelectorAll('.ordermini').length };
   });
   ok(`[${theme}] اسم المستخدم في الكارت الأزرق أبيض`, rgb(r.name)==='255,255,255', r.name);
   ok(`[${theme}] أيقونة «الرئيسية» النشطة بيضا`, rgb(r.icon)==='255,255,255', r.icon);
   ok(`[${theme}] الشاشة الرئيسية في عمود ≤ 980px على الكمبيوتر`, r.appW<=980, r.appW+'px');
-  ok(`[${theme}] البلاطات التلاتة في صف واحد`, r.tiles===1, String(r.tiles));
+  ok(`[${theme}] «اللي بتطلبه كتير» ظهر من تاريخ الطلبات`, r.qrows>=1, String(r.qrows));
+  ok(`[${theme}] «طلباتك الأخيرة» ظهرت`, r.recent>=1, String(r.recent));
   await ctx.close();
 }
 

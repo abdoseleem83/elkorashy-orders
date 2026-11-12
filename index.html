@@ -327,12 +327,12 @@ textarea{resize:vertical;min-height:60px;}
 .chip.sc-8{background:#EEEEEE;border-color:#BFBFBF;color:#444;}
 
 /* الألوان الحقيقية للاختيار (أبيض، بيج، خشبي، أسود، رمادي، أرو) */
-.chip.color-white{background:#FFFFFF;border-color:#D0D0D0;color:#333;}
-.chip.color-beige{background:#D4A574;border-color:#C49464;color:#333;}
-.chip.color-wood{background:#8B6F47;border-color:#6B5435;color:#FFF;}
-.chip.color-black{background:#000000;border-color:#333333;color:#FFF;}
-.chip.color-gray{background:#A9A9A9;border-color:#808080;color:#FFF;}
-.chip.color-aro{background:#8B7BA8;border-color:#6B5B88;color:#FFF;}
+
+
+
+
+
+
 .chip.sc-1.active,.chip.sc-2.active,.chip.sc-3.active,.chip.sc-4.active,
 .chip.sc-5.active,.chip.sc-6.active,.chip.sc-7.active,.chip.sc-8.active{
   background:var(--navy);border-color:var(--navy);color:#fff;
@@ -1187,14 +1187,11 @@ button.mini2027{cursor:pointer;}
 .qty3{display:flex;flex-direction:column;gap:8px;}
 .qty3-line{display:flex;align-items:center;gap:8px;}
 .qty3-unitqty{justify-content:flex-start;}
-.qty3-price{
-  justify-content:space-between;gap:8px;
-  background:var(--card);border:1.2px solid var(--line);border-radius:8px;padding:7px 10px;
-}
-.qty3-cell{font-size:12.6px;font-weight:700;color:var(--ink);}
-.qty3-cell b{color:var(--muted);font-weight:800;font-size:11px;}
-.qty3-total{color:var(--navy);}
-.qty3-total b{color:var(--navy-soft);}
+
+
+
+
+
 .qty3-btns{gap:8px;}
 .qty3-shortage{
   background:#FDECEA;color:#C0392B;border:1.3px solid #C0392B;border-radius:8px;
@@ -1210,10 +1207,7 @@ button.mini2027{cursor:pointer;}
 }
 .cqrow2-color{font-size:13px;font-weight:800;color:var(--navy);}
 .cqrow2-line{display:flex;align-items:center;gap:8px;}
-.cqrow2-price{
-  justify-content:space-between;
-  background:var(--card);border:1.2px solid var(--line);border-radius:8px;padding:7px 10px;
-}
+
 .chipwrap.chipgrid3{display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:7px;}
 .chipwrap.chipgrid3 .chip{padding:9px 6px;text-align:center;}
 
@@ -1389,7 +1383,7 @@ header.top .backnav{width:38px;height:38px;border-radius:13px;padding:0;font-siz
 
 
 
-.bn-dot{position:absolute;top:-3px;left:-5px;width:9px;height:9px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 2px #09122A;}
+
 
 /* ---------- شريط الملخص (السلة / قيد الاختيار / المخزن / القطاع) ---------- */
 .ministrip2027{gap:8px;padding:8px 12px 10px;background:transparent;}
@@ -1750,57 +1744,40 @@ label{font-size:13px;}
   padding:10px 14px;border-radius:14px;box-shadow:0 8px 18px rgba(0,20,80,.35);
 }
 .herocta .ico-svg{top:0;}
-.homekpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px;}
-.hkpi{
-  --c:#4FB6FF;--cbg:rgba(79,182,255,.15);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
-  padding:9px 4px;border-radius:15px;cursor:pointer;font-family:'Cairo',sans-serif;
-  background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));
-  border:1px solid color-mix(in srgb,var(--c) 40%,transparent);
-}
-.hkpi b{font-size:19px;font-weight:900;color:var(--c);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2;}
-.hkpi span{font-size:11px;font-weight:800;color:var(--muted);}
-.hkpi.s-green{--c:#2FD08A;--cbg:rgba(47,208,138,.15);}
-.hkpi.s-purple{--c:#B497FF;--cbg:rgba(169,139,255,.16);}
-.hkpi.s-navy{--c:#4FB6FF;--cbg:rgba(79,182,255,.15);}
+
+
+
+
+
+
+
 .homesec{margin:14px 2px 8px;font-size:14px;font-weight:900;color:var(--ink);display:flex;align-items:center;gap:8px;}
 .homesec span{font-size:11px;font-weight:800;color:var(--muted);}
-.hometiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.hometile{
-  --c:#29B6F6;--cbg:rgba(41,182,246,.14);
-  position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;text-align:right;
-  padding:12px;border-radius:18px;cursor:pointer;font-family:'Cairo',sans-serif;color:var(--ink);
-  background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));
-  border:1px solid color-mix(in srgb,var(--c) 42%,transparent);
-  box-shadow:0 8px 20px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.05);
-}
-.hometile:active{transform:scale(.97);}
-.hticon{
-  width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;
-  background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 55%,#000));
-  box-shadow:0 6px 14px color-mix(in srgb,var(--c) 45%,transparent);
-}
-.hticon .ico-svg{top:0;}
-.httext{display:flex;flex-direction:column;gap:1px;min-width:0;}
-.httext b{font-size:14.5px;font-weight:900;line-height:1.25;}
-.httext small{font-size:11px;font-weight:700;color:var(--muted);line-height:1.3;}
-.htbadge{position:absolute;top:10px;left:10px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#FF5A4F;color:#fff;font-style:normal;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;}
-.hometile.c-blue{--c:#29B6F6;--cbg:rgba(41,182,246,.15);}
-.hometile.c-purple{--c:#A98BFF;--cbg:rgba(169,139,255,.16);}
-.hometile.c-green{--c:#2FD08A;--cbg:rgba(47,208,138,.15);}
-.hometile.c-amber{--c:#FFB92E;--cbg:rgba(255,197,61,.15);}
-.hometile.c-teal{--c:#19C3B1;--cbg:rgba(25,195,177,.15);}
-.hometile.c-pink{--c:#FF6FA5;--cbg:rgba(255,111,165,.15);}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* مربعات أفقية: الأيقونة جنب النص، والمربع الأخير الفردي ياخد العرض كله */
-.hometile{flex-direction:row;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;min-height:62px;}
-.hometile:last-child:nth-child(odd){grid-column:1/-1;}
-.hticon{width:38px;height:38px;border-radius:12px;flex:0 0 auto;}
-.hticon .ico-svg{width:20px;height:20px;}
-.httext{flex:1;}
-.httext b{font-size:14px;}
-.htbadge{top:8px;left:8px;}
-html[data-theme="light"] .hkpi b,html:not([data-theme]) .hkpi b{filter:brightness(.65) saturate(1.2);}
-html[data-theme="light"] .hometile,html:not([data-theme]) .hometile{box-shadow:0 6px 16px rgba(0,36,104,.10);}
+
+
+
+
+
+
+
+
+
 
 /* ---------- الوضع الفاتح: نفس الهيكل بألوان نهارية ---------- */
 html[data-theme="light"] .fixedhead-outer,html:not([data-theme]) .fixedhead-outer{box-shadow:0 6px 20px rgba(0,36,104,.10);}
@@ -1896,8 +1873,8 @@ html[data-theme="light"] .bn.on{color:var(--navy);}
 /* كارت الترحيب والبلاطات بالألوان الجديدة */
 .homehero{background:linear-gradient(135deg,#0E7C86,#0A5A62) !important;box-shadow:none !important;}
 .herocta{color:#0A5A62;}
-.hticon{background:var(--navy) !important;box-shadow:none !important;}
-.hometile{box-shadow:none !important;}
+
+
 
 /* v243b — تحسين التباين وشكل الأيقونات */
 html[data-theme="dark"]{--navy:#0E8791;--navy-soft:#5ED3DC;}
@@ -1909,7 +1886,7 @@ html[data-theme="dark"]{--navy:#0E8791;--navy-soft:#5ED3DC;}
 .statuschips .chip .ico-svg{opacity:.9;}
 .bn-ic{width:36px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:12px;}
 .bn.on .bn-ic{background:color-mix(in srgb,var(--navy) 22%,transparent);}
-.hticon{border-radius:14px !important;}
+
 
 /* أرقام الخطوات والأيقونات بنفس اللون الأساسي */
 .card h2 .num,.card h2 .n{background:var(--navy) !important;color:#fff !important;box-shadow:none !important;}
@@ -1933,9 +1910,7 @@ html[data-theme="light"]{
 html[data-theme="dark"] body{background:radial-gradient(700px 360px at 85% -8%,rgba(47,107,255,.28),transparent 65%),#000;}
 html[data-theme="light"] body{background:linear-gradient(180deg,#EEF3FF 0,#FFFFFF 260px);}
 /* كل الأزرار الأساسية: تدرّج أزرق + كتابة بيضا */
-.exportbtn,.savebtn,.submitbtn,.cartbar-btn,.fab-btn,.pingate button,.polldiag button,
-.chip.active,.previewhead,.whcolhead,.hticon,.num,.herocta:hover,
-.bn.on .bn-ic,.modalbtn.primary{
+.exportbtn,.savebtn,.submitbtn,.cartbar-btn,.fab-btn,.pingate button,.polldiag button,.chip.active,.previewhead,.whcolhead,.num,.herocta:hover,.bn.on .bn-ic,.modalbtn.primary{
   background:var(--grad) !important;color:#fff !important;border-color:transparent !important;box-shadow:none !important;}
 .fab-btn{box-shadow:0 8px 22px rgba(47,107,255,.45) !important;}
 .exportbtn.danger{background:linear-gradient(135deg,#3A3F4B,#111) !important;}
@@ -1946,7 +1921,7 @@ html[data-theme="light"] .exportbtn.danger{background:linear-gradient(135deg,#2B
 .homehero{background:var(--grad) !important;box-shadow:0 10px 26px rgba(47,107,255,.28) !important;}
 .herocta{background:#fff !important;color:#0B3BB8 !important;}
 /* الكروت والبلاطات: أبيض/أسود نضيف بحواف رفيعة */
-.card,.ordercard,.whtile,.stat2027,.mini2027,.hometile,.cartbar,.bottomnav-in{
+.card,.ordercard,.whtile,.stat2027,.mini2027,.cartbar,.bottomnav-in{
   background:var(--card) !important;border:1px solid var(--line) !important;}
 .stat2027,.mini2027{--c:var(--navy-soft);--cbg:rgba(47,107,255,.12);}
 .stat2027 b,.mini2027 b,.stat2027 .n{color:var(--navy-soft);}
@@ -1959,7 +1934,7 @@ html[data-theme="light"] .bn.on,html[data-theme="light"] .bn.on span{color:var(-
 .bn.on .bn-ic{color:#fff !important;}
 .statusbadge.received,.statusbadge.pending,.statusbadge.preparing{background:rgba(47,107,255,.14) !important;color:var(--navy-soft) !important;}
 html[data-theme="light"] .statusbadge.received{color:var(--navy) !important;}
-.hticon .ico-svg,.exportbtn .ico-svg,.savebtn .ico-svg,.submitbtn .ico-svg{color:#fff;}
+.exportbtn .ico-svg,.savebtn .ico-svg,.submitbtn .ico-svg{color:#fff;}
 a,.link{color:var(--navy-soft);}
 .modalbg{background:rgba(0,0,0,.74) !important;}
 .previewmodal,.modalcard{background:var(--card) !important;border:1px solid var(--line) !important;}
@@ -1976,10 +1951,10 @@ html[data-theme="light"] .mini2027 b,html[data-theme="light"] .stat2027 b{color:
 html[data-theme="light"] .delbtn.pdf,html[data-theme="light"] .backnav{color:var(--navy) !important;}
 .authfeat2027 .mini2027{background:var(--grad) !important;color:#fff !important;border:0 !important;}
 
-.hkpi.s-green,.hkpi.s-gold,.hkpi.s-purple,.hkpi.s-navy{--c:var(--navy-soft);background:var(--card) !important;border:1px solid var(--line) !important;}
-.hkpi b,.hkpi .n{color:var(--navy-soft) !important;}
-html[data-theme="light"] .hkpi b,html[data-theme="light"] .hkpi .n{color:var(--navy) !important;}
-.hometile.c-green .hticon,.hometile.c-gold .hticon,.hometile.c-purple .hticon{background:var(--grad) !important;}
+
+
+
+
 
 /* v243d — وضع فاتح أهدى وأوضح: أزرق أغمق وأقل سطوع، والكتابة سودا/كحلي غامق */
 html[data-theme="light"]{
@@ -2013,15 +1988,15 @@ html[data-theme="light"] [class*="hint"] b,html[data-theme="light"] [class*="cru
   .homehero h2{font-size:28px;margin:4px 0;}
   .herohi{font-size:15px;} .homehero p{font-size:14px;}
   .herocta{font-size:16px;padding:14px 22px;border-radius:16px;}
-  .homekpis{gap:14px;margin-bottom:10px;}
-  .hkpi{padding:16px 8px;border-radius:18px;}
-  .hkpi b{font-size:26px;} .hkpi span{font-size:13px;}
+  
+  
+   
   .homesec{font-size:17px;margin:18px 2px 10px;}
-  .hometiles{grid-template-columns:repeat(3,1fr);gap:14px;}
-  .hometile{flex-direction:column;align-items:flex-start;gap:14px;padding:20px;min-height:132px;border-radius:20px;}
-  .hometile:last-child:nth-child(odd){grid-column:auto;}
-  .hticon{width:48px;height:48px;border-radius:15px;} .hticon .ico-svg{width:24px;height:24px;}
-  .httext b{font-size:17px;} .httext small{font-size:13px;}
+  
+  
+  
+   
+   
 }
 /* زرار + في النص: علامة + بيضا حتى لما صفحة «طلب جديد» تبقى هي المفتوحة (.bn.on span الكحلية كانت بتغلبها) */
 .bn-fab .fab-btn,.bn-fab.on .fab-btn,html[data-theme="light"] .bn-fab.on .fab-btn,html:not([data-theme]) .bn-fab.on .fab-btn{color:#fff !important;}
@@ -2058,19 +2033,19 @@ html:is([data-theme="light"],[data-theme="dark"]) .homehero h2{color:#fff !impor
 html:is([data-theme="light"],[data-theme="dark"]) .herocta{background:var(--acc) !important;color:var(--acc-ink) !important;border-radius:16px !important;box-shadow:0 8px 18px rgba(245,158,11,.40) !important;}
 html:is([data-theme="light"],[data-theme="dark"]) .herocta .ico-svg{color:var(--acc-ink) !important;}
 /* البلاطات والأرقام */
-html:is([data-theme="light"],[data-theme="dark"]) .hometile{border-radius:22px !important;box-shadow:var(--card-shadow) !important;border:0 !important;}
-html:is([data-theme="light"],[data-theme="dark"]) .hticon{border-radius:16px !important;box-shadow:none !important;}
-html:is([data-theme="light"],[data-theme="dark"]) .hometile.c-blue .hticon{background:linear-gradient(135deg,#1E6BD6,#0B3D91) !important;}
-html:is([data-theme="light"],[data-theme="dark"]) .hometile.c-purple .hticon{background:linear-gradient(135deg,#FBBF24,#F59E0B) !important;}
-html:is([data-theme="light"],[data-theme="dark"]) .hometile.c-purple .hticon .ico-svg{color:var(--acc-ink) !important;}
-html:is([data-theme="light"],[data-theme="dark"]) .hometile.c-green .hticon{background:linear-gradient(135deg,#22C55E,#15803D) !important;}
-html:is([data-theme="light"],[data-theme="dark"]) .hkpi{border-radius:18px !important;border:0 !important;box-shadow:var(--card-shadow) !important;}
-html[data-theme="light"] .hkpi.s-green b{color:#15803D !important;}
-html[data-theme="light"] .hkpi.s-purple b{color:#C2610C !important;}
-html[data-theme="light"] .hkpi.s-navy b{color:#0B3D91 !important;}
-html[data-theme="dark"] .hkpi.s-green b{color:#4ADE80 !important;}
-html[data-theme="dark"] .hkpi.s-purple b{color:#FBBF24 !important;}
-html[data-theme="dark"] .hkpi.s-navy b{color:#6AA6FF !important;}
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* الشريط السفلي وزرار + */
 html:is([data-theme="light"],[data-theme="dark"]) .bottomnav-in{border-radius:28px !important;border:0 !important;box-shadow:0 14px 34px rgba(11,61,145,.22) !important;}
 html[data-theme="dark"] .bottomnav-in{background:#0F1830 !important;box-shadow:0 14px 34px rgba(0,0,0,.55) !important;}
@@ -2081,6 +2056,69 @@ html:is([data-theme="light"],[data-theme="dark"]) .card{border-radius:22px !impo
 html:is([data-theme="light"],[data-theme="dark"]) .num{background:linear-gradient(135deg,#1E6BD6,#0B3D91) !important;color:#fff !important;}
 html:is([data-theme="light"],[data-theme="dark"]) .submitbtn{background:linear-gradient(135deg,var(--acc),var(--acc-deep)) !important;color:var(--acc-ink) !important;border-radius:16px !important;}
 html:is([data-theme="light"],[data-theme="dark"]) .savebtn{background:linear-gradient(135deg,#1E6BD6,#0B3D91) !important;color:#fff !important;border-radius:16px !important;}
+/* ═══════════════════════════════════════════════════════════════════════════
+   v246 — شكل ومحتوى جديد: الرئيسية «طلب سريع» + طلباتي بخط تقدّم + كروت قطاعات
+   ═══════════════════════════════════════════════════════════════════════════ */
+.homesec{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+.homesec small{font-size:11.5px;font-weight:600;color:var(--muted);}
+.homesec a{font-size:12.5px;font-weight:800;color:var(--navy-soft);cursor:pointer;text-decoration:none;}
+.homehint{display:flex;flex-direction:column;gap:4px;text-align:center;padding:18px 14px;color:var(--muted);}
+.homehint b{color:var(--ink);font-size:14.5px;} .homehint small{font-size:12.5px;line-height:1.7;}
+/* اللي بتطلبه كتير */
+.quickcard{padding:4px 14px !important;}
+.qrow{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);}
+.qrow:last-child{border-bottom:0;}
+.qname{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.qname b{font-size:14.5px;color:var(--ink);line-height:1.35;}
+.qname small{font-size:12px;color:var(--muted);}
+.qun{font-style:normal;font-weight:800;color:#DC2626;}
+.stepper2{display:flex;align-items:center;background:var(--surface2);border-radius:13px;overflow:hidden;flex-shrink:0;}
+.stepper2 button{width:38px;height:38px;border:0;background:transparent;color:var(--navy);font-size:21px;font-weight:900;cursor:pointer;font-family:inherit;}
+.stepper2 button:active{background:var(--surface3);}
+.stepper2 em{min-width:30px;text-align:center;font-style:normal;font-weight:900;font-size:15px;color:var(--ink);}
+/* شريط الإضافة السريعة */
+.quickbar{position:fixed;z-index:30;left:12px;right:12px;margin:0 auto;max-width:560px;
+  bottom:calc(var(--bn-h,64px) + 26px + env(safe-area-inset-bottom,0px));
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:linear-gradient(135deg,#0B3D91,#1E6BD6);color:#fff;border-radius:20px;padding:12px 14px;box-shadow:0 14px 30px rgba(11,61,145,.40);}
+.qbtxt{display:flex;flex-direction:column;gap:1px;min-width:0;} .qbtxt b{font-size:14px;} .qbtxt small{font-size:11px;opacity:.85;}
+.qbbtn{border:0;border-radius:14px;padding:11px 16px;background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#2B1A00;font-weight:900;font-size:13.5px;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.homeview{padding-bottom:calc(var(--bn-h,64px) + 96px) !important;}
+/* كارت طلب مختصر في الرئيسية */
+.ordermini{display:flex !important;align-items:center;justify-content:space-between;gap:10px;width:calc(100% - 0px);text-align:right;cursor:pointer;border:0;font-family:inherit;color:inherit;padding:13px 14px !important;margin-bottom:10px;}
+.omtxt{display:flex;flex-direction:column;gap:2px;} .omtxt b{font-size:14px;} .omtxt small{font-size:12px;color:var(--muted);}
+/* طلباتي: فلاتر + خط تقدّم + تفاصيل مطوية */
+.otabs{display:flex;gap:8px;margin:2px 0 12px;}
+.otab{border:0;border-radius:999px;padding:8px 16px;font-family:inherit;font-size:13px;font-weight:800;color:var(--muted);background:var(--card);box-shadow:0 4px 10px rgba(11,61,145,.07);cursor:pointer;}
+.otab.on{background:var(--navy-deep);color:#fff;}
+html[data-theme="dark"] .otab.on{background:#1E6BD6;}
+.ordA .osteps{display:flex;justify-content:space-between;position:relative;margin:14px 6px 8px;}
+.ordA .osteps:before{content:"";position:absolute;top:9px;right:16%;left:16%;height:3px;background:var(--surface3);border-radius:2px;}
+.ost{position:relative;text-align:center;font-size:11.5px;color:var(--muted);width:33%;font-weight:600;}
+.ost i{display:block;margin:0 auto 5px;width:20px;height:20px;border-radius:50%;background:var(--surface3);border:3px solid var(--card);position:relative;}
+.ost.done i{background:#16A34A;} .ost.cur i{background:#F59E0B;box-shadow:0 0 0 4px rgba(245,158,11,.25);}
+.ost.done,.ost.cur{color:var(--ink);font-weight:800;}
+.odet{margin:6px 0 2px;} .odet summary{cursor:pointer;font-size:12.5px;font-weight:800;color:var(--navy-soft);padding:6px 0;list-style:none;}
+.odet summary::-webkit-details-marker{display:none;} .odet summary:after{content:" ▾";}
+.odet[open] summary:after{content:" ▴";}
+.delbtn.reorder{background:linear-gradient(135deg,#FBBF24,#F59E0B) !important;color:#2B1A00 !important;border:0 !important;font-weight:900;}
+/* شاشة الطلب: كروت قطاعات + بيانات موزع مختصرة */
+.sectiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.sectile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:right;border:2px solid transparent;border-radius:18px;background:var(--surface2);padding:12px;cursor:pointer;font-family:inherit;color:var(--ink);transition:transform .12s,box-shadow .12s;}
+.sectile:active{transform:scale(.98);}
+.sectile .sicon{font-size:24px;line-height:1;margin-bottom:2px;}
+.sectile b{font-size:14px;line-height:1.35;} .sectile small{font-size:11.5px;color:var(--muted);}
+.sectile .sok{color:#15803D;font-weight:800;} .sectile .sno{color:#DC2626;font-weight:800;}
+html[data-theme="dark"] .sectile .sok{color:#4ADE80;}
+.sectile.active{border-color:var(--navy-soft);background:var(--card);box-shadow:0 8px 20px rgba(30,107,214,.25);}
+.distsum{display:flex;align-items:center;gap:10px;padding:4px 0;}
+.dsic{width:40px;height:40px;border-radius:13px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+.dstxt{flex:1;min-width:0;display:flex;flex-direction:column;} .dstxt b{font-size:14.5px;} .dstxt small{font-size:12px;color:var(--muted);}
+.dsedit{border:0;background:var(--surface2);color:var(--navy);font-weight:800;font-size:12.5px;border-radius:12px;padding:8px 14px;cursor:pointer;font-family:inherit;}
+@media (min-width:900px){
+  .sectiles{grid-template-columns:repeat(4,1fr);}
+  .quickbar{max-width:940px;}
+}
 </style>
 </head>
 <body>
@@ -2147,7 +2185,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v245';
+const APP_BUILD = 'v246';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2330,6 +2368,7 @@ const state = {
 
   myOrders:[],
   myOrdersLoading:false,
+  quick:{}, distEdit:false, myOrdersFilter:'all',
   myOrdersSearched:false,
   myOrdersAuthMissing:false,
   myOrdersPhone:'',
@@ -5700,42 +5739,89 @@ function renderToolsPanel_(){
 
 // 🏠 الشاشة الرئيسية (v237): ترحيب + أرقام سريعة + مربعات الأقسام. مفيش منطق جديد —
 // كل مربع بينفّذ نفس data-act القديم (goto / open-cart-review / open-manage-*).
+// عدد منتجات القطاع وهل فيه حاجة متاحة (لكروت القطاعات في شاشة الطلب)
+function sectorStats_(main){
+  const prods = new Set(); let avail = false;
+  CATALOG.forEach(d=>{ if(d.main===main) prods.add(d.product); });
+  prods.forEach(p=>{ if(!isProductFullyUnavailable(main, p)) avail = true; });
+  return { n: prods.size, avail };
+}
+
+// ===== الرئيسية: «اللي بتطلبه كتير» من تاريخ طلباتك + آخر طلباتك =====
+function frequentItems_(){
+  const m = new Map();
+  (state.myOrders||[]).forEach(o=>{ (o.items||[]).forEach(it=>{
+    if(!it || !it.product) return;
+    const k = cartKey_(it), e = m.get(k) || { key:k, item:it, count:0, last:it, lastTs:0 };
+    e.count++;
+    if((o.ts||0) >= e.lastTs){ e.lastTs = o.ts||0; e.last = it; }
+    m.set(k, e);
+  }); });
+  return [...m.values()].sort((a,b)=> b.count-a.count || b.lastTs-a.lastTs).slice(0,5);
+}
+function quickTotals_(){
+  let lines = 0, units = 0;
+  Object.keys(state.quick||{}).forEach(k=>{ const q = Number(state.quick[k])||0; if(q>0){ lines++; units += q; } });
+  return { lines, units };
+}
+function agoText_(ts){
+  const d = Math.floor((Date.now() - (Number(ts)||0)) / 86400000);
+  return d<=0 ? 'النهارده' : d===1 ? 'امبارح' : d<11 ? 'منذ '+d+' أيام' : 'منذ '+d+' يوم';
+}
+function orderUnits_(o){ return (o.items||[]).reduce((t,it)=> t + (Number(it.qty)||0), 0); }
+function orderStepsIdx_(o){ const st = normStatus_(o.status); return st===STATUS_DONE ? 2 : st===STATUS_PREPARING ? 1 : 0; }
+function orderMini_(o){
+  const si = statusInfo_(o.status), n = (o.items||[]).length;
+  return `
+    <button class="card ordermini" data-act="goto" data-view="myorders">
+      <span class="omtxt"><b>#${esc(orderNoDisplay_(o))} · ${n} ${n===1?'صنف':'أصناف'}</b><small>${agoText_(o.ts)} · ${orderUnits_(o)} وحدة</small></span>
+      <span class="statusbadge ${si.cls}">${si.icon} ${esc(si.label)}</span>
+    </button>`;
+}
+
 function renderHomeView(){
   const u = state.currentUser || {};
   const h = new Date().getHours();
   const greet = h < 5 ? 'سهرانين النهاردة' : h < 12 ? 'صباح الخير' : h < 18 ? 'نهارك سعيد' : 'مساء الخير';
   const name = asText(u.distName) || asText(u.username) || '';
-  const cartN = (state.cart||[]).length || (state.pendingDraft && state.pendingDraft.cart && state.pendingDraft.cart.length) || 0;
-  const myN = state.myOrdersSearched ? (state.myOrders||[]).length : '—';
-  const tile_ = (cls, icon, title, sub, act, attrs, badge) => `
-    <button class="hometile ${cls}" data-act="${act}" ${attrs||''}>
-      <span class="hticon">${ico_(icon,22)}</span>
-      <span class="httext"><b>${title}</b><small>${sub}</small></span>
-      ${badge ? `<i class="htbadge">${badge}</i>` : ''}
-    </button>`;
+  const freq = frequentItems_(), qt = quickTotals_();
+  const recent = (state.myOrders||[]).slice(0,3);
+  const loading = state.myOrdersLoading && !state.myOrdersSearched;
+  const quickBlock = freq.length ? `
+    <div class="homesec">اللي بتطلبه كتير <small>زوّد الكمية وابعت</small></div>
+    <div class="card quickcard">
+      ${freq.map((e,i)=>{
+        const q = state.quick[e.key] || 0, un = computeUnavailable_(e.item.main, e.item.product, e.item.color);
+        return `
+        <div class="qrow">
+          <div class="qname"><b>${esc(e.item.product)}${e.item.color?' — '+esc(e.item.color):''}</b>
+            <small>${un?'<i class="qun">غير متوفر</i> · ':''}آخر مرة: ${esc(e.last.qty)} ${esc(e.last.unitType||'')}</small></div>
+          <div class="stepper2">
+            <button data-act="quick-dec" data-i="${i}" aria-label="نقّص">−</button>
+            <em>${q}</em>
+            <button data-act="quick-inc" data-i="${i}" aria-label="زوّد">+</button>
+          </div>
+        </div>`; }).join('')}
+    </div>`
+    : (loading ? `<div class="card homehint">جارٍ تحميل طلباتك…</div>`
+      : `<div class="card homehint"><b>لسه ما بعتّش طلبات</b><small>أول ما تبعت طلب، هتلاقي هنا الأصناف اللي بتطلبها كتير عشان تعيدها بضغطة.</small></div>`);
   return `
   <main class="homeview">
     <section class="homehero">
       <div class="herotxt">
         <span class="herohi">${greet}</span>
         <h2>${esc(name) || 'أهلاً بيك'}</h2>
-        <p>اختار اللي عايز تعمله من هنا</p>
+        <p>عايز تطلب نواقص؟ اختار الأصناف وابعت في أقل من دقيقة</p>
       </div>
-      <button class="herocta" data-act="goto" data-view="order">${ico_('plus',18)} طلب جديد</button>
+      <button class="herocta" data-act="goto" data-view="order">${ico_('plus',18)} ابدأ طلب جديد</button>
     </section>
-
-    <div class="homekpis">
-      <button class="hkpi s-green" data-act="open-cart-review"><b>${cartN}</b><span>في السلة</span></button>
-      <button class="hkpi s-purple" data-act="goto" data-view="myorders"><b>${myN}</b><span>طلباتي</span></button>
-      <button class="hkpi s-navy" data-act="goto" data-view="order"><b>${esc(state.warehouse||'—')}</b><span>المخزن</span></button>
-    </div>
-
-    <div class="homesec">الأقسام</div>
-    <div class="hometiles">
-      ${tile_('c-blue','newOrder','طلب جديد','اختار الأصناف وابعت','goto','data-view="order"')}
-      ${tile_('c-purple','track','طلباتي','تابع حالة طلباتك','goto','data-view="myorders"')}
-      ${tile_('c-green','cart','السلة', cartN ? cartN+' صنف جاهز للإرسال' : 'فاضية دلوقتي','open-cart-review','', cartN||'')}
-    </div>
+    ${quickBlock}
+    ${recent.length ? `<div class="homesec">طلباتك الأخيرة <a data-act="goto" data-view="myorders">كل الطلبات ‹</a></div>${recent.map(orderMini_).join('')}` : ''}
+    ${qt.lines ? `
+    <div class="quickbar">
+      <span class="qbtxt"><b>${qt.lines} ${qt.lines===1?'صنف':'أصناف'} · ${qt.units} وحدة</b><small>هتتضاف للطلب وتراجعها قبل الإرسال</small></span>
+      <button class="qbbtn" data-act="quick-go">كمّل وابعت ←</button>
+    </div>` : ''}
   </main>`;
 }
 
@@ -5992,9 +6078,15 @@ function renderOrderView(){
     'حشوات': 'sc-7',
     'اخري': 'sc-8'
   };
-  const sectorChips = SECTOR_CHIPS.map(g=>`
-    <button class="chip ${g===OTHER_SECTOR?'gold':(SECTOR_COLOR_CLASS_[g]||'')} ${state.mainGroup===g?'active':''}" data-act="set-group" data-val="${esc(g)}">${esc(g)}</button>
-  `).join('');
+  const sectorChips = SECTOR_CHIPS.map(g=>{
+    const st = g===OTHER_SECTOR ? null : sectorStats_(g);
+    const ic = g.includes('كومبن') ? '🚪' : g.includes('كرافت') ? '🪟' : g.includes('اكسسوار') ? '🔩' : g===OTHER_SECTOR ? '📋' : '📦';
+    const sub = g===OTHER_SECTOR ? 'اكتب اللي محتاجه' : (st.n ? `${st.n} ${st.n===1?'منتج':'منتجات'} · ${st.avail?'<span class="sok">متاح</span>':'<span class="sno">نفد</span>'}` : '—');
+    return `
+    <button class="sectile ${g===OTHER_SECTOR?'gold':(SECTOR_COLOR_CLASS_[g]||'')} ${state.mainGroup===g?'active':''}" data-act="set-group" data-val="${esc(g)}">
+      <span class="sicon">${ic}</span><b>${esc(g)}</b><small>${sub}</small>
+    </button>`;
+  }).join('');
 
   let subSection = '';
   let productSection = '';
@@ -6281,6 +6373,12 @@ function renderOrderView(){
       ${(state.warehouse && !STOCK_TRACKED_WAREHOUSES_.includes(state.warehouse)) ? `
       <div class="warehousewarn">⚠ الأصناف في مخزن "${esc(state.warehouse)}" غير معتمدة إلا وقت التحميل فقط، نظرًا لعدم حجز بضاعة مسبقًا.</div>
       ` : ''}`}
+      ${(!state.distEdit && state.distName && state.distRegion && state.distPhone) ? `
+      <div class="distsum">
+        <span class="dsic">👤</span>
+        <span class="dstxt"><b>${esc(state.distName)}</b><small>${esc(state.distRegion)} · ${esc(state.distPhone)}</small></span>
+        <button class="dsedit" data-act="dist-edit">تعديل</button>
+      </div>` : `
       <h2><span class="num">2</span>بيانات الموزع</h2>
       <div class="row3">
         <div class="field">
@@ -6295,13 +6393,13 @@ function renderOrderView(){
           <label>الموبايل *</label>
           <input type="tel" placeholder="01xxxxxxxxx" value="${esc(state.distPhone)}" data-act="set-distphone">
         </div>
-      </div>
+      </div>`}
     </div>`;
 
   const groupCard = `
     <div class="card" id="sec-group">
       <h2><span class="num">3</span>اختار القطاع</h2>
-      <div class="chipwrap chipgrid4">${sectorChips}</div>
+      <div class="sectiles">${sectorChips}</div>
     </div>`;
 
   const noteSection = `
@@ -6381,41 +6479,43 @@ function renderMyOrdersView(){
   } else if(state.myOrders.length===0 && state.myOrdersSearched){
     content = `<div class="emptystate"><div class="ic">${ico_('inbox',44)}</div><div>مفيش طلبات ظاهرة — جرب تدوّر برقم الهاتف</div></div>`;
   } else {
-    content = state.myOrders.map(o=>{
-      const date = new Date(o.ts);
-      const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' - ' + date.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
-      const isDone = o.status===STATUS_DONE;
-      const si = statusInfo_(o.status);
+    const flt = state.myOrdersFilter || 'all';
+    const list = (state.myOrders||[]).filter(o=> flt==='all' ? true : flt==='done' ? normStatus_(o.status)===STATUS_DONE : normStatus_(o.status)!==STATUS_DONE);
+    const tabs = [['all','الكل'],['active','جاري'],['done','اتسلّم']].map(([k,t])=>`<button class="otab ${flt===k?'on':''}" data-act="orders-filter" data-k="${k}">${t}</button>`).join('');
+    content = `<div class="otabs">${tabs}</div>` + (list.length ? list.map(o=>{
+      const si = statusInfo_(o.status), st = normStatus_(o.status), idx = orderStepsIdx_(o), n = (o.items||[]).length;
+      const steps = st===STATUS_EDITED ? '' : `<div class="osteps">${['استلمنا','بنجهّز','اتسلّم'].map((t,i)=>`<div class="ost ${i<idx?'done':''} ${i===idx?'cur':''}"><i></i>${t}</div>`).join('')}</div>`;
       return `
-      <div class="card ordercard">
+      <div class="card ordercard ordA">
         <div class="ohead">
           <div>
-            <div class="dname">${esc(o.distName)}</div>
-            <div class="dmeta">${esc(o.distRegion||'')} · ${dateStr}</div>
             <div class="oid">#${esc(orderNoDisplay_(o))}${o.editedFrom ? ` <span class="statusbadge edited" style="padding:1px 6px;font-size:10.5px;">${ico_('editIcon',11)} معدّل</span>` : ''}</div>
+            <div class="dmeta">${agoText_(o.ts)} · ${n} ${n===1?'صنف':'أصناف'} · ${orderUnits_(o)} وحدة</div>
           </div>
           <span class="statusbadge ${si.cls}">${si.icon} ${esc(si.label)}</span>
         </div>
-        <div class="items">
-          ${o.items.map(it=>`
-            <div class="item-row"><span>${esc(it.product)}${it.color?' — '+esc(it.color):''}</span><b>×${it.qty} ${esc(it.unitType||'')}</b></div>
-          `).join('')}
-        </div>
+        ${steps}
+        <details class="odet"><summary>تفاصيل الأصناف</summary>
+          <div class="items">
+            ${(o.items||[]).map(it=>`<div class="item-row"><span>${esc(it.product)}${it.color?' — '+esc(it.color):''}</span><b>×${it.qty} ${esc(it.unitType||'')}</b></div>`).join('')}
+          </div>
+        </details>
         <div class="adminbtnrow adminbtnrow-compact">
-          ${normStatus_(o.status)===STATUS_RECEIVED ? `
+          <button class="delbtn reorder" data-act="reorder" data-id="${esc(o.id)}" title="ضيف أصناف الطلب ده للطلب الجديد">↻ أعد الطلب</button>
+          ${st===STATUS_RECEIVED ? `
           <button class="delbtn edit" data-act="edit-my-order" data-id="${esc(o.id)}" title="عدّل على الطلب ده">
             ${ico_('editIcon',13)} تعديل
           </button>` : ''}
           <button class="delbtn pdf" data-act="share-shortage" data-id="${esc(o.id)}" ${state.shareShortageBusy?'disabled':''}>
             ${ico_('imageIcon',13)} ${shortageBtnLabel_(o.id)}
           </button>
-          ${normStatus_(o.status)===STATUS_RECEIVED ? `
+          ${st===STATUS_RECEIVED ? `
           <button class="delbtn" data-act="delete-my-order" data-id="${esc(o.id)}" title="احذف الطلب ده">
             ${ico_('trashIcon',13)} حذف
           </button>` : ''}
         </div>
       </div>`;
-    }).join('');
+    }).join('') : `<div class="emptystate"><div>مفيش طلبات في القسم ده</div></div>`);
   }
 
   return `
@@ -7270,6 +7370,10 @@ function render(){
     bindEvents();
     applyFixedHeaderSpacing_();
     applyFixedFooterSpacing_();
+    // الرئيسية محتاجة طلباتك القديمة (اللي بتطلبه كتير + آخر طلباتك): نحمّلها مرة واحدة في الخلفية
+    if(state.view==='home' && state.currentUser && state.currentUser.username!=='admin' && !state.myOrdersSearched && !state.myOrdersLoading && getUserToken()){
+      setTimeout(()=>{ if(!state.myOrdersSearched && !state.myOrdersLoading) refreshMyOrders(); }, 0);
+    }
     // ترقيم الخطوات الظاهرة بس 1،2،3… (الخطوات المخفية كانت بتسيب فجوات: 1،2،3،7،8)
     if(state.view==='order'){
       let n=0; document.querySelectorAll('#app .card h2 .num').forEach(el=>{ if(!el.closest('.modal, .modalbg, [role="dialog"]')) el.textContent=String(++n); });
@@ -7759,6 +7863,41 @@ async function onActionInner(act, el){
       break;
     case 'toggle-theme': toggleTheme_(); break;
     case 'toggle-tools': state.toolsOpen = !state.toolsOpen; render(); break;
+    // ===== الرئيسية الجديدة: إضافة سريعة + أعد الطلب + فلتر طلباتي + تعديل بيانات الموزع =====
+    case 'quick-inc': case 'quick-dec':{
+      const e = frequentItems_()[Number(el.getAttribute('data-i'))];
+      if(!e) break;
+      const cur = Number(state.quick[e.key])||0;
+      state.quick[e.key] = Math.max(0, act==='quick-inc' ? cur + 1 : cur - 1);
+      if(!state.quick[e.key]) delete state.quick[e.key];
+      render();
+      break;
+    }
+    case 'quick-go':{
+      const list = frequentItems_().filter(e => (Number(state.quick[e.key])||0) > 0);
+      list.forEach(e => cartAdd_(Object.assign({}, e.last, {
+        qty: Number(state.quick[e.key]),
+        unavailable: computeUnavailable_(e.last.main, e.last.product, e.last.color) })));
+      const n = list.length;
+      state.quick = {};
+      state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view);
+      state.view = 'order'; render();
+      showToast('اتضاف '+n+(n===1?' صنف':' أصناف')+' للطلب — راجعهم وابعت');
+      break;
+    }
+    case 'reorder':{
+      const o = (state.myOrders||[]).find(x=>String(x.id)===String(el.getAttribute('data-id')));
+      if(!o || !(o.items||[]).length) break;
+      (o.items||[]).forEach(it => cartAdd_(Object.assign({}, it, { unavailable: computeUnavailable_(it.main, it.product, it.color) })));
+      state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view);
+      state.view = 'order'; render();
+      showToast('اتضاف '+(o.items||[]).length+' صنف من الطلب #'+orderNoDisplay_(o));
+      break;
+    }
+    case 'orders-filter':
+      state.myOrdersFilter = el.getAttribute('data-k') || 'all'; render(); break;
+    case 'dist-edit':
+      state.distEdit = true; render(); break;
     case 'goto':{
       state.toolsOpen = false;   // قايمة الأدوات تتقفل أول ما نتنقل
       const v = el.getAttribute('data-view');
