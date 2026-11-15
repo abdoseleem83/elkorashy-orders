@@ -70,8 +70,16 @@ await page.click('.qbox [data-act="confirm-staged"]'); await page.waitForTimeout
 st = await page.evaluate(()=>state.cart.map(c=>c.color+':'+c.qty).sort());
 ok('اتضاف اللونين بكمياتهم للسلة', st.length===2 && st.includes('ابيض:2') && st.includes('رمادي:3'), JSON.stringify(st));
 
-// ── مفيش صف فلتر ألوان منفصل: الألوان جوه الكارت بس
-ok('مفيش فلتر ألوان منفصل', (await page.$('.cfilter'))===null && (await page.$$('.pcard')).length===4);
+// ── بعد اختيار القطاع: قايمة القطاعات تختفي والأصناف تظهر على طول + ترتيب «الموجود الأول»
+ok('قايمة اختيار القطاع مخفية بعد ما القطاع اتحدد', (await page.$('#sec-group'))===null);
+const order = await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()));
+ok('الترتيب: الموجود الأول (حلق كومبن ← قليل ← أعواد بس ← غير متوفر)', order.join('|')==='حلق كومبن|حلق قليل|سقاس مفصلي|ضلفة مفصلي', order.join('|'));
+// ── «غيّر القطاع» في الشريط الثابت
+ok('شريط الهيدر الثابت فيه «غيّر المخزن» و«غيّر القطاع»', /غيّر المخزن/.test(await page.$eval('.ministrip2027', e=>e.textContent)) && /غيّر القطاع/.test(await page.$eval('.ministrip2027', e=>e.textContent)));
+ok('الشريط fixed (مش بيسكرول مع الصفحة)', (await page.$eval('.fixedhead-outer', e=>getComputedStyle(e).position))==='fixed');
+await page.click('.ministrip2027 [data-act="strip-go"][data-val="group"]'); await page.waitForTimeout(300);
+ok('«غيّر القطاع» بيرجّع قايمة القطاعات ويخفي الأصناف', (await page.$('#sec-group'))!==null && (await page.$$('.pcard')).length===0);
+await page.click('#sec-group [data-act="set-group"][data-val="'+K+'"]'); await page.waitForTimeout(300);
 ok('مفيش أخطاء جافاسكريبت', errors.length===0, errors.join(' | '));
 await browser.close();
 console.log(fails ? ('❌ فشل '+fails) : '✅ كله تمام'); process.exit(fails?1:0);

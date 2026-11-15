@@ -1266,6 +1266,10 @@ header.top .backnav{width:38px;height:38px;border-radius:13px;padding:0;font-siz
 .mini2027.s-green{--c:#2FD08A;--cbg:rgba(47,208,138,.15);background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));}
 .mini2027.s-gold{--c:#FFC53D;--cbg:rgba(255,197,61,.15);background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));}
 .mini2027.s-purple{--c:#B497FF;--cbg:rgba(169,139,255,.16);background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));}
+.mini2027.chg{border-style:dashed;}
+.mini2027.chg b{font-size:13px;}
+.mini2027.chg span{color:var(--c);font-weight:800;}
+.mini2027 b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 .mini2027.s-navy{--c:#4FB6FF;--cbg:rgba(79,182,255,.15);background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));}
 /* الصفحات اللي ماتستخدمش الشريط (شاشة الدخول) بتفضل بألوانها المصمتة */
 .authfeat2027 .mini2027{color:#fff;border:0;}
@@ -1917,6 +1921,7 @@ html[data-theme="dark"] .otab.on{background:#1E6BD6;}
 .odet[open] summary:after{content:" ▴";}
 .delbtn.reorder{background:linear-gradient(135deg,#FBBF24,#F59E0B) !important;color:#2B1A00 !important;border:0 !important;font-weight:900;}
 /* شاشة الطلب: كروت قطاعات + بيانات موزع مختصرة */
+.sectiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .sectile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:right;border:2px solid transparent;border-radius:18px;background:var(--surface2);padding:12px;cursor:pointer;font-family:inherit;color:var(--ink);transition:transform .12s,box-shadow .12s;}
 .sectile:active{transform:scale(.98);}
 .sectile b{font-size:14px;line-height:1.35;} .sectile small{font-size:11.5px;color:var(--muted);}
@@ -1957,11 +1962,7 @@ header.top .iconbtn.themepill{width:54px;border-radius:999px;}
 .lo-detail{background:var(--surface2);color:var(--navy);}
 .lo-reorder{background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#2B1A00;box-shadow:0 8px 18px rgba(245,158,11,.35);}
 /* كروت القطاعات: أيقونة جوه مربع ملوّن */
-.sectile .sicon{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:21px;margin-bottom:4px;background:var(--surface3);}
  .sectile.sc-2 .sicon{background:#FEF3C7;} .sectile.sc-3 .sicon{background:#EDE9FE;}
-.sectile.sc-4 .sicon{background:#DCFCE7;} .sectile.sc-5 .sicon{background:#FCE7F3;} .sectile.sc-6 .sicon{background:#CCFBF1;}
-.sectile.sc-7 .sicon{background:#FFEDD5;} .sectile.sc-8 .sicon,.sectile.gold .sicon{background:#EDE9FE;}
-html[data-theme="dark"] .sectile .sicon{background:rgba(255,255,255,.10) !important;}
 .homesectors .sectile{background:var(--card);border:1px solid var(--line);box-shadow:var(--card-shadow,0 6px 16px rgba(11,61,145,.07));}
 .sectile small .sok{color:#15803D;font-weight:800;} .sectile small .sno{color:#DC2626;font-weight:800;}
 html[data-theme="dark"] .sectile small .sno{color:#FCA5A5;}
@@ -2094,7 +2095,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v248';
+const APP_BUILD = 'v249';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -5548,8 +5549,8 @@ function renderHeader(){
   <div class="ministrip2027">
     ${miniTile_('s-green', (state.cart||[]).length, 'السلة', 'strip-go" data-val="cart')}
     ${miniTile_('s-gold', (state.staged||[]).length, 'قيد الاختيار', 'strip-go" data-val="staged')}
-    ${miniTile_('s-purple', esc(state.warehouse||'—'), 'المخزن', 'strip-go" data-val="wh')}
-    ${miniTile_('s-navy', esc(state.mainGroup||'—'), 'القطاع', 'strip-go" data-val="group')}
+    ${miniTile_('s-purple chg', esc(state.warehouse||'—'), '⇄ غيّر المخزن', 'strip-go" data-val="wh')}
+    ${miniTile_('s-navy chg', esc(state.mainGroup||'—'), '⇄ غيّر القطاع', 'strip-go" data-val="group')}
   </div>` : '';
   const hasBack_ = !!(state.viewHistory && state.viewHistory.length);
   // 🏠 في الرئيسية الهيدر بيبقى بتاع الترحيب (اتجاه أ): لوجو EK + «أهلاً، الاسم» + المخزن
@@ -6130,13 +6131,18 @@ function renderOrderView(){
       const prodMap = productsForGroup(state.mainGroup, subToUse);
       // البحث: لو فيه بحث عام في الاكسسوارات بنستخدمه، وإلا بنستخدم البحث العادي جوه التصنيف
       const q = (accGlobalQ || state.productSearch.trim()).toLowerCase();
-      // ترتيب الأصناف رجع زي ما كان — بترتيب الكاتالوج الأصلي، من غير ترتيب حسب التوفر
       let names = [...prodMap.keys()].filter(n => !q || n.toLowerCase().includes(q));
-      // ترتيب حسب توفر الرصيد: متوفر أولًا، بعده كمية قليلة، بعده متاح اعواد،
-      // وأخيرًا مفيش رصيد خالص — والمنتجات الموقوفة (تعطيل يدوي) في الآخر خالص.
+      // ترتيب حسب توفر الرصيد (الموجود الأول) — والمنتجات الموقوفة (تعطيل يدوي) في الآخر خالص.
       if(warehouseAffectsStock(state.mainGroup)){
-        const levelRank_ = lvl => lvl==='ok' ? 0 : lvl==='low' ? 1 : lvl==='crit' ? 2 : lvl==='out' ? 3 : 4;
-        const rankFor_ = n => isProductFullyUnavailable(state.mainGroup, n) ? 5 : levelRank_(productStockLevel(state.mainGroup, n));
+        // الموجود الأول: كل الألوان متاحة ← بعض الألوان متاحة ← قليل ← أعواد بس ← غير متوفر ← موقوف
+        const rankFor_ = n => {
+          if(isProductFullyUnavailable(state.mainGroup, n)) return 5;
+          const g = productAvail_(state.mainGroup, n).groups;
+          if(g.ok.length) return (g.low.length || g.crit.length || g.out.length) ? 1 : 0;
+          if(g.low.length) return 2;
+          if(g.crit.length) return 3;
+          return 4;
+        };
         names = names
           .map(n=>({n, r:rankFor_(n)}))
           .sort((a,b)=>a.r-b.r)
@@ -6296,7 +6302,7 @@ function renderOrderView(){
   // إن أزرار القطاعات كانت بتظهر عمودي (واحد تحت التاني) رغم إن الكود بتاعها
   // نفسه أفقي — العمود كان ضيق أوي ومكنش بيسع غير زرار واحد في الصف.
   const orderColumns = `
-    ${groupCard}
+    ${state.mainGroup ? '' : groupCard}
     ${subSection}
     ${productSection}
     ${otherSection}
@@ -7814,7 +7820,9 @@ async function onActionInner(act, el){
         if(state.editingOrderId){ showToast('مينفعش تغيّر المخزن وانت بتعدّل طلب'); }
         else { state.warehouse = ''; render(); }
       } else if(v==='group'){
-        const n = document.getElementById('sec-group'); if(n) scrollTo_(n);
+        // «غيّر القطاع»: نرجّع قايمة القطاعات (الأصناف قيد الاختيار والسلة بتفضل زي ما هي)
+        state.mainGroup = null; state.subGroup = null; state.productSearch = ''; state.accGlobalSearch = '';
+        render(); window.scrollTo({ top: 0, behavior:'smooth' });
       } else if(v==='staged'){
         const n = document.querySelector('[data-stagedkey]') || document.querySelector('.currentctx');
         if(n) scrollTo_(n); else showToast('مفيش أصناف قيد الاختيار — اختار قطاع وصنف');
