@@ -54,7 +54,7 @@ ok('بيانات الموزع في سطر مختصر بدل الحقول', (awai
 await page.click('[data-act="dist-edit"]'); await page.waitForTimeout(250);
 ok('زرار «تعديل» بيفتح الحقول', (await page.$('[data-act="set-distname"]'))!==null);
 const tiles = await page.$$eval('.sectile', e=>e.map(x=>x.textContent.replace(/\s+/g,' ').trim()));
-ok('كروت القطاعات (4) بعدد المنتجات والتوفّر', tiles.length>=3 && tiles.some(t=>/قطاعات PVC كومبن\s*1 صنف · متاح 1/.test(t)) && tiles.some(t=>/اكسسوارات\s*1 صنف · نفد/.test(t)), tiles.join(' | '));
+ok('كروت القطاعات (4) بعدد المنتجات والتوفّر', tiles.length>=3 && tiles.some(t=>/قطاعات PVC كومبن\s*1 صنف · متاح 1/.test(t)) && tiles.some(t=>/اكسسوارات pvc\s*1 صنف · نفد/.test(t)), tiles.join(' | '));
 const nums = await page.$$eval('#app .card h2 .num', e=>e.map(x=>x.textContent.trim()));
 ok('أرقام الخطوات متسلسلة', nums.every((n,i)=>n===String(i+1)), nums.join(','));
 ok('مفيش أخطاء جافاسكريبت', errors.length===0, errors.join(' | '));

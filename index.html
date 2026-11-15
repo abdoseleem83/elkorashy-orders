@@ -1074,8 +1074,6 @@ button.mini2027{cursor:pointer;}
 .cqrow2-color{font-size:13px;font-weight:800;color:var(--navy);}
 .cqrow2-line{display:flex;align-items:center;gap:8px;}
 
-.chipwrap.chipgrid3{display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:7px;}
-.chipwrap.chipgrid3 .chip{padding:9px 6px;text-align:center;}
 
 /* cart grouped by sector */
 .cartgroup{margin-bottom:14px;}
@@ -2037,6 +2035,7 @@ header.top ~ * .mini2027.sectorbtn,.mini2027.sectorbtn,html[data-theme] .mini202
 .hb-whbtn{display:inline-flex;align-items:center;gap:5px;border:0;background:transparent;padding:0;font:inherit;color:inherit;cursor:pointer;}
 .mini2027.sectorsel{position:relative;}
 .mini2027.sectorsel select{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer;border:0;}
+.otherlink{display:block;width:100%;margin-top:12px;border:1.5px dashed var(--navy-soft);background:transparent;color:var(--navy);border-radius:14px;padding:12px;font-family:inherit;font-weight:900;font-size:13.5px;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -2103,7 +2102,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v254';
+const APP_BUILD = 'v255';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2211,7 +2210,6 @@ const state = {
 
   // sector / product staging
   mainGroup:null,
-  subGroup:null,
   productSearch:'',
   // ===== تبويب "إدارة" (PIN منفصل عن الأدمن — متخزّن في Script Properties) =====
   manageUnlocked:false,
@@ -2486,6 +2484,18 @@ async function ensureLibs_(){
   }
 }
 
+// 🧩 قطاع «اكسسوارات pvc» = تجميع (اكسسوارات اكسا + اكسسوارات خارجيه + شاتر + ابواب WPC) في أيقونة واحدة.
+// ده تجميع للعرض بس: كل صنف بيفضل بالـ main الأصلي بتاعه (الوحدات والأسعار والرصيد وعرض السعر زي ما هي).
+const ACC_GROUP = 'اكسسوارات pvc';
+function isAccMain_(m){ return !!m && (m.includes('اكسسوارات') || m==='شاتر' || m==='ابواب WPC'); }
+function groupOfMain_(m){ return isAccMain_(m) ? ACC_GROUP : m; }
+function sectorMains_(g){ return g===ACC_GROUP ? MAIN_GROUPS.filter(isAccMain_) : [g]; }
+// القطاعات اللي بتظهر في الرئيسية وشاشة الطلب (أصناف أخرى بتتفتح من جوه اكسسوارات pvc ومن القايمة المنسدلة)
+function orderSectors_(){
+  const out = []; let acc = false;
+  MAIN_GROUPS.forEach(m=>{ if(isAccMain_(m)){ if(!acc){ out.push(ACC_GROUP); acc = true; } } else out.push(m); });
+  return out;
+}
 function productsForGroup(main, sub){
   const seen = new Map();
   CATALOG.filter(d=>d.main===main && (!sub || d.sub===sub)).forEach(d=>{
@@ -2493,12 +2503,6 @@ function productsForGroup(main, sub){
     seen.get(d.product).push(d);
   });
   return seen;
-}
-function subGroupsForMain(main){
-  return [...new Set(CATALOG.filter(d=>d.main===main).map(d=>d.sub).filter(Boolean))];
-}
-function sectorNeedsSubFilter(main){
-  return main==='ابواب WPC';   // الاكسسوارات بقت أصناف على طول (من غير تصنيفات فرعية)
 }
 function colorsForProduct(main, product){
   return CATALOG.filter(d=>d.main===main && d.product===product);
@@ -3851,7 +3855,8 @@ function toggleStagedProduct(main, product){
     const selectedColors = existing.length ? existing.map(it=>it.color) : (colorRequired ? [] : ['']);
     const qtys = {}, unitsMap = {};
     existing.forEach(it=>{ qtys[it.color] = it.qty; unitsMap[it.color] = it.unitType; });
-    if(!colorRequired && existing.length===0){ qtys[''] = 1; unitsMap[''] = defaultUnit; }
+    // الكمية بتتسيب فاضية (الموزع يكتبها بنفسه) — الوحدة بس بتتحدد
+    if(!colorRequired && existing.length===0){ unitsMap[''] = defaultUnit; }
 
     state.staged.push({
       key, main, product, colorRequired,
@@ -5560,7 +5565,7 @@ function renderHeader(){
       <b>${esc(state.mainGroup||'اختار القطاع')}</b><span>⇄ غيّر القطاع ▾</span>
       <select data-act="pick-sector-select" aria-label="غيّر القطاع">
         ${state.mainGroup ? '' : '<option value="" selected disabled>اختار القطاع</option>'}
-        ${SECTOR_CHIPS.map(g=>`<option value="${esc(g)}" ${g===state.mainGroup?'selected':''}>${esc(g)}</option>`).join('')}
+        ${orderSectors_().concat([OTHER_SECTOR]).map(g=>`<option value="${esc(g)}" ${g===state.mainGroup?'selected':''}>${esc(g)}</option>`).join('')}
       </select>
     </div>
   </div>` : '';
@@ -5631,16 +5636,18 @@ function renderToolsPanel_(){
 // ===== كروت القطاعات (الرئيسية + شاشة الطلب) =====
 // عدد أصناف القطاع + كام صنف متاح وكام صنف غير متوفر (أعداد حقيقية).
 // «غير متوفر» = موقوف من الأدمن، أو (في المخزن اللي بيتتبع رصيده) مفيش منه رصيد خالص.
-function sectorStats_(main){
-  const prods = new Set();
-  CATALOG.forEach(d=>{ if(d.main===main) prods.add(d.product); });
-  const tracked = warehouseAffectsStock(main) && !state.catalogError;
-  let avail = 0, out = 0;
-  prods.forEach(p=>{
-    const lvl = isProductFullyUnavailable(main, p) ? 'out' : (tracked ? productStockLevel(main, p) : 'ok');
-    if(lvl==='out') out++; else avail++;
+function sectorStats_(g){
+  const seen = new Set(); let avail = 0, out = 0, tracked = false;
+  sectorMains_(g).forEach(m=>{
+    const t = warehouseAffectsStock(m) && !state.catalogError;
+    if(t) tracked = true;
+    productsForGroup(m, null).forEach((_, p)=>{
+      const k = m + '||' + p; if(seen.has(k)) return; seen.add(k);
+      const lvl = isProductFullyUnavailable(m, p) ? 'out' : (t ? productStockLevel(m, p) : 'ok');
+      if(lvl==='out') out++; else avail++;
+    });
   });
-  return { n: prods.size, avail, out, tracked };
+  return { n: seen.size, avail, out, tracked };
 }
 function sectorSubHtml_(g){
   if(g===OTHER_SECTOR) return 'اكتب اللي محتاجه';
@@ -5661,7 +5668,7 @@ const SECTOR_ART_ = [
   { re:/شاتر/, g:['#34D3C5','#0E8F86'], svg:'<rect x="8" y="7" width="32" height="6" rx="2"/><path d="M10 17h28M10 22h28M10 27h28M10 32h28"/><rect x="21" y="36" width="6" height="5" rx="1.5" class="f"/>' },
   { re:/WPC|wpc|ابواب/, g:['#F08A5D','#C2410C'], svg:'<rect x="12" y="5" width="24" height="38" rx="2.5"/><rect x="16" y="10" width="7" height="10" rx="1" class="f"/><rect x="25" y="10" width="7" height="10" rx="1" class="f"/><rect x="16" y="24" width="16" height="13" rx="1" class="f"/><circle cx="31" cy="30" r="1.5" class="s"/>' },
   { re:/خارجي/, g:['#64748B','#334155'], svg:'<rect x="9" y="19" width="9" height="10" rx="2" class="f"/><path d="M18 24h20a3 3 0 0 1 0 6h-6"/><circle cx="13.5" cy="24" r="1.4" class="s"/>' },
-  { re:/اكسسوار/, g:['#2DD4A0','#0F9D6B'], svg:'<rect x="9" y="8" width="12" height="32" rx="2.5"/><rect x="27" y="8" width="12" height="32" rx="2.5"/><path d="M21 14h6M21 24h6M21 34h6"/><circle cx="15" cy="16" r="1.4" class="s"/><circle cx="15" cy="32" r="1.4" class="s"/><circle cx="33" cy="16" r="1.4" class="s"/><circle cx="33" cy="32" r="1.4" class="s"/>' },
+  { re:/اكسسوار|شاتر|WPC/, g:['#2DD4A0','#0F9D6B'], svg:'<rect x="9" y="8" width="12" height="32" rx="2.5"/><rect x="27" y="8" width="12" height="32" rx="2.5"/><path d="M21 14h6M21 24h6M21 34h6"/><circle cx="15" cy="16" r="1.4" class="s"/><circle cx="15" cy="32" r="1.4" class="s"/><circle cx="33" cy="16" r="1.4" class="s"/><circle cx="33" cy="32" r="1.4" class="s"/>' },
   { re:/حشو/, g:['#F472B6','#BE185D'], svg:'<rect x="8" y="8" width="32" height="32" rx="4"/><rect x="14" y="14" width="20" height="20" rx="2" class="f"/>' },
   { re:/تصنيع/, g:['#38BDF8','#0369A1'], svg:'<circle cx="24" cy="24" r="6"/><path d="M24 7v6M24 35v6M7 24h6M35 24h6M12 12l4 4M32 32l4 4M36 12l-4 4M16 32l-4 4"/>' },
 ];
@@ -5677,7 +5684,7 @@ function sectorGrad_(g){ const a = sectorArt_(g); return `linear-gradient(145deg
 // act = الفعل اللي الكارت بينفّذه: 'set-group' (جوه شاشة الطلب) أو 'open-sector' (من الرئيسية)
 // الرئيسية: شبكة أيقونات كبيرة (من غير كروت) — شاشة الطلب: كروت صغيرة بنفس الأيقونة
 function sectorIconsGridHtml_(act){
-  return SECTOR_CHIPS.map(g=>{
+  return orderSectors_().map(g=>{
     const st = g===OTHER_SECTOR ? null : sectorStats_(g);
     const badge = st && st.n ? `<i class="sico-badge">${st.n}</i>` : '';
     return `
@@ -5688,7 +5695,7 @@ function sectorIconsGridHtml_(act){
   }).join('');
 }
 function sectorTilesHtml_(activeGroup, act){
-  return SECTOR_CHIPS.map(g=>`
+  return orderSectors_().concat([OTHER_SECTOR]).map(g=>`
     <button class="sectile ${activeGroup===g?'active':''}" data-act="${act}" data-val="${esc(g)}">
       <span class="sicon" style="background:${sectorGrad_(g)}">${sectorIconSvg_(g, 26)}</span><b>${esc(g)}</b><small>${sectorSubHtml_(g)}</small>
     </button>`).join('');
@@ -5988,12 +5995,6 @@ function pavailHtml_(a){
 function applySector_(main){
   state.mainGroup = main;
   state.productSearch = '';
-  if(sectorNeedsSubFilter(main)){
-    const subs = subGroupsForMain(main);
-    state.subGroup = subs.length===1 ? subs[0] : null;
-  } else {
-    state.subGroup = null;
-  }
 }
 
 function renderProductCard_(main, n, inlineKeys){
@@ -6005,7 +6006,7 @@ function renderProductCard_(main, n, inlineKeys){
   const av = productAvail_(main, n);
 
   const head = `
-    <div class="pc-head" data-act="${unavailable?'noop-unavailable':'toggle-product'}" data-val="${esc(n)}">
+    <div class="pc-head" data-act="${unavailable?'noop-unavailable':'toggle-product'}" data-val="${esc(n)}" data-main="${esc(main)}">
       <span class="pc-name">${esc(n)}</span>
       ${unavailable ? '<span class="unavailtag">موقوف</span>' : (isStaged ? '<span class="tick">✓</span>' : (inCart ? '<span class="incarttag">في السلة</span>' : ''))}
     </div>`;
@@ -6023,7 +6024,7 @@ function renderProductCard_(main, n, inlineKeys){
         const hx = colorHex_(c);
         // علامة التوفر على الدايرة: ✓ أخضر = متاح · ✓ برتقالي = قليل/أعواد بس · ✗ أحمر = غير متوفر/موقوف
         const bdg = (off || (av.tracked && lvl==='out')) ? '<em class="bdg no">✗</em>' : (av.tracked ? `<em class="bdg ${lvl==='ok'?'yes':'low'}">✓</em>` : '');
-        return `<button type="button" class="cdot ${cls} ${sel?'on':''}" style="--dc:${hx};--ck:${inkOn_(hx)}" data-act="${off?'noop-unavailable':'tile-color'}" data-prod="${esc(n)}" data-val="${esc(c)}" title="${esc(c)}${stTxt ? ' — ' + esc(stTxt) : ''}" aria-label="${esc(c)}" aria-pressed="${sel}"><i>${bdg}</i><span class="cname">${esc(c)}</span></button>`;
+        return `<button type="button" class="cdot ${cls} ${sel?'on':''}" style="--dc:${hx};--ck:${inkOn_(hx)}" data-act="${off?'noop-unavailable':'tile-color'}" data-prod="${esc(n)}" data-main="${esc(main)}" data-val="${esc(c)}" title="${esc(c)}${stTxt ? ' — ' + esc(stTxt) : ''}" aria-label="${esc(c)}" aria-pressed="${sel}"><i>${bdg}</i><span class="cname">${esc(c)}</span></button>`;
       }).join('')}
     </div>` : '';
 
@@ -6123,39 +6124,24 @@ function renderOrderView(){
   // يختار لون بنفسه) بيفضل يظهر في قسم "حدد التفاصيل" العادي تحت.
   const inlineStagedKeys_ = [];
   if(state.mainGroup && state.mainGroup!==OTHER_SECTOR){
-    const needsSub = sectorNeedsSubFilter(state.mainGroup);
-    let subToUse = null;
-    if(needsSub){
-      const subs = subGroupsForMain(state.mainGroup);
-      if(subs.length>1){
-        subSection = `
-        <div class="card">
-          <h2><span class="num">4</span>اختار التصنيف الفرعي</h2>
-          <div class="chipwrap chipgrid3">
-            ${subs.map(s=>`<button class="chip ${state.subGroup===s?'active':''}" data-act="set-sub" data-val="${esc(s)}">${esc(s)}</button>`).join('')}
-          </div>
-        </div>`;
-      }
-      subToUse = state.subGroup;
-    }
-    const showProducts = needsSub ? !!subToUse : true;
-    if(showProducts){
-      const prodMap = productsForGroup(state.mainGroup, subToUse);
-      const q = state.productSearch.trim().toLowerCase();
-      let names = [...prodMap.keys()].filter(n => !q || n.toLowerCase().includes(q));
-      // ترتيب أبجدي (عربي، والأرقام بقيمتها: «5 سم» قبل «10 سم») — والأصناف الموقوفة (تعطيل يدوي) في الآخر.
+    {
+      // كل أصناف القطاع (القطاع الموحّد «اكسسوارات pvc» بيجمع أكتر من main) — أبجدي، والموقوف في الآخر.
       // حالة التوفر ظاهرة على كل كارت (✓/✗ + الكلمة) فمفيش داعي نغيّر الترتيب بيها.
+      const q = state.productSearch.trim().toLowerCase();
       const alpha_ = new Intl.Collator('ar', { numeric:true, sensitivity:'base' });
-      names = names
-        .map(n=>({ n, off: isProductFullyUnavailable(state.mainGroup, n) ? 1 : 0 }))
-        .sort((x,y)=> (x.off-y.off) || alpha_.compare(x.n, y.n))
-        .map(x=>x.n);
+      const entries = [];
+      sectorMains_(state.mainGroup).forEach(m=>{
+        productsForGroup(m, null).forEach((_, name)=>{
+          if(!q || name.toLowerCase().includes(q)) entries.push({ main:m, name, off: isProductFullyUnavailable(m, name) ? 1 : 0 });
+        });
+      });
+      entries.sort((x,y)=> (x.off-y.off) || alpha_.compare(x.name, y.name));
       productSection = `
       <div class="card">
         <h2><span class="num">5</span>اختار الأصناف (تقدر تختار أكتر من واحد)</h2>
         <div class="currentctx">
           ${ico_('mapPin',14)} إنت الآن في:
-          <b>${esc(state.mainGroup)}</b>${subToUse ? ` — <b>${esc(subToUse)}</b>` : ''}
+          <b>${esc(state.mainGroup)}</b>
         </div>
         <div class="searchbox">
           <input type="text" placeholder="ابحث عن اسم الصنف..." value="${esc(state.productSearch)}" data-act="search-product">
@@ -6165,11 +6151,12 @@ function renderOrderView(){
             // 🔽 لو فيه صنف متحدد دلوقتي في القطاع ده، نعرضه هو بس ونخفي الباقي.
             // أول ما يلغي اختياره (يدوس عليه تاني أو يدوس إلغاء)، كل الأصناف
             // بترجع تظهر. بطلب صريح من المستخدم.
-            const stagedNames = names.filter(n => state.staged.some(s=>s.key===stagedKey(state.mainGroup,n)));
-            const visibleNames = stagedNames.length ? stagedNames : names;
-            return visibleNames.length ? visibleNames.map(n=>renderProductCard_(state.mainGroup, n, inlineStagedKeys_)).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>';
+            const stagedEntries = entries.filter(e => state.staged.some(s=>s.key===stagedKey(e.main,e.name)));
+            const visible = stagedEntries.length ? stagedEntries : entries;
+            return visible.length ? visible.map(e=>renderProductCard_(e.main, e.name, inlineStagedKeys_)).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>';
           })()}
         </div>
+        ${state.mainGroup===ACC_GROUP ? `<button class="otherlink" data-act="set-group" data-val="${esc(OTHER_SECTOR)}">+ مش لاقي صنفك؟ اكتب اللي محتاجه (أصناف أخرى)</button>` : ''}
       </div>`;
     }
   }
@@ -7830,18 +7817,15 @@ async function onActionInner(act, el){
       state.view = 'order'; render(); window.scrollTo(0, 0);
       break;
     case 'set-group': applySector_(el.getAttribute('data-val')); render(); break;
-    case 'set-sub':
-      state.subGroup = el.getAttribute('data-val');
-      render();
-      break;
     case 'toggle-product':{
       const name = el.getAttribute('data-val');
-      const key = stagedKey(state.mainGroup, name);
+      const pm = el.getAttribute('data-main') || state.mainGroup;
+      const key = stagedKey(pm, name);
       // بنمسك مكان الصنف اللي دوس عليه بالظبط، وبعد ما الألوان تتفتح تحته
       // ويحصل أي تحريك للأصناف التانية، برجّعه لنفس المكان على الشاشة —
       // فيفضل شايفه هو والصنف اللي بعده من غير ما الشاشة "تنط".
       withPositionAnchor_(`[data-act="toggle-product"][data-val="${CSS.escape(name)}"]`, ()=>{
-        toggleStagedProduct(state.mainGroup, name);
+        toggleStagedProduct(pm, name);
       });
       break;
     }
@@ -7850,9 +7834,10 @@ async function onActionInner(act, el){
     // دايرة لون جوه كارت الصنف: لو الصنف لسه مش مختار بنختاره الأول، وبعدين نقلب اللون (اختيار أكتر من لون)
     case 'tile-color':{
       const name = el.getAttribute('data-prod'), color = el.getAttribute('data-val');
-      const key = stagedKey(state.mainGroup, name);
+      const pm = el.getAttribute('data-main') || state.mainGroup;
+      const key = stagedKey(pm, name);
       withPositionAnchor_(`[data-act="toggle-product"][data-val="${CSS.escape(name)}"]`, ()=>{
-        if(!state.staged.some(x=>x.key===key)) toggleStagedProduct(state.mainGroup, name);
+        if(!state.staged.some(x=>x.key===key)) toggleStagedProduct(pm, name);
         toggleStagedColor(key, color);
       });
       break;
@@ -7868,11 +7853,7 @@ async function onActionInner(act, el){
     // من نتيجة بحث الرئيسية: نفتح القطاع ونحط اسم الصنف في بحثه
     case 'home-pick':{
       const main = el.getAttribute('data-main'), product = el.getAttribute('data-val');
-      applySector_(main);
-      if(sectorNeedsSubFilter(main)){
-        const catEntry = CATALOG.find(d=>d.main===main && d.product===product);
-        if(catEntry && catEntry.sub) state.subGroup = catEntry.sub;
-      }
+      applySector_(groupOfMain_(main));
       state.productSearch = product;
       state.homeSearch = '';
       state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view);
@@ -7942,15 +7923,8 @@ async function onActionInner(act, el){
       // دي كلها شروط لازم تتحقق عشان شبكة الأصناف (اللي فيها بلوك التعديل)
       // تتعرض أصلاً. فلو الموزع كان واقف في قطاع/تصنيف/لون مختلف، الشبكة
       // مكانتش بتتعرض خالص، فالشاشة كانت "واقفة مكانها" من غير ما تفتح حاجة.
-      state.mainGroup = main;
+      state.mainGroup = groupOfMain_(main);
       state.productSearch = '';
-      if(sectorNeedsSubFilter(main)){
-        const catEntry = CATALOG.find(d=>d.main===main && d.product===product);
-        const subs = subGroupsForMain(main);
-        state.subGroup = (catEntry && catEntry.sub) ? catEntry.sub : (subs.length===1 ? subs[0] : null);
-      } else {
-        state.subGroup = null;
-      }
       toggleStagedProduct(main, product);
       requestAnimationFrame(()=>{
         const scrollTarget = document.querySelector('.stagedblock') || document.querySelector('.inlinestaged');
@@ -8040,7 +8014,7 @@ async function onActionInner(act, el){
       state.cart = cartMerge_(order.items.map(it=>Object.assign({}, it)));
       state.staged = [];
       state.mainGroup = null;
-      state.subGroup = null;
+      
       showToast('بتعدّل على طلب سابق — كمّل التعديل وابعت تاني');
       render();
       break;

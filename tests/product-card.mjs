@@ -16,7 +16,8 @@ const CAT=[
   mk(K,'كومبن ابيض','حلق قليل','ابيض',12),             // أقل من ٥ لفات = «قليل»
   mk(K,'كومبن ابيض','ضلفة مفصلي','ابيض',0),            // مفيش رصيد خالص = غير متوفر
   mk('قطاعات كرافت لاين','كرافت','حلق كرافت','ابيض',50),
-  mk('اكسسوارات pvc اكسا','مفصلة','مفصلة ثقيلة','',10), mk('اكسسوارات pvc اكسا','سيليكون','سيليكون شفاف','',5), mk('اكسسوارات pvc اكسا','مفصلة','باكتة صغيرة','',7)
+  mk('اكسسوارات pvc اكسا','مفصلة','مفصلة ثقيلة','',10), mk('اكسسوارات pvc اكسا','سيليكون','سيليكون شفاف','',5), mk('اكسسوارات pvc اكسا','مفصلة','باكتة صغيرة','',7),
+  mk('شاتر','','شاتر ابيض','ابيض',9), mk('ابواب WPC','','باب WPC','',3), mk('اكسسوارات خارجيه','','مقبض خارجي','',4)
 ];
 await page.route('**/fonts.googleapis.com/**', r=>r.fulfill({status:200,contentType:'text/css',body:''}));
 await page.route('**/script.google.com/**', async route=>{
@@ -83,11 +84,24 @@ ok('الشريط fixed (مش بيسكرول مع الصفحة)', (await page.$ev
 ok('«غيّر القطاع» select جوه الشريط الثابت', (await page.$('.ministrip2027 select[data-act="pick-sector-select"]'))!==null);
 await page.selectOption('.ministrip2027 select', 'قطاعات كرافت لاين'); await page.waitForTimeout(300);
 ok('الاختيار من القايمة غيّر القطاع وفتح أصنافه', (await page.evaluate(()=>state.mainGroup))==='قطاعات كرافت لاين' && (await page.$$('.pcard')).length===1);
-// ── الاكسسوارات: أصناف على طول (من غير تصنيفات فرعية) وأبجدي
-await page.selectOption('.ministrip2027 select', 'اكسسوارات pvc اكسا'); await page.waitForTimeout(300);
-ok('الاكسسوارات من غير شبكة تصنيفات فرعية', (await page.$('.chipgrid3'))===null);
-const accOrder = (await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()))).join('|'); ok('أصناف الاكسسوارات أبجدي', accOrder==='باكتة صغيرة|سيليكون شفاف|مفصلة ثقيلة', accOrder);
+// ── «اكسسوارات pvc» أيقونة واحدة بتجمع (اكسا + خارجيه + شاتر + WPC)
+ok('القطاعات: «اكسسوارات pvc» أيقونة واحدة بدل (اكسا/خارجيه/شاتر/WPC)', await page.evaluate(()=>{ const o=orderSectors_(); return o.includes('اكسسوارات pvc') && !o.includes('شاتر') && !o.includes('ابواب WPC') && !o.includes('اكسسوارات pvc اكسا') && !o.includes('اكسسوارات خارجيه'); }));
+await page.selectOption('.ministrip2027 select', 'اكسسوارات pvc'); await page.waitForTimeout(300);
+const accNames = await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()));
+ok('القطاع الموحّد فيه أصناف الأربع قطاعات مترتبة أبجدي', accNames.join('|')==='باب WPC|باكتة صغيرة|سيليكون شفاف|شاتر ابيض|مفصلة ثقيلة|مقبض خارجي', accNames.join('|'));
+ok('من غير تصنيفات فرعية + رابط «أصناف أخرى» جوه', (await page.$('.chipgrid3'))===null && (await page.$('.otherlink'))!==null);
+// الكمية فاضية للصنف من غير ألوان (الموزع يكتبها) + الوحدة صح حسب القطاع الأصلي
+await page.click('.pc-head[data-val="مفصلة ثقيلة"]'); await page.waitForTimeout(300);
+ok('الكمية فاضية (مش 1) للصنف اللي من غير ألوان', (await page.$eval('.qbox [data-act="staged-qty-input"]', e=>e.value))==='');
+const cartBefore = await page.evaluate(()=>state.cart.length);
+await page.click('.qbox [data-act="confirm-staged"]'); await page.waitForTimeout(200);
+ok('مينفعش يضيف من غير ما يكتب كمية', (await page.evaluate(()=>state.cart.length))===cartBefore);
+await page.fill('.qbox [data-act="staged-qty-input"]','3'); await page.click('.qbox [data-act="confirm-staged"]'); await page.waitForTimeout(300);
+ok('الإضافة بالكمية المكتوبة وبالـ main الأصلي', (await page.evaluate(()=>state.cart.some(c=>c.product==='مفصلة ثقيلة' && c.main==='اكسسوارات pvc اكسا' && c.qty===3))));
+await page.click('.otherlink'); await page.waitForTimeout(300);
+ok('«أصناف أخرى» بتفتح من جوه القطاع', (await page.evaluate(()=>state.mainGroup))==='أصناف أخرى');
 await page.selectOption('.ministrip2027 select', K); await page.waitForTimeout(300);
+await page.evaluate(()=>{ state.cart=[]; render(); });
 ok('مفيش أخطاء جافاسكريبت', errors.length===0, errors.join(' | '));
 await browser.close();
 console.log(fails ? ('❌ فشل '+fails) : '✅ كله تمام'); process.exit(fails?1:0);
