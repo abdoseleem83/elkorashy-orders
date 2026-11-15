@@ -2036,6 +2036,11 @@ header.top ~ * .mini2027.sectorbtn,.mini2027.sectorbtn,html[data-theme] .mini202
 .mini2027.sectorsel{position:relative;}
 .mini2027.sectorsel select{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer;border:0;}
 .otherlink{display:block;width:100%;margin-top:12px;border:1.5px dashed var(--navy-soft);background:transparent;color:var(--navy);border-radius:14px;padding:12px;font-family:inherit;font-weight:900;font-size:13.5px;cursor:pointer;}
+/* خلفيتين بالتبادل لكروت الأصناف (فاتح/أبيض) عشان كل صنف يتفصل عن اللي قبله — ثابتين مش بيتغيروا مع الفلترة */
+.productgrid > .pcard:nth-child(even){--card:#EAF1FF;border-color:#C5D6F3;}
+html[data-theme="dark"] .productgrid > .pcard:nth-child(even){--card:#18284A;border-color:#2B4170;}
+.pcard.selected,.pcard.incart{border-color:var(--navy-soft);}
+.pcard.incart:not(.selected){border-color:var(--success);}
 </style>
 </head>
 <body>
@@ -2102,7 +2107,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v255';
+const APP_BUILD = 'v256';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';

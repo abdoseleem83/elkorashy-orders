@@ -77,6 +77,7 @@ ok('اتضاف اللونين بكمياتهم للسلة', st.length===2 && st.
 ok('قايمة اختيار القطاع مخفية بعد ما القطاع اتحدد', (await page.$('#sec-group'))===null);
 const order = await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()));
 ok('الترتيب أبجدي (بغض النظر عن التوفر)', order.join('|')==='حلق قليل|حلق كومبن|سقاس مفصلي|ضلفة مفصلي', order.join('|'));
+ok('خلفيتين بالتبادل لكروت الأصناف', await page.evaluate(()=>{ const bg=[...document.querySelectorAll('.pcard')].map(c=>getComputedStyle(c).backgroundColor); return bg.length>=3 && bg.every((b,i)=> i===0 || b!==bg[i-1]) && new Set(bg).size===2; }));
 // ── «غيّر القطاع» في الشريط الثابت
 ok('الشريط الثابت فيه «غيّر القطاع» بس (من غير «غيّر المخزن»)', !/غيّر المخزن/.test(await page.$eval('.ministrip2027', e=>e.textContent)) && (await page.$('.mini2027.sectorbtn'))!==null);
 ok('الشريط fixed (مش بيسكرول مع الصفحة)', (await page.$eval('.fixedhead-outer', e=>getComputedStyle(e).position))==='fixed');
