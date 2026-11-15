@@ -2095,7 +2095,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v249';
+const APP_BUILD = 'v250';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -6249,25 +6249,16 @@ function renderOrderView(){
     && localStorage.getItem(LS_LAST_DATE_KEY) === todayStr()
     && !!localStorage.getItem(LS_LAST_ID_KEY);
 
-  const distSection = `
-    <div class="card distcard">
+  // 👤 بيانات الموزع: لو كاملة بتتنقل لتحت (قبل الملاحظات) كسطر صغير بـ«تعديل» — فوق مبيفضلش غير التنبيهات.
+  // تغيير المخزن/القطاع بقى من الشريط الثابت فوق، فمفيش داعي لكارت المخزن اللي كان واخد مكان.
+  const distComplete_ = !!(!state.distEdit && state.distName && state.distRegion && state.distPhone);
+  const whWarn_ = (!isClientAccount() && state.warehouse && !STOCK_TRACKED_WAREHOUSES_.includes(state.warehouse))
+    ? `<div class="warehousewarn">⚠ الأصناف في مخزن "${esc(state.warehouse)}" غير معتمدة إلا وقت التحميل فقط، نظرًا لعدم حجز بضاعة مسبقًا.</div>` : '';
+  const topBanners_ = `
       ${state.editingOrderId ? `<div class="editbanner">✏️ بتعدّل على طلب سابق #${esc(state.editingOrderId.toUpperCase())}</div>` : ''}
       ${willMergeToday ? `<div class="editbanner" style="background:#FBEBD1;">ℹ️ عندك طلب النهارده لسه "لم يستلم" — وقت الإرسال هنسألك تضيف عليه ولا يتسجّل منفصل</div>` : ''}
-      ${isClientAccount() ? '' : `
-      ${state.editingOrderId ? '' : `<button class="backnav" data-act="back-to-warehouse" style="width:auto;padding:6px 12px;font-size:11px;margin-bottom:8px;" title="ارجع لاختيار المخزن من الأول">→ رجوع لاختيار المخزن</button>`}
-      <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;">
-        <span style="font-size:10.5px;">${warehouseIcon_(state.warehouse)}</span>
-        <span style="font-size:12px;color:var(--muted);">المخزن: <b style="color:var(--navy);">${esc(state.warehouse)}</b></span>
-      </div>
-      ${(state.warehouse && !STOCK_TRACKED_WAREHOUSES_.includes(state.warehouse)) ? `
-      <div class="warehousewarn">⚠ الأصناف في مخزن "${esc(state.warehouse)}" غير معتمدة إلا وقت التحميل فقط، نظرًا لعدم حجز بضاعة مسبقًا.</div>
-      ` : ''}`}
-      ${(!state.distEdit && state.distName && state.distRegion && state.distPhone) ? `
-      <div class="distsum">
-        <span class="dsic">👤</span>
-        <span class="dstxt"><b>${esc(state.distName)}</b><small>${esc(state.distRegion)} · ${esc(state.distPhone)}</small></span>
-        <button class="dsedit" data-act="dist-edit">تعديل</button>
-      </div>` : `
+      ${whWarn_}`;
+  const distForm_ = `
       <h2><span class="num">2</span>بيانات الموزع</h2>
       <div class="row3">
         <div class="field">
@@ -6282,8 +6273,21 @@ function renderOrderView(){
           <label>الموبايل *</label>
           <input type="tel" placeholder="01xxxxxxxxx" value="${esc(state.distPhone)}" data-act="set-distphone">
         </div>
-      </div>`}
+      </div>`;
+  const formOnTop_ = !distComplete_ && !state.distEdit;   // أول مرة (لسه مفيش بيانات): الفورم فوق. أثناء «تعديل»: الفورم بيفتح مكانه تحت.
+  const distSection = (!formOnTop_ && !topBanners_.trim()) ? '' : `
+    <div class="card distcard">
+      ${topBanners_}
+      ${formOnTop_ ? distForm_ : ''}
     </div>`;
+  const distSummary_ = distComplete_ ? `
+    <div class="card distcard">
+      <div class="distsum">
+        <span class="dsic">👤</span>
+        <span class="dstxt"><b>${esc(state.distName)}</b><small>${esc(state.distRegion)} · ${esc(state.distPhone)}</small></span>
+        <button class="dsedit" data-act="dist-edit">تعديل</button>
+      </div>
+    </div>` : (state.distEdit ? `<div class="card distcard">${distForm_}</div>` : '');
 
   const groupCard = `
     <div class="card" id="sec-group">
@@ -6317,6 +6321,7 @@ function renderOrderView(){
     ${orderColumns}
     ${cartSection}
     ${noteSection}
+    ${distSummary_}
     <div class="submitbar ${state.cart.length ? 'fixed' : ''}">
       <div class="submitbar-inner">
       ${state.cart.length ? `
@@ -7796,14 +7801,6 @@ async function onActionInner(act, el){
       state.showMergeAskModal = false;
       state.mergeAskLast = null;
       await actuallySubmit();
-      break;
-    // 🔙 بطلب صريح: لو الموزّع اختار مخزن غلط، مفيش زرار "غيّر" ملاصق
-    // (اتشال عمدًا — عايز المخزن يفضل ثابت أثناء تعبئة الفورم)، لكن لازم
-    // يقدر "يرجع لأول الصفحة" (شاشة اختيار المخزن) من غير ما يفضل عالق.
-    // بيمسح المخزن بس — السلة وبيانات الموزع بتفضل زي ما هي.
-    case 'back-to-warehouse':
-      state.warehouse = '';
-      render();
       break;
     // 📌 مربعات الشريط الثابت: كل واحد بيودّي لمكانه
     case 'strip-go':{
