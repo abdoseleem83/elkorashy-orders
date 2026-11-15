@@ -1988,11 +1988,16 @@ html[data-theme="dark"] .sectile small .sno{color:#FCA5A5;}
 .cdot{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:transparent;padding:0;cursor:pointer;font-family:inherit;min-width:46px;}
 .cdot i{width:32px;height:32px;border-radius:50%;background:var(--dc);border:2px solid rgba(0,0,0,.20);display:flex;align-items:center;justify-content:center;
   font-style:normal;font-weight:900;font-size:16px;color:var(--ck,#fff);transition:transform .12s,box-shadow .12s;}
-.cdot.on i{box-shadow:0 0 0 3px var(--card),0 0 0 5px var(--navy-soft);transform:scale(1.06);}
+.cdot i{position:relative;}
+.cdot.on i{box-shadow:0 0 0 3px var(--card),0 0 0 6px var(--navy);transform:scale(1.08);}
+.bdg{position:absolute;top:-6px;left:-6px;width:18px;height:18px;border-radius:50%;font-style:normal;font-size:11px;font-weight:900;line-height:18px;text-align:center;color:#fff;border:2px solid var(--card);box-sizing:content-box;}
+.bdg.yes{background:#16A34A;} .bdg.low{background:#F59E0B;} .bdg.no{background:#DC2626;}
 .cdot .cname{font-size:10.8px;font-weight:700;color:var(--muted);max-width:68px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cdot.on .cname{color:var(--ink);font-weight:900;}
 .cdot.low i{border-color:#F59E0B;}
-.cdot.out i{opacity:.45;border:2px dashed #DC2626;}
+.cdot.out i{border:2px dashed #DC2626;}
+.cdot.out i{background-blend-mode:normal;}
+.cdot.out{opacity:.8;}
 .cdot.off{opacity:.3;cursor:not-allowed;}
 /* سطر المتاح / غير المتوفر */
 .pavail{display:flex;flex-wrap:wrap;gap:3px 12px;font-size:12.8px;font-weight:800;}
@@ -2095,7 +2100,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v250';
+const APP_BUILD = 'v251';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -5943,10 +5948,21 @@ function colorHex_(c){
   const m = /background:\s*(#[0-9A-Fa-f]{3,8})/.exec(getColorStyle(c));
   return m ? m[1] : '#CBD5E1';
 }
+// صف واحد لكل لون (الكاتالوج ممكن يكرر نفس اللون في صفين — مبنعرضوش مرتين)، وبنستخدم نفس الصف اللي بيتسعّر منه
+function uniqueColorRows_(main, product){
+  const seen = new Set(), out = [];
+  colorsForProduct(main, product).forEach(r=>{
+    const k = normalizeProductName(r.color || '');
+    if(seen.has(k)) return;
+    seen.add(k);
+    out.push(findCatalogItem(main, product, r.color) || r);
+  });
+  return out;
+}
 // حالة توفر كل لون في المخزن الحالي — بالكلام بس (من غير أرقام): متاح · قليل · أعواد بس · غير متوفر
 const STOCK_WORD_ = { ok:'متاح', low:'قليل', crit:'أعواد بس', out:'غير متوفر' };
 function productAvail_(main, product){
-  const rows = colorsForProduct(main, product);
+  const rows = uniqueColorRows_(main, product);
   const a = { tracked: warehouseAffectsStock(main) && !state.catalogError, total: rows.length, groups:{ ok:[], low:[], crit:[], out:[] } };
   rows.forEach(row=>{ a.groups[colorStockLevel(row)].push(row.color || ''); });
   return a;
@@ -5978,8 +5994,7 @@ function renderProductCard_(main, n, inlineKeys){
   const stagedEntry = state.staged.find(x=>x.key===stagedKey(main, n));
   const isStaged = !!stagedEntry;
   const inCart = state.cart.some(it=>it.main===main && it.product===n);
-  const rows = colorsForProduct(main, n);
-  const withColors = rows.filter(r=>r.color);
+  const withColors = uniqueColorRows_(main, n).filter(r=>r.color);
   const unavailable = isProductFullyUnavailable(main, n);
   const av = productAvail_(main, n);
 
@@ -6000,7 +6015,9 @@ function renderProductCard_(main, n, inlineKeys){
         const cls = off ? 'off' : (av.tracked ? (lvl==='out' ? 'out' : lvl==='ok' ? 'ok' : 'low') : 'ok');
         const stTxt = off ? 'موقوف' : (av.tracked ? STOCK_WORD_[lvl] : '');
         const hx = colorHex_(c);
-        return `<button type="button" class="cdot ${cls} ${sel?'on':''}" style="--dc:${hx};--ck:${inkOn_(hx)}" data-act="${off?'noop-unavailable':'tile-color'}" data-prod="${esc(n)}" data-val="${esc(c)}" title="${esc(c)}${stTxt ? ' — ' + esc(stTxt) : ''}" aria-label="${esc(c)}" aria-pressed="${sel}"><i>${sel?'✓':''}</i><span class="cname">${esc(c)}</span></button>`;
+        // علامة التوفر على الدايرة: ✓ أخضر = متاح · ✓ برتقالي = قليل/أعواد بس · ✗ أحمر = غير متوفر/موقوف
+        const bdg = (off || (av.tracked && lvl==='out')) ? '<em class="bdg no">✗</em>' : (av.tracked ? `<em class="bdg ${lvl==='ok'?'yes':'low'}">✓</em>` : '');
+        return `<button type="button" class="cdot ${cls} ${sel?'on':''}" style="--dc:${hx};--ck:${inkOn_(hx)}" data-act="${off?'noop-unavailable':'tile-color'}" data-prod="${esc(n)}" data-val="${esc(c)}" title="${esc(c)}${stTxt ? ' — ' + esc(stTxt) : ''}" aria-label="${esc(c)}" aria-pressed="${sel}"><i>${bdg}</i><span class="cname">${esc(c)}</span></button>`;
       }).join('')}
     </div>` : '';
 

@@ -11,7 +11,7 @@ page.on('pageerror', e => errors.push(e.message));
 const mk=(main,sub,product,color,stock,avail=true)=>({name:product+' '+color,main,sub,unit:4,product,color,price:100,available:avail,inStock:stock>0,stock});
 const K='قطاعات PVC كومبن';
 const CAT=[
-  mk(K,'كومبن ابيض','حلق كومبن','ابيض',40), mk(K,'كومبن بيج','حلق كومبن','بيج',0), mk(K,'كومبن رمادي','حلق كومبن','رمادي',30),
+  mk(K,'كومبن ابيض','حلق كومبن','ابيض',40), mk(K,'كومبن بيج','حلق كومبن','بيج',0), mk(K,'كومبن رمادي','حلق كومبن','رمادي',30), mk(K,'كومبن رمادي','حلق كومبن','رمادي',30),   // صف مكرر لنفس اللون — لازم يتعرض مرة واحدة
   mk(K,'كومبن ابيض','سقاس مفصلي','ابيض',3),            // أقل من لفة = «أعواد بس»
   mk(K,'كومبن ابيض','حلق قليل','ابيض',12),             // أقل من ٥ لفات = «قليل»
   mk(K,'كومبن ابيض','ضلفة مفصلي','ابيض',0),            // مفيش رصيد خالص = غير متوفر
@@ -48,7 +48,8 @@ await page.evaluate(()=>{ state.productSearch=''; state.staged=[]; render(); });
 // ── كارت «حلق كومبن»: ٣ دواير + سطر المتاح/غير المتوفر
 const card = async n => page.evaluate(n=>{ const c=[...document.querySelectorAll('.pcard')].find(x=>x.querySelector('.pc-name').textContent.trim()===n); return c ? { dots:c.querySelectorAll('.cdot').length, on:c.querySelectorAll('.cdot.on').length, av:(c.querySelector('.pavail')||{}).textContent||'' } : null; }, n);
 let c1 = await card('حلق كومبن');
-ok('٣ دواير ألوان جوه الكارت', c1 && c1.dots===3, JSON.stringify(c1));
+ok('٣ دواير ألوان جوه الكارت (من غير تكرار اللون المكرر في الكاتالوج)', c1 && c1.dots===3, JSON.stringify(c1));
+ok('علامة ✓ على المتاح و✗ على غير المتوفر', await page.evaluate(()=>{ const d=[...document.querySelectorAll('.pcard')].find(x=>x.querySelector('.pc-name').textContent.trim()==='حلق كومبن').querySelectorAll('.cdot'); const g=n=>[...d].find(x=>x.getAttribute('aria-label')===n).querySelector('.bdg').textContent; return g('ابيض')==='✓' && g('بيج')==='✗' && g('رمادي')==='✓'; }));
 ok('حالة بالكلام من غير أرقام: «متاح: ابيض، رمادي» + «غير متوفر: بيج»', c1 && /متاح: ابيض، رمادي/.test(c1.av) && /غير متوفر: بيج/.test(c1.av) && !/\d/.test(c1.av), c1 && c1.av);
 ok('«سقاس مفصلي» (أقل من لفة) = «أعواد بس»', /^أعواد بس$/.test((await card('سقاس مفصلي')).av.trim()));
 ok('«حلق قليل» = «قليل»', /^قليل$/.test((await card('حلق قليل')).av.trim()));
@@ -58,7 +59,7 @@ ok('«ضلفة مفصلي» غير متوفر', /^غير متوفر$/.test((awai
 await page.click('[data-act="tile-color"][data-prod="حلق كومبن"][data-val="ابيض"]'); await page.waitForTimeout(250);
 await page.click('[data-act="tile-color"][data-prod="حلق كومبن"][data-val="رمادي"]'); await page.waitForTimeout(250);
 c1 = await card('حلق كومبن');
-ok('دايرتين مختارتين عليهم ✓', c1.on===2 && (await page.$$eval('.cdot.on i', e=>e.every(x=>x.textContent.trim()==='✓'))));
+ok('دايرتين مختارتين (حلقة غامقة حواليهم)', c1.on===2);
 ok('صف كمية لكل لون مختار (٢) جوه الكارت وزرار «ضيف للسلة» واحد', (await page.$$('.pcard .qbox .qr2')).length===2 && (await page.$$('.pcard .qbox [data-act="confirm-staged"]')).length===1);
 await page.click('[data-act="tile-color"][data-prod="حلق كومبن"][data-val="رمادي"]'); await page.waitForTimeout(250);
 ok('دوسة تانية على الدايرة بتشيل اللون', (await card('حلق كومبن')).on===1);
