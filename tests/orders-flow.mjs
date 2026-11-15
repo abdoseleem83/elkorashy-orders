@@ -1,4 +1,4 @@
-// التدفق الجديد: الرئيسية «اللي بتطلبه كتير» → السلة → طلباتي (فلاتر/أعد الطلب) → كروت القطاعات وبيانات الموزع المختصرة
+// التدفق: الرئيسية (طلبك الأخير + أعد الطلب) → السلة → طلباتي (فلاتر/أعد الطلب) → كروت القطاعات وبيانات الموزع المختصرة
 // التشغيل: node tests/orders-flow.mjs   (بعد python3 -m http.server 8099)
 const PW = process.env.PLAYWRIGHT_MODULE || 'playwright';
 const { chromium } = await import(PW);
@@ -29,18 +29,13 @@ const b = await page.$('[data-act="bypass-install"]'); if(b) await b.click();
 await page.fill('[data-act="auth-username"]','test'); await page.fill('[data-act="auth-password"]','secret');
 await page.click('[data-act="login-submit"]'); await page.waitForTimeout(1500);
 
-// ── الرئيسية: اللي بتطلبه كتير (حلق كومبن ابيض الأعلى تكراراً = 3 مرات)
-const rows = await page.$$eval('.qrow .qname b', e=>e.map(x=>x.textContent.trim()));
-ok('الأعلى تكراراً في الأول («حلق كومبن — ابيض»)', rows[0]==='حلق كومبن — ابيض', rows.join(' | '));
-ok('شريط الإضافة السريعة مخفي قبل أي اختيار', (await page.$('.quickbar'))===null);
-await page.click('[data-act="quick-inc"][data-i="0"]'); await page.click('[data-act="quick-inc"][data-i="0"]'); await page.click('[data-act="quick-inc"][data-i="1"]');
-ok('عدّاد الصنف بيزيد (2)', (await page.$eval('.qrow:nth-child(1) em', e=>e.textContent.trim()))==='2');
-ok('شريط «كمّل وابعت» ظهر بالإجمالي (2 أصناف · 3 وحدة)', /2 أصناف · 3 وحدة/.test(await page.$eval('.quickbar', e=>e.textContent)));
-await page.click('[data-act="quick-dec"][data-i="1"]');
-ok('النقص بيرجّع العدّاد لصفر وبيشيله من الشريط', /1 صنف · 2 وحدة/.test(await page.$eval('.quickbar', e=>e.textContent)));
-await page.click('[data-act="quick-go"]'); await page.waitForTimeout(500);
+// ── الرئيسية (اتجاه أ): بحث + طلبك الأخير + كروت القطاعات (من غير «اللي بتطلبه كتير»)
+ok('مفيش قسم «اللي بتطلبه كتير» ولا شريط إضافة سريعة', (await page.$('.qrow'))===null && (await page.$('.quickbar'))===null);
+ok('كارت «طلبك الأخير» = الطلب #213 وفيه خط تقدّم', /#213/.test(await page.$eval('.lastorder', e=>e.textContent)) && (await page.$$('.lastorder .ost')).length===3);
+ok('كروت القطاعات على الرئيسية', (await page.$$('.homesectors .sectile')).length>=3);
+await page.click('.lastorder [data-act="reorder"]'); await page.waitForTimeout(500);
 let st = await page.evaluate(()=>({view:state.view, cart:state.cart.map(c=>c.product+':'+c.qty+':'+c.unitType)}));
-ok('«كمّل وابعت» ودّى لشاشة الطلب وضاف الصنف للسلة', st.view==='order' && st.cart.length===1 && st.cart[0]==='حلق كومبن:2:لفة', JSON.stringify(st));
+ok('«أعد الطلب» من الرئيسية ودّى لشاشة الطلب وضاف الأصناف للسلة', st.view==='order' && st.cart.length===1 && st.cart[0]==='حلق كومبن:4:لفة', JSON.stringify(st));
 
 // ── طلباتي: فلاتر + أعد الطلب (من غير تكرار)
 await page.evaluate(()=>{ state.view='myorders'; render(); }); await page.waitForTimeout(400);
@@ -51,7 +46,7 @@ await page.click('[data-act="orders-filter"][data-k="done"]'); ok('اتسلّم:
 ok('كل طلب فيه خط تقدّم بـ3 مراحل', (await page.$$eval('.ordA', cards=>cards.every(c=>c.querySelectorAll('.ost').length===3))));
 await page.click('[data-act="reorder"][data-id="a2"]'); await page.waitForTimeout(500);
 st = await page.evaluate(()=>({view:state.view, cart:state.cart.map(c=>c.product+':'+c.qty+':'+c.unitType)}));
-ok('«أعد الطلب» دمج نفس الصنف (حلق كومبن ابيض لفة 2+3=5) ولا كرر السطر', st.cart.length===2 && st.cart.includes('حلق كومبن:5:لفة') && st.cart.includes('باكتة:2:عود'), JSON.stringify(st));
+ok('«أعد الطلب» دمج نفس الصنف (حلق كومبن ابيض لفة 4+3=7) ولا كرر السطر', st.cart.length===2 && st.cart.includes('حلق كومبن:7:لفة') && st.cart.includes('باكتة:2:عود'), JSON.stringify(st));
 
 // ── شاشة الطلب: بيانات الموزع مختصرة + كروت القطاعات
 await page.evaluate(()=>{ state.warehouse='طنطا'; state.view='order'; render(); }); await page.waitForTimeout(400);
@@ -59,7 +54,7 @@ ok('بيانات الموزع في سطر مختصر بدل الحقول', (awai
 await page.click('[data-act="dist-edit"]'); await page.waitForTimeout(250);
 ok('زرار «تعديل» بيفتح الحقول', (await page.$('[data-act="set-distname"]'))!==null);
 const tiles = await page.$$eval('.sectile', e=>e.map(x=>x.textContent.replace(/\s+/g,' ').trim()));
-ok('كروت القطاعات (4) بعدد المنتجات والتوفّر', tiles.length>=3 && tiles.some(t=>/قطاعات PVC كومبن\s*1 منتج · متاح/.test(t)) && tiles.some(t=>/اكسسوارات\s*1 منتج · نفد/.test(t)), tiles.join(' | '));
+ok('كروت القطاعات (4) بعدد المنتجات والتوفّر', tiles.length>=3 && tiles.some(t=>/قطاعات PVC كومبن\s*1 صنف · متاح 1/.test(t)) && tiles.some(t=>/اكسسوارات\s*1 صنف · نفد/.test(t)), tiles.join(' | '));
 const nums = await page.$$eval('#app .card h2 .num', e=>e.map(x=>x.textContent.trim()));
 ok('أرقام الخطوات متسلسلة', nums.every((n,i)=>n===String(i+1)), nums.join(','));
 ok('مفيش أخطاء جافاسكريبت', errors.length===0, errors.join(' | '));

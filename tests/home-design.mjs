@@ -1,4 +1,4 @@
-// تصميم الشاشة الرئيسية والتنقل: تباين الاسم، أيقونة «الرئيسية»، علامة +، عرض الكمبيوتر، وترقيم الخطوات
+// تصميم الشاشة الرئيسية (اتجاه أ) والتنقل: الهيدر، أيقونة «الرئيسية»، علامة +، عرض الكمبيوتر، وترقيم الخطوات
 // التشغيل: node tests/home-design.mjs   (بعد python3 -m http.server 8099)
 const PW = process.env.PLAYWRIGHT_MODULE || 'playwright';
 const { chromium } = await import(PW);
@@ -35,18 +35,19 @@ for(const theme of ['light','dark']){
   const r = await page.evaluate(()=>{
     const cs=(el,p)=>el?getComputedStyle(el)[p]:null;
     const app=document.querySelector('#app').getBoundingClientRect();
-    return { theme: document.documentElement.getAttribute('data-theme'),
-      name: cs(document.querySelector('.homehero h2'),'color'),
+    return { name: cs(document.querySelector('.homebrand h1'),'color'),
       icon: cs(document.querySelector('.bn.on .bn-ic'),'color'),
       appW: Math.round(app.width),
-      qrows: document.querySelectorAll('.qrow').length,
-      recent: document.querySelectorAll('.ordermini').length };
+      quick: document.querySelectorAll('.qrow,.quickbar,.homehero').length,
+      last: document.querySelectorAll('.lastorder').length,
+      sectors: document.querySelectorAll('.homesectors .sectile').length,
+      search: document.querySelectorAll('[data-act="home-search"]').length };
   });
-  ok(`[${theme}] اسم المستخدم في الكارت الأزرق أبيض`, rgb(r.name)==='255,255,255', r.name);
+  ok(`[${theme}] اسم المستخدم في هيدر الرئيسية ظاهر`, r.name && r.name!=='rgba(0, 0, 0, 0)', r.name);
   ok(`[${theme}] أيقونة «الرئيسية» النشطة بيضا`, rgb(r.icon)==='255,255,255', r.icon);
   ok(`[${theme}] الشاشة الرئيسية في عمود ≤ 980px على الكمبيوتر`, r.appW<=980, r.appW+'px');
-  ok(`[${theme}] «اللي بتطلبه كتير» ظهر من تاريخ الطلبات`, r.qrows>=1, String(r.qrows));
-  ok(`[${theme}] «طلباتك الأخيرة» ظهرت`, r.recent>=1, String(r.recent));
+  ok(`[${theme}] مفيش «اللي بتطلبه كتير» ولا كارت أزرق ولا شريط سريع`, r.quick===0, String(r.quick));
+  ok(`[${theme}] «طلبك الأخير» وكروت القطاعات والبحث ظهروا`, r.last===1 && r.sectors>=1 && r.search===1, JSON.stringify(r));
   await ctx.close();
 }
 
@@ -65,10 +66,10 @@ ok('علامة + واضحة فوق البرتقالي (غامقة)', rgb(r.fab)=
 }
 { // الموبايل: الرئيسية سليمة
   const { ctx, page } = await open({width:412,height:860}, 'light');
-  const r = await page.evaluate(()=>({ name:getComputedStyle(document.querySelector('.homehero h2')).color,
+  const r = await page.evaluate(()=>({ name:getComputedStyle(document.querySelector('.homebrand h1')).color,
     icon:getComputedStyle(document.querySelector('.bn.on .bn-ic')).color,
     over: document.documentElement.scrollWidth - document.documentElement.clientWidth }));
-  ok('موبايل: الاسم أبيض والأيقونة ظاهرة', rgb(r.name)==='255,255,255' && rgb(r.icon)==='255,255,255');
+  ok('موبايل: الاسم ظاهر والأيقونة بيضا', r.name && rgb(r.icon)==='255,255,255');
   ok('موبايل: مفيش تمرير أفقي', r.over<=1, String(r.over));
   await ctx.close();
 }

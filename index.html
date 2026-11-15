@@ -305,13 +305,6 @@ textarea{resize:vertical;min-height:60px;}
 .chipwrap{display:flex;flex-wrap:wrap;gap:8px;}
 .inlinemulticolor{margin-top:8px;}
 .inlinecolorlabel{font-size:12px;font-weight:800;color:var(--navy);margin:8px 0 3px;}
-.addcolorbtn{
-  display:inline-flex;align-items:center;justify-content:center;gap:5px;
-  width:auto;margin-top:8px;background:var(--card);border:1.5px dashed var(--navy-soft);
-  color:var(--navy);border-radius:999px;padding:6px 14px;font-family:'Cairo',sans-serif;
-  font-weight:800;font-size:11.6px;cursor:pointer;
-}
-.addcolorbtn:active{background:var(--surface3);}
 /* 4 في الصف — للقطاعات والألوان بالظبط زي ما طلب */
 .chipwrap.chipgrid4{display:grid;grid-template-columns:repeat(4, minmax(0,1fr));gap:7px;}
 .chipwrap.chipgrid4 .chip{padding:9px 6px;text-align:center;}
@@ -445,75 +438,14 @@ textarea{resize:vertical;min-height:60px;}
   grid-template-columns:repeat(auto-fill, minmax(78px, 1fr));
   gap:6px;
 }
-.productgrid.compact .ptile{
-  min-height:54px;
-  font-size:10.6px;
-  padding:6px 4px 16px;
-}
-.productgrid.compact .ptile .stocktag,
-.productgrid.compact .ptile .unavailtag{
-  font-size:7.8px;
-}
-.productgrid .ptile{
-  border:1.5px solid var(--line);
-  border-radius:9px;
-  background:var(--surface2);
-  padding:8px 5px 22px;
-  font-size:12px;
-  line-height:1.3;
-  text-align:center;
-  cursor:pointer;
-  min-width:0;
-  overflow-wrap:break-word;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  min-height:72px;
-  word-break:break-word;
-}
-.productgrid .ptile:hover{background:var(--surface3);}
 
 /* ===== وضع القائمة: الأصناف تحت بعض في صفوف بدل الشبكة =====
    ⚠️ مغيّرناش أي لون — كل كلاسات الحالة (instock/lowstock/outstock/
    blackstock/unavailable) وألوان اللافتات زي ما هي بالظبط. اللي اتغير
    هو التخطيط بس: عمود واحد، والاسم يمين واللافتة شمال في نفس الصف. */
-.productgrid.listmode,
-.productgrid.listmode.compact{
-  grid-template-columns:1fr;
-  gap:5px;
-}
-.productgrid.listmode .ptile,
-.productgrid.listmode.compact .ptile{
-  min-height:0;
-  padding:13px 13px;
-  font-size:14.2px;
-  font-weight:800;
-  line-height:1.35;
-  text-align:right;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-  border-radius:10px;
-}
-.productgrid.listmode .ptile > span{flex:1 1 auto;text-align:right;font-weight:800;}
+.productgrid.listmode{grid-template-columns:1fr;gap:8px;}
 /* الصفوف بتاخد عرض أكبر شوية: بتخرج من padding الكارت من الجنبين */
 .productgrid.listmode{margin-inline:-9px;padding:2px 0;}
-.productgrid.listmode .ptile .tick{
-  position:static;flex:0 0 auto;margin:0;
-}
-.productgrid.listmode .ptile .stocktag,
-.productgrid.listmode .ptile .unavailtag,
-.productgrid.listmode.compact .ptile .stocktag,
-.productgrid.listmode.compact .ptile .unavailtag{
-  position:static;
-  flex:0 0 auto;
-  width:auto;min-width:84px;max-width:46%;
-  font-size:10.4px;
-  font-weight:800;
-  padding:5px 11px;
-  border-radius:999px;
-  text-align:center;
-}
 .productgrid.listmode .empty{grid-column:auto;}
 /* بلوك التفاصيل بيتفتح جوه القايمة تحت الصنف نفسه مباشرة */
 .productgrid.listmode .inlinestaged{margin:-1px 0 6px;}
@@ -928,11 +860,6 @@ button.mini2027{cursor:pointer;}
 .statusbadge.done{background:var(--success-bg);color:var(--success);}
 .statusbadge.edited{background:#ECECEC;color:#6B6B6B;}
 .oheadside{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
-.delquick{
-  background:#FDECEA;color:#C0392B;border:1.3px solid #C0392B;border-radius:999px;
-  padding:4px 12px;font-family:'Cairo',sans-serif;font-weight:800;font-size:11px;cursor:pointer;white-space:nowrap;
-}
-.delquick:active{background:#F8D7D2;}
 .ordercard .oheadmain{flex:1;cursor:pointer;user-select:none;padding:2px 0;}
 .ordercard .oheadmain .dmeta{margin-top:2px;}
 .ordercard .ochev{color:var(--navy-soft);font-weight:800;}
@@ -1008,69 +935,17 @@ button.mini2027{cursor:pointer;}
 }
 
 /* product tile ticks */
-.productgrid .ptile{position:relative;}
-.productgrid .ptile .tick{
-  position:absolute;top:3px;left:3px;
-  background:var(--success);color:#fff;border-radius:50%;
-  width:16px;height:16px;font-size:11.2px;display:flex;align-items:center;justify-content:center;
-}
-.productgrid .ptile.incart{border-color:var(--success);}
 
 /* ===== ألوان التوفّر =====
    أخضر  = متوفر بالمخزون
    أحمر  = مفيش منه رصيد (لسه ينفع تختاره وتاخد سعره)
    رمادي = موقوف من الأدمن (مش هينفع تختاره خالص) */
-.productgrid .ptile.instock{
-  /* 🐞 بق حقيقي: مفيش color صريح هنا، فالنص كان بياخد لون النص الافتراضي
-     (بيبقى أبيض مع الوضع الداكن الثابت) فوق الخلفية الفاتحة دي — نص أبيض
-     على أخضر فاتح = مش باين خالص. الشارات دي لوّنها ثابت عمدًا (بادجات
-     معلوماتية) فمحتاجة لون كتابة غامق ثابت برضه، مش var(--ink). */
-  background:#EDF7EE;border-color:var(--success);color:#1E5B33;
-}
-.productgrid .ptile.instock:hover{background:#DFF0E1;}
 
-.productgrid .ptile.lowstock{background:#FFFBE8;color:#8A6D0B;}
-.productgrid .ptile.lowstock:hover{background:#FFF3C4;}
-.productgrid .ptile.outstock,
-.productgrid .ptile.critstock{
-  background:#FDECEC;border-color:var(--danger);color:#8A1F1F;
-}
-.productgrid .ptile.outstock:hover,
-.productgrid .ptile.critstock:hover{background:#FADCDC;}
-.productgrid .ptile.blackstock{
-  background:#2A2A2A;border-color:#2A2A2A;color:#fff;
-}
-.productgrid .ptile.blackstock:hover{background:#000;}
 
 /* المختار يفضل بلون الاختيار مهما كانت حالته */
-.productgrid .ptile.selected{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:700;box-shadow:0 4px 12px rgba(0,36,104,.25);}
 
-.productgrid .ptile.unavailable{
-  opacity:.45;cursor:not-allowed;position:relative;
-  background:var(--surface3);border-color:var(--line);
-}
-.productgrid .ptile .unavailtag{
-  position:absolute;bottom:2px;left:2px;right:2px;
-  background:var(--danger);color:#fff;font-size:9px;font-weight:800;
-  border-radius:4px;padding:1px 2px;text-align:center;
-}
-.productgrid .ptile .stocktag{
-  position:absolute;bottom:2px;left:2px;right:2px;
-  font-size:8.4px;font-weight:800;border-radius:4px;padding:2px;text-align:center;
-  line-height:1.2;white-space:normal;
-}
-.productgrid .ptile .stocktag.out{background:var(--danger);color:#fff;}
-.productgrid .ptile .stocktag.low{background:var(--gold);color:var(--navy-deep);}
-.productgrid .ptile .stocktag.in{background:var(--success);color:#fff;}
-.productgrid .ptile .stocktag.black{background:var(--danger);color:#fff;font-weight:900;}
 
 /* مفتاح الألوان فوق شبكة الأصناف */
-.stocklegend{
-  display:flex;gap:12px;justify-content:center;flex-wrap:wrap;
-  font-size:12.3px;color:var(--muted);margin-bottom:10px;
-}
-.stocklegend span{display:flex;align-items:center;gap:4px;}
-.stocklegend i{width:10px;height:10px;border-radius:3px;display:inline-block;}
 .currentctx{
   background:var(--surface3);
   color:var(--ink);
@@ -1724,26 +1599,6 @@ label{font-size:13px;}
 
 /* ---------- 🏠 الشاشة الرئيسية (v237) ---------- */
 .homeview{padding-top:4px;}
-.homehero{
-  position:relative;overflow:hidden;border-radius:22px;padding:16px;margin-bottom:12px;
-  display:flex;align-items:center;justify-content:space-between;gap:12px;color:#fff;
-  background:
-    radial-gradient(220px 140px at 12% -10%, rgba(255,255,255,.22), transparent 70%),
-    radial-gradient(260px 180px at 100% 120%, rgba(41,182,246,.45), transparent 70%),
-    linear-gradient(135deg,#0A6AE0 0%,#0A3FA0 55%,#061C52 100%);
-  box-shadow:0 14px 32px rgba(0,60,160,.38),inset 0 1px 0 rgba(255,255,255,.18);
-  border:1px solid rgba(120,180,255,.35);
-}
-.herotxt{min-width:0;}
-.herohi{font-size:12.5px;font-weight:800;opacity:.9;}
-.homehero h2{margin:2px 0 2px;font-size:19px;font-weight:900;line-height:1.25;color:#fff;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
-.homehero p{margin:0;font-size:12px;font-weight:700;opacity:.85;}
-.herocta{
-  flex:0 0 auto;display:flex;align-items:center;gap:6px;border:0;cursor:pointer;
-  background:#fff;color:#0A3FA0;font-family:'Cairo',sans-serif;font-weight:900;font-size:13.5px;
-  padding:10px 14px;border-radius:14px;box-shadow:0 8px 18px rgba(0,20,80,.35);
-}
-.herocta .ico-svg{top:0;}
 
 
 
@@ -1871,8 +1726,6 @@ html[data-theme="light"] .bn.on{color:var(--navy);}
 .whcol{width:100%;}
 .whcol .whcolhead{background:var(--navy);box-shadow:none;}
 /* كارت الترحيب والبلاطات بالألوان الجديدة */
-.homehero{background:linear-gradient(135deg,#0E7C86,#0A5A62) !important;box-shadow:none !important;}
-.herocta{color:#0A5A62;}
 
 
 
@@ -1910,7 +1763,7 @@ html[data-theme="light"]{
 html[data-theme="dark"] body{background:radial-gradient(700px 360px at 85% -8%,rgba(47,107,255,.28),transparent 65%),#000;}
 html[data-theme="light"] body{background:linear-gradient(180deg,#EEF3FF 0,#FFFFFF 260px);}
 /* كل الأزرار الأساسية: تدرّج أزرق + كتابة بيضا */
-.exportbtn,.savebtn,.submitbtn,.cartbar-btn,.fab-btn,.pingate button,.polldiag button,.chip.active,.previewhead,.whcolhead,.num,.herocta:hover,.bn.on .bn-ic,.modalbtn.primary{
+.exportbtn,.savebtn,.submitbtn,.cartbar-btn,.fab-btn,.pingate button,.polldiag button,.chip.active,.previewhead,.whcolhead,.num,.bn.on .bn-ic,.modalbtn.primary{
   background:var(--grad) !important;color:#fff !important;border-color:transparent !important;box-shadow:none !important;}
 .fab-btn{box-shadow:0 8px 22px rgba(47,107,255,.45) !important;}
 .exportbtn.danger{background:linear-gradient(135deg,#3A3F4B,#111) !important;}
@@ -1918,8 +1771,6 @@ html[data-theme="light"] .exportbtn.danger{background:linear-gradient(135deg,#2B
 .savebtn:disabled{background:var(--surface3) !important;color:var(--muted) !important;}
 
 /* كارت الترحيب: تدرّج أزرق + زرار أبيض */
-.homehero{background:var(--grad) !important;box-shadow:0 10px 26px rgba(47,107,255,.28) !important;}
-.herocta{background:#fff !important;color:#0B3BB8 !important;}
 /* الكروت والبلاطات: أبيض/أسود نضيف بحواف رفيعة */
 .card,.ordercard,.whtile,.stat2027,.mini2027,.cartbar,.bottomnav-in{
   background:var(--card) !important;border:1px solid var(--line) !important;}
@@ -1975,8 +1826,6 @@ html[data-theme="light"] [class*="hint"],html[data-theme="light"] [class*="crumb
 html[data-theme="light"] [class*="hint"] b,html[data-theme="light"] [class*="crumb"] b,html[data-theme="light"] .currentctx b{color:#13307F !important;}
 /* ═══ v243f: إصلاح الشاشة الرئيسية — تباين الاسم، أيقونة «الرئيسية»، وعرض الكمبيوتر ═══ */
 /* اسم المستخدم فوق الكارت الأزرق: أبيض دايماً (قاعدة العناوين الغامقة في الفاتح كانت بتغلبه) */
-.homehero h2,html[data-theme="light"] .homehero h2{color:#fff !important;}
-.homehero .herohi,.homehero p{color:#fff !important;}
 /* الأيقونة في التبويب النشط: بيضا فوق مربعها الأزرق في الفاتح والداكن (.bn.on span الكحلية كانت بتغلبها) */
 .bn.on .bn-ic,html[data-theme="light"] .bn.on .bn-ic,html:not([data-theme]) .bn.on .bn-ic{color:#fff !important;}
 .bn.on .bn-ic .ico-svg{color:#fff !important;stroke:currentColor;}
@@ -1984,10 +1833,6 @@ html[data-theme="light"] [class*="hint"] b,html[data-theme="light"] [class*="cru
 .homeview{max-width:960px;margin-inline:auto;width:100%;}
 @media (min-width:900px){
   .homeview{padding-top:18px;}
-  .homehero{padding:26px 30px;border-radius:26px;margin-bottom:16px;}
-  .homehero h2{font-size:28px;margin:4px 0;}
-  .herohi{font-size:15px;} .homehero p{font-size:14px;}
-  .herocta{font-size:16px;padding:14px 22px;border-radius:16px;}
   
   
    
@@ -2027,11 +1872,7 @@ html[data-theme="dark"]{
 }
 html:is([data-theme="light"],[data-theme="dark"]) body{background:var(--bg) !important;}
 /* الكارت الترحيبي */
-html:is([data-theme="light"],[data-theme="dark"]) .homehero{background:linear-gradient(135deg,var(--hero-a) 0%,var(--hero-b) 100%) !important;border-radius:26px !important;box-shadow:var(--card-shadow) !important;border:0 !important;}
-html:is([data-theme="light"],[data-theme="dark"]) .homehero h2{color:#fff !important;}
 /* زرار الإجراء الأهم: برتقالي */
-html:is([data-theme="light"],[data-theme="dark"]) .herocta{background:var(--acc) !important;color:var(--acc-ink) !important;border-radius:16px !important;box-shadow:0 8px 18px rgba(245,158,11,.40) !important;}
-html:is([data-theme="light"],[data-theme="dark"]) .herocta .ico-svg{color:var(--acc-ink) !important;}
 /* البلاطات والأرقام */
 
 
@@ -2057,7 +1898,7 @@ html:is([data-theme="light"],[data-theme="dark"]) .num{background:linear-gradien
 html:is([data-theme="light"],[data-theme="dark"]) .submitbtn{background:linear-gradient(135deg,var(--acc),var(--acc-deep)) !important;color:var(--acc-ink) !important;border-radius:16px !important;}
 html:is([data-theme="light"],[data-theme="dark"]) .savebtn{background:linear-gradient(135deg,#1E6BD6,#0B3D91) !important;color:#fff !important;border-radius:16px !important;}
 /* ═══════════════════════════════════════════════════════════════════════════
-   v246 — شكل ومحتوى جديد: الرئيسية «طلب سريع» + طلباتي بخط تقدّم + كروت قطاعات
+   v246 — طلباتي بخط تقدّم + كروت قطاعات (الرئيسية «طلب سريع» اتشالت في v247)
    ═══════════════════════════════════════════════════════════════════════════ */
 .homesec{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
 .homesec small{font-size:11.5px;font-weight:600;color:var(--muted);}
@@ -2065,28 +1906,9 @@ html:is([data-theme="light"],[data-theme="dark"]) .savebtn{background:linear-gra
 .homehint{display:flex;flex-direction:column;gap:4px;text-align:center;padding:18px 14px;color:var(--muted);}
 .homehint b{color:var(--ink);font-size:14.5px;} .homehint small{font-size:12.5px;line-height:1.7;}
 /* اللي بتطلبه كتير */
-.quickcard{padding:4px 14px !important;}
-.qrow{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);}
-.qrow:last-child{border-bottom:0;}
-.qname{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
-.qname b{font-size:14.5px;color:var(--ink);line-height:1.35;}
-.qname small{font-size:12px;color:var(--muted);}
-.qun{font-style:normal;font-weight:800;color:#DC2626;}
-.stepper2{display:flex;align-items:center;background:var(--surface2);border-radius:13px;overflow:hidden;flex-shrink:0;}
-.stepper2 button{width:38px;height:38px;border:0;background:transparent;color:var(--navy);font-size:21px;font-weight:900;cursor:pointer;font-family:inherit;}
-.stepper2 button:active{background:var(--surface3);}
-.stepper2 em{min-width:30px;text-align:center;font-style:normal;font-weight:900;font-size:15px;color:var(--ink);}
 /* شريط الإضافة السريعة */
-.quickbar{position:fixed;z-index:30;left:12px;right:12px;margin:0 auto;max-width:560px;
-  bottom:calc(var(--bn-h,64px) + 26px + env(safe-area-inset-bottom,0px));
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-  background:linear-gradient(135deg,#0B3D91,#1E6BD6);color:#fff;border-radius:20px;padding:12px 14px;box-shadow:0 14px 30px rgba(11,61,145,.40);}
-.qbtxt{display:flex;flex-direction:column;gap:1px;min-width:0;} .qbtxt b{font-size:14px;} .qbtxt small{font-size:11px;opacity:.85;}
-.qbbtn{border:0;border-radius:14px;padding:11px 16px;background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#2B1A00;font-weight:900;font-size:13.5px;cursor:pointer;font-family:inherit;white-space:nowrap;}
-.homeview{padding-bottom:calc(var(--bn-h,64px) + 96px) !important;}
+.homeview{padding-bottom:calc(var(--bn-h,64px) + 30px) !important;}
 /* كارت طلب مختصر في الرئيسية */
-.ordermini{display:flex !important;align-items:center;justify-content:space-between;gap:10px;width:calc(100% - 0px);text-align:right;cursor:pointer;border:0;font-family:inherit;color:inherit;padding:13px 14px !important;margin-bottom:10px;}
-.omtxt{display:flex;flex-direction:column;gap:2px;} .omtxt b{font-size:14px;} .omtxt small{font-size:12px;color:var(--muted);}
 /* طلباتي: فلاتر + خط تقدّم + تفاصيل مطوية */
 .otabs{display:flex;gap:8px;margin:2px 0 12px;}
 .otab{border:0;border-radius:999px;padding:8px 16px;font-family:inherit;font-size:13px;font-weight:800;color:var(--muted);background:var(--card);box-shadow:0 4px 10px rgba(11,61,145,.07);cursor:pointer;}
@@ -2117,8 +1939,85 @@ html[data-theme="dark"] .sectile .sok{color:#4ADE80;}
 .dsedit{border:0;background:var(--surface2);color:var(--navy);font-weight:800;font-size:12.5px;border-radius:12px;padding:8px 14px;cursor:pointer;font-family:inherit;}
 @media (min-width:900px){
   .sectiles{grid-template-columns:repeat(4,1fr);}
-  .quickbar{max-width:940px;}
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   v247 — اتجاه (أ): رئيسية جديدة (بحث + طلبك الأخير + كروت القطاعات)
+          وكارت صنف فيه دواير الألوان (اختيار أكتر من لون) والمتاح/غير المتوفر بأعداد حقيقية
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* هيدر الرئيسية */
+.hb-logo{width:42px;height:42px;border-radius:13px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+  background:var(--surface2);color:var(--navy);font-weight:900;font-size:15px;letter-spacing:.5px;border:1px solid var(--line);}
+header.top .homebrand h1{font-size:16.5px;font-weight:900;}
+header.top .homebrand p.sub{font-size:12px;font-weight:700;}
+header.top .iconbtn.themepill{width:54px;border-radius:999px;}
+/* البحث + نتايجه */
+.homeview .homesearch{margin:4px 0 12px;}
+.homeview .homesearch input{border-radius:16px;padding:14px 16px;font-size:14.5px;}
+.homeres{padding:6px !important;}
+.hres{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:right;border:0;background:transparent;
+  padding:11px 12px;cursor:pointer;font-family:inherit;color:var(--ink);}
+.hres + .hres{border-top:1px solid var(--line);}
+.hres b{font-size:14.5px;} .hres small{font-size:11.5px;color:var(--muted);}
+/* طلبك الأخير */
+.lastorder .oid{font-size:19px;font-weight:900;color:var(--ink);}
+.lastorder .dmeta{font-size:12.5px;color:var(--muted);margin-top:2px;}
+.lo-btns{display:flex;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);}
+.lo-btns button{flex:1;border:0;border-radius:15px;padding:13px 8px;font-family:inherit;font-weight:900;font-size:14px;cursor:pointer;}
+.lo-detail{background:var(--surface2);color:var(--navy);}
+.lo-reorder{background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#2B1A00;box-shadow:0 8px 18px rgba(245,158,11,.35);}
+/* كروت القطاعات: أيقونة جوه مربع ملوّن */
+.sectile .sicon{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:21px;margin-bottom:4px;background:var(--surface3);}
+.sectile.sc-1 .sicon{background:#DBEAFE;} .sectile.sc-2 .sicon{background:#FEF3C7;} .sectile.sc-3 .sicon{background:#EDE9FE;}
+.sectile.sc-4 .sicon{background:#DCFCE7;} .sectile.sc-5 .sicon{background:#FCE7F3;} .sectile.sc-6 .sicon{background:#CCFBF1;}
+.sectile.sc-7 .sicon{background:#FFEDD5;} .sectile.sc-8 .sicon,.sectile.gold .sicon{background:#EDE9FE;}
+html[data-theme="dark"] .sectile .sicon{background:rgba(255,255,255,.10) !important;}
+.homesectors .sectile{background:var(--card);border:1px solid var(--line);box-shadow:var(--card-shadow,0 6px 16px rgba(11,61,145,.07));}
+.sectile small .sok{color:#15803D;font-weight:800;} .sectile small .sno{color:#DC2626;font-weight:800;}
+html[data-theme="dark"] .sectile small .sno{color:#FCA5A5;}
+.stocktag{display:inline-block;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:800;}
+.stocktag.out{background:var(--danger);color:#fff;}
+
+/* فلتر اللون الاختياري («الكل» + الألوان) */
+.cfilter{display:flex;gap:7px;overflow-x:auto;padding:2px 2px 8px;margin-bottom:6px;-webkit-overflow-scrolling:touch;}
+.cfilter .chip{flex:0 0 auto;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;}
+.cfdot{width:12px;height:12px;border-radius:50%;border:1.5px solid rgba(0,0,0,.25);display:inline-block;}
+
+/* كارت الصنف */
+.productgrid.listmode{grid-template-columns:1fr;gap:8px;}
+.pcard{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:13px 14px;display:flex;flex-direction:column;gap:10px;min-width:0;}
+.pcard.selected{border-color:var(--navy-soft);box-shadow:0 6px 18px rgba(30,107,214,.20);}
+.pcard.incart{border-color:var(--success);}
+.pcard.unavailable{opacity:.55;}
+.pc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;}
+.pc-name{flex:1;min-width:0;font-size:15.5px;font-weight:900;color:var(--ink);line-height:1.35;}
+.pcard .tick{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--success);color:#fff;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center;position:static;}
+.incarttag,.unavailtag{flex:0 0 auto;font-size:10.5px;font-weight:800;border-radius:999px;padding:3px 10px;white-space:nowrap;}
+.incarttag{background:#DCFCE7;color:#166534;}
+.unavailtag{background:var(--danger);color:#fff;}
+/* دواير الألوان */
+.cdots{display:flex;flex-wrap:wrap;gap:10px 12px;}
+.cdot{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:transparent;padding:0;cursor:pointer;font-family:inherit;min-width:46px;}
+.cdot i{width:32px;height:32px;border-radius:50%;background:var(--dc);border:2px solid rgba(0,0,0,.20);display:flex;align-items:center;justify-content:center;
+  font-style:normal;font-weight:900;font-size:16px;color:var(--ck,#fff);transition:transform .12s,box-shadow .12s;}
+.cdot.on i{box-shadow:0 0 0 3px var(--card),0 0 0 5px var(--navy-soft);transform:scale(1.06);}
+.cdot .cname{font-size:10.8px;font-weight:700;color:var(--muted);max-width:68px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cdot.on .cname{color:var(--ink);font-weight:900;}
+.cdot.low i{border-color:#F59E0B;}
+.cdot.out i{opacity:.45;border:2px dashed #DC2626;}
+.cdot.off{opacity:.3;cursor:not-allowed;}
+/* سطر المتاح / غير المتوفر */
+.pavail{display:flex;flex-wrap:wrap;gap:3px 12px;font-size:12.8px;font-weight:800;}
+.pav.ok{color:#15803D;} .pav.low{color:#C2410C;} .pav.out{color:#DC2626;}
+html[data-theme="dark"] .pav.ok{color:#4ADE80;} html[data-theme="dark"] .pav.low{color:#FDBA74;} html[data-theme="dark"] .pav.out{color:#FCA5A5;}
+/* الكمية تحت الكارت */
+.productgrid.listmode .inlinemulticolor,.productgrid.listmode .inlinestaged{margin:-2px 0 4px;padding:10px 12px;background:var(--surface3);border:1.3px solid var(--line);border-radius:16px;}
+.inlinemulticolor .inlineqtyrow{background:transparent;border:0;padding:0;margin:0 0 6px;}
+.inlinemulticolor .inlinecolorlabel{margin:8px 0 4px;}
+.pickhint{font-size:12.8px;font-weight:800;color:var(--muted);text-align:center;padding:6px 0 10px;}
+.inlinemulticolor .qty3-unitqty{gap:10px;}
+.inlinemulticolor .qty3-unitqty .qtystepper{flex:1;min-width:0;}
+.inlinemulticolor .qty3-unitqty .qtystepper input{flex:1;min-width:0;width:100%;}
 </style>
 </head>
 <body>
@@ -2185,7 +2084,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v246';
+const APP_BUILD = 'v247';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2297,7 +2196,6 @@ const state = {
   selectedColor:null,
   productSearch:'',
   accGlobalSearch:'',          // بحث عام في كل الاكسسوارات بدون تحديد تصنيف فرعي
-  colorPickerOpenKey:null,     // مفتاح الصنف اللي فاتح شرائح "أضف لون تاني" له دلوقتي
   // ===== تبويب "إدارة" (PIN منفصل عن الأدمن — متخزّن في Script Properties) =====
   manageUnlocked:false,
   manageToken:null,
@@ -2368,7 +2266,7 @@ const state = {
 
   myOrders:[],
   myOrdersLoading:false,
-  quick:{}, distEdit:false, myOrdersFilter:'all',
+  homeSearch:'', distEdit:false, myOrdersFilter:'all',
   myOrdersSearched:false,
   myOrdersAuthMissing:false,
   myOrdersPhone:'',
@@ -2683,36 +2581,12 @@ function productStockLevel(main, product){
   }
   return sawCrit ? 'crit' : 'out';
 }
-// بيرجّع نص مختصر بالألوان المتوفرة فعلاً في الصنف ده:
-// "جميع الألوان" لو كلها متوفرة · "بيج، ابيض" لو بعضها · '' لو مفيش
-// هل الكمية المتاحة قليلة؟ (بنرجّع true/false بس — الموزع مش المفروض يشوف الرقم)
+// حد «الكمية القليلة» بالعود/القطعة = عدد لفات قليلة × محتوى اللفة.
 // الرقم اللي جاي من السيرفر أصلاً = الرصيد − المحجوز، وبالعود/القطعة.
 function lowStockLimitFor(item){
   // محتوى اللفة (عمود D في شيت الأصناف) — للقطعة بيبقى 1
   const content = Number(item && item.unit) || 1;
   return LOW_STOCK_ROLLS * content;
-}
-
-function availableColorsLabel(main, product){
-  const opts = colorsForProduct(main, product).filter(c => c.available !== false);
-  if(!opts.length) return '';
-  const withColor = opts.filter(c => c.color);
-  // صنف من غير ألوان أصلاً
-  if(!withColor.length) return opts.some(c=>effectiveInStock(c)) ? 'متوفر' : '';
-  const inStock = withColor.filter(c => effectiveInStock(c)).map(c => c.color);
-  if(!inStock.length) return '';
-  if(inStock.length === withColor.length) return 'جميع الألوان';
-  return inStock.join('، ');
-}
-
-// بيرجّع أسماء الألوان اللي فيها "كمية قليلة" (عيدان بس، مفيش لفة كاملة) —
-// عشان تاج الصنف "كمية قليلة" يوضّح أنهي لون بالظبط، مش يسيب الموزع يخمّن.
-function lowStockColorsLabel(main, product){
-  const opts = colorsForProduct(main, product).filter(c => c.available !== false && c.color);
-  const names = opts
-    .filter(c => colorStockLevel(findCatalogItem(main, product, c.color)) === 'crit')
-    .map(c => c.color);
-  return names.join('، ');
 }
 
 function unitOptionsForGroup(main){
@@ -5688,19 +5562,31 @@ function renderHeader(){
     ${miniTile_('s-navy', esc(state.mainGroup||'—'), 'القطاع', 'strip-go" data-val="group')}
   </div>` : '';
   const hasBack_ = !!(state.viewHistory && state.viewHistory.length);
-  return `
-  <div class="fixedhead-outer"><div class="fixedhead-inner">
-  <header class="top">
-    ${hasBack_ ? `<button class="iconbtn backnav" data-act="go-back" title="رجوع للصفحة السابقة" aria-label="رجوع">${ico_('backArrow',20)}</button>` : ''}
+  // 🏠 في الرئيسية الهيدر بيبقى بتاع الترحيب (اتجاه أ): لوجو EK + «أهلاً، الاسم» + المخزن
+  const onHome_ = state.view==='home' && state.currentUser && !isAdminUser_;
+  const homeName_ = asText(state.currentUser && state.currentUser.distName) || asText(state.currentUser && state.currentUser.username) || '';
+  const brandHtml_ = onHome_ ? `
+    <div class="brand homebrand">
+      <span class="hb-logo" aria-hidden="true">EK</span>
+      <div class="brandtxt">
+        <h1>أهلاً${homeName_ ? '، ' + esc(homeName_) : ' بيك'}</h1>
+        <p class="sub">${isClientAccount() ? 'القرشي لأبواب وشبابيك الـ UPVC' : 'المخزن: ' + (state.warehouse ? esc(state.warehouse) : 'لسه ما اخترتش')}</p>
+      </div>
+    </div>` : `
     <div class="brand">
       <img class="logoimg" src="${logoSrc_()}" alt="القرشي">
       <div class="brandtxt">
         <h1>القرشي لأبواب وشبابيك الـ UPVC</h1>
         <p class="sub">وكيل AXA مصر — نظام طلبات الموزعين</p>
       </div>
-    </div>
+    </div>`;
+  return `
+  <div class="fixedhead-outer"><div class="fixedhead-inner">
+  <header class="top">
+    ${hasBack_ ? `<button class="iconbtn backnav" data-act="go-back" title="رجوع للصفحة السابقة" aria-label="رجوع">${ico_('backArrow',20)}</button>` : ''}
+    ${brandHtml_}
     <div class="topacts">
-      <button class="iconbtn" data-act="toggle-theme" title="${currentTheme_()==='light'?'رجّع الوضع الداكن':'وضع فاتح'}" aria-label="تبديل الوضع">${ico_(currentTheme_()==='light'?'moon':'sun',19)}</button>
+      <button class="iconbtn ${onHome_?'themepill':''}" data-act="toggle-theme" title="${currentTheme_()==='light'?'رجّع الوضع الداكن':'وضع فاتح'}" aria-label="تبديل الوضع">${ico_(currentTheme_()==='light'?'moon':'sun',19)}</button>
     </div>
   </header>
   <div class="profile-bar"><span></span><span></span><span></span><span></span><span></span></div>
@@ -5739,89 +5625,124 @@ function renderToolsPanel_(){
 
 // 🏠 الشاشة الرئيسية (v237): ترحيب + أرقام سريعة + مربعات الأقسام. مفيش منطق جديد —
 // كل مربع بينفّذ نفس data-act القديم (goto / open-cart-review / open-manage-*).
-// عدد منتجات القطاع وهل فيه حاجة متاحة (لكروت القطاعات في شاشة الطلب)
+// ===== كروت القطاعات (الرئيسية + شاشة الطلب) =====
+// عدد أصناف القطاع + كام صنف متاح وكام صنف غير متوفر (أعداد حقيقية).
+// «غير متوفر» = موقوف من الأدمن، أو (في المخزن اللي بيتتبع رصيده) مفيش منه رصيد خالص.
 function sectorStats_(main){
-  const prods = new Set(); let avail = false;
+  const prods = new Set();
   CATALOG.forEach(d=>{ if(d.main===main) prods.add(d.product); });
-  prods.forEach(p=>{ if(!isProductFullyUnavailable(main, p)) avail = true; });
-  return { n: prods.size, avail };
+  const tracked = warehouseAffectsStock(main) && !state.catalogError;
+  let avail = 0, out = 0;
+  prods.forEach(p=>{
+    const lvl = isProductFullyUnavailable(main, p) ? 'out' : (tracked ? productStockLevel(main, p) : 'ok');
+    if(lvl==='out') out++; else avail++;
+  });
+  return { n: prods.size, avail, out, tracked };
+}
+function sectorSubHtml_(g){
+  if(g===OTHER_SECTOR) return 'اكتب اللي محتاجه';
+  const st = sectorStats_(g);
+  if(!st.n) return '—';
+  const cnt = `${st.n} ${st.n===1?'صنف':'أصناف'}`;
+  // العميل والمخازن اللي مالهاش رصيد متتبَّع: مفيش أرقام رصيد — «متاح» بس (أو «نفد» لو كله موقوف)
+  if(!st.tracked) return `${cnt} · ${st.avail ? '<span class="sok">متاح</span>' : '<span class="sno">نفد</span>'}`;
+  const a = st.avail ? `<span class="sok">متاح ${st.avail}</span>` : '';
+  const o = st.out ? `<span class="sno">غير متوفر ${st.out}</span>` : '';
+  return `${cnt} · ${[a, o].filter(Boolean).join(' · ')}`;
+}
+// كل قطاع بلونه الخاص عشان يتميّز عن التاني بصريًا
+const SECTOR_COLOR_CLASS_ = {
+  'قطاعات PVC كومبن': 'sc-1', 'قطاعات كرافت لاين': 'sc-2', 'نيو لاين': 'sc-3',
+  'اكسسوارات pvc اكسا': 'sc-4', 'ابواب WPC': 'sc-5', 'تصنيع': 'sc-6', 'حشوات': 'sc-7', 'اخري': 'sc-8'
+};
+function sectorIcon_(g){
+  return g.includes('كومبن') ? '🚪' : g.includes('كرافت') ? '🪟' : g.includes('اكسسوار') ? '🔩' : g===OTHER_SECTOR ? '📋' : '📦';
+}
+// act = الفعل اللي الكارت بينفّذه: 'set-group' (جوه شاشة الطلب) أو 'open-sector' (من الرئيسية)
+function sectorTilesHtml_(activeGroup, act){
+  return SECTOR_CHIPS.map(g=>`
+    <button class="sectile ${g===OTHER_SECTOR ? 'gold' : (SECTOR_COLOR_CLASS_[g]||'')} ${activeGroup===g?'active':''}" data-act="${act}" data-val="${esc(g)}">
+      <span class="sicon">${sectorIcon_(g)}</span><b>${esc(g)}</b><small>${sectorSubHtml_(g)}</small>
+    </button>`).join('');
 }
 
-// ===== الرئيسية: «اللي بتطلبه كتير» من تاريخ طلباتك + آخر طلباتك =====
-function frequentItems_(){
-  const m = new Map();
-  (state.myOrders||[]).forEach(o=>{ (o.items||[]).forEach(it=>{
-    if(!it || !it.product) return;
-    const k = cartKey_(it), e = m.get(k) || { key:k, item:it, count:0, last:it, lastTs:0 };
-    e.count++;
-    if((o.ts||0) >= e.lastTs){ e.lastTs = o.ts||0; e.last = it; }
-    m.set(k, e);
-  }); });
-  return [...m.values()].sort((a,b)=> b.count-a.count || b.lastTs-a.lastTs).slice(0,5);
-}
-function quickTotals_(){
-  let lines = 0, units = 0;
-  Object.keys(state.quick||{}).forEach(k=>{ const q = Number(state.quick[k])||0; if(q>0){ lines++; units += q; } });
-  return { lines, units };
-}
+// ===== الرئيسية (اتجاه أ): بحث + «طلبك الأخير» + كروت القطاعات =====
 function agoText_(ts){
   const d = Math.floor((Date.now() - (Number(ts)||0)) / 86400000);
   return d<=0 ? 'النهارده' : d===1 ? 'امبارح' : d<11 ? 'منذ '+d+' أيام' : 'منذ '+d+' يوم';
 }
+function sentAgoText_(ts){
+  const d = Math.floor((Date.now() - (Number(ts)||0)) / 86400000);
+  return d<=0 ? 'اتبعت النهارده' : d===1 ? 'اتبعت امبارح' : d===2 ? 'اتبعت من يومين' : d<11 ? 'اتبعت من '+d+' أيام' : 'اتبعت من '+d+' يوم';
+}
 function orderUnits_(o){ return (o.items||[]).reduce((t,it)=> t + (Number(it.qty)||0), 0); }
 function orderStepsIdx_(o){ const st = normStatus_(o.status); return st===STATUS_DONE ? 2 : st===STATUS_PREPARING ? 1 : 0; }
-function orderMini_(o){
-  const si = statusInfo_(o.status), n = (o.items||[]).length;
-  return `
-    <button class="card ordermini" data-act="goto" data-view="myorders">
-      <span class="omtxt"><b>#${esc(orderNoDisplay_(o))} · ${n} ${n===1?'صنف':'أصناف'}</b><small>${agoText_(o.ts)} · ${orderUnits_(o)} وحدة</small></span>
-      <span class="statusbadge ${si.cls}">${si.icon} ${esc(si.label)}</span>
-    </button>`;
+
+// بحث الرئيسية: بيدوّر في أسماء الأصناف كلها (من غير ما نختار قطاع الأول)
+function homeSearchResults_(q){
+  const nq = normColorKey_(q).toLowerCase();
+  if(!nq) return [];
+  const seen = new Set(), out = [];
+  for(const d of CATALOG){
+    const k = d.main + '||' + d.product;
+    if(seen.has(k)) continue;
+    if(normColorKey_(d.product).toLowerCase().includes(nq) || normColorKey_(d.name||'').toLowerCase().includes(nq)){
+      seen.add(k); out.push({ main:d.main, product:d.product, sub:d.sub });
+      if(out.length >= 10) break;
+    }
+  }
+  return out;
 }
 
 function renderHomeView(){
-  const u = state.currentUser || {};
-  const h = new Date().getHours();
-  const greet = h < 5 ? 'سهرانين النهاردة' : h < 12 ? 'صباح الخير' : h < 18 ? 'نهارك سعيد' : 'مساء الخير';
-  const name = asText(u.distName) || asText(u.username) || '';
-  const freq = frequentItems_(), qt = quickTotals_();
-  const recent = (state.myOrders||[]).slice(0,3);
+  const last = (state.myOrders||[])[0];
   const loading = state.myOrdersLoading && !state.myOrdersSearched;
-  const quickBlock = freq.length ? `
-    <div class="homesec">اللي بتطلبه كتير <small>زوّد الكمية وابعت</small></div>
-    <div class="card quickcard">
-      ${freq.map((e,i)=>{
-        const q = state.quick[e.key] || 0, un = computeUnavailable_(e.item.main, e.item.product, e.item.color);
-        return `
-        <div class="qrow">
-          <div class="qname"><b>${esc(e.item.product)}${e.item.color?' — '+esc(e.item.color):''}</b>
-            <small>${un?'<i class="qun">غير متوفر</i> · ':''}آخر مرة: ${esc(e.last.qty)} ${esc(e.last.unitType||'')}</small></div>
-          <div class="stepper2">
-            <button data-act="quick-dec" data-i="${i}" aria-label="نقّص">−</button>
-            <em>${q}</em>
-            <button data-act="quick-inc" data-i="${i}" aria-label="زوّد">+</button>
-          </div>
-        </div>`; }).join('')}
-    </div>`
-    : (loading ? `<div class="card homehint">جارٍ تحميل طلباتك…</div>`
-      : `<div class="card homehint"><b>لسه ما بعتّش طلبات</b><small>أول ما تبعت طلب، هتلاقي هنا الأصناف اللي بتطلبها كتير عشان تعيدها بضغطة.</small></div>`);
+  const q = asText(state.homeSearch).trim();
+  const res = q ? homeSearchResults_(q) : [];
+  const searchBlock = `
+    <div class="searchbox homesearch">
+      <input type="text" placeholder="🔍 دوّر على صنف… (حلق، باكتة، سيليكون)" value="${esc(state.homeSearch)}" data-act="home-search" enterkeyhint="search">
+    </div>
+    ${q ? `
+    <div class="card homeres">
+      ${res.length ? res.map(r=>`
+      <button class="hres" data-act="home-pick" data-main="${esc(r.main)}" data-val="${esc(r.product)}"><b>${esc(r.product)}</b><small>${esc(r.main)}</small></button>`).join('')
+      : `<div class="homehint"><small>مفيش صنف بالاسم ده</small></div>`}
+    </div>` : ''}`;
+
+  let lastBlock;
+  if(last){
+    const si = statusInfo_(last.status), st = normStatus_(last.status), idx = orderStepsIdx_(last), n = (last.items||[]).length;
+    const steps = st===STATUS_EDITED ? '' : `<div class="osteps">${['استلمنا','بنجهّز','اتسلّم'].map((t,i)=>`<div class="ost ${i<idx?'done':''} ${i===idx?'cur':''}"><i></i>${t}</div>`).join('')}</div>`;
+    lastBlock = `
+    <div class="homesec">طلبك الأخير <a data-act="goto" data-view="myorders">كل الطلبات ‹</a></div>
+    <div class="card ordercard ordA lastorder">
+      <div class="ohead">
+        <div>
+          <div class="oid">طلب #${esc(orderNoDisplay_(last))}</div>
+          <div class="dmeta">${sentAgoText_(last.ts)} · ${n} ${n===1?'صنف':'أصناف'} · ${orderUnits_(last)} وحدة</div>
+        </div>
+        <span class="statusbadge ${si.cls}">${si.icon} ${esc(si.label)}</span>
+      </div>
+      ${steps}
+      <div class="lo-btns">
+        <button class="lo-detail" data-act="goto" data-view="myorders">تفاصيل الطلب</button>
+        <button class="lo-reorder" data-act="reorder" data-id="${esc(last.id)}">↻ أعد الطلب</button>
+      </div>
+    </div>`;
+  } else if(loading){
+    lastBlock = `<div class="card homehint">جارٍ تحميل طلباتك…</div>`;
+  } else {
+    lastBlock = `<div class="card homehint"><b>لسه ما بعتّش طلبات</b><small>أول ما تبعت طلب، هتلاقي هنا حالته وزرار «أعد الطلب».</small></div>`;
+  }
+
   return `
   <main class="homeview">
-    <section class="homehero">
-      <div class="herotxt">
-        <span class="herohi">${greet}</span>
-        <h2>${esc(name) || 'أهلاً بيك'}</h2>
-        <p>عايز تطلب نواقص؟ اختار الأصناف وابعت في أقل من دقيقة</p>
-      </div>
-      <button class="herocta" data-act="goto" data-view="order">${ico_('plus',18)} ابدأ طلب جديد</button>
-    </section>
-    ${quickBlock}
-    ${recent.length ? `<div class="homesec">طلباتك الأخيرة <a data-act="goto" data-view="myorders">كل الطلبات ‹</a></div>${recent.map(orderMini_).join('')}` : ''}
-    ${qt.lines ? `
-    <div class="quickbar">
-      <span class="qbtxt"><b>${qt.lines} ${qt.lines===1?'صنف':'أصناف'} · ${qt.units} وحدة</b><small>هتتضاف للطلب وتراجعها قبل الإرسال</small></span>
-      <button class="qbbtn" data-act="quick-go">كمّل وابعت ←</button>
-    </div>` : ''}
+    ${searchBlock}
+    ${q ? '' : `
+    ${lastBlock}
+    <div class="homesec">تصفّح القطاعات</div>
+    <div class="sectiles homesectors">${sectorTilesHtml_('', 'open-sector')}</div>`}
   </main>`;
 }
 
@@ -5905,15 +5826,16 @@ function render3LineQty(s, color, opts){
       </div>
     </div>
     ${shortageMsg ? `<div class="qty3-shortage">${esc(shortageMsg)}</div>` : ''}
+    ${opts.noBtns ? '' : `
     <div class="qty3-line qty3-btns">
       <button class="confirmbtn" data-act="confirm-staged" data-key="${esc(s.key)}">✓ ضيف للسلة</button>
       <button class="cancelbtn" data-act="cancel-staged" data-key="${esc(s.key)}">✖ إلغاء</button>
-    </div>
+    </div>`}
   </div>`;
 }
 
-function renderInlineQtyRow(s, color){
-  return `<div class="inlineqtyrow">${render3LineQty(s, color)}</div>`;
+function renderInlineQtyRow(s, color, opts){
+  return `<div class="inlineqtyrow">${render3LineQty(s, color, opts)}</div>`;
 }
 
 function renderStagedBlock(s){
@@ -6008,6 +5930,113 @@ function renderStagedBlock(s){
   </div>`;
 }
 
+// ===== كارت الصنف (اتجاه أ): الاسم + دواير الألوان (اختيار أكتر من لون) + المتاح/غير المتوفر بأعداد حقيقية =====
+// لون الدايرة: بنطلعه من نفس خريطة ألوان الشرايح (COLOR_STYLES_MAP) — لو اللون مش فيها بنرجّع رمادي هادي.
+function inkOn_(hex){
+  let h = String(hex||'').replace('#',''); if(h.length===3) h = h.split('').map(x=>x+x).join(''); if(h.length<6) return '#fff';
+  const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+  return (0.299*r + 0.587*g + 0.114*b) > 170 ? '#1F2937' : '#fff';
+}
+function colorHex_(c){
+  const m = /background:\s*(#[0-9A-Fa-f]{3,8})/.exec(getColorStyle(c));
+  return m ? m[1] : '#CBD5E1';
+}
+// ملخص توفر صنف (أو لون واحد منه) في المخزن الحالي — الأرقام بالوحدة الأساسية (عود/قطعة) زي الرصيد في الشيت
+function productAvail_(main, product, onlyColor){
+  let rows = colorsForProduct(main, product);
+  if(onlyColor) rows = rows.filter(r=>r.color===onlyColor);
+  const a = { tracked: warehouseAffectsStock(main) && !state.catalogError, qty:0, okN:0, lowN:0, outN:0, outNames:[], total: rows.length };
+  rows.forEach(row=>{
+    const lvl = colorStockLevel(row);
+    if(lvl==='out'){ a.outN++; if(row.color) a.outNames.push(row.color); }
+    else { if(lvl==='ok') a.okN++; else a.lowN++; a.qty += Number(row.stock)||0; }
+  });
+  return a;
+}
+// سطر التوفر تحت الاسم: «متاح · ٤٠ في المخزن» / «قليل · ٦٠ بس» + «غير متوفر: بيج، رمادي» لو فيه ألوان خلصت.
+// العميل والمخازن اللي مالهاش رصيد متتبَّع (وحالة فشل تحميل الأرصدة): مفيش سطر خالص.
+function pavailHtml_(a){
+  if(!a.tracked || !a.total) return '';
+  if(!a.okN && !a.lowN) return `<span class="pav out">غير متوفر</span>`;
+  const head = a.okN ? `<span class="pav ok">متاح · ${a.qty} في المخزن</span>` : `<span class="pav low">قليل · ${a.qty} بس</span>`;
+  const out = a.outN ? `<span class="pav out">غير متوفر${a.outNames.length ? ': ' + esc(a.outNames.join('، ')) : ''}</span>` : '';
+  return head + out;
+}
+function applySector_(main){
+  state.mainGroup = main;
+  state.productSearch = '';
+  state.accGlobalSearch = '';
+  state.selectedColor = null;
+  if(sectorNeedsSubFilter(main)){
+    const subs = subGroupsForMain(main);
+    state.subGroup = subs.length===1 ? subs[0] : null;
+  } else {
+    state.subGroup = null;
+  }
+}
+
+function renderProductCard_(main, n, colorToUse, inlineKeys){
+  const stagedEntry = state.staged.find(x=>x.key===stagedKey(main, n));
+  const isStaged = !!stagedEntry;
+  const inCart = state.cart.some(it=>it.main===main && it.product===n);
+  const rows = colorsForProduct(main, n);
+  const withColors = rows.filter(r=>r.color);
+  const colorItem = colorToUse ? findCatalogItem(main, n, colorToUse) : null;
+  const unavailable = colorToUse ? !!(colorItem && colorItem.available===false) : isProductFullyUnavailable(main, n);
+  const av = productAvail_(main, n, colorToUse);
+
+  const head = `
+    <div class="pc-head" data-act="${unavailable?'noop-unavailable':'toggle-product'}" data-val="${esc(n)}">
+      <span class="pc-name">${esc(n)}</span>
+      ${unavailable ? '<span class="unavailtag">موقوف</span>' : (isStaged ? '<span class="tick">✓</span>' : (inCart ? '<span class="incarttag">في السلة</span>' : ''))}
+    </div>`;
+
+  // دواير الألوان: دايرة بلون الصنف، والمختار عليه علامة ✓ — دوس على أكتر من لون عشان تطلب أكتر من لون
+  const dots = withColors.length ? `
+    <div class="cdots" role="group" aria-label="الألوان">
+      ${withColors.map(r=>{
+        const c = r.color;
+        const sel = isStaged && stagedEntry.selectedColors.includes(c);
+        const off = r.available===false;
+        const lvl = colorStockLevel(r);
+        const cls = off ? 'off' : (av.tracked ? (lvl==='out' ? 'out' : lvl==='ok' ? 'ok' : 'low') : 'ok');
+        const stTxt = off ? 'موقوف' : (av.tracked ? (lvl==='out' ? 'غير متوفر' : (lvl==='ok' ? 'متاح ' : 'قليل ') + (Number(r.stock)||0)) : '');
+        const hx = colorHex_(c);
+        return `<button type="button" class="cdot ${cls} ${sel?'on':''}" style="--dc:${hx};--ck:${inkOn_(hx)}" data-act="${off?'noop-unavailable':'tile-color'}" data-prod="${esc(n)}" data-val="${esc(c)}" title="${esc(c)}${stTxt ? ' — ' + esc(stTxt) : ''}" aria-label="${esc(c)}" aria-pressed="${sel}"><i>${sel?'✓':''}</i><span class="cname">${esc(c)}</span></button>`;
+      }).join('')}
+    </div>` : '';
+
+  const pav = pavailHtml_(av);
+  const card = `
+    <div class="pcard ${isStaged?'selected':''} ${inCart?'incart':''} ${unavailable?'unavailable':''}">
+      ${head}${dots}${pav ? `<div class="pavail">${pav}</div>` : ''}
+    </div>`;
+
+  let inline = '';
+  if(isStaged){
+    inlineKeys.push(stagedEntry.key);
+    if(stagedEntry.colorRequired){
+      const sc = stagedEntry.selectedColors;
+      const lvlOf = c => colorStockLevel(findCatalogItem(main, n, c));
+      const outs = sc.filter(c => lvlOf(c)==='out');
+      const partial = sc.filter(c => { const l = lvlOf(c); return l==='low' || l==='crit'; });
+      inline = `<div class="inlinemulticolor">` + (sc.length ? `
+        ${sc.map((c,i)=>`
+          <div class="inlinecolorlabel">${esc(c)}</div>
+          ${renderInlineQtyRow(stagedEntry, c, { noBtns: i < sc.length-1 })}`).join('')}
+        ${outs.length ? `<div class="lowstocknote" style="background:#FDECEC;border-color:var(--danger);color:#8A1F1F;">🚫 مفيش رصيد خالص في: ${outs.map(esc).join(' · ')} — لسه ينفع تطلبه</div>` : ''}
+        ${partial.length ? `<div class="lowstocknote">⚠️ الكمية مش كتيرة في: ${partial.map(esc).join(' · ')} — يفضل تتأكد الأول</div>` : ''}`
+        : `
+        <div class="pickhint">اختار لون أو أكتر من الدواير اللي فوق</div>
+        <div class="qty3-line qty3-btns"><button class="cancelbtn" data-act="cancel-staged" data-key="${esc(stagedEntry.key)}">✖ إلغاء</button></div>`) + `</div>`;
+    } else {
+      // صنف من غير ألوان: نفس بلوك التفاصيل العادي تحت الكارت
+      inline = `<div class="inlinestaged">${renderStagedBlock(stagedEntry)}</div>`;
+    }
+  }
+  return card + inline;
+}
+
 // ===== render: order view =====
 function renderOrderView(){
   if(state.catalogLoading){
@@ -6067,26 +6096,7 @@ function renderOrderView(){
     </main>`;
   }
 
-  // كل قطاع بلونه الخاص عشان يتميّز عن التاني بصريًا وهو مجمّع 4 في الصف
-  const SECTOR_COLOR_CLASS_ = {
-    'قطاعات PVC كومبن': 'sc-1',
-    'قطاعات كرافت لاين': 'sc-2',
-    'نيو لاين': 'sc-3',
-    'اكسسوارات pvc اكسا': 'sc-4',
-    'ابواب WPC': 'sc-5',
-    'تصنيع': 'sc-6',
-    'حشوات': 'sc-7',
-    'اخري': 'sc-8'
-  };
-  const sectorChips = SECTOR_CHIPS.map(g=>{
-    const st = g===OTHER_SECTOR ? null : sectorStats_(g);
-    const ic = g.includes('كومبن') ? '🚪' : g.includes('كرافت') ? '🪟' : g.includes('اكسسوار') ? '🔩' : g===OTHER_SECTOR ? '📋' : '📦';
-    const sub = g===OTHER_SECTOR ? 'اكتب اللي محتاجه' : (st.n ? `${st.n} ${st.n===1?'منتج':'منتجات'} · ${st.avail?'<span class="sok">متاح</span>':'<span class="sno">نفد</span>'}` : '—');
-    return `
-    <button class="sectile ${g===OTHER_SECTOR?'gold':(SECTOR_COLOR_CLASS_[g]||'')} ${state.mainGroup===g?'active':''}" data-act="set-group" data-val="${esc(g)}">
-      <span class="sicon">${ic}</span><b>${esc(g)}</b><small>${sub}</small>
-    </button>`;
-  }).join('');
+  const sectorChips = sectorTilesHtml_(state.mainGroup, 'set-group');
 
   let subSection = '';
   let productSection = '';
@@ -6121,19 +6131,10 @@ function renderOrderView(){
       }
       // لو فيه بحث عام في الاكسسوارات، نعرض من كل التصنيفات (sub=null) ونتخطى إجبار اختيار تصنيف
       subToUse = accQ ? null : state.subGroup;
-    } else if(colorsAvail.length){
-      // خطوة "اختار اللون" — بتظهر بعد القطاع مباشرة لأي قطاع فيه ألوان حقيقية
-      subSection = `
-      <div class="card">
-        <h2><span class="num">4</span>اختار اللون</h2>
-        <div class="chipwrap chipgrid4">
-          ${colorsAvail.map(c=>`<button class="chip ${state.selectedColor===c?'active':''}" style="${getColorStyle(c)}" data-act="set-color" data-val="${esc(c)}">${esc(c)}</button>`).join('')}
-        </div>
-      </div>`;
     }
     const colorToUse = colorsAvail.length ? state.selectedColor : null;
     const accGlobalQ = (needsSub && state.mainGroup.includes('اكسسوارات')) ? asText(state.accGlobalSearch).trim() : '';
-    const showProducts = needsSub ? (!!subToUse || !!accGlobalQ) : (colorsAvail.length ? !!colorToUse : true);
+    const showProducts = needsSub ? (!!subToUse || !!accGlobalQ) : true;
     if(showProducts){
       const prodMap = productsForGroup(state.mainGroup, subToUse);
       // البحث: لو فيه بحث عام في الاكسسوارات بنستخدمه، وإلا بنستخدم البحث العادي جوه التصنيف
@@ -6172,19 +6173,10 @@ function renderOrderView(){
         <div class="searchbox">
           <input type="text" placeholder="ابحث عن اسم الصنف..." value="${esc(state.productSearch)}" data-act="search-product">
         </div>
-        <div class="stocklegend">
-          ${colorToUse ? `
-          <span><i style="background:var(--success);"></i> متوفر</span>
-          <span><i style="background:var(--gold);"></i> كمية قليلة</span>
-          <span><i style="background:var(--danger);"></i> متاح اعواد</span>
-          <span><i style="background:#000;"></i> مفيش رصيد خالص</span>
-          <span><i style="background:#C9C5BA;"></i> موقوف</span>
-          ` : `
-          <span><i style="background:var(--success);"></i> متوفر</span>
-          <span><i style="background:var(--danger);"></i> مفيش رصيد (لسه ينفع تطلبه)</span>
-          <span><i style="background:#C9C5BA;"></i> موقوف</span>
-          `}
-        </div>
+        ${colorsAvail.length>1 ? `
+        <div class="cfilter" role="group" aria-label="فلتر اللون">
+          ${[''].concat(colorsAvail).map(v=>`<button type="button" class="chip ${(state.selectedColor||'')===v?'active':''}" data-act="set-color" data-val="${esc(v)}">${v ? `<i class="cfdot" style="background:${colorHex_(v)}"></i>` : ''}${v ? esc(v) : 'الكل'}</button>`).join('')}
+        </div>` : ''}
         <div class="productgrid listmode ${state.mainGroup && state.mainGroup.includes('اكسسوارات') ? 'compact' : ''}">
           ${(()=>{
             // 🔽 لو فيه صنف متحدد دلوقتي في القطاع ده، نعرضه هو بس ونخفي الباقي.
@@ -6192,91 +6184,7 @@ function renderOrderView(){
             // بترجع تظهر. بطلب صريح من المستخدم.
             const stagedNames = names.filter(n => state.staged.some(s=>s.key===stagedKey(state.mainGroup,n)));
             const visibleNames = stagedNames.length ? stagedNames : names;
-            return visibleNames.length ? visibleNames.map(n=>{
-            const stagedEntry = state.staged.find(s=>s.key===stagedKey(state.mainGroup,n));
-            const isStaged = !!stagedEntry;
-            const inCart = state.cart.some(it=>it.main===state.mainGroup && it.product===n);
-            const colorItem = colorToUse ? findCatalogItem(state.mainGroup, n, colorToUse) : null;
-            const unavailable = colorToUse ? !!(colorItem && colorItem.available===false) : isProductFullyUnavailable(state.mainGroup, n);
-            // ⚠️ في مخازن العاشر والمنصورة، ولو الداخل عميل، الرصيد مالوش
-            // معنى — نوري الصنف عادي من غير أي تلوين أو لافتة "متوفر/مفيش
-            // رصيد" خالص. "موقوف" من الأدمن يفضل يتطبق دايمًا مهما كان.
-            const showStock = warehouseAffectsStock(state.mainGroup);
-            // في وضع "اختار اللون" بنستخدم المستوى الحقيقي بتاع اللون ده بالظبط
-            // (4 مستويات: مفيش رصيد خالص / اعواد / قليلة / متوفر) — نفس الألوان
-            // والتصميم المستخدمين أصلاً في شرائح الألوان.
-            const lvl = unavailable ? 'unavailable' : (showStock ? (colorToUse ? colorStockLevel(colorItem) : productStockLevel(state.mainGroup, n)) : 'ok');
-            const stockClass = unavailable ? 'unavailable' : (showStock ? (
-              colorToUse
-                ? (lvl==='ok' ? 'instock' : lvl==='low' ? 'lowstock' : lvl==='crit' ? 'critstock' : 'blackstock')
-                : (lvl==='ok' ? 'instock' : lvl==='crit' ? 'lowstock' : 'outstock')
-            ) : '');
-            const tile = `
-            <div class="ptile ${isStaged?'selected':''} ${inCart?'incart':''} ${stockClass}" data-act="${unavailable?'noop-unavailable':'toggle-product'}" data-val="${esc(n)}">
-              ${isStaged?'<span class="tick">✓</span>':''}
-              <span>${esc(n)}</span>
-              ${unavailable?'<span class="unavailtag">موقوف</span>':''}
-              ${colorToUse ? `
-                ${(showStock && !unavailable && lvl==='out')?'<span class="stocktag black">مفيش رصيد خالص</span>':''}
-                ${(showStock && !unavailable && lvl==='crit')?'<span class="stocktag out">متاح اعواد</span>':''}
-                ${(showStock && !unavailable && lvl==='low')?'<span class="stocktag low">كمية قليلة</span>':''}
-                ${(showStock && !unavailable && lvl==='ok')?'<span class="stocktag in">متوفر</span>':''}
-              ` : `
-                ${(showStock && !unavailable && lvl==='out')?'<span class="stocktag out">مفيش رصيد</span>':''}
-                ${(showStock && !unavailable && lvl==='crit')?`<span class="stocktag low">كمية قليلة: ${esc(lowStockColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
-                ${(showStock && !unavailable && lvl==='ok')?`<span class="stocktag in">متوفر: ${esc(availableColorsLabel(state.mainGroup, n) || '—')}</span>`:''}
-              `}
-            </div>`;
-            // ⚠️ لو اللون اتحدد بالفعل من خطوة "اختار اللون" فوق (colorToUse)
-            // وده الصنف ده كان متضاف بلونه، بنعرض صف مختصر (وحدة+كمية+سعر+
-            // زرار إضافة) على طول تحت الصنف — من غير ما نبعته لقسم "حدد
-            // التفاصيل" البعيد ولا نعيد سؤاله عن اللون تاني.
-            //
-            // 🎨 ميزة إضافة ألوان تانية لنفس الصنف من غير ما تخرج من الشاشة:
-            // بنعرض صف كمية/سعر منفصل لكل لون اختاره (colorToUse + أي لون
-            // زوّده يدويًا)، وتحتهم زرار "+ أضف لون تاني" يفتح شرائح باقي
-            // الألوان المتاحة لنفس الصنف. تفعيله من نفس toggleStagedColor
-            // اللي بتستخدمها شرائح الألوان العادية.
-            let inlineRow = '';
-            if(isStaged){
-              if(colorToUse && stagedEntry.selectedColors.includes(colorToUse)){
-                const extraColors = stagedEntry.availableColors.filter(c=>c!==colorToUse);
-                const pickerOpen = state.colorPickerOpenKey === stagedEntry.key;
-                inlineRow = `<div class="inlinemulticolor">` +
-                  stagedEntry.selectedColors.map(c=>`
-                    ${stagedEntry.selectedColors.length>1 ? `<div class="inlinecolorlabel">${esc(c)}</div>` : ''}
-                    ${renderInlineQtyRow(stagedEntry, c)}
-                  `).join('') +
-                  (extraColors.length ? `
-                  <button class="addcolorbtn" data-act="toggle-color-picker" data-key="${esc(stagedEntry.key)}">
-                    ${pickerOpen ? ico_('xCircle',14) + ' اقفل' : ico_('paletteIcon',14) + ' أضف لون تاني'}
-                  </button>
-                  ${pickerOpen ? `
-                  <div class="chipwrap chipgrid4 chipsquares" style="margin-top:8px;">
-                    ${extraColors.map(c=>{
-                      const unavailable = isColorUnavailable(stagedEntry.main, stagedEntry.product, c);
-                      const colorStyles = getColorStyle(c);
-                      if(unavailable) return `<button class="chip disabled" style="${colorStyles}" data-act="noop-unavailable" disabled>${esc(c)}<small>موقوف</small></button>`;
-                      if(!warehouseAffectsStock(stagedEntry.main)) return `<button class="chip" style="${colorStyles}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
-                      const lvl = colorStockLevel(findCatalogItem(stagedEntry.main, stagedEntry.product, c));
-                      if(lvl==='out') return `<button class="chip nostockchip" style="${colorStyles}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متاح رصيد</small></button>`;
-                      if(lvl==='crit') return `<button class="chip outstockchip" style="${colorStyles}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>متاح اعواد</small></button>`;
-                      if(lvl==='low') return `<button class="chip gold lowstockchip" style="${colorStyles}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}<small>كمية قليلة</small></button>`;
-                      return `<button class="chip greenchip" style="${colorStyles}" data-act="toggle-color" data-key="${esc(stagedEntry.key)}" data-val="${esc(c)}">${esc(c)}</button>`;
-                    }).join('')}
-                  </div>` : ''}
-                  ` : '') +
-                `</div>`;
-              }else{
-                // ⚠️ قبل كده كان بلوك التفاصيل بيروح لقسم "حدد التفاصيل" بعيد
-                // تحت الشبكة. دلوقتي بيتفتح مكانه بالظبط تحت الصنف المضغوط،
-                // فالموزع يشوف الكمية والوحدة وزراير ضيف للسلة/إلغاء على طول.
-                inlineRow = `<div class="inlinestaged">${renderStagedBlock(stagedEntry)}</div>`;
-              }
-              inlineStagedKeys_.push(stagedEntry.key);
-            }
-            return tile + inlineRow;
-          }).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>';
+            return visibleNames.length ? visibleNames.map(n=>renderProductCard_(state.mainGroup, n, colorToUse, inlineStagedKeys_)).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>';
           })()}
         </div>
       </div>`;
@@ -7287,22 +7195,6 @@ function restoreGridScroll_(val){
   if(el) el.scrollTop = val;
 }
 
-// عشان الموزع لما يختار صنف جديد (مش شايله قبل كده) ميحتاجش يدور بنفسه على
-// كارت "حدد التفاصيل" اللي ممكن يكون بعيد أوي تحت شبكة الأصناف الطويلة —
-// بندزّه (scroll) تلقائيًا لبلوك تفاصيل الصنف ده أول ما يتضاف، مع ترك مسافة
-// من فوق عشان الهيدر الثابت ميغطيش أول سطر منه.
-function scrollToStagedDetail_(key){
-  requestAnimationFrame(()=>{
-    const el = document.querySelector(`[data-stagedkey="${CSS.escape(key)}"]`);
-    if(!el) return;
-    const head = document.querySelector('.fixedhead-outer');
-    const headH = head ? head.offsetHeight : 0;
-    const rect = el.getBoundingClientRect();
-    const targetY = window.scrollY + rect.top - headH - 12;
-    window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
-  });
-}
-
 // بيحط مساحة تحت المحتوى بقد ارتفاع شريط الأزرار الثابت بالظبط،
 // عشان آخر كارت في الصفحة يفضل قابل للوصول ومايتغطّاش وراه.
 function applyFixedFooterSpacing_(){
@@ -7690,6 +7582,7 @@ function onInputChange(act, el, val){
 
   switch(act){
     case 'search-product': state.productSearch = val; break;
+    case 'home-search': state.homeSearch = val; break;
     case 'acc-global-search': state.accGlobalSearch = val; break;
     case 'set-manage-pin': state.managePinInput = val; break;
     case 'manage-search-item': state.manageSearch = val; break;
@@ -7863,28 +7756,7 @@ async function onActionInner(act, el){
       break;
     case 'toggle-theme': toggleTheme_(); break;
     case 'toggle-tools': state.toolsOpen = !state.toolsOpen; render(); break;
-    // ===== الرئيسية الجديدة: إضافة سريعة + أعد الطلب + فلتر طلباتي + تعديل بيانات الموزع =====
-    case 'quick-inc': case 'quick-dec':{
-      const e = frequentItems_()[Number(el.getAttribute('data-i'))];
-      if(!e) break;
-      const cur = Number(state.quick[e.key])||0;
-      state.quick[e.key] = Math.max(0, act==='quick-inc' ? cur + 1 : cur - 1);
-      if(!state.quick[e.key]) delete state.quick[e.key];
-      render();
-      break;
-    }
-    case 'quick-go':{
-      const list = frequentItems_().filter(e => (Number(state.quick[e.key])||0) > 0);
-      list.forEach(e => cartAdd_(Object.assign({}, e.last, {
-        qty: Number(state.quick[e.key]),
-        unavailable: computeUnavailable_(e.last.main, e.last.product, e.last.color) })));
-      const n = list.length;
-      state.quick = {};
-      state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view);
-      state.view = 'order'; render();
-      showToast('اتضاف '+n+(n===1?' صنف':' أصناف')+' للطلب — راجعهم وابعت');
-      break;
-    }
+    // ===== الرئيسية: أعد الطلب + فلتر طلباتي + تعديل بيانات الموزع =====
     case 'reorder':{
       const o = (state.myOrders||[]).find(x=>String(x.id)===String(el.getAttribute('data-id')));
       if(!o || !(o.items||[]).length) break;
@@ -7974,33 +7846,18 @@ async function onActionInner(act, el){
       }
       break;
     }
-    case 'set-group':{
-      state.mainGroup = el.getAttribute('data-val');
-      state.productSearch='';
-      state.accGlobalSearch='';
-      state.selectedColor = null;
-      state.colorPickerOpenKey = null;
-      if(sectorNeedsSubFilter(state.mainGroup)){
-        const subs = subGroupsForMain(state.mainGroup);
-        state.subGroup = subs.length===1 ? subs[0] : null;
-      } else {
-        state.subGroup = null;
-      }
-      render();
-      break;
-    }
+    case 'set-group': applySector_(el.getAttribute('data-val')); render(); break;
     case 'set-sub':
       state.subGroup = el.getAttribute('data-val');
       render();
       break;
     case 'set-color':
-      state.selectedColor = el.getAttribute('data-val');
+      state.selectedColor = el.getAttribute('data-val') || null;   // فاضي = «الكل»
       render();
       break;
     case 'toggle-product':{
       const name = el.getAttribute('data-val');
       const key = stagedKey(state.mainGroup, name);
-      const wasStaged = state.staged.some(x=>x.key===key);
       // بنمسك مكان الصنف اللي دوس عليه بالظبط، وبعد ما الألوان تتفتح تحته
       // ويحصل أي تحريك للأصناف التانية، برجّعه لنفس المكان على الشاشة —
       // فيفضل شايفه هو والصنف اللي بعده من غير ما الشاشة "تنط".
@@ -8015,21 +7872,40 @@ async function onActionInner(act, el){
           }
         }
       });
-      // ⚠️ لو الصنف ده جديد (مكانش شايله قبل كده)، دلوقتي هو مضاف لقسم
-      // "حدد التفاصيل" البعيد تحت — بنودّي الموزع لهناك تلقائيًا عشان
-      // ميحسش إن حاجة ماحصلتش. لو كان بيلغي صنف كان شايله، مش محتاجين نودّيه.
-      // ⚠️ لو اللون متحدد بالفعل من فوق (state.selectedColor)، الصنف هيظهر
-      // كصف مختصر تحت التايل نفسه على طول (مش في قسم بعيد)، فمفيش داعي
-      // نعمل سكرول — هو أصلاً في مكانه قدام عين الموزع.
-      if(!wasStaged && !state.selectedColor) scrollToStagedDetail_(key);
       break;
     }
     case 'noop-unavailable': showToast('الصنف ده غير متوفر حاليًا'); break;
     case 'toggle-color': toggleStagedColor(el.getAttribute('data-key'), el.getAttribute('data-val')); break;
-    case 'toggle-color-picker':{
-      const key = el.getAttribute('data-key');
-      state.colorPickerOpenKey = (state.colorPickerOpenKey===key) ? null : key;
-      render();
+    // دايرة لون جوه كارت الصنف: لو الصنف لسه مش مختار بنختاره الأول، وبعدين نقلب اللون (اختيار أكتر من لون)
+    case 'tile-color':{
+      const name = el.getAttribute('data-prod'), color = el.getAttribute('data-val');
+      const key = stagedKey(state.mainGroup, name);
+      withPositionAnchor_(`[data-act="toggle-product"][data-val="${CSS.escape(name)}"]`, ()=>{
+        if(!state.staged.some(x=>x.key===key)) toggleStagedProduct(state.mainGroup, name);
+        toggleStagedColor(key, color);
+      });
+      break;
+    }
+    // من الرئيسية: كارت قطاع → شاشة الطلب على القطاع ده
+    case 'open-sector':{
+      applySector_(el.getAttribute('data-val'));
+      state.homeSearch = '';
+      state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view);
+      state.view = 'order'; render(); window.scrollTo(0, 0);
+      break;
+    }
+    // من نتيجة بحث الرئيسية: نفتح القطاع ونحط اسم الصنف في بحثه
+    case 'home-pick':{
+      const main = el.getAttribute('data-main'), product = el.getAttribute('data-val');
+      applySector_(main);
+      if(sectorNeedsSubFilter(main)){
+        const catEntry = CATALOG.find(d=>d.main===main && d.product===product);
+        if(catEntry && catEntry.sub) state.subGroup = catEntry.sub;
+      }
+      if(main.includes('اكسسوارات')) state.accGlobalSearch = product; else state.productSearch = product;
+      state.homeSearch = '';
+      state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view);
+      state.view = 'order'; render(); window.scrollTo(0, 0);
       break;
     }
     // ===== تبويب "إدارة" الجديد =====
@@ -8098,19 +7974,13 @@ async function onActionInner(act, el){
       state.mainGroup = main;
       state.productSearch = '';
       state.accGlobalSearch = '';
-      state.colorPickerOpenKey = null;
+      state.selectedColor = null;
       if(sectorNeedsSubFilter(main)){
         const catEntry = CATALOG.find(d=>d.main===main && d.product===product);
         const subs = subGroupsForMain(main);
         state.subGroup = (catEntry && catEntry.sub) ? catEntry.sub : (subs.length===1 ? subs[0] : null);
       } else {
         state.subGroup = null;
-        if(colorsForMain(main).length){
-          // القطاعات دي بتحتاج خطوة "اختار اللون" قبل ما الشبكة تتعرض —
-          // بنحدد أول لون للصنف ده في السلة عشان الخطوة دي تتخطى تلقائيًا.
-          const existingColor = state.cart.find(it=>it.main===main && it.product===product);
-          state.selectedColor = existingColor ? existingColor.color : null;
-        }
       }
       toggleStagedProduct(main, product);
       requestAnimationFrame(()=>{

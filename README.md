@@ -94,6 +94,7 @@
 npx http-server -p 8099 -s .      # في تيرمينال
 node tests/shortage.mjs          # «نواقص» ومفيش أسعار (v239)
 node tests/admin.mjs              # مسار الأدمن والأرشيف
+node tests/product-card.mjs       # كارت الصنف: دواير الألوان + المتاح/غير المتوفر + بحث الرئيسية (v247)
 ```
 
 محتاج `playwright` متسطّب. لو متسطّب عام مش محلي:

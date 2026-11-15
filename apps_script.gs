@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v246';
+const APP_VERSION = 'v247';
 
 const SHEET_NAME = 'Orders';
 const CATALOG_SHEET_NAME = 'الأصناف';
@@ -1050,10 +1050,6 @@ function savePushSub_(username, subJson) {
     }
   }
   return false;
-}
-
-function sendWebPush_(username, title, body, tag) {
-  return false;   // متوقفة — شوف الشرح فوق
 }
 
 
