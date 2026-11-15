@@ -32,7 +32,7 @@ await page.click('[data-act="login-submit"]'); await page.waitForTimeout(1500);
 // ── الرئيسية (اتجاه أ): بحث + طلبك الأخير + كروت القطاعات (من غير «اللي بتطلبه كتير»)
 ok('مفيش قسم «اللي بتطلبه كتير» ولا شريط إضافة سريعة', (await page.$('.qrow'))===null && (await page.$('.quickbar'))===null);
 ok('كارت «طلبك الأخير» = الطلب #213 وفيه خط تقدّم', /#213/.test(await page.$eval('.lastorder', e=>e.textContent)) && (await page.$$('.lastorder .ost')).length===3);
-ok('كروت القطاعات على الرئيسية', (await page.$$('.homesectors .sectile')).length>=3);
+ok('كروت القطاعات على الرئيسية', (await page.$$('.homesectors .sico')).length>=3);
 await page.click('.lastorder [data-act="reorder"]'); await page.waitForTimeout(500);
 let st = await page.evaluate(()=>({view:state.view, cart:state.cart.map(c=>c.product+':'+c.qty+':'+c.unitType)}));
 ok('«أعد الطلب» من الرئيسية ودّى لشاشة الطلب وضاف الأصناف للسلة', st.view==='order' && st.cart.length===1 && st.cart[0]==='حلق كومبن:4:لفة', JSON.stringify(st));

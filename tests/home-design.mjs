@@ -40,7 +40,7 @@ for(const theme of ['light','dark']){
       appW: Math.round(app.width),
       quick: document.querySelectorAll('.qrow,.quickbar,.homehero').length,
       last: document.querySelectorAll('.lastorder').length,
-      sectors: document.querySelectorAll('.homesectors .sectile').length,
+      sectors: document.querySelectorAll('.homesectors .sico').length,
       search: document.querySelectorAll('[data-act="home-search"]').length };
   });
   ok(`[${theme}] اسم المستخدم في هيدر الرئيسية ظاهر`, r.name && r.name!=='rgba(0, 0, 0, 0)', r.name);

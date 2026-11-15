@@ -12,7 +12,8 @@ const mk=(main,sub,product,color,stock,avail=true)=>({name:product+' '+color,mai
 const K='قطاعات PVC كومبن';
 const CAT=[
   mk(K,'كومبن ابيض','حلق كومبن','ابيض',40), mk(K,'كومبن بيج','حلق كومبن','بيج',0), mk(K,'كومبن رمادي','حلق كومبن','رمادي',30),
-  mk(K,'كومبن ابيض','سقاس مفصلي','ابيض',3),            // أقل من لفة = «قليل»
+  mk(K,'كومبن ابيض','سقاس مفصلي','ابيض',3),            // أقل من لفة = «أعواد بس»
+  mk(K,'كومبن ابيض','حلق قليل','ابيض',12),             // أقل من ٥ لفات = «قليل»
   mk(K,'كومبن ابيض','ضلفة مفصلي','ابيض',0),            // مفيش رصيد خالص = غير متوفر
   mk('قطاعات كرافت لاين','كرافت','حلق كرافت','ابيض',50)
 ];
@@ -33,8 +34,8 @@ await page.click('[data-act="login-submit"]'); await page.waitForTimeout(1500);
 await page.evaluate(()=>{ state.warehouse='طنطا'; render(); }); await page.waitForTimeout(300);
 
 // ── كروت القطاعات: أعداد حقيقية (٢ متاح، ١ غير متوفر)
-const tiles = await page.$$eval('.homesectors .sectile', e=>e.map(x=>x.textContent.replace(/\s+/g,' ').trim()));
-ok('كارت كومبن: «3 أصناف · متاح 2 · غير متوفر 1»', tiles.some(t=>/قطاعات PVC كومبن\s*3 أصناف · متاح 2 · غير متوفر 1/.test(t)), tiles.join(' | '));
+const tiles = await page.$$eval('.homesectors .sico', e=>e.map(x=>x.textContent.replace(/\s+/g,' ').trim()));
+ok('كارت كومبن: «4 أصناف · متاح 3 · غير متوفر 1»', tiles.some(t=>/قطاعات PVC كومبن\s*4 أصناف · متاح 3 · غير متوفر 1/.test(t)), tiles.join(' | '));
 
 // ── بحث الرئيسية
 await page.fill('[data-act="home-search"]','سقاس'); await page.waitForTimeout(300);
@@ -48,8 +49,9 @@ await page.evaluate(()=>{ state.productSearch=''; state.staged=[]; render(); });
 const card = async n => page.evaluate(n=>{ const c=[...document.querySelectorAll('.pcard')].find(x=>x.querySelector('.pc-name').textContent.trim()===n); return c ? { dots:c.querySelectorAll('.cdot').length, on:c.querySelectorAll('.cdot.on').length, av:(c.querySelector('.pavail')||{}).textContent||'' } : null; }, n);
 let c1 = await card('حلق كومبن');
 ok('٣ دواير ألوان جوه الكارت', c1 && c1.dots===3, JSON.stringify(c1));
-ok('«متاح · 70 في المخزن» + «غير متوفر: بيج»', c1 && /متاح · 70 في المخزن/.test(c1.av) && /غير متوفر: بيج/.test(c1.av), c1 && c1.av);
-ok('«سقاس مفصلي» قليل: «قليل · 3 بس»', /قليل · 3 بس/.test((await card('سقاس مفصلي')).av));
+ok('حالة بالكلام من غير أرقام: «متاح: ابيض، رمادي» + «غير متوفر: بيج»', c1 && /متاح: ابيض، رمادي/.test(c1.av) && /غير متوفر: بيج/.test(c1.av) && !/\d/.test(c1.av), c1 && c1.av);
+ok('«سقاس مفصلي» (أقل من لفة) = «أعواد بس»', /^أعواد بس$/.test((await card('سقاس مفصلي')).av.trim()));
+ok('«حلق قليل» = «قليل»', /^قليل$/.test((await card('حلق قليل')).av.trim()));
 ok('«ضلفة مفصلي» غير متوفر', /^غير متوفر$/.test((await card('ضلفة مفصلي')).av.trim()));
 
 // ── اختيار أكتر من لون: دايرتين → علامة ✓ + صفين كمية
@@ -57,22 +59,19 @@ await page.click('[data-act="tile-color"][data-prod="حلق كومبن"][data-va
 await page.click('[data-act="tile-color"][data-prod="حلق كومبن"][data-val="رمادي"]'); await page.waitForTimeout(250);
 c1 = await card('حلق كومبن');
 ok('دايرتين مختارتين عليهم ✓', c1.on===2 && (await page.$$eval('.cdot.on i', e=>e.every(x=>x.textContent.trim()==='✓'))));
-ok('صف كمية لكل لون مختار (٢) وزرار «ضيف للسلة» واحد', (await page.$$('.inlinemulticolor .qty3')).length===2 && (await page.$$('.inlinemulticolor [data-act="confirm-staged"]')).length===1);
+ok('صف كمية لكل لون مختار (٢) جوه الكارت وزرار «ضيف للسلة» واحد', (await page.$$('.pcard .qbox .qr2')).length===2 && (await page.$$('.pcard .qbox [data-act="confirm-staged"]')).length===1);
 await page.click('[data-act="tile-color"][data-prod="حلق كومبن"][data-val="رمادي"]'); await page.waitForTimeout(250);
 ok('دوسة تانية على الدايرة بتشيل اللون', (await card('حلق كومبن')).on===1);
 await page.click('[data-act="tile-color"][data-prod="حلق كومبن"][data-val="رمادي"]'); await page.waitForTimeout(250);
 // كميات وإضافة للسلة
-await page.fill('.inlinemulticolor [data-act="staged-qty-input"][data-val="ابيض"]','2');
-await page.fill('.inlinemulticolor [data-act="staged-qty-input"][data-val="رمادي"]','3');
-await page.click('.inlinemulticolor [data-act="confirm-staged"]'); await page.waitForTimeout(400);
+await page.fill('.qbox [data-act="staged-qty-input"][data-val="ابيض"]','2');
+await page.fill('.qbox [data-act="staged-qty-input"][data-val="رمادي"]','3');
+await page.click('.qbox [data-act="confirm-staged"]'); await page.waitForTimeout(400);
 st = await page.evaluate(()=>state.cart.map(c=>c.color+':'+c.qty).sort());
 ok('اتضاف اللونين بكمياتهم للسلة', st.length===2 && st.includes('ابيض:2') && st.includes('رمادي:3'), JSON.stringify(st));
 
-// ── فلتر اللون الاختياري («الكل» + ألوان) بيقلّل الأصناف
-await page.click('[data-act="set-color"][data-val="بيج"]'); await page.waitForTimeout(250);
-ok('فلتر «بيج»: صنف واحد بس', (await page.$$('.pcard')).length===1);
-await page.click('[data-act="set-color"][data-val=""]'); await page.waitForTimeout(250);
-ok('«الكل» بيرجّع كل الأصناف', (await page.$$('.pcard')).length===3);
+// ── مفيش صف فلتر ألوان منفصل: الألوان جوه الكارت بس
+ok('مفيش فلتر ألوان منفصل', (await page.$('.cfilter'))===null && (await page.$$('.pcard')).length===4);
 ok('مفيش أخطاء جافاسكريبت', errors.length===0, errors.join(' | '));
 await browser.close();
 console.log(fails ? ('❌ فشل '+fails) : '✅ كله تمام'); process.exit(fails?1:0);
