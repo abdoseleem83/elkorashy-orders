@@ -15,7 +15,8 @@ const CAT=[
   mk(K,'كومبن ابيض','سقاس مفصلي','ابيض',3),            // أقل من لفة = «أعواد بس»
   mk(K,'كومبن ابيض','حلق قليل','ابيض',12),             // أقل من ٥ لفات = «قليل»
   mk(K,'كومبن ابيض','ضلفة مفصلي','ابيض',0),            // مفيش رصيد خالص = غير متوفر
-  mk('قطاعات كرافت لاين','كرافت','حلق كرافت','ابيض',50)
+  mk('قطاعات كرافت لاين','كرافت','حلق كرافت','ابيض',50),
+  mk('اكسسوارات pvc اكسا','مفصلة','مفصلة ثقيلة','',10), mk('اكسسوارات pvc اكسا','سيليكون','سيليكون شفاف','',5), mk('اكسسوارات pvc اكسا','مفصلة','باكتة صغيرة','',7)
 ];
 await page.route('**/fonts.googleapis.com/**', r=>r.fulfill({status:200,contentType:'text/css',body:''}));
 await page.route('**/script.google.com/**', async route=>{
@@ -76,11 +77,17 @@ ok('قايمة اختيار القطاع مخفية بعد ما القطاع ا�
 const order = await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()));
 ok('الترتيب أبجدي (بغض النظر عن التوفر)', order.join('|')==='حلق قليل|حلق كومبن|سقاس مفصلي|ضلفة مفصلي', order.join('|'));
 // ── «غيّر القطاع» في الشريط الثابت
-ok('شريط الهيدر الثابت فيه «غيّر المخزن» و«غيّر القطاع»', /غيّر المخزن/.test(await page.$eval('.ministrip2027', e=>e.textContent)) && /غيّر القطاع/.test(await page.$eval('.ministrip2027', e=>e.textContent)));
+ok('الشريط الثابت فيه «غيّر القطاع» بس (من غير «غيّر المخزن»)', !/غيّر المخزن/.test(await page.$eval('.ministrip2027', e=>e.textContent)) && (await page.$('.mini2027.sectorbtn'))!==null);
 ok('الشريط fixed (مش بيسكرول مع الصفحة)', (await page.$eval('.fixedhead-outer', e=>getComputedStyle(e).position))==='fixed');
-await page.click('.ministrip2027 [data-act="strip-go"][data-val="group"]'); await page.waitForTimeout(300);
-ok('«غيّر القطاع» بيرجّع قايمة القطاعات ويخفي الأصناف', (await page.$('#sec-group'))!==null && (await page.$$('.pcard')).length===0);
-await page.click('#sec-group [data-act="set-group"][data-val="'+K+'"]'); await page.waitForTimeout(300);
+// ── «غيّر القطاع» قايمة منسدلة: بتغيّر القطاع مباشرة من غير ما تخرج للقايمة
+ok('«غيّر القطاع» select جوه الشريط الثابت', (await page.$('.ministrip2027 select[data-act="pick-sector-select"]'))!==null);
+await page.selectOption('.ministrip2027 select', 'قطاعات كرافت لاين'); await page.waitForTimeout(300);
+ok('الاختيار من القايمة غيّر القطاع وفتح أصنافه', (await page.evaluate(()=>state.mainGroup))==='قطاعات كرافت لاين' && (await page.$$('.pcard')).length===1);
+// ── الاكسسوارات: أصناف على طول (من غير تصنيفات فرعية) وأبجدي
+await page.selectOption('.ministrip2027 select', 'اكسسوارات pvc اكسا'); await page.waitForTimeout(300);
+ok('الاكسسوارات من غير شبكة تصنيفات فرعية', (await page.$('.chipgrid3'))===null);
+const accOrder = (await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()))).join('|'); ok('أصناف الاكسسوارات أبجدي', accOrder==='باكتة صغيرة|سيليكون شفاف|مفصلة ثقيلة', accOrder);
+await page.selectOption('.ministrip2027 select', K); await page.waitForTimeout(300);
 ok('مفيش أخطاء جافاسكريبت', errors.length===0, errors.join(' | '));
 await browser.close();
 console.log(fails ? ('❌ فشل '+fails) : '✅ كله تمام'); process.exit(fails?1:0);

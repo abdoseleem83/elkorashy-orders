@@ -423,7 +423,6 @@ textarea{resize:vertical;min-height:60px;}
 
 .searchbox{position:relative;margin-bottom:10px;}
 .searchbox input{padding-left:14px;}
-.accsearchhint{font-size:11.5px;color:var(--navy-soft);background:var(--surface3);border-radius:8px;padding:7px 10px;margin-bottom:8px;font-weight:700;}
 
 .productgrid{
   display:grid;
@@ -1266,9 +1265,6 @@ header.top .backnav{width:38px;height:38px;border-radius:13px;padding:0;font-siz
 .mini2027.s-green{--c:#2FD08A;--cbg:rgba(47,208,138,.15);background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));}
 .mini2027.s-gold{--c:#FFC53D;--cbg:rgba(255,197,61,.15);background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));}
 .mini2027.s-purple{--c:#B497FF;--cbg:rgba(169,139,255,.16);background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));}
-.mini2027.chg{border-style:dashed;}
-.mini2027.chg b{font-size:13px;}
-.mini2027.chg span{color:var(--c);font-weight:800;}
 .mini2027 b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 .mini2027.s-navy{--c:#4FB6FF;--cbg:rgba(79,182,255,.15);background:linear-gradient(165deg,var(--cbg),rgba(255,255,255,.02));}
 /* الصفحات اللي ماتستخدمش الشريط (شاشة الدخول) بتفضل بألوانها المصمتة */
@@ -2034,6 +2030,13 @@ html[data-theme="dark"] .sico small .sok{color:#4ADE80;}
 .sectile .sicon{width:42px;height:42px;border-radius:14px;box-shadow:0 6px 12px rgba(15,23,42,.18);}
 .sectile .sicon .sart .f{fill:rgba(255,255,255,.35);}
 @media (min-width:700px){ .sgrid{grid-template-columns:repeat(6,1fr);} }
+header.top ~ * .mini2027.sectorbtn,.mini2027.sectorbtn,html[data-theme] .mini2027.sectorbtn{flex:2.3 1 0;border:0 !important;background:linear-gradient(135deg,#FBBF24,#F59E0B) !important;box-shadow:0 8px 18px rgba(245,158,11,.40) !important;padding:7px 8px;}
+.mini2027.sectorbtn b,html[data-theme] .mini2027.sectorbtn b{font-size:15px;font-weight:900;color:#2B1A00 !important;}
+.mini2027.sectorbtn span{font-size:12.5px;font-weight:900;color:#4A2E00 !important;opacity:1;}
+.mini2027.sectorbtn:active{transform:scale(.97);}
+.hb-whbtn{display:inline-flex;align-items:center;gap:5px;border:0;background:transparent;padding:0;font:inherit;color:inherit;cursor:pointer;}
+.mini2027.sectorsel{position:relative;}
+.mini2027.sectorsel select{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer;border:0;}
 </style>
 </head>
 <body>
@@ -2100,7 +2103,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v252';
+const APP_BUILD = 'v254';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2210,7 +2213,6 @@ const state = {
   mainGroup:null,
   subGroup:null,
   productSearch:'',
-  accGlobalSearch:'',          // بحث عام في كل الاكسسوارات بدون تحديد تصنيف فرعي
   // ===== تبويب "إدارة" (PIN منفصل عن الأدمن — متخزّن في Script Properties) =====
   manageUnlocked:false,
   manageToken:null,
@@ -2496,7 +2498,7 @@ function subGroupsForMain(main){
   return [...new Set(CATALOG.filter(d=>d.main===main).map(d=>d.sub).filter(Boolean))];
 }
 function sectorNeedsSubFilter(main){
-  return main.includes('اكسسوارات') || main==='ابواب WPC';
+  return main==='ابواب WPC';   // الاكسسوارات بقت أصناف على طول (من غير تصنيفات فرعية)
 }
 function colorsForProduct(main, product){
   return CATALOG.filter(d=>d.main===main && d.product===product);
@@ -5554,8 +5556,13 @@ function renderHeader(){
   <div class="ministrip2027">
     ${miniTile_('s-green', (state.cart||[]).length, 'السلة', 'strip-go" data-val="cart')}
     ${miniTile_('s-gold', (state.staged||[]).length, 'قيد الاختيار', 'strip-go" data-val="staged')}
-    ${miniTile_('s-purple chg', esc(state.warehouse||'—'), '⇄ غيّر المخزن', 'strip-go" data-val="wh')}
-    ${miniTile_('s-navy chg', esc(state.mainGroup||'—'), '⇄ غيّر القطاع', 'strip-go" data-val="group')}
+    <div class="mini2027 sectorbtn sectorsel">
+      <b>${esc(state.mainGroup||'اختار القطاع')}</b><span>⇄ غيّر القطاع ▾</span>
+      <select data-act="pick-sector-select" aria-label="غيّر القطاع">
+        ${state.mainGroup ? '' : '<option value="" selected disabled>اختار القطاع</option>'}
+        ${SECTOR_CHIPS.map(g=>`<option value="${esc(g)}" ${g===state.mainGroup?'selected':''}>${esc(g)}</option>`).join('')}
+      </select>
+    </div>
   </div>` : '';
   const hasBack_ = !!(state.viewHistory && state.viewHistory.length);
   // 🏠 في الرئيسية الهيدر بيبقى بتاع الترحيب (اتجاه أ): لوجو EK + «أهلاً، الاسم» + المخزن
@@ -5566,7 +5573,7 @@ function renderHeader(){
       <span class="hb-logo" aria-hidden="true">EK</span>
       <div class="brandtxt">
         <h1>أهلاً${homeName_ ? '، ' + esc(homeName_) : ' بيك'}</h1>
-        <p class="sub">${isClientAccount() ? 'القرشي لأبواب وشبابيك الـ UPVC' : 'المخزن: ' + (state.warehouse ? esc(state.warehouse) : 'لسه ما اخترتش')}</p>
+        <p class="sub">${isClientAccount() ? 'القرشي لأبواب وشبابيك الـ UPVC' : `<button class="hb-whbtn" data-act="home-change-wh" title="تغيير المخزن">المخزن: ${state.warehouse ? esc(state.warehouse) : 'لسه ما اخترتش'} ⇄</button>`}</p>
       </div>
     </div>` : `
     <div class="brand">
@@ -5981,7 +5988,6 @@ function pavailHtml_(a){
 function applySector_(main){
   state.mainGroup = main;
   state.productSearch = '';
-  state.accGlobalSearch = '';
   if(sectorNeedsSubFilter(main)){
     const subs = subGroupsForMain(main);
     state.subGroup = subs.length===1 ? subs[0] : null;
@@ -6121,33 +6127,21 @@ function renderOrderView(){
     let subToUse = null;
     if(needsSub){
       const subs = subGroupsForMain(state.mainGroup);
-      const isAcc = state.mainGroup.includes('اكسسوارات');
-      const accQ = isAcc ? asText(state.accGlobalSearch).trim() : '';
       if(subs.length>1){
         subSection = `
         <div class="card">
           <h2><span class="num">4</span>اختار التصنيف الفرعي</h2>
-          ${isAcc ? `
-          <div class="searchbox accglobalsearch">
-            <input type="text" placeholder="🔍 ابحث في كل الاكسسوارات (من غير ما تختار تصنيف)..." value="${esc(state.accGlobalSearch)}" data-act="acc-global-search">
-          </div>
-          ${accQ ? `<div class="accsearchhint">🔎 بتدوّر في كل الاكسسوارات على «${esc(accQ)}» — امسح البحث عشان ترجع للتصنيفات.</div>` : ''}
-          ` : ''}
-          ${accQ ? '' : `
           <div class="chipwrap chipgrid3">
             ${subs.map(s=>`<button class="chip ${state.subGroup===s?'active':''}" data-act="set-sub" data-val="${esc(s)}">${esc(s)}</button>`).join('')}
-          </div>`}
+          </div>
         </div>`;
       }
-      // لو فيه بحث عام في الاكسسوارات، نعرض من كل التصنيفات (sub=null) ونتخطى إجبار اختيار تصنيف
-      subToUse = accQ ? null : state.subGroup;
+      subToUse = state.subGroup;
     }
-    const accGlobalQ = (needsSub && state.mainGroup.includes('اكسسوارات')) ? asText(state.accGlobalSearch).trim() : '';
-    const showProducts = needsSub ? (!!subToUse || !!accGlobalQ) : true;
+    const showProducts = needsSub ? !!subToUse : true;
     if(showProducts){
       const prodMap = productsForGroup(state.mainGroup, subToUse);
-      // البحث: لو فيه بحث عام في الاكسسوارات بنستخدمه، وإلا بنستخدم البحث العادي جوه التصنيف
-      const q = (accGlobalQ || state.productSearch.trim()).toLowerCase();
+      const q = state.productSearch.trim().toLowerCase();
       let names = [...prodMap.keys()].filter(n => !q || n.toLowerCase().includes(q));
       // ترتيب أبجدي (عربي، والأرقام بقيمتها: «5 سم» قبل «10 سم») — والأصناف الموقوفة (تعطيل يدوي) في الآخر.
       // حالة التوفر ظاهرة على كل كارت (✓/✗ + الكلمة) فمفيش داعي نغيّر الترتيب بيها.
@@ -6166,7 +6160,7 @@ function renderOrderView(){
         <div class="searchbox">
           <input type="text" placeholder="ابحث عن اسم الصنف..." value="${esc(state.productSearch)}" data-act="search-product">
         </div>
-        <div class="productgrid listmode ${state.mainGroup && state.mainGroup.includes('اكسسوارات') ? 'compact' : ''}">
+        <div class="productgrid listmode">
           ${(()=>{
             // 🔽 لو فيه صنف متحدد دلوقتي في القطاع ده، نعرضه هو بس ونخفي الباقي.
             // أول ما يلغي اختياره (يدوس عليه تاني أو يدوس إلغاء)، كل الأصناف
@@ -7560,6 +7554,9 @@ function bindEvents(){
 }
 
 function onSelectChange(act, el, val){
+  if(act==='pick-sector-select'){
+    if(val){ applySector_(val); render(); window.scrollTo({ top: 0, behavior:'smooth' }); }
+  }
   if(act==='set-color-unit'){
     setStagedColorUnit(el.getAttribute('data-key'), el.getAttribute('data-val'), val);
   }
@@ -7577,7 +7574,6 @@ function onInputChange(act, el, val){
   switch(act){
     case 'search-product': state.productSearch = val; break;
     case 'home-search': state.homeSearch = val; break;
-    case 'acc-global-search': state.accGlobalSearch = val; break;
     case 'set-manage-pin': state.managePinInput = val; break;
     case 'manage-search-item': state.manageSearch = val; break;
     case 'manage-draft-sub': state.manageEditDraft.sub = val; break;
@@ -7821,19 +7817,18 @@ async function onActionInner(act, el){
       if(v==='cart'){
         if(state.cart.length || state.pendingDraft){ if(state.pendingDraft && !state.cart.length){ resumeDraft(); state.showResumeModal=false; } state.showCartReview=true; render(); }
         else showToast('السلة فاضية — ضيف أصناف الأول');
-      } else if(v==='wh'){
-        if(state.editingOrderId){ showToast('مينفعش تغيّر المخزن وانت بتعدّل طلب'); }
-        else { state.warehouse = ''; render(); }
-      } else if(v==='group'){
-        // «غيّر القطاع»: نرجّع قايمة القطاعات (الأصناف قيد الاختيار والسلة بتفضل زي ما هي)
-        state.mainGroup = null; state.subGroup = null; state.productSearch = ''; state.accGlobalSearch = '';
-        render(); window.scrollTo({ top: 0, behavior:'smooth' });
       } else if(v==='staged'){
         const n = document.querySelector('[data-stagedkey]') || document.querySelector('.currentctx');
         if(n) scrollTo_(n); else showToast('مفيش أصناف قيد الاختيار — اختار قطاع وصنف');
       }
       break;
     }
+    // تغيير المخزن بقى من هيدر الرئيسية (الشريحة اللي في شاشة الطلب اتشالت)
+    case 'home-change-wh':
+      state.warehouse = '';
+      state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view);
+      state.view = 'order'; render(); window.scrollTo(0, 0);
+      break;
     case 'set-group': applySector_(el.getAttribute('data-val')); render(); break;
     case 'set-sub':
       state.subGroup = el.getAttribute('data-val');
@@ -7878,7 +7873,7 @@ async function onActionInner(act, el){
         const catEntry = CATALOG.find(d=>d.main===main && d.product===product);
         if(catEntry && catEntry.sub) state.subGroup = catEntry.sub;
       }
-      if(main.includes('اكسسوارات')) state.accGlobalSearch = product; else state.productSearch = product;
+      state.productSearch = product;
       state.homeSearch = '';
       state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view);
       state.view = 'order'; render(); window.scrollTo(0, 0);
@@ -7949,7 +7944,6 @@ async function onActionInner(act, el){
       // مكانتش بتتعرض خالص، فالشاشة كانت "واقفة مكانها" من غير ما تفتح حاجة.
       state.mainGroup = main;
       state.productSearch = '';
-      state.accGlobalSearch = '';
       if(sectorNeedsSubFilter(main)){
         const catEntry = CATALOG.find(d=>d.main===main && d.product===product);
         const subs = subGroupsForMain(main);
