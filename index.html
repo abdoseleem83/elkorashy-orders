@@ -2100,7 +2100,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v251';
+const APP_BUILD = 'v252';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -6149,22 +6149,13 @@ function renderOrderView(){
       // البحث: لو فيه بحث عام في الاكسسوارات بنستخدمه، وإلا بنستخدم البحث العادي جوه التصنيف
       const q = (accGlobalQ || state.productSearch.trim()).toLowerCase();
       let names = [...prodMap.keys()].filter(n => !q || n.toLowerCase().includes(q));
-      // ترتيب حسب توفر الرصيد (الموجود الأول) — والمنتجات الموقوفة (تعطيل يدوي) في الآخر خالص.
-      if(warehouseAffectsStock(state.mainGroup)){
-        // الموجود الأول: كل الألوان متاحة ← بعض الألوان متاحة ← قليل ← أعواد بس ← غير متوفر ← موقوف
-        const rankFor_ = n => {
-          if(isProductFullyUnavailable(state.mainGroup, n)) return 5;
-          const g = productAvail_(state.mainGroup, n).groups;
-          if(g.ok.length) return (g.low.length || g.crit.length || g.out.length) ? 1 : 0;
-          if(g.low.length) return 2;
-          if(g.crit.length) return 3;
-          return 4;
-        };
-        names = names
-          .map(n=>({n, r:rankFor_(n)}))
-          .sort((a,b)=>a.r-b.r)
-          .map(x=>x.n);
-      }
+      // ترتيب أبجدي (عربي، والأرقام بقيمتها: «5 سم» قبل «10 سم») — والأصناف الموقوفة (تعطيل يدوي) في الآخر.
+      // حالة التوفر ظاهرة على كل كارت (✓/✗ + الكلمة) فمفيش داعي نغيّر الترتيب بيها.
+      const alpha_ = new Intl.Collator('ar', { numeric:true, sensitivity:'base' });
+      names = names
+        .map(n=>({ n, off: isProductFullyUnavailable(state.mainGroup, n) ? 1 : 0 }))
+        .sort((x,y)=> (x.off-y.off) || alpha_.compare(x.n, y.n))
+        .map(x=>x.n);
       productSection = `
       <div class="card">
         <h2><span class="num">5</span>اختار الأصناف (تقدر تختار أكتر من واحد)</h2>

@@ -74,7 +74,7 @@ ok('اتضاف اللونين بكمياتهم للسلة', st.length===2 && st.
 // ── بعد اختيار القطاع: قايمة القطاعات تختفي والأصناف تظهر على طول + ترتيب «الموجود الأول»
 ok('قايمة اختيار القطاع مخفية بعد ما القطاع اتحدد', (await page.$('#sec-group'))===null);
 const order = await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()));
-ok('الترتيب: الموجود الأول (حلق كومبن ← قليل ← أعواد بس ← غير متوفر)', order.join('|')==='حلق كومبن|حلق قليل|سقاس مفصلي|ضلفة مفصلي', order.join('|'));
+ok('الترتيب أبجدي (بغض النظر عن التوفر)', order.join('|')==='حلق قليل|حلق كومبن|سقاس مفصلي|ضلفة مفصلي', order.join('|'));
 // ── «غيّر القطاع» في الشريط الثابت
 ok('شريط الهيدر الثابت فيه «غيّر المخزن» و«غيّر القطاع»', /غيّر المخزن/.test(await page.$eval('.ministrip2027', e=>e.textContent)) && /غيّر القطاع/.test(await page.$eval('.ministrip2027', e=>e.textContent)));
 ok('الشريط fixed (مش بيسكرول مع الصفحة)', (await page.$eval('.fixedhead-outer', e=>getComputedStyle(e).position))==='fixed');
