@@ -14,7 +14,8 @@ const CAT=[
   mk(K,'كومبن ابيض','حلق كومبن','ابيض',40), mk(K,'كومبن بيج','حلق كومبن','بيج',0), mk(K,'كومبن رمادي','حلق كومبن','رمادي',30), mk(K,'كومبن رمادي','حلق كومبن','رمادي',30),   // صف مكرر لنفس اللون — لازم يتعرض مرة واحدة
   mk(K,'كومبن ابيض','سقاس مفصلي','ابيض',3),            // أقل من لفة = «أعواد بس»
   mk(K,'كومبن ابيض','حلق قليل','ابيض',12),             // أقل من ٥ لفات = «قليل»
-  mk(K,'كومبن ابيض','ضلفة مفصلي','ابيض',0),            // مفيش رصيد خالص = غير متوفر
+  mk(K,'كومبن ابيض','ضلفة مفصلي','ابيض',0),
+  mk(K,'كومبن ابيض','باكتة جرار','ابيض',20),            // مفيش رصيد خالص = غير متوفر
   mk('قطاعات كرافت لاين','كرافت','حلق كرافت','ابيض',50),
   mk('اكسسوارات pvc اكسا','مفصلة','مفصلة ثقيلة','',10), mk('اكسسوارات pvc اكسا','سيليكون','سيليكون شفاف','',5), mk('اكسسوارات pvc اكسا','مفصلة','باكتة صغيرة','',7),
   mk('شاتر','','شاتر ابيض','ابيض',9), mk('ابواب WPC','','باب WPC','',3), mk('اكسسوارات خارجيه','','مقبض خارجي','',4)
@@ -37,7 +38,7 @@ await page.evaluate(()=>{ state.warehouse='طنطا'; render(); }); await page.w
 
 // ── كروت القطاعات: أعداد حقيقية (٢ متاح، ١ غير متوفر)
 const tiles = await page.$$eval('.homesectors .sico', e=>e.map(x=>x.textContent.replace(/\s+/g,' ').trim()));
-ok('كارت كومبن: «4 أصناف · متاح 3 · غير متوفر 1»', tiles.some(t=>/قطاعات PVC كومبن\s*4 أصناف · متاح 3 · غير متوفر 1/.test(t)), tiles.join(' | '));
+ok('كارت كومبن: «5 أصناف · متاح 4 · غير متوفر 1»', tiles.some(t=>/قطاعات PVC كومبن\s*5 أصناف · متاح 4 · غير متوفر 1/.test(t)), tiles.join(' | '));
 
 // ── بحث الرئيسية
 await page.fill('[data-act="home-search"]','سقاس'); await page.waitForTimeout(300);
@@ -76,7 +77,7 @@ ok('اتضاف اللونين بكمياتهم للسلة', st.length===2 && st.
 // ── بعد اختيار القطاع: قايمة القطاعات تختفي والأصناف تظهر على طول + ترتيب «الموجود الأول»
 ok('قايمة اختيار القطاع مخفية بعد ما القطاع اتحدد', (await page.$('#sec-group'))===null);
 const order = await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()));
-ok('الترتيب أبجدي (بغض النظر عن التوفر)', order.join('|')==='حلق قليل|حلق كومبن|سقاس مفصلي|ضلفة مفصلي', order.join('|'));
+ok('الترتيب أبجدي (بغض النظر عن التوفر)', order.join('|')==='باكتة جرار|حلق قليل|حلق كومبن|سقاس مفصلي|ضلفة مفصلي', order.join('|'));
 ok('خلفيتين بالتبادل لكروت الأصناف', await page.evaluate(()=>{ const bg=[...document.querySelectorAll('.pcard')].map(c=>getComputedStyle(c).backgroundColor); return bg.length>=3 && bg.every((b,i)=> i===0 || b!==bg[i-1]) && new Set(bg).size===2; }));
 ok('البحث جوه الهيدر الثابت (مبيسكرولش) وفيه أيقونة 🔍', (await page.$('.fixedhead-outer .searchbox.hasic .sbic svg'))!==null && (await page.$('.fixedhead-outer [data-act="search-product"]'))!==null);
 await page.evaluate(()=>window.scrollTo(0, 400)); await page.waitForTimeout(200);
@@ -111,20 +112,27 @@ await page.click('.otherlink'); await page.waitForTimeout(300);
 ok('«أصناف أخرى» بتفتح من جوه القطاع', (await page.evaluate(()=>state.mainGroup))==='أصناف أخرى');
 await page.selectOption('.ministrip2027 select', K); await page.waitForTimeout(300);
 await page.evaluate(()=>{ state.cart=[]; render(); });
-// ── مربعات الأنواع (باكتات / حلوق / ضلف …): دوس نوع يظهرلك أصنافه بس
+// ── مربعات الأنواع: قطاعات الشبابيك = مفصلي · جرار · أخرى (والباقي بأول كلمة والمفرد في «أخرى»)
 await page.evaluate(([k])=>{ state.cart=[]; state.staged=[]; applySector_(k); render(); }, [K]); await page.waitForTimeout(300);
-const fams = await page.$$eval('.famrow .fam b', e=>e.map(x=>x.textContent.trim()));
-ok('مربعات الأنواع ظاهرة: الكل + حلوق + سقاسات + ضلف', fams[0]==='الكل' && fams.includes('حلوق') && fams.includes('سقاسات') && fams.includes('ضلف'), fams.join('|'));
+const fams = await page.$$eval('.famrow .fam', e=>e.map(x=>x.querySelector('b').textContent.trim()+':'+x.querySelector('small').textContent.trim()));
+ok('كومبن: الكل 5 · مفصلي 2 · جرار 1 · أخرى 2 (أخرى في الآخر)', fams.join('|')==='الكل:5|مفصلي:2|جرار:1|أخرى:2', fams.join('|'));
+ok('مفيش «حلوق» ولا «ضلف» كمربعات', !fams.some(x=>/^(حلوق|ضلف)/.test(x)));
 ok('مربعات الأنواع جوه الشاشة (مفيش سكرول جانبي)', await page.evaluate(()=>{ const r=document.querySelector('.famrow'); return r.scrollWidth<=r.clientWidth+1 && getComputedStyle(r).flexWrap==='wrap'; }));
-await page.click('.fam[data-val="حلق"]'); await page.waitForTimeout(300);
-ok('«حلوق» بتعرض الحلوق بس', (await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()))).every(n=>n.startsWith('حلق')) && (await page.$$('.pcard')).length===2);
+await page.click('.fam[data-val="sys:مفصلي"]'); await page.waitForTimeout(300);
+ok('«مفصلي» بتعرض المفصلي بس (كل المفصلي مع بعض)', (await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()))).join('|')==='سقاس مفصلي|ضلفة مفصلي');
+await page.click('.fam[data-val="sys:جرار"]'); await page.waitForTimeout(300);
+ok('«جرار» بتعرض الجرار بس', (await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()))).join('|')==='باكتة جرار');
+await page.click('.fam[data-val="sys:اخرى"]'); await page.waitForTimeout(300);
+ok('«أخرى» = اللي مش مفصلي ولا جرار', (await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()))).join('|')==='حلق قليل|حلق كومبن');
 await page.click('.fam[data-val=""]'); await page.waitForTimeout(300);
-await page.evaluate(([k])=>{ for(let i=1;i<=14;i++) CATALOG.push({name:'نوع'+i+' صنف',main:k,sub:'',unit:1,product:'نوع'+i+' صنف',color:'',price:1,available:true,inStock:true,stock:5}); render(); }, [K]); await page.waitForTimeout(300);
-ok('كتير أنواع: أول ٩ + «كل الأنواع» (من غير ما تطلع بره الشاشة)', await page.evaluate(()=>{ const r=document.querySelector('.famrow'); return r.querySelectorAll('.fam:not(.more)').length===10 && !!r.querySelector('.fam.more') && r.scrollWidth<=r.clientWidth+1; }));
+ok('«الكل» بترجّع كل الأصناف', (await page.$$('.pcard')).length===5);
+// باقي القطاعات (اكسسوارات pvc): أول كلمة + المفرد في «أخرى» + «كل الأنواع» لو كتير
+await page.evaluate(()=>{ for(let i=1;i<=11;i++){ for(const x of ['أ','ب']) CATALOG.push({name:'فام'+i+' '+x,main:'اكسسوارات pvc اكسا',sub:'',unit:1,product:'فام'+i+' '+x,color:'',price:1,available:true,inStock:true,stock:5}); } applySector_(ACC_GROUP); render(); }); await page.waitForTimeout(300);
+ok('اكسسوارات: مفيش سكرول جانبي في المربعات', await page.evaluate(()=>{ const r=document.querySelector('.famrow'); return r.scrollWidth<=r.clientWidth+1; }));
+ok('اكسسوارات: أول ٩ أنواع + «كل الأنواع»', await page.evaluate(()=>document.querySelectorAll('.famrow .fam:not(.more)').length===10 && !!document.querySelector('.fam.more')));
 await page.click('.fam.more'); await page.waitForTimeout(300);
-ok('«كل الأنواع» بتفتحهم كلهم', await page.evaluate(()=>document.querySelectorAll('.famrow .fam:not(.more)').length>10));
-await page.click('.fam.more'); await page.evaluate(()=>{ CATALOG.splice(CATALOG.length-14,14); render(); }); await page.waitForTimeout(300);
-ok('«الكل» بترجّع كل الأصناف', (await page.$$('.pcard')).length===4);
+ok('«كل الأنواع» بتفتحهم كلهم وفيهم «أخرى»', await page.evaluate(()=>document.querySelectorAll('.famrow .fam:not(.more)').length>10 && !!document.querySelector('.fam[data-val="sys:اخرى"]')));
+await page.evaluate(([k])=>{ CATALOG.splice(CATALOG.length-22,22); state.famExpanded=false; applySector_(k); render(); }, [K]); await page.waitForTimeout(300);
 // ── دوسة على لون موجود في السلة: بيتفتح للتعديل (مش بيتشال ويتمسح البند من السلة)
 await page.evaluate(()=>{ state.staged=[]; state.cart=[]; render(); }); await page.waitForTimeout(200);
 await page.evaluate(([k])=>{ cartAdd_({main:k,product:'سقاس مفصلي',name:'سقاس مفصلي ابيض',color:'ابيض',unitType:'لفة',qty:2}); cartAdd_({main:k,product:'ضلفة مفصلي',name:'ضلفة مفصلي ابيض',color:'ابيض',unitType:'لفة',qty:1}); render(); }, [K]); await page.waitForTimeout(200);
