@@ -2041,6 +2041,10 @@ header.top ~ * .mini2027.sectorbtn,.mini2027.sectorbtn,html[data-theme] .mini202
 html[data-theme="dark"] .productgrid > .pcard:nth-child(even){--card:#18284A;border-color:#2B4170;}
 .pcard.selected,.pcard.incart{border-color:var(--navy-soft);}
 .pcard.incart:not(.selected){border-color:var(--success);}
+.searchbox.hasic input{padding-inline-start:44px;}
+.searchbox .sbic{position:absolute;inset-inline-start:14px;top:50%;transform:translateY(-50%);display:flex;color:var(--navy);pointer-events:none;z-index:1;}
+.searchbox .sbic .ico-svg{stroke:currentColor;}
+body.kb-open .bottomnav,body.kb-open .submitbar{display:none !important;}
 </style>
 </head>
 <body>
@@ -2107,7 +2111,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v257';
+const APP_BUILD = 'v258';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -5740,8 +5744,9 @@ function renderHomeView(){
   const q = asText(state.homeSearch).trim();
   const res = q ? homeSearchResults_(q) : [];
   const searchBlock = `
-    <div class="searchbox homesearch">
-      <input type="text" placeholder="🔍 دوّر على صنف… (حلق، باكتة، سيليكون)" value="${esc(state.homeSearch)}" data-act="home-search" enterkeyhint="search">
+    <div class="searchbox hasic homesearch">
+      <span class="sbic">${ico_('search',19)}</span>
+      <input type="text" placeholder="دوّر على صنف… (حلق، باكتة، سيليكون)" value="${esc(state.homeSearch)}" data-act="home-search" enterkeyhint="search">
     </div>
     ${q ? `
     <div class="card homeres">
@@ -6148,8 +6153,9 @@ function renderOrderView(){
           ${ico_('mapPin',14)} إنت الآن في:
           <b>${esc(state.mainGroup)}</b>
         </div>
-        <div class="searchbox">
-          <input type="text" placeholder="ابحث عن اسم الصنف..." value="${esc(state.productSearch)}" data-act="search-product">
+        <div class="searchbox hasic">
+          <span class="sbic">${ico_('search',19)}</span>
+          <input type="text" placeholder="ابحث عن اسم الصنف..." value="${esc(state.productSearch)}" data-act="search-product" enterkeyhint="search">
         </div>
         <div class="productgrid listmode">
           ${(()=>{
@@ -7518,6 +7524,12 @@ function bindEvents(){
   // ---------- الدخول للخانة ----------
   // ⚠️ focus مابيطلعش لفوق (مابيعملش bubbling) فمينفعش نستخدمه في التفويض —
   // البديل focusin وهو بيطلع عادي.
+  // ⌨️ أول ما الكيبورد يفتح (بحث / كمية / ملاحظات) نخفي الشرايط الثابتة اللي تحت (السلة · الإرسال · التنقل)
+  // — كانت بتقعد فوق الكيبورد وتغطي نتايج البحث فمكانش فيه مكان يبان فيه حاجة ولا تسكرول.
+  const typingEl_ = el => !!(el && el.matches && el.matches('textarea, input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit])'));
+  document.addEventListener('focusin', e=>{ if(typingEl_(e.target)) document.body.classList.add('kb-open'); });
+  document.addEventListener('focusout', ()=> setTimeout(()=>{ if(!typingEl_(document.activeElement)) document.body.classList.remove('kb-open'); }, 200));
+
   app.addEventListener('focusin', e=>{
     const el = e.target;
     if(!el.matches || !el.matches('[data-act]')) return;

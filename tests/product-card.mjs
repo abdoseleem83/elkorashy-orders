@@ -78,6 +78,11 @@ ok('قايمة اختيار القطاع مخفية بعد ما القطاع ا�
 const order = await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()));
 ok('الترتيب أبجدي (بغض النظر عن التوفر)', order.join('|')==='حلق قليل|حلق كومبن|سقاس مفصلي|ضلفة مفصلي', order.join('|'));
 ok('خلفيتين بالتبادل لكروت الأصناف', await page.evaluate(()=>{ const bg=[...document.querySelectorAll('.pcard')].map(c=>getComputedStyle(c).backgroundColor); return bg.length>=3 && bg.every((b,i)=> i===0 || b!==bg[i-1]) && new Set(bg).size===2; }));
+ok('أيقونة البحث ظاهرة جوه خانة البحث', (await page.$('.searchbox.hasic .sbic svg'))!==null);
+await page.focus('[data-act="search-product"]'); await page.waitForTimeout(350);
+ok('الكيبورد مفتوح: الشرايط الثابتة (التنقل/الإرسال) اتخفّت', await page.evaluate(()=>document.body.classList.contains('kb-open') && getComputedStyle(document.querySelector('.bottomnav')).display==='none'));
+await page.evaluate(()=>document.activeElement.blur()); await page.waitForTimeout(400);
+ok('بعد قفل الكيبورد الشرايط رجعت', await page.evaluate(()=>!document.body.classList.contains('kb-open') && getComputedStyle(document.querySelector('.bottomnav')).display!=='none'));
 // ── «غيّر القطاع» في الشريط الثابت
 ok('الشريط الثابت فيه «غيّر القطاع» بس (من غير «غيّر المخزن»)', !/غيّر المخزن/.test(await page.$eval('.ministrip2027', e=>e.textContent)) && (await page.$('.mini2027.sectorbtn'))!==null);
 ok('الشريط fixed (مش بيسكرول مع الصفحة)', (await page.$eval('.fixedhead-outer', e=>getComputedStyle(e).position))==='fixed');
