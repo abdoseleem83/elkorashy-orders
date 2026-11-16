@@ -24,6 +24,7 @@ await page.route('**/fonts.googleapis.com/**', r=>r.fulfill({status:200,contentT
 await page.route('**/script.google.com/**', async route=>{
   const r=route.request(); const post=r.method()==='POST'?JSON.parse(r.postData()||'{}'):null;
   const action=post?(post.action||''):(new URL(r.url()).searchParams.get('action')||'');
+  if(action==='manageSetProductType') globalThis.__typePost = post;
   let p;
   if(action==='catalog') p={items:CAT,discounts:{}};
   else if(action==='login') p={ok:true,username:'test',distName:'فرع طنطا',distRegion:'طنطا',distPhone:'01000000001',distType:'موزع',token:'FAKE.TOKEN'};
@@ -126,6 +127,20 @@ await page.click('.fam[data-val="sys:اخرى"]'); await page.waitForTimeout(300
 ok('«أخرى» = اللي مش مفصلي ولا جرار', (await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()))).join('|')==='حلق قليل|حلق كومبن');
 await page.click('.fam[data-val=""]'); await page.waitForTimeout(300);
 ok('«الكل» بترجّع كل الأصناف', (await page.$$('.pcard')).length===5);
+// ── نقل صنف بين الأنواع (للإدارة بس): من «أخرى» لـ «جرار»
+ok('زرار «نقل» مش ظاهر لغير الإدارة', (await page.$('.movechip'))===null);
+await page.evaluate(()=>{ setManageToken('MGR.TOK'); render(); }); await page.waitForTimeout(300);
+ok('زرار «نقل» ظاهر على كل كارت للإدارة', (await page.$$('.pcard .movechip')).length===5);
+await page.selectOption('.pcard:has(.pc-name:text-is("حلق كومبن")) .movechip select', 'جرار'); await page.waitForTimeout(500);
+const post = globalThis.__typePost;
+ok('اتبعت للسيرفر: حلق كومبن ← جرار', post && post.action==='manageSetProductType' && post.main===K && post.product==='حلق كومبن' && post.type==='جرار' && post.token==='MGR.TOK', JSON.stringify(post));
+const fams2 = await page.$$eval('.famrow .fam', e=>e.map(x=>x.querySelector('b').textContent.trim()+':'+x.querySelector('small').textContent.trim()));
+ok('الأرقام اتحدّثت: جرار 2 · أخرى 1', fams2.join('|')==='الكل:5|مفصلي:2|جرار:2|أخرى:1', fams2.join('|'));
+await page.click('.fam[data-val="sys:جرار"]'); await page.waitForTimeout(300);
+ok('«حلق كومبن» ظهر في «جرار»', (await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()))).includes('حلق كومبن'));
+await page.selectOption('.pcard:has(.pc-name:text-is("حلق كومبن")) .movechip select', '__auto'); await page.waitForTimeout(500);
+ok('«رجوع للتصنيف التلقائي» بيرجّعه لـ «أخرى»', (globalThis.__typePost.type===''), JSON.stringify(globalThis.__typePost)) ;
+await page.evaluate(()=>{ setManageToken(''); state.family=''; render(); }); await page.waitForTimeout(200);
 // باقي القطاعات (اكسسوارات pvc): أول كلمة + المفرد في «أخرى» + «كل الأنواع» لو كتير
 await page.evaluate(()=>{ for(let i=1;i<=11;i++){ for(const x of ['أ','ب']) CATALOG.push({name:'فام'+i+' '+x,main:'اكسسوارات pvc اكسا',sub:'',unit:1,product:'فام'+i+' '+x,color:'',price:1,available:true,inStock:true,stock:5}); } applySector_(ACC_GROUP); render(); }); await page.waitForTimeout(300);
 ok('اكسسوارات: مفيش سكرول جانبي في المربعات', await page.evaluate(()=>{ const r=document.querySelector('.famrow'); return r.scrollWidth<=r.clientWidth+1; }));

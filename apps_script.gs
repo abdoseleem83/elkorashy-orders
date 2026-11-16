@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v263';
+const APP_VERSION = 'v264';
 
 const SHEET_NAME = 'Orders';
 const CATALOG_SHEET_NAME = 'الأصناف';
@@ -467,6 +467,10 @@ function doPostInner_(e) {
   if (action === 'manageUpdateCatalogItem') {
     if (!isValidManageToken_(token)) return denyManage_();
     return json_({ ok: updateCatalogItem_(data.item || {}) });
+  }
+  if (action === 'manageSetProductType') {
+    if (!isValidManageToken_(token)) return denyManage_();
+    return json_({ ok: setProductType_(data.main, data.product, data.type) });
   }
   if (action === 'manageAddCatalogItem') {
     if (!isValidManageToken_(token)) return denyManage_();
@@ -1256,6 +1260,33 @@ function updateCatalogItem_(data) {
   return false;
 }
 
+// 🧭 نقل صنف (بكل ألوانه) لنوع تاني: مفصلي / جرار / أخرى — بيتكتب في عمود «النوع» (بيتعمل لو مش موجود).
+// النوع الفاضي = التصنيف التلقائي (من اسم الصنف). بيتطبّق على كل صفوف نفس الـ main + الـ product.
+function setProductType_(main, product, type) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CATALOG_SHEET_NAME);
+  if (!sheet) return false;
+  const t = String(type == null ? '' : type).trim();
+  if (t && ['مفصلي', 'جرار', 'أخرى'].indexOf(t) < 0) return false;
+  const lastCol = Math.max(sheet.getLastColumn(), 9);
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  let col = findHeaderCol_(headers, 'النوع');
+  if (col < 0) {
+    col = sheet.getLastColumn();                // أول عمود فاضي بعد آخر عمود موجود
+    sheet.getRange(1, col + 1).setValue('النوع');
+  }
+  const n = sheet.getLastRow() - 1;
+  if (n < 1) return false;
+  const vals = sheet.getRange(2, 1, n, 5).getValues();     // A..E (B=main, E=product)
+  let hit = 0;
+  for (let i = 0; i < n; i++) {
+    if (String(vals[i][1]).trim() === String(main).trim() && String(vals[i][4] || vals[i][0]).trim() === String(product).trim()) {
+      sheet.getRange(i + 2, col + 1).setValue(t);
+      hit++;
+    }
+  }
+  return hit > 0;
+}
+
 function addCatalogItem_(data) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CATALOG_SHEET_NAME);
   if (!sheet) return false;
@@ -1415,6 +1446,7 @@ function buildCatalogPayload_() {
     if (lastRow >= 2) {
       const headers = csheet.getRange(1, 1, 1, lastCol).getValues()[0];
       const remainColIdx = findHeaderCol_(headers, 'رصيد متبقي');
+      const typeColIdx = findHeaderCol_(headers, 'النوع');   // تصنيف يدوي (مفصلي / جرار / أخرى) — بيتحدد من التطبيق بزرار «نقل»
       const rows = csheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
       // ⚡ المحجوز بيتحسب **عند الحاجة بس**. في الحالة الطبيعية عمود "رصيد
       // متبقي" مليان بأرقام جاهزة، فمش محتاجين نقرا شيت الطلبات كله أصلاً.
@@ -1444,6 +1476,7 @@ function buildCatalogPayload_() {
 
         return {
           name: r[0], main: r[1], sub: r[2],
+          type: typeColIdx >= 0 ? String(r[typeColIdx] == null ? '' : r[typeColIdx]).trim() : '',
           unit: Number(r[3]) || 1, product: r[4] || r[0], color: r[5] || '',
           price: (r[6] === '' || r[6] === null || r[6] === undefined) ? null : Number(r[6]),
           // available = الأدمن عطّل الصنف يدويًا (عمود I = "لا")

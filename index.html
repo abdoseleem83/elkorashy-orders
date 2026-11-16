@@ -2078,6 +2078,8 @@ body.kb-open .bottomnav,body.kb-open .submitbar{display:none !important;}
 .fam.on{background:linear-gradient(135deg,#1E6BD6,#0B3D91);border-color:transparent;color:#fff;box-shadow:0 8px 18px rgba(11,61,145,.3);}
 .fam.on small{color:rgba(255,255,255,.85);}
 .fam.more{border-style:dashed;border-color:var(--navy-soft);color:var(--navy);}
+.movechip{position:relative;align-self:flex-start;display:inline-flex;align-items:center;gap:4px;border:1.5px dashed var(--navy-soft);color:var(--navy);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:900;cursor:pointer;}
+.movechip select{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer;border:0;}
 </style>
 </head>
 <body>
@@ -2144,7 +2146,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v263';
+const APP_BUILD = 'v264';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2660,7 +2662,7 @@ function unitOptionsForGroup(main){
 
 function normalizeCatalogItems_(items){
   return items.map(d=>({
-    name:d.name, main:d.main, sub:d.sub,
+    name:d.name, main:d.main, sub:d.sub, type: String(d.type||'').trim(),
     unit: Number(d.unit)||1, product: d.product || d.name, color: d.color || '',
     price: (d.price===null || d.price===undefined || d.price==='') ? null : Number(d.price),
     available: d.available !== false,
@@ -6106,6 +6108,27 @@ function pavailHtml_(a){
     return `<span class="pav ${k}">${STOCK_WORD_[k]}${names.length ? ': ' + esc(names.join('، ')) : ''}</span>`;
   }).join('');
 }
+// 🧭 النوع اليدوي لصنف (من عمود «النوع» في الشيت) — فاضي = تصنيف تلقائي
+function productTypeOverride_(main, product){
+  const row = CATALOG.find(d=>d.main===main && d.product===product && d.type);
+  const t = row ? String(row.type).trim() : '';
+  return (t==='مفصلي' || t==='جرار' || t==='أخرى') ? t : '';
+}
+// نقل صنف (بكل ألوانه) لنوع تاني — للأدمن/الإدارة بس. بيتحدّث على طول وبيتحفظ في الشيت.
+async function moveProductType_(main, product, type){
+  const prev = CATALOG.filter(d=>d.main===main && d.product===product).map(d=>[d, d.type||'']);
+  prev.forEach(([d])=>{ d.type = type; });
+  render();
+  try{
+    const r = await apiPost({ action:'manageSetProductType', token:getManageToken(), main, product, type });
+    if(!r || !r.ok) throw new Error('rejected');
+    showToast(type ? `اتنقل «${product}» لـ ${type}` : `«${product}» رجع للتصنيف التلقائي`);
+  }catch(e){
+    prev.forEach(([d, t])=>{ d.type = t; });
+    render();
+    showToast('معرفتش أحفظ النقل — اتأكد إنك داخل «إدارة» وجرّب تاني');
+  }
+}
 function applySector_(main){
   state.mainGroup = main;
   state.productSearch = '';
@@ -6135,6 +6158,15 @@ function renderProductCard_(main, n, inlineKeys){
       <span class="pc-name">${esc(n)}</span>
       ${unavailable ? '<span class="unavailtag">موقوف</span>' : (isStaged ? '<span class="tick">✓</span>' : (inCart ? '<span class="incarttag">في السلة</span>' : ''))}
     </div>`;
+  // ⇄ نقل لنوع تاني (مفصلي / جرار / أخرى) — بيظهر للإدارة بس في قطاعات الشبابيك
+  const moveChip = (/كومبن|كرافت|نيو/.test(main) && getManageToken()) ? `
+    <label class="movechip" title="نقل لنوع تاني">⇄ نقل
+      <select data-act="move-type" data-main="${esc(main)}" data-prod="${esc(n)}" aria-label="نقل ${esc(n)} لنوع تاني">
+        <option value="" selected disabled>نقل لـ…</option>
+        ${['مفصلي','جرار','أخرى'].map(t=>`<option value="${t}">${t}</option>`).join('')}
+        <option value="__auto">↺ رجوع للتصنيف التلقائي</option>
+      </select>
+    </label>` : '';
 
   // دواير الألوان: دايرة بلون الصنف، والمختار عليه علامة ✓ — دوس على أكتر من لون عشان تطلب أكتر من لون
   const dots = withColors.length ? `
@@ -6176,7 +6208,7 @@ function renderProductCard_(main, n, inlineKeys){
   }
   return `
     <div class="pcard ${isStaged?'selected':''} ${inCart?'incart':''} ${unavailable?'unavailable':''}">
-      ${head}${dots}${pav ? `<div class="pavail">${pav}</div>` : ''}${qbox}
+      ${head}${dots}${pav ? `<div class="pavail">${pav}</div>` : ''}${moveChip}${qbox}
     </div>`;
 }
 
@@ -6268,7 +6300,12 @@ function renderOrderView(){
       const norm_ = x => String(x||'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
       let famOf;
       if(sysMode){
-        famOf = e => { const n = norm_(e.name), m = n.includes('مفصل'), j = n.includes('جرار'); return (m && !j) ? 'sys:مفصلي' : (j && !m) ? 'sys:جرار' : 'sys:اخرى'; };
+        famOf = e => {
+          const ov = productTypeOverride_(e.main, e.name);            // اللي اتنقل يدويًا بيغلب التصنيف التلقائي
+          if(ov) return ov==='مفصلي' ? 'sys:مفصلي' : ov==='جرار' ? 'sys:جرار' : 'sys:اخرى';
+          const n = norm_(e.name), m = n.includes('مفصل'), j = n.includes('جرار');
+          return (m && !j) ? 'sys:مفصلي' : (j && !m) ? 'sys:جرار' : 'sys:اخرى';
+        };
       } else {
         const cnt = new Map(); entries.forEach(e=>{ const k = familyKey_(e.name); cnt.set(k, (cnt.get(k)||0)+1); });
         famOf = e => { const k = familyKey_(e.name); return (cnt.get(k)||0) > 1 ? k : 'sys:اخرى'; };
@@ -7702,6 +7739,10 @@ function bindEvents(){
 }
 
 function onSelectChange(act, el, val){
+  if(act==='move-type'){
+    if(val) moveProductType_(el.getAttribute('data-main'), el.getAttribute('data-prod'), val==='__auto' ? '' : val);
+    return;
+  }
   if(act==='pick-sector-select'){
     if(val){ applySector_(val); render(); window.scrollTo({ top: 0, behavior:'smooth' }); }
   }
