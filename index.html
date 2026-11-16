@@ -2045,6 +2045,8 @@ html[data-theme="dark"] .productgrid > .pcard:nth-child(even){--card:#18284A;bor
 .searchbox .sbic{position:absolute;inset-inline-start:14px;top:50%;transform:translateY(-50%);display:flex;color:var(--navy);pointer-events:none;z-index:1;}
 .searchbox .sbic .ico-svg{stroke:currentColor;}
 body.kb-open .bottomnav,body.kb-open .submitbar{display:none !important;}
+.fixedsearch{margin:0 12px 8px !important;}
+.fixedsearch input{padding-top:11px;padding-bottom:11px;}
 </style>
 </head>
 <body>
@@ -2111,7 +2113,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v258';
+const APP_BUILD = 'v259';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -5577,7 +5579,12 @@ function renderHeader(){
         ${orderSectors_().concat([OTHER_SECTOR]).map(g=>`<option value="${esc(g)}" ${g===state.mainGroup?'selected':''}>${esc(g)}</option>`).join('')}
       </select>
     </div>
-  </div>` : '';
+  </div>
+  ${(state.mainGroup && state.mainGroup!==OTHER_SECTOR && (state.warehouse || isClientAccount())) ? `
+  <div class="searchbox hasic fixedsearch">
+    <span class="sbic">${ico_('search',19)}</span>
+    <input type="text" placeholder="ابحث عن اسم الصنف..." value="${esc(state.productSearch)}" data-act="search-product" enterkeyhint="search">
+  </div>` : ''}` : '';
   const hasBack_ = !!(state.viewHistory && state.viewHistory.length);
   // 🏠 في الرئيسية الهيدر بيبقى بتاع الترحيب (اتجاه أ): لوجو EK + «أهلاً، الاسم» + المخزن
   const onHome_ = state.view==='home' && state.currentUser && !isAdminUser_;
@@ -6148,15 +6155,6 @@ function renderOrderView(){
       entries.sort((x,y)=> (x.off-y.off) || alpha_.compare(x.name, y.name));
       productSection = `
       <div class="card">
-        <h2><span class="num">5</span>اختار الأصناف (تقدر تختار أكتر من واحد)</h2>
-        <div class="currentctx">
-          ${ico_('mapPin',14)} إنت الآن في:
-          <b>${esc(state.mainGroup)}</b>
-        </div>
-        <div class="searchbox hasic">
-          <span class="sbic">${ico_('search',19)}</span>
-          <input type="text" placeholder="ابحث عن اسم الصنف..." value="${esc(state.productSearch)}" data-act="search-product" enterkeyhint="search">
-        </div>
         <div class="productgrid listmode">
           ${(()=>{
             // 🔽 لو فيه صنف متحدد دلوقتي في القطاع ده، نعرضه هو بس ونخفي الباقي.
