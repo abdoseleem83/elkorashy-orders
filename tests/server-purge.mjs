@@ -1,4 +1,4 @@
-// منطق السيرفر (apps_script.gs) — الحذف التلقائي للمنفَّذ بعد 48 ساعة + دمج الأصناف المكررة
+// منطق السيرفر (apps_script.gs) — الحذف التلقائي للمنفَّذ بعد ساعة + دمج الأصناف المكررة
 // بيشغّل السكربت الحقيقي في vm بشيت وهمي (من غير جوجل). التشغيل: node tests/server-purge.mjs
 import fs from 'fs'; import vm from 'vm';
 let fails = 0; const ok = (n, c, x='') => { console.log((c?'✅':'❌')+' '+n+(x?' — '+x:'')); if(!c) fails++; };
@@ -32,19 +32,19 @@ const DONE = vm.runInContext('STATUS_DONE', ctx), NEW = vm.runInContext('STATUS_
 
 const HOUR = 3600 * 1000, now = Date.now();
 sheetData.push(
-  mkRow('old-done',   DONE, new Date(now - 49*HOUR)),   // اتنفّذ من 49 ساعة  → يتمسح
-  mkRow('fresh-done', DONE, new Date(now - 47*HOUR)),   // من 47 ساعة         → يفضل
+  mkRow('old-done',   DONE, new Date(now - 61*60*1000)),   // اتنفّذ من 61 دقيقة → يتمسح
+  mkRow('fresh-done', DONE, new Date(now - 59*60*1000)),   // من 59 دقيقة        → يفضل
   mkRow('legacy-done',DONE, ''),                        // منفَّذ قديم من غير وقت → ياخد وقت دلوقتي ويفضل
   mkRow('pending',    NEW,  ''),                        // مش منفَّذ          → يفضل
   mkRow('old-done-2', DONE, new Date(now - 100*HOUR)),  // → يتمسح
 );
 const res = vm.runInContext('purgeDoneOrders_()', ctx);
 const ids = () => sheetData.slice(1).map(r => r[0]);
-ok('اتمسح الطلبين المنفَّذين من أكتر من 48 ساعة', res.deleted === 2 && !ids().includes('old-done') && !ids().includes('old-done-2'), JSON.stringify(res));
-ok('المنفَّذ من أقل من 48 ساعة فضل', ids().includes('fresh-done'));
+ok('اتمسح الطلبين المنفَّذين من أكتر من ساعة', res.deleted === 2 && !ids().includes('old-done') && !ids().includes('old-done-2'), JSON.stringify(res));
+ok('المنفَّذ من أقل من ساعة فضل', ids().includes('fresh-done'));
 ok('الطلب اللي مش منفَّذ ما اتلمسش', ids().includes('pending'));
 const legacy = sheetData.find(r => r[0] === 'legacy-done');
-ok('منفَّذ قديم من غير وقت: فضل وخد وقت التنفيذ دلوقتي (مهلة 48 ساعة)', !!legacy && legacy[12] instanceof Date && Math.abs(legacy[12].getTime()-now) < 60000);
+ok('منفَّذ قديم من غير وقت: فضل وخد وقت التنفيذ دلوقتي (مهلة ساعة)', !!legacy && legacy[12] instanceof Date && Math.abs(legacy[12].getTime()-now) < 60000);
 const res2 = vm.runInContext('purgeDoneOrders_()', ctx);
 ok('تشغيله تاني ما بيمسحش حاجة زيادة', res2.deleted === 0 && ids().length === 3, JSON.stringify(res2));
 

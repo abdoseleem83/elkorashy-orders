@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v256';
+const APP_VERSION = 'v257';
 
 const SHEET_NAME = 'Orders';
 const CATALOG_SHEET_NAME = 'الأصناف';
@@ -40,7 +40,7 @@ const EDIT_MARK_SUFFIX_ = '⟧';
 const COL_ID = 1, COL_TS = 2, COL_NAME = 3, COL_REGION = 4, COL_PHONE = 5,
       COL_NOTE = 6, COL_SUMMARY = 7, COL_STATUS = 8, COL_ITEMS = 9,
       COL_WAREHOUSE = 10, COL_ORDERNO = 11, COL_USERNAME = 12,
-      COL_DONE_AT = 13;          // وقت ما اتحوّل «تم تنفيذ الطلب» (للحذف التلقائي بعد 48 ساعة)
+      COL_DONE_AT = 13;          // وقت ما اتحوّل «تم تنفيذ الطلب» (للحذف التلقائي بعد ساعة)
 const ORDERS_HEADERS = ['رقم الطلب', 'التاريخ', 'الموزع', 'المنطقة', 'الهاتف', 'ملاحظات',
                         'ملخص الأصناف', 'الحالة', 'الأصناف (JSON)', 'المخزن',
                         'رقم الطلب بالمخزن', 'اسم المستخدم', 'وقت التنفيذ'];
@@ -378,14 +378,14 @@ function setup() {
 // مركوبة على trigger الواتساب القديم — عشان سرعة تحديث الرصيد (المحجوز)
 // متتأثرش بإلغاء ميزة واتساب.
 function installTriggers() {
-  const wanted = { 'processWhatsAppQueue': 1, 'minuteSync_': 1, 'reconcileReserved': 10, 'purgeDoneOrdersTrigger_': 60 };
+  const wanted = { 'processWhatsAppQueue': 1, 'minuteSync_': 1, 'reconcileReserved': 10, 'purgeDoneOrdersTrigger_': 10 };
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (wanted.hasOwnProperty(t.getHandlerFunction())) ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger('minuteSync_').timeBased().everyMinutes(1).create();
   ScriptApp.newTrigger('reconcileReserved').timeBased().everyMinutes(10).create();
-  ScriptApp.newTrigger('purgeDoneOrdersTrigger_').timeBased().everyHours(1).create();
-  return 'اتركّبت: مزامنة المحجوز (كل دقيقة + كل ١٠ دقايق شبكة أمان) + حذف المنفَّذ بعد 48 ساعة (كل ساعة). أي trigger قديم لواتساب اتمسح.';
+  ScriptApp.newTrigger('purgeDoneOrdersTrigger_').timeBased().everyMinutes(10).create();
+  return 'اتركّبت: مزامنة المحجوز (كل دقيقة + كل ١٠ دقايق شبكة أمان) + حذف المنفَّذ بعد ساعة (فحص كل ١٠ دقايق). أي trigger قديم لواتساب اتمسح.';
 }
 
 function getUsersSheet_() {
@@ -682,7 +682,7 @@ function updateOrderStatus_(id, status) {
     if (String(rows[i][COL_ID - 1]) !== String(id)) continue;
     found = true;
     sheet.getRange(i + 1, COL_STATUS).setValue(status);
-    // وقت التنفيذ: بيتسجّل أول ما الحالة تبقى «تم تنفيذ الطلب» (والحذف التلقائي بيعدّ 48 ساعة منه)،
+    // وقت التنفيذ: بيتسجّل أول ما الحالة تبقى «تم تنفيذ الطلب» (والحذف التلقائي بيعدّ ساعة منه)،
     // وبيتمسح لو الأدمن رجّع الحالة لحاجة تانية.
     sheet.getRange(i + 1, COL_DONE_AT).setValue(String(status).trim() === STATUS_DONE ? new Date() : '');
     break;
@@ -773,14 +773,15 @@ function deleteDeliveredOrders_() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  الحذف التلقائي للطلبات المنفَّذة بعد 48 ساعة
+//  الحذف التلقائي للطلبات المنفَّذة بعد ساعة
 // ═══════════════════════════════════════════════════════════════════
-// أي طلب حالته «تم تنفيذ الطلب» بيتمسح لوحده بعد 48 ساعة من وقت التنفيذ (عمود «وقت التنفيذ»).
+// أي طلب حالته «تم تنفيذ الطلب» بيتمسح لوحده بعد ساعة من وقت التنفيذ (عمود «وقت التنفيذ»).
 // الطلبات المنفَّذة القديمة (من قبل الميزة دي، ومالهاش وقت) بتاخد وقت التنفيذ = أول فحص،
-// يعني مهلتها 48 ساعة من وقتها — مفيش حاجة بتتمسح فجأة. بيشتغل:
-//   ١) كل ساعة بـ trigger (شغّل installTriggers مرة واحدة)،
-//   ٢) وكل ما الأدمن يفتح قايمة الطلبات (على الأكتر مرة كل نص ساعة) كشبكة أمان.
-const DONE_TTL_MS_ = 48 * 60 * 60 * 1000;
+// يعني مهلتها ساعة من وقتها. بيشتغل:
+//   ١) كل ١٠ دقايق بـ trigger (شغّل installTriggers مرة واحدة بعد النشر)،
+//   ٢) وكل ما الأدمن يفتح قايمة الطلبات (على الأكتر مرة كل ٥ دقايق) كشبكة أمان.
+// يعني الطلب المنفَّذ بيتمسح بين ساعة وساعة وعشر دقايق من تنفيذه.
+const DONE_TTL_MS_ = 60 * 60 * 1000;
 
 function purgeDoneOrders_() {
   const lock = LockService.getScriptLock();
@@ -809,12 +810,12 @@ function purgeDoneOrders_() {
   }
 }
 function purgeDoneOrdersTrigger_() { try { purgeDoneOrders_(); } catch (e) { logError_ && logError_(e); } }
-// شبكة أمان: كل ما الأدمن يحمّل الطلبات — بس لو عدّى نص ساعة على آخر فحص
+// شبكة أمان: كل ما الأدمن يحمّل الطلبات — بس لو عدّى ٥ دقايق على آخر فحص
 function lazyPurgeDone_() {
   try {
     const cache = CacheService.getScriptCache();
     if (cache.get('purgeDoneAt')) return;
-    cache.put('purgeDoneAt', '1', 1800);
+    cache.put('purgeDoneAt', '1', 300);
     purgeDoneOrders_();
   } catch (e) {}
 }
@@ -1679,7 +1680,7 @@ function doGetInner_(e) {
 
   // ---------- الافتراضي: كل الطلبات (لوحة المتابعة الإدارية) ----------
   if (!isAdmin) return denyAdmin_();
-  lazyPurgeDone_();   // حذف المنفَّذ اللي عدّى 48 ساعة (شبكة أمان بجانب الـ trigger)
+  lazyPurgeDone_();   // حذف المنفَّذ اللي عدّت ساعة على تنفيذه (شبكة أمان بجانب الـ trigger)
   if (!sheet) return json_([]);
   const n = sheet.getLastRow() - 1;
   if (n < 1) return json_([]);
