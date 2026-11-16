@@ -115,9 +115,15 @@ await page.evaluate(()=>{ state.cart=[]; render(); });
 await page.evaluate(([k])=>{ state.cart=[]; state.staged=[]; applySector_(k); render(); }, [K]); await page.waitForTimeout(300);
 const fams = await page.$$eval('.famrow .fam b', e=>e.map(x=>x.textContent.trim()));
 ok('مربعات الأنواع ظاهرة: الكل + حلوق + سقاسات + ضلف', fams[0]==='الكل' && fams.includes('حلوق') && fams.includes('سقاسات') && fams.includes('ضلف'), fams.join('|'));
+ok('مربعات الأنواع جوه الشاشة (مفيش سكرول جانبي)', await page.evaluate(()=>{ const r=document.querySelector('.famrow'); return r.scrollWidth<=r.clientWidth+1 && getComputedStyle(r).flexWrap==='wrap'; }));
 await page.click('.fam[data-val="حلق"]'); await page.waitForTimeout(300);
 ok('«حلوق» بتعرض الحلوق بس', (await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()))).every(n=>n.startsWith('حلق')) && (await page.$$('.pcard')).length===2);
 await page.click('.fam[data-val=""]'); await page.waitForTimeout(300);
+await page.evaluate(([k])=>{ for(let i=1;i<=14;i++) CATALOG.push({name:'نوع'+i+' صنف',main:k,sub:'',unit:1,product:'نوع'+i+' صنف',color:'',price:1,available:true,inStock:true,stock:5}); render(); }, [K]); await page.waitForTimeout(300);
+ok('كتير أنواع: أول ٩ + «كل الأنواع» (من غير ما تطلع بره الشاشة)', await page.evaluate(()=>{ const r=document.querySelector('.famrow'); return r.querySelectorAll('.fam:not(.more)').length===10 && !!r.querySelector('.fam.more') && r.scrollWidth<=r.clientWidth+1; }));
+await page.click('.fam.more'); await page.waitForTimeout(300);
+ok('«كل الأنواع» بتفتحهم كلهم', await page.evaluate(()=>document.querySelectorAll('.famrow .fam:not(.more)').length>10));
+await page.click('.fam.more'); await page.evaluate(()=>{ CATALOG.splice(CATALOG.length-14,14); render(); }); await page.waitForTimeout(300);
 ok('«الكل» بترجّع كل الأصناف', (await page.$$('.pcard')).length===4);
 // ── دوسة على لون موجود في السلة: بيتفتح للتعديل (مش بيتشال ويتمسح البند من السلة)
 await page.evaluate(()=>{ state.staged=[]; state.cart=[]; render(); }); await page.waitForTimeout(200);

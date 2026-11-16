@@ -2071,13 +2071,13 @@ body.kb-open .bottomnav,body.kb-open .submitbar{display:none !important;}
 .homewh{padding:16px !important;}
 .homewh h3{margin:0 0 12px;font-size:16px;font-weight:900;color:var(--ink);}
 /* مربعات الأنواع */
-.famrow{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 12px;margin:0 -2px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
-.famrow::-webkit-scrollbar{display:none;}
-.fam{flex:0 0 auto;min-width:74px;height:66px;border-radius:18px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0 10px;font-family:inherit;cursor:pointer;}
+.famrow{display:flex;flex-wrap:wrap;gap:8px;padding:2px 0 12px;margin:0 0 4px;}
+.fam{flex:0 1 auto;min-width:72px;max-width:100%;height:64px;border-radius:18px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0 10px;font-family:inherit;cursor:pointer;}
 .fam b{font-size:14px;font-weight:900;white-space:nowrap;}
 .fam small{font-size:11px;font-weight:800;color:var(--muted);}
 .fam.on{background:linear-gradient(135deg,#1E6BD6,#0B3D91);border-color:transparent;color:#fff;box-shadow:0 8px 18px rgba(11,61,145,.3);}
 .fam.on small{color:rgba(255,255,255,.85);}
+.fam.more{border-style:dashed;border-color:var(--navy-soft);color:var(--navy);}
 </style>
 </head>
 <body>
@@ -2144,7 +2144,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v261';
+const APP_BUILD = 'v262';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2330,7 +2330,7 @@ const state = {
 
   myOrders:[],
   myOrdersLoading:false,
-  homeSearch:'', family:'', distEdit:false, myOrdersFilter:'all',
+  homeSearch:'', family:'', famExpanded:false, distEdit:false, myOrdersFilter:'all',
   myOrdersSearched:false,
   myOrdersAuthMissing:false,
   myOrdersPhone:'',
@@ -6110,6 +6110,7 @@ function applySector_(main){
   state.mainGroup = main;
   state.productSearch = '';
   state.family = '';
+  state.famExpanded = false;
 }
 // 🧩 نوع الصنف = أول كلمة في اسمه (باكتة · حلق · ضلفة · سقاس …) — بتتجمّع تلقائي من الكاتالوج من غير ما نكتبها بإيدينا
 const FAMILY_PLURALS_ = { 'حلق':'حلوق','ضلفه':'ضلف','باكته':'باكتات','سقاس':'سقاسات','برور':'برورات','طبه':'طبّات','ماسوره':'مواسير','زاويه':'زوايا','تقابل':'تقابلات','بانل':'بانلات','مفصله':'مفصلات','مقبض':'مقابض','سبلونه':'سبلونات','ماكينه':'ماكينات','ترباس':'تراباس','موتور':'موتورات','شريحه':'شرايح','مقص':'مقصات','سكاك':'سكاكين','غطاء':'أغطية','عصفوره':'عصافير','كاوتش':'كاوتش','حشوه':'حشوات','باب':'أبواب' };
@@ -6266,10 +6267,15 @@ function renderOrderView(){
       const families = [...famMap.values()].sort((a,b)=> b.n - a.n || alpha_.compare(a.label, b.label));
       const famActive = families.some(f=>f.key===state.family) ? state.family : '';
       const famShown = famActive ? entries.filter(e=>familyKey_(e.name)===famActive) : entries;
+      // المربعات بتلف على أكتر من سطر (من غير سكرول جانبي — كانت بتطلع بره الشاشة)، وأول ٩ أنواع بس لحد ما يدوس «كل الأنواع»
+      const FAM_FIRST_ = 9;
+      const famVisible = (state.famExpanded || families.length <= FAM_FIRST_ + 1) ? families
+        : families.filter((f,i)=> i < FAM_FIRST_ || f.key===famActive);
       const familyRow = families.length>1 ? `
         <div class="famrow" role="group" aria-label="نوع الصنف">
           <button class="fam ${!famActive?'on':''}" data-act="set-family" data-val=""><b>الكل</b><small>${entries.length}</small></button>
-          ${families.map(f=>`<button class="fam ${famActive===f.key?'on':''}" data-act="set-family" data-val="${esc(f.key)}"><b>${esc(f.label)}</b><small>${f.n}</small></button>`).join('')}
+          ${famVisible.map(f=>`<button class="fam ${famActive===f.key?'on':''}" data-act="set-family" data-val="${esc(f.key)}"><b>${esc(f.label)}</b><small>${f.n}</small></button>`).join('')}
+          ${families.length > famVisible.length || state.famExpanded && families.length > FAM_FIRST_ + 1 ? `<button class="fam more" data-act="toggle-fam-all"><b>${state.famExpanded ? 'أقل ▴' : 'كل الأنواع ▾'}</b><small>${state.famExpanded ? '' : families.length}</small></button>` : ''}
         </div>` : '';
       productSection = `
       <div class="card">
@@ -7953,6 +7959,7 @@ async function onActionInner(act, el){
       state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view);
       state.view = 'order'; render(); window.scrollTo(0, 0);
       break;
+    case 'toggle-fam-all': state.famExpanded = !state.famExpanded; render(); break;
     case 'set-family': state.family = el.getAttribute('data-val') || ''; render(); window.scrollTo({ top: 0, behavior:'smooth' }); break;
     case 'set-group': applySector_(el.getAttribute('data-val')); render(); break;
     case 'toggle-product':{
