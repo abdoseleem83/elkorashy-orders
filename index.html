@@ -2047,6 +2047,37 @@ html[data-theme="dark"] .productgrid > .pcard:nth-child(even){--card:#18284A;bor
 body.kb-open .bottomnav,body.kb-open .submitbar{display:none !important;}
 .fixedsearch{margin:0 12px 8px !important;}
 .fixedsearch input{padding-top:11px;padding-bottom:11px;}
+/* ===== v261: حفظ الدخول + رئيسية أجمل + مربعات الأنواع ===== */
+.rememberrow{display:flex;align-items:center;gap:10px;margin:10px 2px 2px;cursor:pointer;font-size:13.5px;font-weight:800;color:var(--ink);}
+.rchk{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:14px;color:transparent;background:var(--card);flex:0 0 auto;}
+.rchk.on{background:var(--navy);border-color:var(--navy);color:#fff;}
+.topbanners{margin:0 0 10px;}
+.topbanners .editbanner{margin:0 0 8px;}
+/* الرئيسية */
+.homehero2{position:relative;overflow:hidden;border-radius:24px;padding:18px 18px 14px;margin:0 0 14px;color:#fff;
+  background:linear-gradient(135deg,#0B3D91 0%,#1E6BD6 55%,#2BB3C0 100%);box-shadow:0 14px 30px rgba(11,61,145,.28);}
+.homehero2 .hh-art{position:absolute;inset-inline-start:-6px;bottom:-14px;width:210px;height:126px;color:rgba(255,255,255,.22);pointer-events:none;}
+.homehero2 .hh-txt{position:relative;display:flex;flex-direction:column;gap:3px;margin-bottom:12px;}
+.homehero2 .hh-txt b{font-size:20px;font-weight:900;}
+.homehero2 .hh-txt small{font-size:12.5px;opacity:.9;font-weight:700;}
+.hh-chips{position:relative;display:flex;gap:8px;flex-wrap:wrap;}
+.hh-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.16);color:#fff;
+  border-radius:999px;padding:8px 14px;font-family:inherit;font-weight:900;font-size:13px;cursor:pointer;backdrop-filter:blur(4px);}
+.hh-chip i{font-style:normal;background:#fff;color:#0B3D91;border-radius:999px;min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;padding:0 6px;}
+.secsec{display:flex;align-items:center;justify-content:flex-start !important;gap:8px;}
+.secsec::before{content:"";width:5px;height:20px;border-radius:4px;background:linear-gradient(180deg,#FBBF24,#F59E0B);}
+.sgridpanel{background:linear-gradient(160deg,var(--card),var(--surface2));border:1px solid var(--line);border-radius:26px;padding:20px 8px 14px;box-shadow:0 10px 26px rgba(11,61,145,.08);}
+.sgridpanel .sgrid{margin-top:0;}
+.homewh{padding:16px !important;}
+.homewh h3{margin:0 0 12px;font-size:16px;font-weight:900;color:var(--ink);}
+/* مربعات الأنواع */
+.famrow{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 12px;margin:0 -2px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.famrow::-webkit-scrollbar{display:none;}
+.fam{flex:0 0 auto;min-width:74px;height:66px;border-radius:18px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0 10px;font-family:inherit;cursor:pointer;}
+.fam b{font-size:14px;font-weight:900;white-space:nowrap;}
+.fam small{font-size:11px;font-weight:800;color:var(--muted);}
+.fam.on{background:linear-gradient(135deg,#1E6BD6,#0B3D91);border-color:transparent;color:#fff;box-shadow:0 8px 18px rgba(11,61,145,.3);}
+.fam.on small{color:rgba(255,255,255,.85);}
 </style>
 </head>
 <body>
@@ -2113,7 +2144,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v259';
+const APP_BUILD = 'v261';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2189,6 +2220,12 @@ const SS_AUTHED_KEY = 'qurashi_session_authed';
 const LS_BIOMETRIC_CREDID_KEY = 'qurashi_biometric_credid';
 const LS_BIOMETRIC_VAULT_KEY = 'qurashi_biometric_vault';
 const LS_USER_TOKEN_KEY = 'qurashi_user_token';
+// 🔐 «افضل مسجّل دخول»: الجلسة بتفضل على الجهاز ١٨٠ يوم (بتتجدّد مع كل فتح) — من غير ما الموزع يكتب الاسم والباسورد كل مرة.
+const LS_REMEMBER_KEY = 'qurashi_remember_until';
+const LS_LASTUSER_KEY = 'qurashi_last_username';
+const REMEMBER_MS = 180 * 24 * 60 * 60 * 1000;
+function rememberLogin_(on){ try{ if(on) localStorage.setItem(LS_REMEMBER_KEY, String(Date.now() + REMEMBER_MS)); else localStorage.removeItem(LS_REMEMBER_KEY); }catch(e){} }
+function rememberValid_(){ try{ return Number(localStorage.getItem(LS_REMEMBER_KEY) || 0) > Date.now(); }catch(e){ return false; } }
 const LS_CATALOG_CACHE_KEY = 'qurashi_catalog_cache';
 const ADMIN_WHATSAPP = '201067765483';
 
@@ -2205,6 +2242,7 @@ const state = {
   biometricBusy:false,
   lastAuthMode:null,           // آخر وضع (login/register/forgot) اتعرض — عشان نعرف نشغّل أنيميشن الكارت أول ما الوضع يتغيّر بس، مش مع كل حرف بيتكتب
   authUsername:'',
+  authRemember:true,            // «افضل مسجّل دخول» (مفعّلة افتراضيًا)
   authPassword:'',
   authPassword2:'',
   authError:'',
@@ -2292,7 +2330,7 @@ const state = {
 
   myOrders:[],
   myOrdersLoading:false,
-  homeSearch:'', distEdit:false, myOrdersFilter:'all',
+  homeSearch:'', family:'', distEdit:false, myOrdersFilter:'all',
   myOrdersSearched:false,
   myOrdersAuthMissing:false,
   myOrdersPhone:'',
@@ -3481,6 +3519,8 @@ function restoreManageSession(){
 }
 
 function loadUserSession(){
+  // اسم المستخدم اللي دخل بيه آخر مرة بيتكتب لوحده في خانة الدخول (الباسورد عمره ما بيتخزّن)
+  try{ if(!state.authUsername) state.authUsername = localStorage.getItem(LS_LASTUSER_KEY) || ''; }catch(e){}
   // 🔒 بطلب صريح: التطبيق لما يتقفل تمامًا ويتفتح تاني، لازم الموزّع يدخل
   // الباسورد أو البصمة تاني. بس ده لازم يتفرّق عن مجرد عمل Refresh عادي
   // للصفحة (اللي المفروض يفضل داخل بعده من غير ما يتسأل تاني) — والاتنين
@@ -3495,6 +3535,15 @@ function loadUserSession(){
         const u = JSON.parse(raw);
         if(u && u.username){ state.currentUser = u; return; }
       }
+    }
+  }catch(e){}
+  // 🔐 «افضل مسجّل دخول»: لو الموزع سايبها مفعّلة (الافتراضي) نرجّعه لحسابه من غير ما نسأله تاني —
+  // إلا لو فعّل البصمة على الجهاز (ساعتها البصمة هي القفل اللي اختاره بنفسه).
+  try{
+    if(rememberValid_() && !isBiometricEnabledForThisDevice()){
+      const raw = localStorage.getItem(LS_USER_KEY);
+      const u = raw ? JSON.parse(raw) : null;
+      if(u && u.username && getUserToken()){ state.currentUser = u; markSessionAuthed_(); rememberLogin_(true); return; }
     }
   }catch(e){}
   // مفيش جلسة مؤكدة للتاب ده — لو الجهاز ده فيه بصمة متفعلة قبل كده،
@@ -3650,6 +3699,8 @@ async function submitLogin(){
     state.currentUser = { username: data.username || username, distName: data.distName||'', distRegion: data.distRegion||'', distPhone: data.distPhone||'', distType: data.distType||'موزع', token: data.token||'' };
     try{ localStorage.setItem(LS_USER_KEY, JSON.stringify(state.currentUser)); }catch(e){}
     markSessionAuthed_();
+    rememberLogin_(state.authRemember);
+    try{ localStorage.setItem(LS_LASTUSER_KEY, username); }catch(e){}
     // ⚠️ إصلاح جذري لمشكلة "اسم الموزّع غلط في الطلبات": لو الموزّع كتب اسم
     // غلط/مختصر مرة واحدة قبل كده، كان بيتحفظ محليًا على جهازه (localStorage)
     // للأبد، وبما إن الشرط القديم كان "لو فيه اسم موجود، سيبه"، الاسم الصحيح
@@ -4463,6 +4514,19 @@ function stockTableHTML_(forPdf){
 // شاشة مراجعة السلة — بتفتح بضغطة على أيقونة السلة فوق. فيها كل الأصناف
 // وسؤال واضح: تزود ولا تبعت؟ لو تزود بترجع لنفس الفورم تكمل اختيار.
 // لو تبعت بتقفل الشاشة دي وتبدأ إجراء الإرسال العادي (تأكيد ثم إرسال).
+// قفل شاشة مراجعة السلة ورجوع المستخدم لمكانه: نفس الصفحة ونفس السكرول (render بيكرّش الصفحة فالسكرول كان بيرجع فوق = «المخزن»)
+function closeCartReview_(addMore){
+  const ret = state.cartReturn || null;
+  state.showCartReview = false;
+  if(addMore && ret && ret.view !== 'order'){
+    state.viewHistory = state.viewHistory || []; state.viewHistory.push(ret.view);
+    state.view = 'order';
+  }
+  render();
+  const y = (ret && (ret.view === state.view)) ? ret.y : 0;
+  const restore = () => window.scrollTo(0, y);
+  restore(); requestAnimationFrame(()=>{ restore(); setTimeout(restore, 60); });
+}
 function renderCartReviewModal(){
   if(!state.showCartReview) return '';
   return `
@@ -5788,12 +5852,45 @@ function renderHomeView(){
     lastBlock = `<div class="card homehint"><b>لسه ما بعتّش طلبات</b><small>أول ما تبعت طلب، هتلاقي هنا حالته وزرار «أعد الطلب».</small></div>`;
   }
 
+  // 🏬 المخزن الأول: الأيقونات (وأعداد المتاح فيها) بتظهر بعد اختيار المخزن — العميل مش محتاج مخزن.
+  const needWh_ = !state.warehouse && !isClientAccount();
+  const whPick_ = `
+    <div class="card homewh">
+      <h3>🏬 هتحمّل من أنهي مخزن؟</h3>
+      <div class="whgrid">
+        ${WAREHOUSES.map(w=>`
+          <button class="whtile" data-act="pick-warehouse-inline" data-val="${esc(w)}">
+            <span class="whicon">${warehouseIcon_(w)}</span><span>${esc(w)}</span>
+          </button>`).join('')}
+      </div>
+    </div>`;
+  const cartN_ = (state.cart||[]).length;
+  const activeN_ = (state.myOrders||[]).filter(o=>normStatus_(o.status)!==STATUS_DONE && normStatus_(o.status)!==STATUS_EDITED).length;
+  const hero_ = `
+    <div class="homehero2" aria-hidden="false">
+      <svg class="hh-art" viewBox="0 0 200 120" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <rect x="118" y="14" width="34" height="62" rx="4"/><rect x="124" y="20" width="22" height="22" rx="2"/><rect x="124" y="48" width="22" height="22" rx="2"/>
+        <rect x="160" y="34" width="30" height="42" rx="3"/><path d="M175 34v42M160 55h30"/>
+        <path d="M100 100h98" stroke-width="3"/><circle cx="40" cy="30" r="22" opacity=".35"/><circle cx="62" cy="84" r="10" opacity=".35"/>
+      </svg>
+      <div class="hh-txt">
+        <b>جاهز تطلب؟</b>
+        <small>اختار القطاع وابدأ — الأصناف والألوان قدامك</small>
+      </div>
+      <div class="hh-chips">
+        <button class="hh-chip" data-act="open-cart-review">${ico_('cart',15)} السلة <i>${cartN_}</i></button>
+        <button class="hh-chip" data-act="goto" data-view="myorders">${ico_('track',15)} طلبات جارية <i>${activeN_}</i></button>
+      </div>
+    </div>`;
   return `
   <main class="homeview">
     ${searchBlock}
     ${q ? '' : `
+    ${hero_}
     ${lastBlock}
-    <div class="sgrid homesectors">${sectorIconsGridHtml_('open-sector')}</div>`}
+    ${needWh_ ? whPick_ : `
+    <div class="homesec secsec">اختار القطاع</div>
+    <div class="sgridpanel"><div class="sgrid homesectors">${sectorIconsGridHtml_('open-sector')}</div></div>`}`}
   </main>`;
 }
 
@@ -6012,6 +6109,16 @@ function pavailHtml_(a){
 function applySector_(main){
   state.mainGroup = main;
   state.productSearch = '';
+  state.family = '';
+}
+// 🧩 نوع الصنف = أول كلمة في اسمه (باكتة · حلق · ضلفة · سقاس …) — بتتجمّع تلقائي من الكاتالوج من غير ما نكتبها بإيدينا
+const FAMILY_PLURALS_ = { 'حلق':'حلوق','ضلفه':'ضلف','باكته':'باكتات','سقاس':'سقاسات','برور':'برورات','طبه':'طبّات','ماسوره':'مواسير','زاويه':'زوايا','تقابل':'تقابلات','بانل':'بانلات','مفصله':'مفصلات','مقبض':'مقابض','سبلونه':'سبلونات','ماكينه':'ماكينات','ترباس':'تراباس','موتور':'موتورات','شريحه':'شرايح','مقص':'مقصات','سكاك':'سكاكين','غطاء':'أغطية','عصفوره':'عصافير','كاوتش':'كاوتش','حشوه':'حشوات','باب':'أبواب' };
+function familyKey_(name){
+  const t = String(name||'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').trim().split(/\s+/)[0] || '';
+  return t.replace(/^ال(?=.{3,})/,'').toLowerCase();
+}
+function familyLabel_(key, sample){
+  return FAMILY_PLURALS_[key] || String(sample||'').trim().split(/\s+/)[0] || key;
 }
 
 function renderProductCard_(main, n, inlineKeys){
@@ -6153,15 +6260,27 @@ function renderOrderView(){
         });
       });
       entries.sort((x,y)=> (x.off-y.off) || alpha_.compare(x.name, y.name));
+      // مربعات الأنواع (بتتحسب على نتيجة البحث): دوس «باكتات» تظهرلك الباكتات بس
+      const famMap = new Map();
+      entries.forEach(e=>{ const k = familyKey_(e.name); if(!k) return; const f = famMap.get(k) || { key:k, n:0, label:familyLabel_(k, e.name) }; f.n++; famMap.set(k, f); });
+      const families = [...famMap.values()].sort((a,b)=> b.n - a.n || alpha_.compare(a.label, b.label));
+      const famActive = families.some(f=>f.key===state.family) ? state.family : '';
+      const famShown = famActive ? entries.filter(e=>familyKey_(e.name)===famActive) : entries;
+      const familyRow = families.length>1 ? `
+        <div class="famrow" role="group" aria-label="نوع الصنف">
+          <button class="fam ${!famActive?'on':''}" data-act="set-family" data-val=""><b>الكل</b><small>${entries.length}</small></button>
+          ${families.map(f=>`<button class="fam ${famActive===f.key?'on':''}" data-act="set-family" data-val="${esc(f.key)}"><b>${esc(f.label)}</b><small>${f.n}</small></button>`).join('')}
+        </div>` : '';
       productSection = `
       <div class="card">
+        ${familyRow}
         <div class="productgrid listmode">
           ${(()=>{
             // 🔽 لو فيه صنف متحدد دلوقتي في القطاع ده، نعرضه هو بس ونخفي الباقي.
             // أول ما يلغي اختياره (يدوس عليه تاني أو يدوس إلغاء)، كل الأصناف
             // بترجع تظهر. بطلب صريح من المستخدم.
-            const stagedEntries = entries.filter(e => state.staged.some(s=>s.key===stagedKey(e.main,e.name)));
-            const visible = stagedEntries.length ? stagedEntries : entries;
+            const stagedEntries = famShown.filter(e => state.staged.some(s=>s.key===stagedKey(e.main,e.name)));
+            const visible = stagedEntries.length ? stagedEntries : famShown;
             return visible.length ? visible.map(e=>renderProductCard_(e.main, e.name, inlineStagedKeys_)).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>';
           })()}
         </div>
@@ -6273,11 +6392,11 @@ function renderOrderView(){
         </div>
       </div>`;
   const formOnTop_ = !distComplete_ && !state.distEdit;   // أول مرة (لسه مفيش بيانات): الفورم فوق. أثناء «تعديل»: الفورم بيفتح مكانه تحت.
-  const distSection = (!formOnTop_ && !topBanners_.trim()) ? '' : `
+  const distSection = formOnTop_ ? `
     <div class="card distcard">
       ${topBanners_}
-      ${formOnTop_ ? distForm_ : ''}
-    </div>`;
+      ${distForm_}
+    </div>` : (topBanners_.trim() ? `<div class="topbanners">${topBanners_}</div>` : '');
   const distSummary_ = distComplete_ ? `
     <div class="card distcard">
       <div class="distsum">
@@ -7331,9 +7450,10 @@ function renderLoginForm(){
   return `
     <h3>تسجيل الدخول</h3>
     <label>اسم المستخدم</label>
-    <input type="text" placeholder="اسم المستخدم" value="${esc(state.authUsername)}" data-act="auth-username">
+    <input type="text" name="username" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="اسم المستخدم" value="${esc(state.authUsername)}" data-act="auth-username">
     <label>كلمة المرور</label>
-    <input type="password" placeholder="كلمة المرور" value="${esc(state.authPassword)}" data-act="auth-password">
+    <input type="password" name="password" autocomplete="current-password" placeholder="كلمة المرور" value="${esc(state.authPassword)}" data-act="auth-password">
+    <div class="rememberrow" data-act="toggle-remember" role="checkbox" aria-checked="${state.authRemember}"><span class="rchk ${state.authRemember?'on':''}">✓</span><span>افضل مسجّل دخول على الجهاز ده</span></div>
     ${state.authError ? `<div class="err">${esc(state.authError)}</div>` : ''}
     <button data-act="login-submit" ${state.authLoading?'disabled':''}>${state.authLoading?'جارٍ الدخول...':'دخول'}</button>
     <div class="authlinks">
@@ -7663,6 +7783,7 @@ async function onActionInner(act, el){
     case 'goto-register': state.authView='register'; state.authError=''; render(); break;
     case 'goto-forgot': state.authView='forgot'; state.authError=''; state.forgotSent=false; render(); break;
     case 'login-submit': await submitLogin(); break;
+    case 'toggle-remember': state.authRemember = !state.authRemember; render(); break;
     case 'login-dest':{
       state.postLoginView = el.getAttribute('data-val');
       state.authView = 'login'; state.authError = '';
@@ -7742,7 +7863,8 @@ async function onActionInner(act, el){
       stopAdminPoll_();
       try{ localStorage.removeItem(LS_USER_KEY); }catch(e){}
       try{ sessionStorage.removeItem(SS_AUTHED_KEY); }catch(e){}
-      state.authView='login'; state.authUsername=''; state.authPassword='';
+      rememberLogin_(false);
+      state.authView='login'; state.authPassword='';
       state.showBiometricGate = isBiometricEnabledForThisDevice();
       render();
       break;
@@ -7817,7 +7939,7 @@ async function onActionInner(act, el){
         window.scrollTo({ top: Math.max(0, y), behavior:'smooth' });
       };
       if(v==='cart'){
-        if(state.cart.length || state.pendingDraft){ if(state.pendingDraft && !state.cart.length){ resumeDraft(); state.showResumeModal=false; } state.showCartReview=true; render(); }
+        if(state.cart.length || state.pendingDraft){ if(state.pendingDraft && !state.cart.length){ resumeDraft(); state.showResumeModal=false; } state.cartReturn = { view: state.view, y: window.scrollY }; state.showCartReview=true; render(); }
         else showToast('السلة فاضية — ضيف أصناف الأول');
       } else if(v==='staged'){
         const n = document.querySelector('[data-stagedkey]') || document.querySelector('.currentctx');
@@ -7831,6 +7953,7 @@ async function onActionInner(act, el){
       state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view);
       state.view = 'order'; render(); window.scrollTo(0, 0);
       break;
+    case 'set-family': state.family = el.getAttribute('data-val') || ''; render(); window.scrollTo({ top: 0, behavior:'smooth' }); break;
     case 'set-group': applySector_(el.getAttribute('data-val')); render(); break;
     case 'toggle-product':{
       const name = el.getAttribute('data-val');
@@ -7852,8 +7975,12 @@ async function onActionInner(act, el){
       const pm = el.getAttribute('data-main') || state.mainGroup;
       const key = stagedKey(pm, name);
       withPositionAnchor_(`[data-act="toggle-product"][data-val="${CSS.escape(name)}"]`, ()=>{
-        if(!state.staged.some(x=>x.key===key)) toggleStagedProduct(pm, name);
-        toggleStagedColor(key, color);
+        const wasStaged = state.staged.some(x=>x.key===key);
+        if(!wasStaged) toggleStagedProduct(pm, name);   // لو الصنف في السلة بيتفتح بألوانه وكمياته اللي فيها
+        const st = state.staged.find(x=>x.key===key);
+        // أول دوسة على لون موجود في السلة = نفتحه للتعديل (مش نشيله — كان بيمسح البند من السلة بصمت)
+        if(st && (wasStaged || !st.selectedColors.includes(color))) toggleStagedColor(key, color);
+        else render();
       });
       break;
     }
@@ -7961,11 +8088,13 @@ async function onActionInner(act, el){
     // اللي هي مجرد استعراض قبل التأكيد.
     case 'open-cart-review':
       if(state.pendingDraft && !state.cart.length){ resumeDraft(); state.showResumeModal=false; }
+      state.cartReturn = { view: state.view, y: window.scrollY };
       state.showCartReview=true;
       render();
       break;
-    case 'close-cart-review': state.showCartReview=false; render(); break;
-    case 'cart-add-more': state.showCartReview=false; render(); break;
+    case 'close-cart-review': closeCartReview_(false); break;
+    // «زود أصناف»: نرجع لنفس صفحة الأصناف (نفس القطاع) وفي نفس مكان السكرول اللي كنت واقف فيه
+    case 'cart-add-more': closeCartReview_(true); break;
     case 'cart-send':
       state.showCartReview=false;
       await requestSubmit(); // نفس مسار "إرسال الطلب" العادي: تأكيد ثم إرسال فعلي

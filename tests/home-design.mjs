@@ -32,6 +32,7 @@ const rgb = c => (c.match(/\d+/g)||[]).slice(0,3).join(',');
 
 for(const theme of ['light','dark']){
   const { ctx, page } = await open({width:1280,height:900}, theme);
+  await page.evaluate(()=>{ state.warehouse='طنطا'; render(); }); await page.waitForTimeout(250);
   const r = await page.evaluate(()=>{
     const cs=(el,p)=>el?getComputedStyle(el)[p]:null;
     const app=document.querySelector('#app').getBoundingClientRect();

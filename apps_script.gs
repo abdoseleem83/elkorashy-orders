@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v259';
+const APP_VERSION = 'v261';
 
 const SHEET_NAME = 'Orders';
 const CATALOG_SHEET_NAME = 'الأصناف';
@@ -56,7 +56,7 @@ const RESERVED_WAREHOUSE_ = 'طنطا';
 
 // مدة صلاحية التوكنات
 const TTL_ADMIN_MS = 12 * 60 * 60 * 1000;        // ١٢ ساعة
-const TTL_USER_MS  = 30 * 24 * 60 * 60 * 1000;   // ٣٠ يوم
+const TTL_USER_MS  = 180 * 24 * 60 * 60 * 1000;  // ١٨٠ يوم (متوافق مع «افضل مسجّل دخول» في التطبيق)
 
 // حد محاولات تسجيل الدخول الفاشلة قبل القفل المؤقت
 const LOGIN_MAX_FAILS = 5;

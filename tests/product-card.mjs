@@ -111,6 +111,31 @@ await page.click('.otherlink'); await page.waitForTimeout(300);
 ok('«أصناف أخرى» بتفتح من جوه القطاع', (await page.evaluate(()=>state.mainGroup))==='أصناف أخرى');
 await page.selectOption('.ministrip2027 select', K); await page.waitForTimeout(300);
 await page.evaluate(()=>{ state.cart=[]; render(); });
+// ── مربعات الأنواع (باكتات / حلوق / ضلف …): دوس نوع يظهرلك أصنافه بس
+await page.evaluate(([k])=>{ state.cart=[]; state.staged=[]; applySector_(k); render(); }, [K]); await page.waitForTimeout(300);
+const fams = await page.$$eval('.famrow .fam b', e=>e.map(x=>x.textContent.trim()));
+ok('مربعات الأنواع ظاهرة: الكل + حلوق + سقاسات + ضلف', fams[0]==='الكل' && fams.includes('حلوق') && fams.includes('سقاسات') && fams.includes('ضلف'), fams.join('|'));
+await page.click('.fam[data-val="حلق"]'); await page.waitForTimeout(300);
+ok('«حلوق» بتعرض الحلوق بس', (await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()))).every(n=>n.startsWith('حلق')) && (await page.$$('.pcard')).length===2);
+await page.click('.fam[data-val=""]'); await page.waitForTimeout(300);
+ok('«الكل» بترجّع كل الأصناف', (await page.$$('.pcard')).length===4);
+// ── دوسة على لون موجود في السلة: بيتفتح للتعديل (مش بيتشال ويتمسح البند من السلة)
+await page.evaluate(()=>{ state.staged=[]; state.cart=[]; render(); }); await page.waitForTimeout(200);
+await page.evaluate(([k])=>{ cartAdd_({main:k,product:'سقاس مفصلي',name:'سقاس مفصلي ابيض',color:'ابيض',unitType:'لفة',qty:2}); cartAdd_({main:k,product:'ضلفة مفصلي',name:'ضلفة مفصلي ابيض',color:'ابيض',unitType:'لفة',qty:1}); render(); }, [K]); await page.waitForTimeout(200);
+await page.click('[data-act="tile-color"][data-prod="سقاس مفصلي"][data-val="ابيض"]'); await page.waitForTimeout(300);
+ok('اللون اتفتح بكميته القديمة (٢) ومااتمسحش من السلة', await page.evaluate(()=>{ const s=state.staged[0]; return s && s.selectedColors.join()==='ابيض' && s.qtys['ابيض']===2 && state.cart.length===1; }));
+await page.evaluate(()=>{ cancelStaged(state.staged[0].key); }); await page.waitForTimeout(700);   // الإلغاء بيتأخر ٣٢٠ms للأنيميشن
+ok('الإلغاء رجّع البند للسلة زي ما كان (من غير تكرار)', await page.evaluate(()=>state.cart.length===2 && state.cart.filter(c=>c.product==='سقاس مفصلي').length===1));
+// ── «زود أصناف» بيرجع لنفس صفحة الأصناف ونفس القطاع ونفس السكرول
+await page.evaluate(()=>window.scrollTo(0,120)); await page.waitForTimeout(150);
+await page.click('[data-act="strip-go"][data-val="cart"]'); await page.waitForTimeout(250);
+await page.click('[data-act="cart-add-more"]'); await page.waitForTimeout(400);
+ok('«زود أصناف»: نفس القطاع والصفحة ونفس مكان السكرول', await page.evaluate(([k])=>state.view==='order' && state.mainGroup===k && !state.showCartReview && Math.abs(window.scrollY-120)<=2, [K]), String(await page.evaluate(()=>window.scrollY)));
+// من الرئيسية: «زود أصناف» يودّي لشاشة الأصناف (مش يفضل في الرئيسية)
+await page.evaluate(()=>{ state.view='home'; render(); }); await page.waitForTimeout(200);
+await page.click('.bottomnav [data-act="open-cart-review"]'); await page.waitForTimeout(250);
+await page.click('[data-act="cart-add-more"]'); await page.waitForTimeout(400);
+ok('من الرئيسية «زود أصناف» بيفتح الأصناف على آخر قطاع', await page.evaluate(([k])=>state.view==='order' && state.mainGroup===k && !state.showCartReview, [K]));
 ok('مفيش أخطاء جافاسكريبت', errors.length===0, errors.join(' | '));
 await browser.close();
 console.log(fails ? ('❌ فشل '+fails) : '✅ كله تمام'); process.exit(fails?1:0);
