@@ -2071,10 +2071,10 @@ body.kb-open .bottomnav,body.kb-open .submitbar{display:none !important;}
 .homewh{padding:16px !important;}
 .homewh h3{margin:0 0 12px;font-size:16px;font-weight:900;color:var(--ink);}
 /* مربعات الأنواع */
-.famrow{display:flex;flex-wrap:wrap;gap:8px;padding:2px 0 12px;margin:0 0 4px;}
-.fam{flex:0 1 auto;min-width:72px;max-width:100%;height:64px;border-radius:18px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0 10px;font-family:inherit;cursor:pointer;}
-.fam b{font-size:14px;font-weight:900;white-space:nowrap;}
-.fam small{font-size:11px;font-weight:800;color:var(--muted);}
+.famrow{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 10px;margin:0 0 4px;}
+.fam{flex:0 1 auto;min-width:60px;max-width:100%;height:48px;border-radius:18px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0 9px;font-family:inherit;cursor:pointer;}
+.fam b{font-size:12.5px;font-weight:900;white-space:nowrap;}
+.fam small{font-size:10.5px;font-weight:800;color:var(--muted);line-height:1;}
 .fam.on{background:linear-gradient(135deg,#1E6BD6,#0B3D91);border-color:transparent;color:#fff;box-shadow:0 8px 18px rgba(11,61,145,.3);}
 .fam.on small{color:rgba(255,255,255,.85);}
 .fam.more{border-style:dashed;border-color:var(--navy-soft);color:var(--navy);}
@@ -2146,7 +2146,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v264';
+const APP_BUILD = 'v265';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -6136,7 +6136,7 @@ function applySector_(main){
   state.famExpanded = false;
 }
 // 🧩 نوع الصنف = أول كلمة في اسمه (باكتة · حلق · ضلفة · سقاس …) — بتتجمّع تلقائي من الكاتالوج من غير ما نكتبها بإيدينا
-const FAMILY_PLURALS_ = { 'حلق':'حلوق','ضلفه':'ضلف','باكته':'باكتات','سقاس':'سقاسات','برور':'برورات','طبه':'طبّات','ماسوره':'مواسير','زاويه':'زوايا','تقابل':'تقابلات','بانل':'بانلات','مفصله':'مفصلات','مقبض':'مقابض','سبلونه':'سبلونات','ماكينه':'ماكينات','ترباس':'تراباس','موتور':'موتورات','شريحه':'شرايح','مقص':'مقصات','سكاك':'سكاكين','غطاء':'أغطية','عصفوره':'عصافير','كاوتش':'كاوتش','حشوه':'حشوات','باب':'أبواب' };
+const FAMILY_PLURALS_ = { 'حلق':'حلوق','ضلفه':'ضلف','باكته':'باكتات','سقاس':'سقاسات','برور':'برورات','طبه':'طبّات','ماسوره':'مواسير','زاويه':'زوايا','تقابل':'تقابلات','بانل':'بانلات','مفصله':'مفصلات','مقبض':'مقابض','سبلونه':'سبلونات','ماكينه':'ماكينات','ترباس':'تراباس','موتور':'موتورات','شريحه':'شرايح','مقص':'مقصات','سكاك':'سكاكات','سكاكه':'سكاكات','غطاء':'أغطية','عصفوره':'عصافير','كاوتش':'كاوتش','حشوه':'حشوات','باب':'أبواب' };
 function familyKey_(name){
   const t = String(name||'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').trim().split(/\s+/)[0] || '';
   return t.replace(/^ال(?=.{3,})/,'').toLowerCase();

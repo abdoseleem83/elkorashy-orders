@@ -127,6 +127,7 @@ await page.click('.fam[data-val="sys:اخرى"]'); await page.waitForTimeout(300
 ok('«أخرى» = اللي مش مفصلي ولا جرار', (await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()))).join('|')==='حلق قليل|حلق كومبن');
 await page.click('.fam[data-val=""]'); await page.waitForTimeout(300);
 ok('«الكل» بترجّع كل الأصناف', (await page.$$('.pcard')).length===5);
+ok('«سكاكات» مش «سكاكين» + المربعات صغيرة (≤ 52px)', await page.evaluate(()=> familyLabel_('سكاك','سكاك كبير')==='سكاكات' && familyLabel_('سكاكه','سكاكة')==='سكاكات' && document.querySelector('.fam').getBoundingClientRect().height<=52));
 // ── نقل صنف بين الأنواع (للإدارة بس): من «أخرى» لـ «جرار»
 ok('زرار «نقل» مش ظاهر لغير الإدارة', (await page.$('.movechip'))===null);
 await page.evaluate(()=>{ setManageToken('MGR.TOK'); render(); }); await page.waitForTimeout(300);
