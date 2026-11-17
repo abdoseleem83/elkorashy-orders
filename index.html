@@ -440,7 +440,8 @@ textarea{resize:vertical;min-height:60px;}
    ⚠️ مغيّرناش أي لون — كل كلاسات الحالة (instock/lowstock/outstock/
    blackstock/unavailable) وألوان اللافتات زي ما هي بالظبط. اللي اتغير
    هو التخطيط بس: عمود واحد، والاسم يمين واللافتة شمال في نفس الصف. */
-.productgrid.listmode{grid-template-columns:1fr;gap:8px;}
+.productgrid.listmode{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+@media (min-width:760px){ .productgrid.listmode{grid-template-columns:repeat(5,minmax(0,1fr));} }
 /* الصفوف بتاخد عرض أكبر شوية: بتخرج من padding الكارت من الجنبين */
 .productgrid.listmode{margin-inline:-9px;padding:2px 0;}
 .productgrid.listmode .empty{grid-column:auto;}
@@ -1966,7 +1967,8 @@ html[data-theme="dark"] .sectile small .sno{color:#FCA5A5;}
 /* فلتر اللون الاختياري («الكل» + الألوان) */
 
 /* كارت الصنف */
-.productgrid.listmode{grid-template-columns:1fr;gap:8px;}
+.productgrid.listmode{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+@media (min-width:760px){ .productgrid.listmode{grid-template-columns:repeat(5,minmax(0,1fr));} }
 .pcard{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:13px 14px;display:flex;flex-direction:column;gap:10px;min-width:0;}
 .pcard.selected{border-color:var(--navy-soft);box-shadow:0 6px 18px rgba(30,107,214,.20);}
 .pcard.incart{border-color:var(--success);}
@@ -2036,9 +2038,18 @@ header.top ~ * .mini2027.sectorbtn,.mini2027.sectorbtn,html[data-theme] .mini202
 .mini2027.sectorsel{position:relative;}
 .mini2027.sectorsel select{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer;border:0;}
 .otherlink{display:block;width:100%;margin-top:12px;border:1.5px dashed var(--navy-soft);background:transparent;color:var(--navy);border-radius:14px;padding:12px;font-family:inherit;font-weight:900;font-size:13.5px;cursor:pointer;}
-/* خلفيتين بالتبادل لكروت الأصناف (فاتح/أبيض) عشان كل صنف يتفصل عن اللي قبله — ثابتين مش بيتغيروا مع الفلترة */
-.productgrid > .pcard:nth-child(even){--card:#EAF1FF;border-color:#C5D6F3;}
-html[data-theme="dark"] .productgrid > .pcard:nth-child(even){--card:#18284A;border-color:#2B4170;}
+/* الكارت المضغوط (اسم الصنف بس) — ٣ في الصف؛ المفتوح بياخد العرض كله */
+.pcard.exp{grid-column:1/-1;}
+.pickfam{grid-column:1/-1;text-align:center;padding:18px 10px;border:2px dashed var(--line);border-radius:16px;color:var(--muted);font-weight:900;font-size:13.5px;}
+.pcard.pt{position:relative;min-height:70px;padding:10px 8px;border-radius:14px;align-items:center;justify-content:center;text-align:center;gap:4px;font-family:inherit;color:var(--ink);cursor:pointer;box-shadow:0 2px 6px rgba(11,61,145,.05);}
+.pcard.pt:active{transform:scale(.97);}
+.pcard.pt .pc-name{flex:0 1 auto;width:100%;text-align:center;}
+.pt-name{font-size:12.5px;font-weight:900;line-height:1.4;word-break:break-word;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;}
+.pt-dot{position:absolute;top:7px;inset-inline-start:7px;width:9px;height:9px;border-radius:50%;}
+.pt-dot.ok{background:#16A34A;} .pt-dot.mid{background:#F59E0B;} .pt-dot.out{background:#DC2626;}
+.pt-tag{font-style:normal;font-size:9.5px;font-weight:900;border-radius:999px;padding:1px 7px;background:#DCFCE7;color:#166534;}
+.pt-tag.off{background:var(--danger);color:#fff;}
+.pcard.pt.incart{border-color:var(--success);}
 .pcard.selected,.pcard.incart{border-color:var(--navy-soft);}
 .pcard.incart:not(.selected){border-color:var(--success);}
 .searchbox.hasic input{padding-inline-start:44px;}
@@ -2151,7 +2162,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v266';
+const APP_BUILD = 'v267';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2337,7 +2348,7 @@ const state = {
 
   myOrders:[],
   myOrdersLoading:false,
-  homeSearch:'', family:'', famExpanded:false, distEdit:false, myOrdersFilter:'all',
+  homeSearch:'', family:null, famExpanded:false,   // family: null = لسه مختارش نوع (الأصناف مخفية) · '' = الكل distEdit:false, myOrdersFilter:'all',
   myOrdersSearched:false,
   myOrdersAuthMissing:false,
   myOrdersPhone:'',
@@ -3279,7 +3290,7 @@ async function refreshMyOrders(){
     if(isUnauthorized_(data)){ state.myOrdersAuthMissing = true; state.myOrders = []; }
     else{
       const results = Array.isArray(data) ? data : [];
-      state.myOrders = results.sort((a,b)=> b.ts - a.ts);
+      state.myOrders = results.sort((a,b)=> a.ts - b.ts);   // الأقدم الأول
     }
   }catch(e){ state.myOrders = []; }
   state.myOrdersLoading = false;
@@ -3293,7 +3304,7 @@ async function searchMyOrdersByPhone(){
   state.myOrdersLoading = true; render();
   try{
     const results = await loadMyOrdersByPhone(phone);
-    state.myOrders = results.sort((a,b)=> b.ts - a.ts);
+    state.myOrders = results.sort((a,b)=> a.ts - b.ts);   // الأقدم الأول
   }catch(e){ state.myOrders = []; }
   state.myOrdersLoading = false;
   state.myOrdersSearched = true;
@@ -5817,7 +5828,7 @@ function homeSearchResults_(q){
 }
 
 function renderHomeView(){
-  const last = (state.myOrders||[])[0];
+  const last = (state.myOrders||[]).reduce((m,o)=> (!m || (Number(o.ts)||0) >= (Number(m.ts)||0)) ? o : m, null);   // الأحدث (القايمة مترتبة الأقدم الأول)
   const loading = state.myOrdersLoading && !state.myOrdersSearched;
   const q = asText(state.homeSearch).trim();
   const res = q ? homeSearchResults_(q) : [];
@@ -6137,7 +6148,7 @@ async function moveProductType_(main, product, type){
 function applySector_(main){
   state.mainGroup = main;
   state.productSearch = '';
-  state.family = '';
+  state.family = null;
   state.famExpanded = false;
 }
 // 🧩 نوع الصنف = أول كلمة في اسمه (باكتة · حلق · ضلفة · سقاس …) — بتتجمّع تلقائي من الكاتالوج من غير ما نكتبها بإيدينا
@@ -6192,6 +6203,22 @@ function renderProductCard_(main, n, inlineKeys){
 
   const pav = pavailHtml_(av);
 
+  // 🔲 الشكل المضغوط (٣ في الصف): اسم الصنف بس + نقطة توفر صغيرة. الألوان والكمية بتظهر بعد ما تدوس على الصنف.
+  if(!isStaged){
+    let lvl = '';
+    if(av.tracked && av.total){
+      const g = av.groups, inN = g.ok.length + g.low.length + g.crit.length;
+      lvl = !inN ? 'out' : (g.ok.length && !g.low.length && !g.crit.length && !g.out.length) ? 'ok' : 'mid';
+    }
+    const lvlTxt = { ok:'متاح', mid:'متاح جزئيًا', out:'غير متوفر' }[lvl] || '';
+    return `
+    <button type="button" class="pcard pt ${inCart?'incart':''} ${unavailable?'unavailable':''}" data-act="${unavailable?'noop-unavailable':'toggle-product'}" data-val="${esc(n)}" data-main="${esc(main)}"${lvlTxt ? ` title="${lvlTxt}"` : ''}>
+      ${lvl ? `<i class="pt-dot ${lvl}" aria-label="${lvlTxt}"></i>` : ''}
+      <span class="pc-name pt-name">${esc(n)}</span>
+      ${unavailable ? '<em class="pt-tag off">موقوف</em>' : (inCart ? '<em class="pt-tag">في السلة</em>' : '')}
+    </button>`;
+  }
+
   // الكمية قصاد البند: كل لون مختار (أو الصنف نفسه لو من غير ألوان) في سطر واحد: الاسم يمين، الوحدة، و(− رقم +) شمال
   let qbox = '';
   if(isStaged){
@@ -6212,7 +6239,7 @@ function renderProductCard_(main, n, inlineKeys){
       <div class="qbtns"><button class="cancelbtn" data-act="cancel-staged" data-key="${esc(stagedEntry.key)}">✖ إلغاء</button></div>`) + `</div>`;
   }
   return `
-    <div class="pcard ${isStaged?'selected':''} ${inCart?'incart':''} ${unavailable?'unavailable':''}">
+    <div class="pcard exp ${isStaged?'selected':''} ${inCart?'incart':''} ${unavailable?'unavailable':''}">
       ${head}${dots}${pav ? `<div class="pavail">${pav}</div>` : ''}${moveChip}${qbox}
     </div>`;
 }
@@ -6328,8 +6355,11 @@ function renderOrderView(){
         if(sysMode) return (sysOrder_[a.key] ?? 5) - (sysOrder_[b.key] ?? 5);
         return b.n - a.n || alpha_.compare(a.label, b.label);
       });
-      const famActive = families.some(f=>f.key===state.family) ? state.family : '';
-      const famShown = famActive ? entries.filter(e=>famOf(e)===famActive) : entries;
+      const famActive = (state.family && families.some(f=>f.key===state.family)) ? state.family : '';
+      const famChosen = state.family !== null;
+      // الأصناف مبتفتحش غير لما يختار «الكل» أو نوع (مفصلي/جرار/…) — إلا لو بيدوّر بالاسم أو القطاع نوع واحد بس
+      const needPick = families.length > 1 && !famChosen && !q;
+      const famShown = needPick ? [] : (famActive ? entries.filter(e=>famOf(e)===famActive) : entries);
       const FAM_FIRST_ = 10;   // الكل + ١٠ أنواع + «كل الأنواع» = ١٢ مربع = ٤ صفوف كاملة (٣ في الصف)
       const famVisible = (state.famExpanded || families.length <= FAM_FIRST_ + 1) ? families
         : families.filter((f,i)=> i < FAM_FIRST_ || f.key===famActive);
@@ -6342,7 +6372,7 @@ function renderOrderView(){
           <button class="fam on" data-act="set-family" data-val="${esc(famActive)}" title="دوس تاني لإظهار كل الأنواع"><b>${esc(famActiveObj ? famActiveObj.label : '')} <i>✕</i></b><small>${famActiveObj ? famActiveObj.n : ''} صنف · دوس تاني لإظهار الكل</small></button>
         </div>` : `
         <div class="famrow" role="group" aria-label="نوع الصنف">
-          <button class="fam ${!famActive?'on':''}" data-act="set-family" data-val=""><b>الكل</b><small>${entries.length}</small></button>
+          <button class="fam ${famChosen && !famActive?'on':''}" data-act="set-family" data-val=""><b>الكل</b><small>${entries.length}</small></button>
           ${famVisible.map(f=>`<button class="fam ${famActive===f.key?'on':''}" data-act="set-family" data-val="${esc(f.key)}"><b>${esc(f.label)}</b><small>${f.n}</small></button>`).join('')}
           ${families.length > famVisible.length || state.famExpanded && families.length > FAM_FIRST_ + 1 ? `<button class="fam more" data-act="toggle-fam-all"><b>${state.famExpanded ? 'أقل ▴' : 'كل الأنواع ▾'}</b><small>${state.famExpanded ? '' : families.length}</small></button>` : ''}
         </div>`) : '';
@@ -6354,8 +6384,8 @@ function renderOrderView(){
             // 🔽 لو فيه صنف متحدد دلوقتي في القطاع ده، نعرضه هو بس ونخفي الباقي.
             // أول ما يلغي اختياره (يدوس عليه تاني أو يدوس إلغاء)، كل الأصناف
             // بترجع تظهر. بطلب صريح من المستخدم.
-            const stagedEntries = famShown.filter(e => state.staged.some(s=>s.key===stagedKey(e.main,e.name)));
-            const visible = stagedEntries.length ? stagedEntries : famShown;
+            if(needPick) return `<div class="pickfam">👆 اختار «الكل» أو نوع من فوق عشان تظهر الأصناف</div>`;
+            const visible = famShown;
             return visible.length ? visible.map(e=>renderProductCard_(e.main, e.name, inlineStagedKeys_)).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>';
           })()}
         </div>
@@ -6640,13 +6670,12 @@ function filteredAdminOrders_(){
     if(state.adminStatusFilter!=='all' && o.status!==state.adminStatusFilter) return false;
     if(q && !(o.distName||'').toLowerCase().includes(q)) return false;
     return true;
-  // الأحدث فوق والأقدم تحت. بنرتّب بالوقت تنازليًا، ولو الوقت متساوي أو مش
-  // موجود بنرجع لرقم الطلب، عشان الترتيب مايعتمدش على ترتيب الصفوف الراجع
-  // من الشيت خالص.
+  // الأقدم فوق والأحدث تحت (الأقدم الأول). بنرتّب بالوقت تصاعديًا، ولو الوقت متساوي أو مش
+  // موجود بنرجع لرقم الطلب، عشان الترتيب مايعتمدش على ترتيب الصفوف الراجع من الشيت خالص.
   }).slice().sort((a,b)=>{
-    const d = orderTimeKey_(b) - orderTimeKey_(a);
+    const d = orderTimeKey_(a) - orderTimeKey_(b);
     if(d !== 0) return d;
-    return orderNoKey_(b) - orderNoKey_(a);
+    return orderNoKey_(a) - orderNoKey_(b);
   });
 }
 
@@ -8033,7 +8062,7 @@ async function onActionInner(act, el){
       state.view = 'order'; render(); window.scrollTo(0, 0);
       break;
     case 'toggle-fam-all': state.famExpanded = !state.famExpanded; render(); break;
-    case 'set-family': { const v = el.getAttribute('data-val') || ''; state.family = (v && v===state.family) ? '' : v; render(); } window.scrollTo({ top: 0, behavior:'smooth' }); break;
+    case 'set-family': { const v = el.getAttribute('data-val') || ''; state.family = (state.family!==null && v===state.family) ? null : v; render(); } window.scrollTo({ top: 0, behavior:'smooth' }); break;
     case 'set-group': applySector_(el.getAttribute('data-val')); render(); break;
     case 'toggle-product':{
       const name = el.getAttribute('data-val');
@@ -8147,6 +8176,7 @@ async function onActionInner(act, el){
       // مكانتش بتتعرض خالص، فالشاشة كانت "واقفة مكانها" من غير ما تفتح حاجة.
       state.mainGroup = groupOfMain_(main);
       state.productSearch = '';
+      state.family = '';     // «الكل» — عشان الصنف المتفتح للتعديل يظهر
       toggleStagedProduct(main, product);
       requestAnimationFrame(()=>{
         const scrollTarget = document.querySelector('.stagedblock') || document.querySelector('.inlinestaged');

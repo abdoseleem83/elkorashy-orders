@@ -51,13 +51,30 @@ await page.evaluate(()=>{ state.productSearch=''; state.staged=[]; render(); });
 
 // ── كارت «حلق كومبن»: ٣ دواير + سطر المتاح/غير المتوفر
 const card = async n => page.evaluate(n=>{ const c=[...document.querySelectorAll('.pcard')].find(x=>x.querySelector('.pc-name').textContent.trim()===n); return c ? { dots:c.querySelectorAll('.cdot').length, on:c.querySelectorAll('.cdot.on').length, av:(c.querySelector('.pavail')||{}).textContent||'' } : null; }, n);
+// ── الأصناف مبتفتحش غير لما يختار «الكل» أو نوع
+ok('الأصناف مخفية لحد ما يختار «الكل» أو نوع (وفيه رسالة توجيه)', (await page.$$('.pcard')).length===0 && (await page.$('.pickfam'))!==null && (await page.$$('.famrow .fam')).length>1);
+await page.click('.fam[data-val=""]'); await page.waitForTimeout(300);
+ok('«الكل» بتظهر كل الأصناف', (await page.$$('.pcard')).length===5 && (await page.$('.pickfam'))===null);
+await page.click('.fam[data-val=""]'); await page.waitForTimeout(300);
+ok('دوسة تانية على «الكل» بترجّع إخفاء الأصناف', (await page.$$('.pcard')).length===0 && (await page.$('.pickfam'))!==null);
+await page.fill('[data-act="search-product"]','سقاس'); await page.waitForTimeout(300);
+ok('البحث بالاسم بيظهر النتايج من غير ما يختار نوع', (await page.$$('.pcard')).length===1);
+await page.fill('[data-act="search-product"]',''); await page.waitForTimeout(200);
+await page.click('.fam[data-val=""]'); await page.waitForTimeout(300);
+// ── الشكل المضغوط: اسم الصنف بس ٣ في الصف + نقطة توفر، والألوان تظهر بعد الدوس
+ok('الأصناف مضغوطة: اسم بس (مفيش دواير ألوان قبل ما تدوس) و٣ في الصف', await page.evaluate(()=>{ const g=document.querySelector('.productgrid'); return document.querySelectorAll('.pcard.pt').length===5 && document.querySelectorAll('.cdot').length===0 && getComputedStyle(g).gridTemplateColumns.trim().split(/\s+/).length===3; }));
+const dotOf = n => page.evaluate(n=>{ const c=[...document.querySelectorAll('.pcard.pt')].find(x=>x.querySelector('.pc-name').textContent.trim()===n); const d=c && c.querySelector('.pt-dot'); return d ? d.className.replace('pt-dot','').trim() : ''; }, n);
+ok('نقطة التوفر على المربع: متاح=أخضر · جزئي/قليل=برتقالي · غير متوفر=أحمر', (await dotOf('باكتة جرار'))==='ok' && (await dotOf('حلق كومبن'))==='mid' && (await dotOf('سقاس مفصلي'))==='mid' && (await dotOf('حلق قليل'))==='mid' && (await dotOf('ضلفة مفصلي'))==='out');
+await page.click('.pcard.pt[data-val="حلق كومبن"]'); await page.waitForTimeout(350);
+ok('بعد الدوس الصنف اتفتح (عرض كامل) وظهرت ألوانه', await page.evaluate(()=>{ const c=document.querySelector('.pcard.exp'); return !!c && c.querySelectorAll('.cdot').length===3 && getComputedStyle(c).gridColumnStart==='1'; }));
 let c1 = await card('حلق كومبن');
 ok('٣ دواير ألوان جوه الكارت (من غير تكرار اللون المكرر في الكاتالوج)', c1 && c1.dots===3, JSON.stringify(c1));
 ok('علامة ✓ على المتاح و✗ على غير المتوفر', await page.evaluate(()=>{ const d=[...document.querySelectorAll('.pcard')].find(x=>x.querySelector('.pc-name').textContent.trim()==='حلق كومبن').querySelectorAll('.cdot'); const g=n=>[...d].find(x=>x.getAttribute('aria-label')===n).querySelector('.bdg').textContent; return g('ابيض')==='✓' && g('بيج')==='✗' && g('رمادي')==='✓'; }));
 ok('حالة بالكلام من غير أرقام: «متاح: ابيض، رمادي» + «غير متوفر: بيج»', c1 && /متاح: ابيض، رمادي/.test(c1.av) && /غير متوفر: بيج/.test(c1.av) && !/\d/.test(c1.av), c1 && c1.av);
-ok('«سقاس مفصلي» (أقل من لفة) = «أعواد بس»', /^أعواد بس$/.test((await card('سقاس مفصلي')).av.trim()));
-ok('«حلق قليل» = «قليل»', /^قليل$/.test((await card('حلق قليل')).av.trim()));
-ok('«ضلفة مفصلي» غير متوفر', /^غير متوفر$/.test((await card('ضلفة مفصلي')).av.trim()));
+const avTxt = n => page.evaluate(([k,n])=> pavailHtml_(productAvail_(k,n)).replace(/<[^>]+>/g,'').trim(), [K,n]);
+ok('«سقاس مفصلي» (أقل من لفة) = «أعواد بس»', (await avTxt('سقاس مفصلي'))==='أعواد بس');
+ok('«حلق قليل» = «قليل»', (await avTxt('حلق قليل'))==='قليل');
+ok('«ضلفة مفصلي» غير متوفر', (await avTxt('ضلفة مفصلي'))==='غير متوفر');
 
 // ── اختيار أكتر من لون: دايرتين → علامة ✓ + صفين كمية
 await page.click('[data-act="tile-color"][data-prod="حلق كومبن"][data-val="ابيض"]'); await page.waitForTimeout(250);
@@ -79,7 +96,6 @@ ok('اتضاف اللونين بكمياتهم للسلة', st.length===2 && st.
 ok('قايمة اختيار القطاع مخفية بعد ما القطاع اتحدد', (await page.$('#sec-group'))===null);
 const order = await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()));
 ok('الترتيب أبجدي (بغض النظر عن التوفر)', order.join('|')==='باكتة جرار|حلق قليل|حلق كومبن|سقاس مفصلي|ضلفة مفصلي', order.join('|'));
-ok('خلفيتين بالتبادل لكروت الأصناف', await page.evaluate(()=>{ const bg=[...document.querySelectorAll('.pcard')].map(c=>getComputedStyle(c).backgroundColor); return bg.length>=3 && bg.every((b,i)=> i===0 || b!==bg[i-1]) && new Set(bg).size===2; }));
 ok('البحث جوه الهيدر الثابت (مبيسكرولش) وفيه أيقونة 🔍', (await page.$('.fixedhead-outer .searchbox.hasic .sbic svg'))!==null && (await page.$('.fixedhead-outer [data-act="search-product"]'))!==null);
 await page.evaluate(()=>window.scrollTo(0, 400)); await page.waitForTimeout(200);
 ok('البحث ظاهر في أعلى الشاشة وإحنا نازلين تحت', await page.evaluate(()=>{ const r=document.querySelector('[data-act="search-product"]').getBoundingClientRect(); return r.top>=0 && r.bottom<=260; }));
@@ -102,7 +118,7 @@ const accNames = await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.
 ok('القطاع الموحّد فيه أصناف الأربع قطاعات مترتبة أبجدي', accNames.join('|')==='باب WPC|باكتة صغيرة|سيليكون شفاف|شاتر ابيض|مفصلة ثقيلة|مقبض خارجي', accNames.join('|'));
 ok('من غير تصنيفات فرعية + رابط «أصناف أخرى» جوه', (await page.$('.chipgrid3'))===null && (await page.$('.otherlink'))!==null);
 // الكمية فاضية للصنف من غير ألوان (الموزع يكتبها) + الوحدة صح حسب القطاع الأصلي
-await page.click('.pc-head[data-val="مفصلة ثقيلة"]'); await page.waitForTimeout(300);
+await page.click('.pcard.pt[data-val="مفصلة ثقيلة"]'); await page.waitForTimeout(300);
 ok('الكمية فاضية (مش 1) للصنف اللي من غير ألوان', (await page.$eval('.qbox [data-act="staged-qty-input"]', e=>e.value))==='');
 const cartBefore = await page.evaluate(()=>state.cart.length);
 await page.click('.qbox [data-act="confirm-staged"]'); await page.waitForTimeout(200);
@@ -130,9 +146,10 @@ ok('«الكل» بترجّع كل الأصناف', (await page.$$('.pcard')).le
 ok('نص المربع المختار أبيض (واضح على الأزرق)', await page.evaluate(()=>{ const b=document.querySelector('.fam.on b'); return getComputedStyle(b).color==='rgb(255, 255, 255)'; }));
 ok('«سكاكات» مش «سكاكين» + المربعات صغيرة (≤ 52px)', await page.evaluate(()=> familyLabel_('سكاك','سكاك كبير')==='سكاكات' && familyLabel_('سكاكه','سكاكة')==='سكاكات' && document.querySelector('.fam').getBoundingClientRect().height<=52));
 // ── نقل صنف بين الأنواع (للإدارة بس): من «أخرى» لـ «جرار»
+await page.click('.pcard.pt[data-val="حلق كومبن"]'); await page.waitForTimeout(350);
 ok('زرار «نقل» مش ظاهر لغير الإدارة', (await page.$('.movechip'))===null);
 await page.evaluate(()=>{ setManageToken('MGR.TOK'); render(); }); await page.waitForTimeout(300);
-ok('زرار «نقل» ظاهر على كل كارت للإدارة', (await page.$$('.pcard .movechip')).length===5);
+ok('زرار «نقل» ظاهر للإدارة على الصنف المفتوح', (await page.$$('.pcard.exp .movechip')).length===1);
 await page.selectOption('.pcard:has(.pc-name:text-is("حلق كومبن")) .movechip select', 'جرار'); await page.waitForTimeout(500);
 const post = globalThis.__typePost;
 ok('اتبعت للسيرفر: حلق كومبن ← جرار', post && post.action==='manageSetProductType' && post.main===K && post.product==='حلق كومبن' && post.type==='جرار' && post.token==='MGR.TOK', JSON.stringify(post));
@@ -142,7 +159,7 @@ await page.click('.fam[data-val="sys:جرار"]'); await page.waitForTimeout(300
 ok('«حلق كومبن» ظهر في «جرار»', (await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()))).includes('حلق كومبن'));
 await page.selectOption('.pcard:has(.pc-name:text-is("حلق كومبن")) .movechip select', '__auto'); await page.waitForTimeout(500);
 ok('«رجوع للتصنيف التلقائي» بيرجّعه لـ «أخرى»', (globalThis.__typePost.type===''), JSON.stringify(globalThis.__typePost)) ;
-await page.evaluate(()=>{ setManageToken(''); state.family=''; render(); }); await page.waitForTimeout(200);
+await page.evaluate(()=>{ setManageToken(''); state.family=''; state.staged=[]; render(); }); await page.waitForTimeout(200);
 // باقي القطاعات (اكسسوارات pvc): أول كلمة + المفرد في «أخرى» + «كل الأنواع» لو كتير
 await page.evaluate(()=>{ for(let i=1;i<=11;i++){ for(const x of ['أ','ب']) CATALOG.push({name:'فام'+i+' '+x,main:'اكسسوارات pvc اكسا',sub:'',unit:1,product:'فام'+i+' '+x,color:'',price:1,available:true,inStock:true,stock:5}); } applySector_(ACC_GROUP); render(); }); await page.waitForTimeout(300);
 ok('اكسسوارات: مفيش سكرول جانبي في المربعات', await page.evaluate(()=>{ const r=document.querySelector('.famrow'); return r.scrollWidth<=r.clientWidth+1; }));
@@ -159,8 +176,9 @@ await page.evaluate(([k])=>{ CATALOG.splice(CATALOG.length-22,22); state.famExpa
 // ── دوسة على لون موجود في السلة: بيتفتح للتعديل (مش بيتشال ويتمسح البند من السلة)
 await page.evaluate(()=>{ state.staged=[]; state.cart=[]; render(); }); await page.waitForTimeout(200);
 await page.evaluate(([k])=>{ cartAdd_({main:k,product:'سقاس مفصلي',name:'سقاس مفصلي ابيض',color:'ابيض',unitType:'لفة',qty:2}); cartAdd_({main:k,product:'ضلفة مفصلي',name:'ضلفة مفصلي ابيض',color:'ابيض',unitType:'لفة',qty:1}); render(); }, [K]); await page.waitForTimeout(200);
-await page.click('[data-act="tile-color"][data-prod="سقاس مفصلي"][data-val="ابيض"]'); await page.waitForTimeout(300);
-ok('اللون اتفتح بكميته القديمة (٢) ومااتمسحش من السلة', await page.evaluate(()=>{ const s=state.staged[0]; return s && s.selectedColors.join()==='ابيض' && s.qtys['ابيض']===2 && state.cart.length===1; }));
+await page.evaluate(()=>{ state.family=''; render(); }); await page.waitForTimeout(200);
+await page.click('.pcard.pt[data-val="سقاس مفصلي"]'); await page.waitForTimeout(350);
+ok('الصنف اللي في السلة اتفتح بلونه وكميته القديمة (٢) وبيتعدّل', await page.evaluate(()=>{ const s=state.staged[0]; return s && s.selectedColors.join()==='ابيض' && s.qtys['ابيض']===2 && state.cart.length===1; }));
 await page.evaluate(()=>{ cancelStaged(state.staged[0].key); }); await page.waitForTimeout(700);   // الإلغاء بيتأخر ٣٢٠ms للأنيميشن
 ok('الإلغاء رجّع البند للسلة زي ما كان (من غير تكرار)', await page.evaluate(()=>state.cart.length===2 && state.cart.filter(c=>c.product==='سقاس مفصلي').length===1));
 // ── «زود أصناف» بيرجع لنفس صفحة الأصناف ونفس القطاع ونفس السكرول

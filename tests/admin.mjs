@@ -74,6 +74,13 @@ const relogin = await page.evaluate(async ()=>{
 });
 console.log('٥) التوكن المنتهي بيسيب المستخدم داخل ويعلّم myOrdersAuthMissing:', relogin?'✅':'❌');
 
+const adminOrder = await page.evaluate(()=>{
+  state.orders = [{id:'c',ts:3000,orderNo:3,status:'x',distName:'ج'},{id:'a',ts:1000,orderNo:1,status:'x',distName:'أ'},{id:'b',ts:2000,orderNo:2,status:'x',distName:'ب'}];
+  state.adminStatusFilter='all'; state.adminFilter='';
+  return filteredAdminOrders_().map(o=>o.id).join('');
+});
+console.log('٥-ب) متابعة المخزن: الأقدم الأول:', adminOrder==='abc'?'✅':'❌ '+adminOrder);
+
 console.log('\nنداءات السيرفر:');
 calls.forEach(c=>console.log('   ', c.m.padEnd(5), c.action.padEnd(18), c.token?('token='+c.token):''));
 const mutationsViaGet = calls.filter(c=>c.m==='GET' && ['delete','deleteDelivered','updateStatus','login'].includes(c.action));

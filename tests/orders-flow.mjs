@@ -43,6 +43,7 @@ ok('«أعد الطلب» من الرئيسية ودّى لشاشة الطلب �
 await page.evaluate(()=>{ state.view='myorders'; render(); }); await page.waitForTimeout(400);
 const count = async()=> (await page.$$('.ordA')).length;
 ok('الكل: 3 طلبات', (await count())===3, String(await count()));
+ok('طلباتي: الأقدم الأول (#204 ← #209 ← #213)', (await page.$$eval('.ordA .oid', e=>e.map(x=>x.textContent.trim()))).join('|')==='#204|#209|#213');
 await page.click('[data-act="orders-filter"][data-k="active"]'); ok('جاري: طلب واحد', (await count())===1);
 await page.click('[data-act="orders-filter"][data-k="done"]'); ok('اتسلّم: طلبين', (await count())===2);
 ok('كل طلب فيه خط تقدّم بـ3 مراحل', (await page.$$eval('.ordA', cards=>cards.every(c=>c.querySelectorAll('.ost').length===3))));
