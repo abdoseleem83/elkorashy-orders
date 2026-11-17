@@ -2071,12 +2071,17 @@ body.kb-open .bottomnav,body.kb-open .submitbar{display:none !important;}
 .homewh{padding:16px !important;}
 .homewh h3{margin:0 0 12px;font-size:16px;font-weight:900;color:var(--ink);}
 /* مربعات الأنواع */
-.famrow{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 10px;margin:0 0 4px;}
-.fam{flex:0 1 auto;min-width:60px;max-width:100%;height:48px;border-radius:18px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0 9px;font-family:inherit;cursor:pointer;}
-.fam b{font-size:12.5px;font-weight:900;white-space:nowrap;}
+.famrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:2px 0 10px;margin:0 0 4px;}
+.famrow.one{grid-template-columns:1fr;}
+@media (min-width:760px){ .famrow:not(.one){grid-template-columns:repeat(6,minmax(0,1fr));} }
+.fam{width:100%;min-width:0;height:42px;border-radius:18px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0 9px;font-family:inherit;cursor:pointer;}
+.fam b{font-size:12.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+.fam b i{font-style:normal;opacity:.85;margin-inline-start:4px;}
 .fam small{font-size:10.5px;font-weight:800;color:var(--muted);line-height:1;}
 .fam.on{background:linear-gradient(135deg,#1E6BD6,#0B3D91);border-color:transparent;color:#fff;box-shadow:0 8px 18px rgba(11,61,145,.3);}
-.fam.on small{color:rgba(255,255,255,.85);}
+#app .famrow .fam.on,#app .famrow .fam.on b,#app .famrow .fam.on b i{color:#fff !important;}
+#app .famrow .fam.on small{color:rgba(255,255,255,.88) !important;}
+.famrow.one .fam{height:46px;}
 .fam.more{border-style:dashed;border-color:var(--navy-soft);color:var(--navy);}
 .movechip{position:relative;align-self:flex-start;display:inline-flex;align-items:center;gap:4px;border:1.5px dashed var(--navy-soft);color:var(--navy);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:900;cursor:pointer;}
 .movechip select{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer;border:0;}
@@ -2146,7 +2151,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v265';
+const APP_BUILD = 'v266';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -6325,15 +6330,22 @@ function renderOrderView(){
       });
       const famActive = families.some(f=>f.key===state.family) ? state.family : '';
       const famShown = famActive ? entries.filter(e=>famOf(e)===famActive) : entries;
-      const FAM_FIRST_ = 9;
+      const FAM_FIRST_ = 10;   // الكل + ١٠ أنواع + «كل الأنواع» = ١٢ مربع = ٤ صفوف كاملة (٣ في الصف)
       const famVisible = (state.famExpanded || families.length <= FAM_FIRST_ + 1) ? families
         : families.filter((f,i)=> i < FAM_FIRST_ || f.key===famActive);
-      const familyRow = families.length>1 ? `
+      // قطاعات غير الشبابيك (اكسسوارات…): لما تختار نوع بيفضل هو بس (والباقي بيختفي) والأصناف بتاعته بس تظهر،
+      // ودوسة تانية عليه ترجّع كل الأنواع وكل الأصناف. قطاعات الشبابيك (مفصلي/جرار/أخرى) بتفضل ظاهرة كلها للتبديل السريع.
+      const collapseOne = !sysMode && !!famActive;
+      const famActiveObj = families.find(f=>f.key===famActive);
+      const familyRow = families.length>1 ? (collapseOne ? `
+        <div class="famrow one" role="group" aria-label="نوع الصنف">
+          <button class="fam on" data-act="set-family" data-val="${esc(famActive)}" title="دوس تاني لإظهار كل الأنواع"><b>${esc(famActiveObj ? famActiveObj.label : '')} <i>✕</i></b><small>${famActiveObj ? famActiveObj.n : ''} صنف · دوس تاني لإظهار الكل</small></button>
+        </div>` : `
         <div class="famrow" role="group" aria-label="نوع الصنف">
           <button class="fam ${!famActive?'on':''}" data-act="set-family" data-val=""><b>الكل</b><small>${entries.length}</small></button>
           ${famVisible.map(f=>`<button class="fam ${famActive===f.key?'on':''}" data-act="set-family" data-val="${esc(f.key)}"><b>${esc(f.label)}</b><small>${f.n}</small></button>`).join('')}
           ${families.length > famVisible.length || state.famExpanded && families.length > FAM_FIRST_ + 1 ? `<button class="fam more" data-act="toggle-fam-all"><b>${state.famExpanded ? 'أقل ▴' : 'كل الأنواع ▾'}</b><small>${state.famExpanded ? '' : families.length}</small></button>` : ''}
-        </div>` : '';
+        </div>`) : '';
       productSection = `
       <div class="card">
         ${familyRow}
@@ -8021,7 +8033,7 @@ async function onActionInner(act, el){
       state.view = 'order'; render(); window.scrollTo(0, 0);
       break;
     case 'toggle-fam-all': state.famExpanded = !state.famExpanded; render(); break;
-    case 'set-family': state.family = el.getAttribute('data-val') || ''; render(); window.scrollTo({ top: 0, behavior:'smooth' }); break;
+    case 'set-family': { const v = el.getAttribute('data-val') || ''; state.family = (v && v===state.family) ? '' : v; render(); } window.scrollTo({ top: 0, behavior:'smooth' }); break;
     case 'set-group': applySector_(el.getAttribute('data-val')); render(); break;
     case 'toggle-product':{
       const name = el.getAttribute('data-val');

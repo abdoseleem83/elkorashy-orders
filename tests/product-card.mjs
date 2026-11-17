@@ -118,7 +118,7 @@ await page.evaluate(([k])=>{ state.cart=[]; state.staged=[]; applySector_(k); re
 const fams = await page.$$eval('.famrow .fam', e=>e.map(x=>x.querySelector('b').textContent.trim()+':'+x.querySelector('small').textContent.trim()));
 ok('كومبن: الكل 5 · مفصلي 2 · جرار 1 · أخرى 2 (أخرى في الآخر)', fams.join('|')==='الكل:5|مفصلي:2|جرار:1|أخرى:2', fams.join('|'));
 ok('مفيش «حلوق» ولا «ضلف» كمربعات', !fams.some(x=>/^(حلوق|ضلف)/.test(x)));
-ok('مربعات الأنواع جوه الشاشة (مفيش سكرول جانبي)', await page.evaluate(()=>{ const r=document.querySelector('.famrow'); return r.scrollWidth<=r.clientWidth+1 && getComputedStyle(r).flexWrap==='wrap'; }));
+ok('مربعات الأنواع ٣ في الصف وجوه الشاشة (مفيش سكرول جانبي)', await page.evaluate(()=>{ const r=document.querySelector('.famrow'); return r.scrollWidth<=r.clientWidth+1 && getComputedStyle(r).display==='grid' && getComputedStyle(r).gridTemplateColumns.trim().split(/\s+/).length===3; }));
 await page.click('.fam[data-val="sys:مفصلي"]'); await page.waitForTimeout(300);
 ok('«مفصلي» بتعرض المفصلي بس (كل المفصلي مع بعض)', (await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()))).join('|')==='سقاس مفصلي|ضلفة مفصلي');
 await page.click('.fam[data-val="sys:جرار"]'); await page.waitForTimeout(300);
@@ -127,6 +127,7 @@ await page.click('.fam[data-val="sys:اخرى"]'); await page.waitForTimeout(300
 ok('«أخرى» = اللي مش مفصلي ولا جرار', (await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()))).join('|')==='حلق قليل|حلق كومبن');
 await page.click('.fam[data-val=""]'); await page.waitForTimeout(300);
 ok('«الكل» بترجّع كل الأصناف', (await page.$$('.pcard')).length===5);
+ok('نص المربع المختار أبيض (واضح على الأزرق)', await page.evaluate(()=>{ const b=document.querySelector('.fam.on b'); return getComputedStyle(b).color==='rgb(255, 255, 255)'; }));
 ok('«سكاكات» مش «سكاكين» + المربعات صغيرة (≤ 52px)', await page.evaluate(()=> familyLabel_('سكاك','سكاك كبير')==='سكاكات' && familyLabel_('سكاكه','سكاكة')==='سكاكات' && document.querySelector('.fam').getBoundingClientRect().height<=52));
 // ── نقل صنف بين الأنواع (للإدارة بس): من «أخرى» لـ «جرار»
 ok('زرار «نقل» مش ظاهر لغير الإدارة', (await page.$('.movechip'))===null);
@@ -145,7 +146,13 @@ await page.evaluate(()=>{ setManageToken(''); state.family=''; render(); }); awa
 // باقي القطاعات (اكسسوارات pvc): أول كلمة + المفرد في «أخرى» + «كل الأنواع» لو كتير
 await page.evaluate(()=>{ for(let i=1;i<=11;i++){ for(const x of ['أ','ب']) CATALOG.push({name:'فام'+i+' '+x,main:'اكسسوارات pvc اكسا',sub:'',unit:1,product:'فام'+i+' '+x,color:'',price:1,available:true,inStock:true,stock:5}); } applySector_(ACC_GROUP); render(); }); await page.waitForTimeout(300);
 ok('اكسسوارات: مفيش سكرول جانبي في المربعات', await page.evaluate(()=>{ const r=document.querySelector('.famrow'); return r.scrollWidth<=r.clientWidth+1; }));
-ok('اكسسوارات: أول ٩ أنواع + «كل الأنواع»', await page.evaluate(()=>document.querySelectorAll('.famrow .fam:not(.more)').length===10 && !!document.querySelector('.fam.more')));
+ok('اكسسوارات: الكل + أول ١٠ أنواع + «كل الأنواع» (١٢ مربع = ٤ صفوف كاملة)', await page.evaluate(()=>document.querySelectorAll('.famrow .fam:not(.more)').length===11 && !!document.querySelector('.fam.more')));
+// اكسسوارات: اختار نوع ← هو بس يفضل والباقي يختفي، ودوسة تانية ترجّع الكل
+const nAcc = await page.evaluate(()=>document.querySelectorAll('.pcard').length);
+await page.click('.fam[data-val="فام1"]'); await page.waitForTimeout(300);
+ok('اخترت نوع: مربع واحد بس فاضل (الباقي اختفى) وأصنافه بس ظاهرة', await page.evaluate(()=>document.querySelectorAll('.famrow .fam').length===1 && document.querySelector('.famrow.one') && [...document.querySelectorAll('.pcard .pc-name')].every(x=>x.textContent.startsWith('فام1'))  && document.querySelectorAll('.pcard').length===2));
+await page.click('.famrow.one .fam'); await page.waitForTimeout(300);
+ok('دوسة تانية: كل الأنواع وكل الأصناف رجعوا', await page.evaluate(([n])=>document.querySelectorAll('.famrow .fam').length>3 && !document.querySelector('.famrow.one') && document.querySelectorAll('.pcard').length===n, [nAcc]));
 await page.click('.fam.more'); await page.waitForTimeout(300);
 ok('«كل الأنواع» بتفتحهم كلهم وفيهم «أخرى»', await page.evaluate(()=>document.querySelectorAll('.famrow .fam:not(.more)').length>10 && !!document.querySelector('.fam[data-val="sys:اخرى"]')));
 await page.evaluate(([k])=>{ CATALOG.splice(CATALOG.length-22,22); state.famExpanded=false; applySector_(k); render(); }, [K]); await page.waitForTimeout(300);
