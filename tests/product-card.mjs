@@ -144,7 +144,33 @@ ok('«أخرى» = اللي مش مفصلي ولا جرار', (await page.$$eval
 await page.click('.fam[data-val=""]'); await page.waitForTimeout(300);
 ok('«الكل» بترجّع كل الأصناف', (await page.$$('.pcard')).length===5);
 ok('نص المربع المختار أبيض (واضح على الأزرق)', await page.evaluate(()=>{ const b=document.querySelector('.fam.on b'); return getComputedStyle(b).color==='rgb(255, 255, 255)'; }));
-ok('«سكاكات» مش «سكاكين» + المربعات صغيرة (≤ 52px)', await page.evaluate(()=> familyLabel_('سكاك','سكاك كبير')==='سكاكات' && familyLabel_('سكاكه','سكاكة')==='سكاكات' && document.querySelector('.fam').getBoundingClientRect().height<=52));
+// ── مربعات الأصناف بلونين بس بالتبادل
+await page.evaluate(()=>{ state.staged=[]; state.family=''; render(); }); await page.waitForTimeout(250);
+ok('مربعات الأصناف بلونين بس بالتبادل', await page.evaluate(()=>{ const bg=[...document.querySelectorAll('.pcard.pt')].map(c=>getComputedStyle(c).backgroundColor); return bg.length>=4 && bg.every((b,i)=>i===0||b!==bg[i-1]) && new Set(bg).size===2; }));
+// ── لما يختار صنف: الباقي بيختفي، ولما يلغي بيرجعوا
+await page.click('.pcard.pt[data-val="حلق قليل"]'); await page.waitForTimeout(350);
+ok('اخترت صنف: الأصناف التانية اختفت (المفتوح بس)', (await page.$$('.productgrid .pcard')).length===1 && (await page.$$('.pcard.exp')).length===1);
+await page.click('.pcard.exp [data-act="cancel-staged"]'); await page.waitForTimeout(700);
+ok('بعد الإلغاء كل الأصناف رجعت', (await page.$$('.productgrid .pcard.pt')).length===5);
+// ── دمج الأصناف المكررة («3.8 سم» و«3.8سم» صنف واحد)
+const merged = await page.evaluate(()=>{
+  const old = CATALOG;
+  const rows = [
+    {name:'a',main:'قطاعات PVC كومبن',product:'حلق ببار 6 سم',color:'ابيض',stock:5,available:true,price:10},
+    {name:'b',main:'قطاعات PVC كومبن',product:'حلق ببار 6سم',color:'ابيض',stock:0,available:true,price:10},
+    {name:'c',main:'قطاعات PVC كومبن',product:'حلق ببار 6سم',color:'بيج',stock:3,available:true,price:10},
+    {name:'d',main:'قطاعات PVC كومبن',product:'سقاس',color:'ابيض',stock:1,available:true,price:5},
+  ];
+  const out = mergeDuplicateProducts_(rows.map(r=>({...r})));
+  CATALOG = out; rebuildCatalogIndex_();
+  const names = [...new Set(out.map(r=>r.product))].sort();
+  const white = findCatalogItem('قطاعات PVC كومبن','حلق ببار 6 سم','ابيض');   // الاسم القديم لسه بيتحوّل للأساسي
+  const res = { n: out.length, names: names.join('|'), whiteStock: white && white.stock, oldAlias: !!white };
+  CATALOG = old; rebuildCatalogIndex_();
+  return res;
+});
+ok('دمج المكرر: صنف واحد (6سم)، ألوانه من غير تكرار، وأحسن صف للّون المتكرر', merged.n===3 && merged.names==='حلق ببار 6سم|سقاس' && merged.whiteStock===5, JSON.stringify(merged));
+ok('الاسم القديم لسه بيتحوّل للصنف الأساسي (سلة/طلب قديم)', merged.oldAlias===true);
 // ── نقل صنف بين الأنواع (للإدارة بس): من «أخرى» لـ «جرار»
 await page.click('.pcard.pt[data-val="حلق كومبن"]'); await page.waitForTimeout(350);
 ok('زرار «نقل» مش ظاهر لغير الإدارة', (await page.$('.movechip'))===null);
@@ -160,19 +186,10 @@ ok('«حلق كومبن» ظهر في «جرار»', (await page.$$eval('.pcard 
 await page.selectOption('.pcard:has(.pc-name:text-is("حلق كومبن")) .movechip select', '__auto'); await page.waitForTimeout(500);
 ok('«رجوع للتصنيف التلقائي» بيرجّعه لـ «أخرى»', (globalThis.__typePost.type===''), JSON.stringify(globalThis.__typePost)) ;
 await page.evaluate(()=>{ setManageToken(''); state.family=''; state.staged=[]; render(); }); await page.waitForTimeout(200);
-// باقي القطاعات (اكسسوارات pvc): أول كلمة + المفرد في «أخرى» + «كل الأنواع» لو كتير
-await page.evaluate(()=>{ for(let i=1;i<=11;i++){ for(const x of ['أ','ب']) CATALOG.push({name:'فام'+i+' '+x,main:'اكسسوارات pvc اكسا',sub:'',unit:1,product:'فام'+i+' '+x,color:'',price:1,available:true,inStock:true,stock:5}); } applySector_(ACC_GROUP); render(); }); await page.waitForTimeout(300);
-ok('اكسسوارات: مفيش سكرول جانبي في المربعات', await page.evaluate(()=>{ const r=document.querySelector('.famrow'); return r.scrollWidth<=r.clientWidth+1; }));
-ok('اكسسوارات: الكل + أول ١٠ أنواع + «كل الأنواع» (١٢ مربع = ٤ صفوف كاملة)', await page.evaluate(()=>document.querySelectorAll('.famrow .fam:not(.more)').length===11 && !!document.querySelector('.fam.more')));
-// اكسسوارات: اختار نوع ← هو بس يفضل والباقي يختفي، ودوسة تانية ترجّع الكل
-const nAcc = await page.evaluate(()=>document.querySelectorAll('.pcard').length);
-await page.click('.fam[data-val="فام1"]'); await page.waitForTimeout(300);
-ok('اخترت نوع: مربع واحد بس فاضل (الباقي اختفى) وأصنافه بس ظاهرة', await page.evaluate(()=>document.querySelectorAll('.famrow .fam').length===1 && document.querySelector('.famrow.one') && [...document.querySelectorAll('.pcard .pc-name')].every(x=>x.textContent.startsWith('فام1'))  && document.querySelectorAll('.pcard').length===2));
-await page.click('.famrow.one .fam'); await page.waitForTimeout(300);
-ok('دوسة تانية: كل الأنواع وكل الأصناف رجعوا', await page.evaluate(([n])=>document.querySelectorAll('.famrow .fam').length>3 && !document.querySelector('.famrow.one') && document.querySelectorAll('.pcard').length===n, [nAcc]));
-await page.click('.fam.more'); await page.waitForTimeout(300);
-ok('«كل الأنواع» بتفتحهم كلهم وفيهم «أخرى»', await page.evaluate(()=>document.querySelectorAll('.famrow .fam:not(.more)').length>10 && !!document.querySelector('.fam[data-val="sys:اخرى"]')));
-await page.evaluate(([k])=>{ CATALOG.splice(CATALOG.length-22,22); state.famExpanded=false; applySector_(k); render(); }, [K]); await page.waitForTimeout(300);
+// الاكسسوارات: أصناف مباشرة من غير مجموعات (أبجدي) ومربعات مضغوطة
+await page.evaluate(()=>{ applySector_(ACC_GROUP); render(); }); await page.waitForTimeout(300);
+ok('الاكسسوارات: مفيش مجموعات ولا رسالة اختيار — الأصناف ظاهرة على طول', (await page.$('.famrow'))===null && (await page.$('.pickfam'))===null && (await page.$$('.pcard.pt')).length>=6);
+await page.evaluate(([k])=>{ applySector_(k); render(); }, [K]); await page.waitForTimeout(300);
 // ── دوسة على لون موجود في السلة: بيتفتح للتعديل (مش بيتشال ويتمسح البند من السلة)
 await page.evaluate(()=>{ state.staged=[]; state.cart=[]; render(); }); await page.waitForTimeout(200);
 await page.evaluate(([k])=>{ cartAdd_({main:k,product:'سقاس مفصلي',name:'سقاس مفصلي ابيض',color:'ابيض',unitType:'لفة',qty:2}); cartAdd_({main:k,product:'ضلفة مفصلي',name:'ضلفة مفصلي ابيض',color:'ابيض',unitType:'لفة',qty:1}); render(); }, [K]); await page.waitForTimeout(200);

@@ -2040,6 +2040,9 @@ header.top ~ * .mini2027.sectorbtn,.mini2027.sectorbtn,html[data-theme] .mini202
 .otherlink{display:block;width:100%;margin-top:12px;border:1.5px dashed var(--navy-soft);background:transparent;color:var(--navy);border-radius:14px;padding:12px;font-family:inherit;font-weight:900;font-size:13.5px;cursor:pointer;}
 /* الكارت المضغوط (اسم الصنف بس) — ٣ في الصف؛ المفتوح بياخد العرض كله */
 .pcard.exp{grid-column:1/-1;}
+/* مربعات الأصناف بلونين بس بالتبادل (أبيض / أزرق فاتح) */
+.productgrid > .pcard.pt:nth-child(even){--card:#E4EEFF;border-color:#BCD0F2;}
+html[data-theme="dark"] .productgrid > .pcard.pt:nth-child(even){--card:#18284A;border-color:#2B4170;}
 .pickfam{grid-column:1/-1;text-align:center;padding:18px 10px;border:2px dashed var(--line);border-radius:16px;color:var(--muted);font-weight:900;font-size:13.5px;}
 .pcard.pt{position:relative;min-height:70px;padding:10px 8px;border-radius:14px;align-items:center;justify-content:center;text-align:center;gap:4px;font-family:inherit;color:var(--ink);cursor:pointer;box-shadow:0 2px 6px rgba(11,61,145,.05);}
 .pcard.pt:active{transform:scale(.97);}
@@ -2083,7 +2086,6 @@ body.kb-open .bottomnav,body.kb-open .submitbar{display:none !important;}
 .homewh h3{margin:0 0 12px;font-size:16px;font-weight:900;color:var(--ink);}
 /* مربعات الأنواع */
 .famrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:2px 0 10px;margin:0 0 4px;}
-.famrow.one{grid-template-columns:1fr;}
 @media (min-width:760px){ .famrow:not(.one){grid-template-columns:repeat(6,minmax(0,1fr));} }
 .fam{width:100%;min-width:0;height:42px;border-radius:18px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0 9px;font-family:inherit;cursor:pointer;}
 .fam b{font-size:12.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
@@ -2092,10 +2094,11 @@ body.kb-open .bottomnav,body.kb-open .submitbar{display:none !important;}
 .fam.on{background:linear-gradient(135deg,#1E6BD6,#0B3D91);border-color:transparent;color:#fff;box-shadow:0 8px 18px rgba(11,61,145,.3);}
 #app .famrow .fam.on,#app .famrow .fam.on b,#app .famrow .fam.on b i{color:#fff !important;}
 #app .famrow .fam.on small{color:rgba(255,255,255,.88) !important;}
-.famrow.one .fam{height:46px;}
-.fam.more{border-style:dashed;border-color:var(--navy-soft);color:var(--navy);}
 .movechip{position:relative;align-self:flex-start;display:inline-flex;align-items:center;gap:4px;border:1.5px dashed var(--navy-soft);color:var(--navy);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:900;cursor:pointer;}
 .movechip select{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer;border:0;}
+.homehero2.fest{background:linear-gradient(135deg,#7C2D12 0%,#D97706 45%,#FBBF24 100%);box-shadow:0 14px 30px rgba(217,119,6,.35);}
+.homehero2.fest .hh-txt b{font-size:19px;text-shadow:0 2px 8px rgba(0,0,0,.25);}
+.hh-chip.quiet{background:rgba(0,0,0,.18);border-color:transparent;font-weight:800;}
 </style>
 </head>
 <body>
@@ -2162,7 +2165,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v267';
+const APP_BUILD = 'v269';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2348,7 +2351,7 @@ const state = {
 
   myOrders:[],
   myOrdersLoading:false,
-  homeSearch:'', family:null, famExpanded:false,   // family: null = لسه مختارش نوع (الأصناف مخفية) · '' = الكل distEdit:false, myOrdersFilter:'all',
+  homeSearch:'', family:null,   // family: null = لسه مختارش نوع (الأصناف مخفية) · '' = الكل distEdit:false, myOrdersFilter:'all',
   myOrdersSearched:false,
   myOrdersAuthMissing:false,
   myOrdersPhone:'',
@@ -2394,6 +2397,33 @@ let CATALOG_INDEX = new Map();
 let CATALOG_BY_MAIN_PRODUCT = new Map();
 let CATALOG_BY_PRODUCT = new Map();
 
+// 🧬 دمج المكرر: نفس الصنف متسجّل بمسافات مختلفة («3.8 سم» و«3.8سم») بيتعرض صنف واحد.
+// بنختار الاسم الأكتر صفوفًا (والأطول عند التعادل) كاسم أساسي، وللّون المكرر بنسيب أحسن صف (متاح ← رصيد أكبر ← له سعر).
+// الأسماء القديمة بتفضل بتتحوّل للأساسي (CATALOG_ALIASES) عشان أي سلة/طلب قديم يفضل يلاقي سعره.
+let CATALOG_ALIASES = new Map();
+function dupKey_(x){
+  return String(x||'').replace(/\u0640/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,'').toLowerCase();
+}
+function mergeDuplicateProducts_(arr){
+  CATALOG_ALIASES = new Map();
+  const groups = new Map();
+  arr.forEach(d=>{ const k = d.main + '|' + dupKey_(d.product); (groups.get(k) || groups.set(k, []).get(k)).push(d); });
+  const out = [];
+  groups.forEach(rows=>{
+    const names = new Map(); rows.forEach(r=>names.set(r.product, (names.get(r.product)||0)+1));
+    if(names.size === 1 && rows.length === new Set(rows.map(r=>dupKey_(r.color))).size){ out.push(...rows); return; }
+    const canon = [...names.entries()].sort((a,b)=> b[1]-a[1] || String(b[0]).length - String(a[0]).length)[0][0];
+    const best = new Map();
+    const score = r => (r.available===false ? 0 : 4) + (Number(r.stock)>0 ? 2 : 0) + (r.price!=null ? 1 : 0) + Math.min(Number(r.stock)||0, 1e6) / 1e7;
+    rows.forEach(r=>{
+      const ck = dupKey_(r.color), cur = best.get(ck);
+      if(!cur || score(r) > score(cur)){ if(cur) CATALOG_ALIASES.set(r.main+'|'+normalizeProductName(cur.product)+'|'+normalizeProductName(cur.color), null); best.set(ck, r); }
+    });
+    rows.forEach(r=>{ if(r.product !== canon){ CATALOG_ALIASES.set(r.main+'|'+normalizeProductName(r.product)+'|'+normalizeProductName(r.color), best.get(dupKey_(r.color))); } });
+    best.forEach(r=>{ if(r.product !== canon) r.product = canon; out.push(r); });
+  });
+  return out;
+}
 function rebuildCatalogIndex_(){
   CATALOG_INDEX = new Map();
   CATALOG_BY_MAIN_PRODUCT = new Map();
@@ -2410,6 +2440,7 @@ function rebuildCatalogIndex_(){
     if(!pArr){ pArr = []; CATALOG_BY_PRODUCT.set(np, pArr); }
     pArr.push(d);
   }
+  CATALOG_ALIASES.forEach((item, k)=>{ if(item && !CATALOG_INDEX.has(k)) CATALOG_INDEX.set(k, item); });
 }
 
 // ===== helpers =====
@@ -2756,6 +2787,7 @@ async function loadCatalog(){
       state.catalogError = true;
     }
   }
+  CATALOG = mergeDuplicateProducts_(CATALOG);
   rebuildCatalogIndex_();   // ⚡ لازم بعد أي تعيين لـ CATALOG
   MAIN_GROUPS = [...new Set(CATALOG.map(d=>d.main))];
   SECTOR_CHIPS = [...MAIN_GROUPS, OTHER_SECTOR];
@@ -5827,6 +5859,67 @@ function homeSearchResults_(q){
   return out;
 }
 
+// 🎉 رأس السنة: من ٢٨ ديسمبر لـ ٣ يناير — بانر احتفالي في الرئيسية + مطر قصاصات وتلج خفيف ١٠ ثواني (مرة في اليوم).
+// مبيمنعش الدوس، ومبيشتغلش لو الموبايل على «تقليل الحركة»، وفيه زرار «إيقاف الاحتفال» (بيتفعّل تاني السنة الجاية).
+const LS_FESTIVE_OFF = 'qurashi_festive_off', LS_FESTIVE_DAY = 'qurashi_festive_day';
+function festiveYear_(d){
+  d = d || new Date();
+  const m = d.getMonth(), day = d.getDate();
+  if(m===11 && day>=28) return d.getFullYear() + 1;
+  if(m===0 && day<=3) return d.getFullYear();
+  return 0;
+}
+function festiveActive_(d){
+  const y = festiveYear_(d); if(!y) return 0;
+  try{ if(localStorage.getItem(LS_FESTIVE_OFF)===String(y)) return 0; }catch(e){}
+  return y;
+}
+function runFestive_(ms){
+  ms = ms || 10000;
+  if(document.getElementById('festiveCanvas')) return;
+  const cv = document.createElement('canvas');
+  cv.id = 'festiveCanvas';
+  cv.setAttribute('aria-hidden','true');
+  cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:9999;pointer-events:none;';
+  document.body.appendChild(cv);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const W = cv.width = Math.round(innerWidth * dpr), H = cv.height = Math.round(innerHeight * dpr);
+  const ctx = cv.getContext('2d');
+  const COLORS = ['#F59E0B','#1E6BD6','#16A34A','#DC2626','#8B5CF6','#06B6D4','#EC4899'];
+  const N = innerWidth < 600 ? 55 : 90;
+  const P = Array.from({length:N}, (_,i)=>{
+    const snow = i % 2 === 0;
+    return { snow, x: Math.random()*W, y: -Math.random()*H*0.6, r: (snow ? 2 + Math.random()*3.5 : 4 + Math.random()*5) * dpr,
+      vy: (0.8 + Math.random()*1.6) * dpr, vx: (Math.random()-0.5) * 0.8 * dpr, rot: Math.random()*6, vr: (Math.random()-0.5)*0.15,
+      ph: Math.random()*6, c: snow ? '#FFFFFF' : COLORS[i % COLORS.length] };
+  });
+  const t0 = performance.now();
+  (function frame(t){
+    const e = t - t0;
+    if(e >= ms || !cv.isConnected){ cv.remove(); return; }
+    ctx.clearRect(0,0,W,H);
+    ctx.globalAlpha = e > ms - 1500 ? Math.max(0, (ms - e) / 1500) : 1;
+    P.forEach(p=>{
+      p.y += p.vy; p.ph += 0.03; p.x += p.vx + Math.sin(p.ph) * 0.6 * dpr; p.rot += p.vr;
+      if(p.y > H + 20){ p.y = -10; p.x = Math.random()*W; }
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c;
+      if(p.snow){ ctx.shadowColor = 'rgba(30,107,214,.55)'; ctx.shadowBlur = 4*dpr; ctx.beginPath(); ctx.arc(0,0,p.r,0,6.3); ctx.fill(); }
+      else ctx.fillRect(-p.r, -p.r/2, p.r*2, p.r);
+      ctx.restore();
+    });
+    requestAnimationFrame(frame);
+  })(t0);
+}
+function maybeRunFestive_(){
+  try{
+    if(state.view!=='home' || !state.currentUser || !festiveActive_()) return;
+    if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const today = new Date().toDateString();
+    if(localStorage.getItem(LS_FESTIVE_DAY) === today) return;
+    localStorage.setItem(LS_FESTIVE_DAY, today);
+    setTimeout(()=>runFestive_(), 350);
+  }catch(e){}
+}
 function renderHomeView(){
   const last = (state.myOrders||[]).reduce((m,o)=> (!m || (Number(o.ts)||0) >= (Number(m.ts)||0)) ? o : m, null);   // الأحدث (القايمة مترتبة الأقدم الأول)
   const loading = state.myOrdersLoading && !state.myOrdersSearched;
@@ -5884,7 +5977,22 @@ function renderHomeView(){
     </div>`;
   const cartN_ = (state.cart||[]).length;
   const activeN_ = (state.myOrders||[]).filter(o=>normStatus_(o.status)!==STATUS_DONE && normStatus_(o.status)!==STATUS_EDITED).length;
-  const hero_ = `
+  const fy_ = festiveActive_();
+  const hero_ = fy_ ? `
+    <div class="homehero2 fest">
+      <svg class="hh-art" viewBox="0 0 200 120" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="40" cy="30" r="22" opacity=".35"/><circle cx="170" cy="34" r="12" opacity=".35"/><path d="M92 18l4 10 10 4-10 4-4 10-4-10-10-4 10-4z" opacity=".5"/><path d="M150 76l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" opacity=".5"/>
+      </svg>
+      <div class="hh-txt">
+        <b>🎉 كل سنة وانتم طيبين ${fy_}</b>
+        <small>سنة جديدة سعيدة وطلبات موفّقة — من القرشي لأبواب وشبابيك الـ UPVC</small>
+      </div>
+      <div class="hh-chips">
+        <button class="hh-chip" data-act="open-cart-review">${ico_('cart',15)} السلة <i>${cartN_}</i></button>
+        <button class="hh-chip" data-act="goto" data-view="myorders">${ico_('track',15)} طلبات جارية <i>${activeN_}</i></button>
+        <button class="hh-chip quiet" data-act="toggle-festive">✕ إيقاف الاحتفال</button>
+      </div>
+    </div>` : `
     <div class="homehero2" aria-hidden="false">
       <svg class="hh-art" viewBox="0 0 200 120" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <rect x="118" y="14" width="34" height="62" rx="4"/><rect x="124" y="20" width="22" height="22" rx="2"/><rect x="124" y="48" width="22" height="22" rx="2"/>
@@ -6149,18 +6257,7 @@ function applySector_(main){
   state.mainGroup = main;
   state.productSearch = '';
   state.family = null;
-  state.famExpanded = false;
 }
-// 🧩 نوع الصنف = أول كلمة في اسمه (باكتة · حلق · ضلفة · سقاس …) — بتتجمّع تلقائي من الكاتالوج من غير ما نكتبها بإيدينا
-const FAMILY_PLURALS_ = { 'حلق':'حلوق','ضلفه':'ضلف','باكته':'باكتات','سقاس':'سقاسات','برور':'برورات','طبه':'طبّات','ماسوره':'مواسير','زاويه':'زوايا','تقابل':'تقابلات','بانل':'بانلات','مفصله':'مفصلات','مقبض':'مقابض','سبلونه':'سبلونات','ماكينه':'ماكينات','ترباس':'تراباس','موتور':'موتورات','شريحه':'شرايح','مقص':'مقصات','سكاك':'سكاكات','سكاكه':'سكاكات','غطاء':'أغطية','عصفوره':'عصافير','كاوتش':'كاوتش','حشوه':'حشوات','باب':'أبواب' };
-function familyKey_(name){
-  const t = String(name||'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').trim().split(/\s+/)[0] || '';
-  return t.replace(/^ال(?=.{3,})/,'').toLowerCase();
-}
-function familyLabel_(key, sample){
-  return FAMILY_PLURALS_[key] || String(sample||'').trim().split(/\s+/)[0] || key;
-}
-
 function renderProductCard_(main, n, inlineKeys){
   const stagedEntry = state.staged.find(x=>x.key===stagedKey(main, n));
   const isStaged = !!stagedEntry;
@@ -6325,65 +6422,40 @@ function renderOrderView(){
         });
       });
       entries.sort((x,y)=> (x.off-y.off) || alpha_.compare(x.name, y.name));
-      // مربعات الأنواع (بتتحسب على نتيجة البحث): دوس «مفصلي» تظهرلك المفصلي بس، «جرار» الجرار بس.
-      //  • قطاعات الشبابيك (كومبن/كرافت/نيو): مفصلي · جرار · أخرى (اللي مش مفصلي ولا جرار، وكوبلن التجميع بين الاتنين)
-      //  • باقي القطاعات: أول كلمة في الاسم (باكتات · سبلونات …) واللي فيه صنف واحد بس بيتجمّع في «أخرى»
+      // مربعات الأنواع: قطاعات الشبابيك (كومبن/كرافت/نيو) = مفصلي · جرار · أخرى (دوس نوع تظهرلك أصنافه بس).
+      // الاكسسوارات وباقي القطاعات: أصناف مباشرة من غير مجموعات (أبجدي) — بطلب صريح من المستخدم.
       const sysMode = /كومبن|كرافت|نيو/.test(state.mainGroup);
       const norm_ = x => String(x||'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
-      let famOf;
-      if(sysMode){
-        famOf = e => {
-          const ov = productTypeOverride_(e.main, e.name);            // اللي اتنقل يدويًا بيغلب التصنيف التلقائي
-          if(ov) return ov==='مفصلي' ? 'sys:مفصلي' : ov==='جرار' ? 'sys:جرار' : 'sys:اخرى';
-          const n = norm_(e.name), m = n.includes('مفصل'), j = n.includes('جرار');
-          return (m && !j) ? 'sys:مفصلي' : (j && !m) ? 'sys:جرار' : 'sys:اخرى';
-        };
-      } else {
-        const cnt = new Map(); entries.forEach(e=>{ const k = familyKey_(e.name); cnt.set(k, (cnt.get(k)||0)+1); });
-        famOf = e => { const k = familyKey_(e.name); return (cnt.get(k)||0) > 1 ? k : 'sys:اخرى'; };
-      }
+      const famOf = e => {
+        const ov = productTypeOverride_(e.main, e.name);            // اللي اتنقل يدويًا بيغلب التصنيف التلقائي
+        if(ov) return ov==='مفصلي' ? 'sys:مفصلي' : ov==='جرار' ? 'sys:جرار' : 'sys:اخرى';
+        const n = norm_(e.name), m = n.includes('مفصل'), j = n.includes('جرار');
+        return (m && !j) ? 'sys:مفصلي' : (j && !m) ? 'sys:جرار' : 'sys:اخرى';
+      };
+      const FAM_LABELS_ = { 'sys:مفصلي':'مفصلي', 'sys:جرار':'جرار', 'sys:اخرى':'أخرى' };
       const famMap = new Map();
-      entries.forEach(e=>{
-        const k = famOf(e); if(!k) return;
-        const f = famMap.get(k) || { key:k, n:0, label: k==='sys:مفصلي' ? 'مفصلي' : k==='sys:جرار' ? 'جرار' : k==='sys:اخرى' ? 'أخرى' : familyLabel_(k, e.name) };
-        f.n++; famMap.set(k, f);
-      });
-      const sysOrder_ = { 'sys:مفصلي':0, 'sys:جرار':1 };
-      const families = [...famMap.values()].sort((a,b)=>{
-        const oa = a.key==='sys:اخرى' ? 2 : 0, ob = b.key==='sys:اخرى' ? 2 : 0;       // «أخرى» دايمًا في الآخر
-        if(oa!==ob) return oa-ob;
-        if(sysMode) return (sysOrder_[a.key] ?? 5) - (sysOrder_[b.key] ?? 5);
-        return b.n - a.n || alpha_.compare(a.label, b.label);
-      });
+      if(sysMode) entries.forEach(e=>{ const k = famOf(e); const f = famMap.get(k) || { key:k, n:0, label:FAM_LABELS_[k] }; f.n++; famMap.set(k, f); });
+      const famOrder_ = { 'sys:مفصلي':0, 'sys:جرار':1, 'sys:اخرى':2 };
+      const families = [...famMap.values()].sort((a,b)=> famOrder_[a.key] - famOrder_[b.key]);
       const famActive = (state.family && families.some(f=>f.key===state.family)) ? state.family : '';
       const famChosen = state.family !== null;
-      // الأصناف مبتفتحش غير لما يختار «الكل» أو نوع (مفصلي/جرار/…) — إلا لو بيدوّر بالاسم أو القطاع نوع واحد بس
+      // الأصناف مبتفتحش غير لما يختار «الكل» أو نوع — إلا لو بيدوّر بالاسم
       const needPick = families.length > 1 && !famChosen && !q;
       const famShown = needPick ? [] : (famActive ? entries.filter(e=>famOf(e)===famActive) : entries);
-      const FAM_FIRST_ = 10;   // الكل + ١٠ أنواع + «كل الأنواع» = ١٢ مربع = ٤ صفوف كاملة (٣ في الصف)
-      const famVisible = (state.famExpanded || families.length <= FAM_FIRST_ + 1) ? families
-        : families.filter((f,i)=> i < FAM_FIRST_ || f.key===famActive);
-      // قطاعات غير الشبابيك (اكسسوارات…): لما تختار نوع بيفضل هو بس (والباقي بيختفي) والأصناف بتاعته بس تظهر،
-      // ودوسة تانية عليه ترجّع كل الأنواع وكل الأصناف. قطاعات الشبابيك (مفصلي/جرار/أخرى) بتفضل ظاهرة كلها للتبديل السريع.
-      const collapseOne = !sysMode && !!famActive;
-      const famActiveObj = families.find(f=>f.key===famActive);
-      const familyRow = families.length>1 ? (collapseOne ? `
-        <div class="famrow one" role="group" aria-label="نوع الصنف">
-          <button class="fam on" data-act="set-family" data-val="${esc(famActive)}" title="دوس تاني لإظهار كل الأنواع"><b>${esc(famActiveObj ? famActiveObj.label : '')} <i>✕</i></b><small>${famActiveObj ? famActiveObj.n : ''} صنف · دوس تاني لإظهار الكل</small></button>
-        </div>` : `
+      const familyRow = families.length>1 ? `
         <div class="famrow" role="group" aria-label="نوع الصنف">
           <button class="fam ${famChosen && !famActive?'on':''}" data-act="set-family" data-val=""><b>الكل</b><small>${entries.length}</small></button>
-          ${famVisible.map(f=>`<button class="fam ${famActive===f.key?'on':''}" data-act="set-family" data-val="${esc(f.key)}"><b>${esc(f.label)}</b><small>${f.n}</small></button>`).join('')}
-          ${families.length > famVisible.length || state.famExpanded && families.length > FAM_FIRST_ + 1 ? `<button class="fam more" data-act="toggle-fam-all"><b>${state.famExpanded ? 'أقل ▴' : 'كل الأنواع ▾'}</b><small>${state.famExpanded ? '' : families.length}</small></button>` : ''}
-        </div>`) : '';
+          ${families.map(f=>`<button class="fam ${famActive===f.key?'on':''}" data-act="set-family" data-val="${esc(f.key)}"><b>${esc(f.label)}</b><small>${f.n}</small></button>`).join('')}
+        </div>` : '';
       productSection = `
       <div class="card">
         ${familyRow}
         <div class="productgrid listmode">
           ${(()=>{
-            // 🔽 لو فيه صنف متحدد دلوقتي في القطاع ده، نعرضه هو بس ونخفي الباقي.
-            // أول ما يلغي اختياره (يدوس عليه تاني أو يدوس إلغاء)، كل الأصناف
-            // بترجع تظهر. بطلب صريح من المستخدم.
+            // 🔽 لو فيه صنف متحدد دلوقتي في القطاع ده، نعرضه هو بس ونخفي الباقي (عشان ما يتلخبطش).
+            // أول ما يلغي اختياره (إلغاء / تأكيد الإضافة) كل الأصناف بترجع تظهر.
+            const stagedEntries = entries.filter(e => state.staged.some(s=>s.key===stagedKey(e.main,e.name)));
+            if(stagedEntries.length) return stagedEntries.map(e=>renderProductCard_(e.main, e.name, inlineStagedKeys_)).join('');
             if(needPick) return `<div class="pickfam">👆 اختار «الكل» أو نوع من فوق عشان تظهر الأصناف</div>`;
             const visible = famShown;
             return visible.length ? visible.map(e=>renderProductCard_(e.main, e.name, inlineStagedKeys_)).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>';
@@ -7469,6 +7541,7 @@ function render(){
     bindEvents();
     applyFixedHeaderSpacing_();
     applyFixedFooterSpacing_();
+    maybeRunFestive_();
     // الرئيسية محتاجة طلباتك القديمة (اللي بتطلبه كتير + آخر طلباتك): نحمّلها مرة واحدة في الخلفية
     if(state.view==='home' && state.currentUser && state.currentUser.username!=='admin' && !state.myOrdersSearched && !state.myOrdersLoading && getUserToken()){
       setTimeout(()=>{ if(!state.myOrdersSearched && !state.myOrdersLoading) refreshMyOrders(); }, 0);
@@ -7891,6 +7964,11 @@ async function onActionInner(act, el){
     case 'goto-register': state.authView='register'; state.authError=''; render(); break;
     case 'goto-forgot': state.authView='forgot'; state.authError=''; state.forgotSent=false; render(); break;
     case 'login-submit': await submitLogin(); break;
+    case 'toggle-festive': {
+      try{ localStorage.setItem(LS_FESTIVE_OFF, String(festiveYear_())); }catch(e){}
+      const cv = document.getElementById('festiveCanvas'); if(cv) cv.remove();
+      render(); break;
+    }
     case 'toggle-remember': state.authRemember = !state.authRemember; render(); break;
     case 'login-dest':{
       state.postLoginView = el.getAttribute('data-val');
@@ -8061,7 +8139,6 @@ async function onActionInner(act, el){
       state.viewHistory = state.viewHistory || []; state.viewHistory.push(state.view);
       state.view = 'order'; render(); window.scrollTo(0, 0);
       break;
-    case 'toggle-fam-all': state.famExpanded = !state.famExpanded; render(); break;
     case 'set-family': { const v = el.getAttribute('data-val') || ''; state.family = (state.family!==null && v===state.family) ? null : v; render(); } window.scrollTo({ top: 0, behavior:'smooth' }); break;
     case 'set-group': applySector_(el.getAttribute('data-val')); render(); break;
     case 'toggle-product':{
