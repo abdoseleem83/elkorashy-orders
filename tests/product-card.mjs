@@ -171,6 +171,30 @@ const merged = await page.evaluate(()=>{
 });
 ok('دمج المكرر: صنف واحد (6سم)، ألوانه من غير تكرار، وأحسن صف للّون المتكرر', merged.n===3 && merged.names==='حلق ببار 6سم|سقاس' && merged.whiteStock===5, JSON.stringify(merged));
 ok('الاسم القديم لسه بيتحوّل للصنف الأساسي (سلة/طلب قديم)', merged.oldAlias===true);
+// ── تجميع «نفس الصنف بأنواعه»: الطول (٦.٥م) والكاوتش واللون المكتوب في الاسم = مربع واحد
+const vi = await page.evaluate(()=>{
+  const g = (n,c)=>{ const v=variantInfo_(n,c); return v.base+'|'+v.label; };
+  return [
+    g('حلق مفصلي ببار 5 سم كرافت'), g('حلق مفصلي ببار 5 سم كرافت طول 6.5م'), g('حلق مفصلي بكاوتش ببار 5 سم كرافت 6م'),
+    g('سقاس مفصلي كرافت 6.5'), g('حلق مقلوب بار 5 سم كرافت بكاوتش طول 6.5 م'), g('كاوتش قطاعات كرافت ابيض aksa', true), g('كاوتش قطاعات كرافت بيج aksa', true),
+    g('حلق جرار 3 مجري ببار 5 سم كرافت 6.5م'), g('بانل 15 سم كرافت 6.5'),
+  ];
+});
+ok('استخراج النوع: الطول/الكاوتش/اللون بيتشالوا من الاسم الأساسي', vi[0]==='حلق مفصلي ببار 5 سم كرافت|عادي' && vi[1]==='حلق مفصلي ببار 5 سم كرافت|6.5 م' && vi[2]==='حلق مفصلي ببار 5 سم كرافت|بكاوتش · 6 م' && vi[3]==='سقاس مفصلي كرافت|6.5 م' && vi[4]==='حلق مقلوب بار 5 سم كرافت|بكاوتش · 6.5 م' && vi[5]==='كاوتش قطاعات كرافت aksa|ابيض' && vi[6]==='كاوتش قطاعات كرافت aksa|بيج' && vi[7]==='حلق جرار 3 مجري ببار 5 سم كرافت|6.5 م' && vi[8]==='بانل 15 سم كرافت|6.5 م', JSON.stringify(vi));
+ok('«5 سم» (عرض البار) مبيتحسبش طول', await page.evaluate(()=>variantInfo_('حلق مفصلي ببار 5 سم كومبن').label==='عادي'));
+await page.evaluate(([k])=>{
+  window.__oldCat = CATALOG.slice();
+  const mk=(name,stock)=>({name,main:k,sub:'',unit:4,product:name,color:'ابيض',price:10,available:true,inStock:true,stock});
+  CATALOG.push(mk('حلق جرار ببار 5 سم كومبن',30), mk('حلق جرار ببار 5 سم كومبن طول 6.5 م',20), mk('حلق جرار بكاوتش ببار 5 سم كومبن',0));
+  rebuildCatalogIndex_(); state.family=''; state.staged=[]; state.openGroup=null; render();
+}, [K]); await page.waitForTimeout(300);
+ok('الأنواع التلاتة بقت مربع واحد «حلق جرار ببار 5 سم كومبن» (3 أنواع)', await page.evaluate(()=>{ const g=[...document.querySelectorAll('.pcard.grp')]; return g.length===1 && /حلق جرار ببار 5 سم كومبن/.test(g[0].textContent) && /3 أنواع/.test(g[0].textContent); }));
+await page.click('.pcard.grp'); await page.waitForTimeout(300);
+ok('دوس المربع: بتختار النوع (عادي / 6.5 م / بكاوتش)', (await page.$$eval('.vchip', e=>e.map(x=>x.textContent.replace(/\s+/g,' ').trim()))).join('|')==='عادي|6.5 م|بكاوتش');
+await page.click('.vchip:has-text("6.5 م")'); await page.waitForTimeout(350);
+ok('اختيار «6.5 م» فتح الصنف الفعلي بألوانه (والباقي اتخفى)', await page.evaluate(()=>state.staged.length===1 && /طول 6\.5 م/.test(state.staged[0].product) && document.querySelectorAll('.pcard.exp .cdot').length===1 && document.querySelectorAll('.productgrid .pcard').length===1));
+await page.click('.pcard.exp [data-act="cancel-staged"]'); await page.waitForTimeout(700);
+await page.evaluate(()=>{ CATALOG = window.__oldCat; rebuildCatalogIndex_(); state.openGroup=null; state.family=''; render(); }); await page.waitForTimeout(250);
 // ── نقل صنف بين الأنواع (للإدارة بس): من «أخرى» لـ «جرار»
 await page.click('.pcard.pt[data-val="حلق كومبن"]'); await page.waitForTimeout(350);
 ok('زرار «نقل» مش ظاهر لغير الإدارة', (await page.$('.movechip'))===null);
