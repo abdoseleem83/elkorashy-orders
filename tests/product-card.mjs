@@ -182,6 +182,19 @@ const vi = await page.evaluate(()=>{
 });
 ok('استخراج النوع: الطول/الكاوتش/اللون بيتشالوا من الاسم الأساسي', vi[0]==='حلق مفصلي ببار 5 سم كرافت|عادي' && vi[1]==='حلق مفصلي ببار 5 سم كرافت|6.5 م' && vi[2]==='حلق مفصلي ببار 5 سم كرافت|بكاوتش · 6 م' && vi[3]==='سقاس مفصلي كرافت|6.5 م' && vi[4]==='حلق مقلوب بار 5 سم كرافت|بكاوتش · 6.5 م' && vi[5]==='كاوتش قطاعات كرافت aksa|ابيض' && vi[6]==='كاوتش قطاعات كرافت aksa|بيج' && vi[7]==='حلق جرار 3 مجري ببار 5 سم كرافت|6.5 م' && vi[8]==='بانل 15 سم كرافت|6.5 م', JSON.stringify(vi));
 ok('«5 سم» (عرض البار) مبيتحسبش طول', await page.evaluate(()=>variantInfo_('حلق مفصلي ببار 5 سم كومبن').label==='عادي'));
+const vi2 = await page.evaluate(()=>{
+  const b=n=>variantInfo_(n).base, g=(n)=>variantInfo_(n).parts;
+  return {
+    nio58: b('حلق مفصلي بار 5 سم نيو 5.8 سم')===b('حلق مفصلي بار 5 سم نيو') && g('حلق مفصلي بار 5 سم نيو 5.8 سم').len==='5.8 م',
+    nio6: b('حلق مفصلي مشاريع نيو 6 سم')===b('حلق مفصلي مشاريع نيو') && g('حلق مفصلي مشاريع نيو 6 سم').len==='6 م',
+    crb: b('زاوية CRB كومبن')===b('زاوية CRP كومبن') && g('زاوية CRB كومبن').code[0]==='CRB' && g('زاوية CRP كومبن').code[0]==='CRP',
+    dupKeys: dupKey_('برور عريض 6 * 9 كومبن')===dupKey_('برور عريض 6 × 9 سم كومبن'),
+  };
+});
+ok('«نيو 5.8 سم» و«نيو 6 سم» بيتجمّعوا مع صنفهم الأساسي (الطول)', vi2.nio58 && vi2.nio6, JSON.stringify(vi2));
+ok('زاوية/ماسورة CRB و CRP صنف واحد بنوعين', vi2.crb);
+ok('الطول بيتوحّد: «5.80» = «5.8 م»', await page.evaluate(()=>variantInfo_('حلق مقلوب بار 5 سم نيو 5.80 سم').parts.len==='5.8 م' || variantInfo_('حلق مقلوب بار 5 سم كرافت طول 5.80 م').parts.len==='5.8 م'));
+ok('«6 * 9» و«6 × 9 سم» صنف واحد (بيتدمجوا)', vi2.dupKeys);
 await page.evaluate(([k])=>{
   window.__oldCat = CATALOG.slice();
   const mk=(name,stock)=>({name,main:k,sub:'',unit:4,product:name,color:'ابيض',price:10,available:true,inStock:true,stock});
@@ -190,10 +203,15 @@ await page.evaluate(([k])=>{
 }, [K]); await page.waitForTimeout(300);
 ok('الأنواع التلاتة بقت مربع واحد «حلق جرار ببار 5 سم كومبن» (3 أنواع)', await page.evaluate(()=>{ const g=[...document.querySelectorAll('.pcard.grp')]; return g.length===1 && /حلق جرار ببار 5 سم كومبن/.test(g[0].textContent) && /3 أنواع/.test(g[0].textContent); }));
 await page.click('.pcard.grp'); await page.waitForTimeout(300);
-ok('دوس المربع: بتختار النوع (عادي / 6.5 م / بكاوتش)', (await page.$$eval('.vchip', e=>e.map(x=>x.textContent.replace(/\s+/g,' ').trim()))).join('|')==='عادي|6.5 م|بكاوتش');
+ok('دوس المربع: بتختار النوع (6 م / 6.5 م / بكاوتش · 6 م) — مفيش كلمة «عادي»', (await page.$$eval('.vchip', e=>e.map(x=>x.textContent.replace(/\s+/g,' ').trim()))).join('|')==='6 م|6.5 م|بكاوتش · 6 م');
+ok('لما تفتح مجموعة الأصناف التانية بتختفي', await page.evaluate(()=>document.querySelectorAll('.productgrid .pcard').length===1 && !!document.querySelector('.grpcard')));
 await page.click('.vchip:has-text("6.5 م")'); await page.waitForTimeout(350);
 ok('اختيار «6.5 م» فتح الصنف الفعلي بألوانه (والباقي اتخفى)', await page.evaluate(()=>state.staged.length===1 && /طول 6\.5 م/.test(state.staged[0].product) && document.querySelectorAll('.pcard.exp .cdot').length===1 && document.querySelectorAll('.productgrid .pcard').length===1));
 await page.click('.pcard.exp [data-act="cancel-staged"]'); await page.waitForTimeout(700);
+// اللي فيه رصيد بيتقدّم جوه المجموعة: «عادي» خلص ← بيتأخر، و«6.5 م» و«بكاوتش» المتاحين قبله
+await page.evaluate(()=>{ CATALOG.forEach(d=>{ if(d.product==='حلق جرار ببار 5 سم كومبن') d.stock=0; if(d.product==='حلق جرار بكاوتش ببار 5 سم كومبن') d.stock=30; }); rebuildCatalogIndex_(); state.openGroup=null; render(); });
+await page.waitForTimeout(250); await page.click('.pcard.grp'); await page.waitForTimeout(300);
+ok('جوه المجموعة اللي فيه رصيد الأول (6.5 م · بكاوتش · 6 م) واللي خلص «6 م» في الآخر', (await page.$$eval('.vchip', e=>e.map(x=>x.textContent.replace(/\s+/g,' ').trim()))).join('|')==='6.5 م|بكاوتش · 6 م|6 م');
 await page.evaluate(()=>{ CATALOG = window.__oldCat; rebuildCatalogIndex_(); state.openGroup=null; state.family=''; render(); }); await page.waitForTimeout(250);
 // ── نقل صنف بين الأنواع (للإدارة بس): من «أخرى» لـ «جرار»
 await page.click('.pcard.pt[data-val="حلق كومبن"]'); await page.waitForTimeout(350);

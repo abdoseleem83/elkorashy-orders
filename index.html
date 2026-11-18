@@ -2171,7 +2171,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v270';
+const APP_BUILD = 'v272';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2408,7 +2408,10 @@ let CATALOG_BY_PRODUCT = new Map();
 // الأسماء القديمة بتفضل بتتحوّل للأساسي (CATALOG_ALIASES) عشان أي سلة/طلب قديم يفضل يلاقي سعره.
 let CATALOG_ALIASES = new Map();
 function dupKey_(x){
-  return String(x||'').replace(/\u0640/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,'').toLowerCase();
+  return String(x||'').replace(/\u0640/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي')
+    .replace(/(\d)\s*[*×xX]\s*(\d)/g,'$1x$2')          // 6 * 9  =  6 × 9
+    .replace(/(\d)\s*سم(?![\u0621-\u064A])/g,'$1')      // «9 سم» = «9»
+    .replace(/\s+/g,'').toLowerCase();
 }
 function mergeDuplicateProducts_(arr){
   CATALOG_ALIASES = new Map();
@@ -6272,27 +6275,38 @@ const VARIANT_SECTOR_WORDS_ = ['كرافت','نيو','كومبن'];
 function variantInfo_(name, stripColors){
   const n_ = x => String(x||'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
   const words = String(name||'').trim().split(/\s+/).filter(Boolean);
-  const tokens = [], keep = [];
+  const parts = { code:[], color:[], rubber:false, len:'' };
+  const keep = [];
   const isLenNum = v => /^\d+(\.\d+)?$/.test(v) && [5,5.8,6,6.5].includes(Number(v));
+  const isSector = w => VARIANT_SECTOR_WORDS_.includes(w);
   for(let i=0; i<words.length; i++){
     const w = words[i], nw = n_(w), prev = i>0 ? n_(words[i-1]) : '', next = i+1<words.length ? n_(words[i+1]) : '';
-    if(nw==='بكاوتش'){ tokens.push('بكاوتش'); continue; }
+    if(nw==='بكاوتش'){ parts.rubber = true; continue; }
+    if(/^(crb|crp)$/i.test(w)){ parts.code.push(w.toUpperCase()); continue; }
     if(nw==='طول' && /^\d+(\.\d+)?(م|متر|سم)?$/.test(next)){
       const num = next.replace(/(م|متر|سم)$/,''); i++; if(/^(م|متر|سم)$/.test(n_(words[i+1]||''))) i++;
-      tokens.push(num + ' م'); continue;
+      parts.len = String(Number(num)) + ' م'; continue;
     }
     let m = nw.match(/^(\d+(\.\d+)?)(م|متر)$/);
-    if(m && isLenNum(m[1])){ tokens.push(m[1] + ' م'); continue; }
-    if(isLenNum(nw) && /^(م|متر)$/.test(next)){ tokens.push(nw + ' م'); i++; continue; }
+    if(m && isLenNum(m[1])){ parts.len = String(Number(m[1])) + ' م'; continue; }
+    if(isLenNum(nw) && /^(م|متر)$/.test(next)){ parts.len = String(Number(nw)) + ' م'; i++; continue; }
     const isLast = i === words.length-1;
-    if(isLast && VARIANT_SECTOR_WORDS_.includes(prev)){
+    if(isLast && isSector(prev)){
       m = nw.match(/^(\d+(\.\d+)?)(سم)?$/);
-      if(m && isLenNum(m[1])){ tokens.push(m[1] + ' م'); continue; }
+      if(m && isLenNum(m[1])){ parts.len = String(Number(m[1])) + ' م'; continue; }
     }
-    if(stripColors && VARIANT_COLORS_.includes(nw)){ tokens.push(w); continue; }
+    // «نيو 5.8 سم» / «نيو 6 سم» (سم هنا غلطة والمقصود متر): رقم طول + «سم» في آخر الاسم بعد اسم القطاع
+    if(isLenNum(nw) && next==='سم' && i+2===words.length && isSector(prev)){ parts.len = String(Number(nw)) + ' م'; i++; continue; }
+    if(stripColors && VARIANT_COLORS_.includes(nw)){ parts.color.push(w); continue; }
     keep.push(w);
   }
-  return { base: keep.join(' ').trim() || String(name||'').trim(), label: tokens.length ? tokens.join(' · ') : 'عادي', tokens: tokens.length };
+  const base = keep.join(' ').trim() || String(name||'').trim();
+  const tokens = parts.code.length + parts.color.length + (parts.rubber?1:0) + (parts.len?1:0);
+  return { base, parts, tokens, label: variantLabel_(parts, '') || 'عادي' };
+}
+// ترتيب أجزاء التسمية: كود · لون · بكاوتش · الطول. الطول الأساسي (من غير ما يتكتب) = ٦ م
+function variantLabel_(p, defaultLen){
+  return [...p.code, ...p.color, ...(p.rubber ? ['بكاوتش'] : []), p.len || defaultLen || ''].filter(Boolean).join(' · ');
 }
 function groupVariants_(entries){
   const alpha = new Intl.Collator('ar', { numeric:true, sensitivity:'base' });
@@ -6301,13 +6315,25 @@ function groupVariants_(entries){
     const noColor = !uniqueColorRows_(e.main, e.name).some(r=>r.color);
     const v = variantInfo_(e.name, noColor);
     const key = e.main + '|' + dupKey_(v.base);
-    (groups.get(key) || groups.set(key, { key, base: v.base, items: [] }).get(key)).items.push({ e, label: v.label, tokens: v.tokens });
+    (groups.get(key) || groups.set(key, { key, base: v.base, items: [] }).get(key)).items.push({ e, parts: v.parts, tokens: v.tokens });
   });
   const out = [...groups.values()].map(g=>{
     if(g.items.length < 2) return { one:true, e:g.items[0].e, base:g.items[0].e.name, off:g.items[0].e.off };
-    // نفس التسمية مرتين (زي كلمة ترتيب مختلف): نميّزهم بترقيم
+    // لو المجموعة أطوالها مختلفة: اللي مفيهوش طول مكتوب طوله الأساسي = ٦ م (بدل كلمة «عادي»)
+    const hasLen = g.items.some(it=>it.parts.len);
+    g.items.forEach(it=>{ it.label = variantLabel_(it.parts, hasLen ? '6 م' : '') || 'عادي'; });
+    // نفس التسمية مرتين: نميّزهم بترقيم
     const seen = new Map(); g.items.forEach(it=>{ const c=(seen.get(it.label)||0)+1; seen.set(it.label,c); if(c>1) it.label += ' ('+c+')'; });
-    g.items.sort((a,b)=> a.tokens-b.tokens || alpha.compare(a.label, b.label));
+    // جوه المجموعة: اللي فيه رصيد الأول (كله متاح ← متاح جزئي ← قليل ← أعواد بس ← غير متوفر ← موقوف)، وبعدين الأبسط فالأبجدي
+    const rank = it=>{
+      if(isProductFullyUnavailable(it.e.main, it.e.name)) return 5;
+      const a = productAvail_(it.e.main, it.e.name); if(!a.tracked || !a.total) return 0;
+      const gr = a.groups;
+      if(gr.ok.length) return (gr.low.length || gr.crit.length || gr.out.length) ? 1 : 0;
+      return gr.low.length ? 2 : gr.crit.length ? 3 : 4;
+    };
+    g.items.forEach(it=>{ it.rank = rank(it); });
+    g.items.sort((a,b)=> a.rank-b.rank || a.tokens-b.tokens || alpha.compare(a.label, b.label));
     return { one:false, key:g.key, base:g.base, items:g.items, off:g.items.every(it=>it.e.off) ? 1 : 0 };
   });
   return out.sort((a,b)=> (a.off-b.off) || alpha.compare(a.base, b.base));
@@ -6542,7 +6568,11 @@ function renderOrderView(){
             if(stagedEntries.length) return stagedEntries.map(e=>renderProductCard_(e.main, e.name, inlineStagedKeys_)).join('');
             if(needPick) return `<div class="pickfam">👆 اختار «الكل» أو نوع من فوق عشان تظهر الأصناف</div>`;
             const visible = famShown;
-            return visible.length ? groupVariants_(visible).map(g=> g.one ? renderProductCard_(g.e.main, g.e.name, inlineStagedKeys_) : renderGroupCard_(g)).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>';
+            const grouped = groupVariants_(visible);
+            // لما يفتح مجموعة (يدوس عليها): بتفضل هي بس وباقي الأصناف بتختفي عشان ما يتلخبطش
+            const openG = grouped.find(g=>!g.one && g.key===state.openGroup);
+            if(openG) return renderGroupCard_(openG);
+            return grouped.length ? grouped.map(g=> g.one ? renderProductCard_(g.e.main, g.e.name, inlineStagedKeys_) : renderGroupCard_(g)).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>';
           })()}
         </div>
         ${state.mainGroup===ACC_GROUP ? `<button class="otherlink" data-act="set-group" data-val="${esc(OTHER_SECTOR)}">+ مش لاقي صنفك؟ اكتب اللي محتاجه (أصناف أخرى)</button>` : ''}
