@@ -1988,6 +1988,8 @@ html[data-theme="dark"] .pav.ok{color:#4ADE80;} html[data-theme="dark"] .pav.low
 .qbtns .confirmbtn,.qbtns .cancelbtn{flex:1;}
 .sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px 6px;margin-top:6px;}
 .homesectors{margin-top:24px;}
+.sgridpanel .homesectors{grid-template-columns:repeat(2,1fr);gap:14px 12px;padding:0 6px;}
+.sgridpanel .homesectors .sico{overflow:hidden;}
 .sico{display:flex;flex-direction:column;align-items:center;gap:7px;border:0;background:transparent;padding:0;font-family:inherit;color:var(--ink);cursor:pointer;min-width:0;}
 .sico:active .sico-tile{transform:scale(.94);}
 .sico-tile{position:relative;width:72px;height:72px;border-radius:24px;display:flex;align-items:center;justify-content:center;
@@ -2083,7 +2085,7 @@ body.kb-open .bottomnav,body.kb-open .submitbar{display:none !important;}
 /* اللوجو بحجم المستطيل كله وبدون خلفية/إطار (اللوجو نفسه هو الكارت) */
 html .sico.haslogo,html[data-theme] .sico.haslogo{background:none !important;border:0 !important;box-shadow:none !important;padding:0;}
 html .sico.haslogo .sico-logo,html[data-theme] .sico.haslogo .sico-logo{background:none !important;border:0 !important;box-shadow:none !important;padding:0;min-height:0;border-radius:0;}
-html .sico.haslogo .sico-logo .slogo{width:100%;height:auto;max-height:none;background:none !important;border-radius:0;transform:scale(1.12);}
+html .sico.haslogo .sico-logo .slogo{width:100%;height:auto;max-height:none;object-fit:contain;background:none !important;border-radius:0;}
 .sectile.haslogo{display:flex;align-items:center;justify-content:center;background:#fff;padding:8px;min-height:56px;}
 .sectile.haslogo .slogo{width:100%;max-height:44px;}
 .sectile.haslogo.active,.sico.haslogo:active .sico-logo{outline:3px solid var(--navy,#1E48B8);outline-offset:1px;}
@@ -2175,7 +2177,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v284';
+const APP_BUILD = 'v285';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
