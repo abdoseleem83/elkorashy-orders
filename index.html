@@ -293,8 +293,6 @@ input:focus,textarea:focus,button:focus-visible{
 textarea{resize:vertical;min-height:60px;}
 .field{margin-bottom:12px;}
 .field:last-child{margin-bottom:0;}
-.row2{display:flex;gap:10px;}
-.row2 .field{flex:1;}
 .row3{display:flex;gap:6px;}
 .row3 .field{flex:1;min-width:0;margin-bottom:0;}
 .row3 .field input{padding:8px 6px;font-size:11.5px;}
@@ -308,14 +306,6 @@ textarea{resize:vertical;min-height:60px;}
 .chipwrap.chipgrid4 .chip{padding:9px 6px;text-align:center;}
 /* لون مميّز لكل قطاع — يبقى واضح ومختلف عن اللي جنبه في شبكة الـ4 في الصف */
 /* الألوان الفعلية — خلفية تمثل اللون الحقيقي */
-.chip.sc-1{background:#EAF3FB;border-color:#8FB8DE;color:#1F4E79;}
-.chip.sc-2{background:#EAF7EF;border-color:#8FCFA6;color:#1E6B3A;}
-.chip.sc-3{background:#FBEFEA;border-color:#E3A98A;color:#8A4A1F;}
-.chip.sc-4{background:#F4EAFB;border-color:#C6A0E0;color:#5B2C82;}
-.chip.sc-5{background:#FBEAF0;border-color:#E0A0BE;color:#82285A;}
-.chip.sc-6{background:#EAEFFB;border-color:#A0B3E0;color:#2A3C82;}
-.chip.sc-7{background:#FBF7EA;border-color:#E0CE9F;color:#7A5F1F;}
-.chip.sc-8{background:#EEEEEE;border-color:#BFBFBF;color:#444;}
 
 /* الألوان الحقيقية للاختيار (أبيض، بيج، خشبي، أسود، رمادي، أرو) */
 
@@ -324,10 +314,6 @@ textarea{resize:vertical;min-height:60px;}
 
 
 
-.chip.sc-1.active,.chip.sc-2.active,.chip.sc-3.active,.chip.sc-4.active,
-.chip.sc-5.active,.chip.sc-6.active,.chip.sc-7.active,.chip.sc-8.active{
-  background:var(--navy);border-color:var(--navy);color:#fff;
-}
 /* الألوان بقت مربعات متساوية بالظبط (مش بيضاوي زي القطاعات) */
 .chipwrap.chipgrid4.chipsquares .chip{
   /* ⚠️ aspect-ratio:1/1 + overflow:hidden كانوا بيقصّوا أي اسم لون طويل
@@ -431,10 +417,6 @@ textarea{resize:vertical;min-height:60px;}
   padding:2px;
 }
 /* الأكسسوارات: أسماء قصيرة، فبنعمل خانات أصغر وأعمدة أكتر */
-.productgrid.compact{
-  grid-template-columns:repeat(auto-fill, minmax(78px, 1fr));
-  gap:6px;
-}
 
 /* ===== وضع القائمة: الأصناف تحت بعض في صفوف بدل الشبكة =====
    ⚠️ مغيّرناش أي لون — كل كلاسات الحالة (instock/lowstock/outstock/
@@ -1023,11 +1005,6 @@ button.mini2027{cursor:pointer;}
 
 
 
-.cqrow{
-  display:flex;align-items:center;gap:4px;
-  padding:6px 2px;border-bottom:1px solid var(--line);
-}
-.cqrow:last-child{border-bottom:none;}
 
 .cqselect{
   width:64px;border:1.3px solid var(--line);border-radius:8px;background:var(--card);
@@ -1920,8 +1897,6 @@ html[data-theme="dark"] .otab.on{background:#1E6BD6;}
 .sectile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:right;border:2px solid transparent;border-radius:18px;background:var(--surface2);padding:12px;cursor:pointer;font-family:inherit;color:var(--ink);transition:transform .12s,box-shadow .12s;}
 .sectile:active{transform:scale(.98);}
 .sectile b{font-size:14px;line-height:1.35;} .sectile small{font-size:11.5px;color:var(--muted);}
-.sectile .sok{color:#15803D;font-weight:800;} .sectile .sno{color:#DC2626;font-weight:800;}
-html[data-theme="dark"] .sectile .sok{color:#4ADE80;}
 .sectile.active{border-color:var(--navy-soft);background:var(--card);box-shadow:0 8px 20px rgba(30,107,214,.25);}
 .distsum{display:flex;align-items:center;gap:10px;padding:4px 0;}
 .dsic{width:40px;height:40px;border-radius:13px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
@@ -1959,8 +1934,6 @@ header.top .iconbtn.themepill{width:54px;border-radius:999px;}
 /* كروت القطاعات: أيقونة جوه مربع ملوّن */
  .sectile.sc-2 .sicon{background:#FEF3C7;} .sectile.sc-3 .sicon{background:#EDE9FE;}
 .homesectors .sectile{background:var(--card);border:1px solid var(--line);box-shadow:var(--card-shadow,0 6px 16px rgba(11,61,145,.07));}
-.sectile small .sok{color:#15803D;font-weight:800;} .sectile small .sno{color:#DC2626;font-weight:800;}
-html[data-theme="dark"] .sectile small .sno{color:#FCA5A5;}
 .stocktag{display:inline-block;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:800;}
 .stocktag.out{background:var(--danger);color:#fff;}
 
@@ -2021,12 +1994,8 @@ html[data-theme="dark"] .pav.ok{color:#4ADE80;} html[data-theme="dark"] .pav.low
   box-shadow:0 12px 22px rgba(15,23,42,.22),inset 0 2px 0 rgba(255,255,255,.35);transition:transform .12s;}
 .sico-tile .sart{filter:drop-shadow(0 2px 2px rgba(0,0,0,.25));}
 .sart .f{fill:rgba(255,255,255,.35);} .sart .s{fill:#fff;stroke:none;} .sart .t{stroke-width:1.6;opacity:.8;}
-.sico-badge{position:absolute;top:-6px;left:-6px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--card);color:var(--navy);
-  font-style:normal;font-size:11.5px;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.25);}
 .sico b{font-size:12.8px;line-height:1.3;text-align:center;font-weight:900;}
 .sico small{font-size:10.6px;line-height:1.4;color:var(--muted);text-align:center;}
-.sico small .sok{color:#15803D;font-weight:800;} .sico small .sno{color:#DC2626;font-weight:800;}
-html[data-theme="dark"] .sico small .sok{color:#4ADE80;}
 .sectile .sicon{width:42px;height:42px;border-radius:14px;box-shadow:0 6px 12px rgba(15,23,42,.18);}
 .sectile .sicon .sart .f{fill:rgba(255,255,255,.35);}
 @media (min-width:700px){ .sgrid{grid-template-columns:repeat(6,1fr);} }
@@ -2105,6 +2074,24 @@ body.kb-open .bottomnav,body.kb-open .submitbar{display:none !important;}
 .vchip{position:relative;display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--navy-soft);background:var(--card);color:var(--navy);border-radius:999px;padding:9px 16px;font-family:inherit;font-weight:900;font-size:13.5px;cursor:pointer;}
 .vchip .pt-dot{position:static;display:inline-block;flex:0 0 auto;}
 .vchip.incart{border-color:var(--success);}
+
+/* 🏷️ لوجو القطاعات (v273) */
+.slogo{display:block;max-width:100%;height:auto;object-fit:contain;background:#fff;border-radius:10px;}
+.sico.haslogo{justify-content:center;}
+.sico-logo{display:flex;align-items:center;justify-content:center;width:100%;min-height:74px;padding:10px;background:#fff;border:1px solid var(--line,#dbe3f3);border-radius:16px;box-shadow:0 2px 8px rgba(20,40,90,.08);}
+.sico-logo .slogo{width:100%;max-height:60px;}
+.sectile.haslogo{display:flex;align-items:center;justify-content:center;background:#fff;padding:8px;min-height:56px;}
+.sectile.haslogo .slogo{width:100%;max-height:44px;}
+.sectile.haslogo.active,.sico.haslogo:active .sico-logo{outline:3px solid var(--navy,#1E48B8);outline-offset:1px;}
+.ordsectors{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 2px;}
+.ordsectors .slogo{height:22px;width:auto;padding:2px 6px;border:1px solid var(--line,#dbe3f3);border-radius:7px;}
+.ordsectors .stxt{font-size:11.5px;padding:2px 8px;border:1px solid var(--line,#dbe3f3);border-radius:7px;background:#fff;color:#0B1020;}
+.qtyedit{display:flex;align-items:center;gap:4px;}
+.qtyedit button{width:28px;height:28px;border-radius:8px;border:1px solid var(--line,#dbe3f3);background:#fff;color:#0B1020;font-size:16px;line-height:1;}
+.qtyedit input{width:54px;text-align:center;padding:4px;}
+.qtyedit .qrm{color:#c0262d;}
+.adminedit{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;}
+.sbtnlogo{height:30px;width:auto;max-width:92%;padding:2px 8px;margin:0 auto;}
 </style>
 </head>
 <body>
@@ -2171,7 +2158,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v272';
+const APP_BUILD = 'v273';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -2189,7 +2176,6 @@ const STATUS_DONE = 'تم تنفيذ الطلب';
 const STATUS_EDITED = 'مُعدّل';   // حالة قديمة (قبل v216) — الطلب القديم دلوقتي بيتمسح تمامًا
                                   // بدل ما يتعلّم الحالة دي، بس لسه محتاجينها لطلبات قديمة
                                   // في الشيت من قبل الترقية (شوف editedFrom للتاج الجديد)
-const STATUS_PENDING = STATUS_RECEIVED;   // اسم قديم — سايبينه عشان أي كود بيناديه
 const STATUS_ORDER = [STATUS_RECEIVED, STATUS_PREPARING, STATUS_DONE];
 function normStatus_(st){
   const v = String(st == null ? '' : st).trim();
@@ -2375,7 +2361,11 @@ const state = {
   ordersLoading:false,
   adminFilter:'',
   adminStatusFilter:'all',
-  adminOpenIds:{},   // أي كروت الطلبات مفتوحة في متابعة المخزن
+  adminOpenIds:{},
+  adminEdits:{},      // مسودات تعديل كميات طلبات الموزعين (الأدمن): id → أصناف
+  adminEditBusy:{},
+  actingFor:null,     // الأدمن بيعمل طلب باسم موزّع: {username, distName, region, phone}
+  distList:null,   // أي كروت الطلبات مفتوحة في متابعة المخزن
   adminPdfGeneratingId:null,
   shortageImgBusy:null,
 
@@ -3131,7 +3121,11 @@ function isNetworkError_(e){
 }
 
 async function saveOrderRemoteOnce_(order, isUpdate){
-  const payload = Object.assign({}, order, { action: isUpdate ? 'update' : 'create', token: getUserToken() });
+  // الأدمن بيعمل طلب باسم موزّع: توكن الأدمن + اسم الموزّع (السيرفر بيتأكد منهم)
+  const forAdmin = !isUpdate && order.forUsername && getAdminToken();
+  const payload = Object.assign({}, order, forAdmin
+    ? { action:'adminCreate', token:getAdminToken(), forUsername:order.forUsername }
+    : { action: isUpdate ? 'update' : 'create', token: getUserToken() });
   const controller = new AbortController();
   // Apps Script بياخد وقت خصوصًا في أول نداء أو لما الطلب فيه أصناف كتير.
   // 25 ثانية كانت قصيرة وبتقطع على طلبات شغالة — رفعناها لـ 60.
@@ -4236,7 +4230,7 @@ function finalizeOrderSuccess_(order, isUpdate, oldId, id, orderNo, toastMsg){
   saveOrderRef(id, order.distName);
   localStorage.setItem(LS_LAST_DATE_KEY, todayStr());
   localStorage.setItem(LS_LAST_ID_KEY, id.toUpperCase());
-  state.cart=[]; state.staged=[]; state.distName=''; state.distRegion=''; state.distPhone=''; state.note=''; state.warehouse=''; state.editingOrderId=null;
+  state.cart=[]; state.staged=[]; state.distName=''; state.distRegion=''; state.distPhone=''; state.note=''; state.warehouse=''; state.editingOrderId=null; state.actingFor=null;
   loadProfile();
   clearDraft();
   showToast(toastMsg, 5000);
@@ -4270,7 +4264,8 @@ async function actuallySubmit(){
     warehouse: asText(state.warehouse).trim(),
     note: asText(state.note).trim(),
     items: state.cart,
-    status: STATUS_RECEIVED
+    status: STATUS_RECEIVED,
+    forUsername: (state.actingFor && !isUpdate) ? state.actingFor.username : undefined
   };
   try{
     const resp = await saveOrderRemote(order, isUpdate);
@@ -5696,7 +5691,7 @@ function renderHeader(){
     ${miniTile_('s-green', (state.cart||[]).length, 'السلة', 'strip-go" data-val="cart')}
     ${miniTile_('s-gold', (state.staged||[]).length, 'قيد الاختيار', 'strip-go" data-val="staged')}
     <div class="mini2027 sectorbtn sectorsel">
-      <b>${esc(state.mainGroup||'اختار القطاع')}</b><span>⇄ غيّر القطاع ▾</span>
+      ${(state.mainGroup && sectorLogo_(state.mainGroup)) ? `<img class="slogo sbtnlogo" src="${sectorLogo_(state.mainGroup)}" alt="${esc(state.mainGroup)}"><span>⇄ ▾</span>` : `<b>${esc(state.mainGroup||'اختار القطاع')}</b><span>⇄ غيّر القطاع ▾</span>`}
       <select data-act="pick-sector-select" aria-label="غيّر القطاع">
         ${state.mainGroup ? '' : '<option value="" selected disabled>اختار القطاع</option>'}
         ${orderSectors_().concat([OTHER_SECTOR]).map(g=>`<option value="${esc(g)}" ${g===state.mainGroup?'selected':''}>${esc(g)}</option>`).join('')}
@@ -5706,7 +5701,7 @@ function renderHeader(){
   ${(state.mainGroup && state.mainGroup!==OTHER_SECTOR && (state.warehouse || isClientAccount())) ? `
   <div class="searchbox hasic fixedsearch">
     <span class="sbic">${ico_('search',19)}</span>
-    <input type="text" placeholder="ابحث عن اسم الصنف..." value="${esc(state.productSearch)}" data-act="search-product" enterkeyhint="search">
+    <input type="text" placeholder="" aria-label="بحث" value="${esc(state.productSearch)}" data-act="search-product" enterkeyhint="search">
   </div>` : ''}` : '';
   const hasBack_ = !!(state.viewHistory && state.viewHistory.length);
   // 🏠 في الرئيسية الهيدر بيبقى بتاع الترحيب (اتجاه أ): لوجو EK + «أهلاً، الاسم» + المخزن
@@ -5773,32 +5768,7 @@ function renderToolsPanel_(){
 // 🏠 الشاشة الرئيسية (v237): ترحيب + أرقام سريعة + مربعات الأقسام. مفيش منطق جديد —
 // كل مربع بينفّذ نفس data-act القديم (goto / open-cart-review / open-manage-*).
 // ===== كروت القطاعات (الرئيسية + شاشة الطلب) =====
-// عدد أصناف القطاع + كام صنف متاح وكام صنف غير متوفر (أعداد حقيقية).
-// «غير متوفر» = موقوف من الأدمن، أو (في المخزن اللي بيتتبع رصيده) مفيش منه رصيد خالص.
-function sectorStats_(g){
-  const seen = new Set(); let avail = 0, out = 0, tracked = false;
-  sectorMains_(g).forEach(m=>{
-    const t = warehouseAffectsStock(m) && !state.catalogError;
-    if(t) tracked = true;
-    productsForGroup(m, null).forEach((_, p)=>{
-      const k = m + '||' + p; if(seen.has(k)) return; seen.add(k);
-      const lvl = isProductFullyUnavailable(m, p) ? 'out' : (t ? productStockLevel(m, p) : 'ok');
-      if(lvl==='out') out++; else avail++;
-    });
-  });
-  return { n: seen.size, avail, out, tracked };
-}
-function sectorSubHtml_(g){
-  if(g===OTHER_SECTOR) return 'اكتب اللي محتاجه';
-  const st = sectorStats_(g);
-  if(!st.n) return '—';
-  const cnt = `${st.n} ${st.n===1?'صنف':'أصناف'}`;
-  // العميل والمخازن اللي مالهاش رصيد متتبَّع: مفيش أرقام رصيد — «متاح» بس (أو «نفد» لو كله موقوف)
-  if(!st.tracked) return `${cnt} · ${st.avail ? '<span class="sok">متاح</span>' : '<span class="sno">نفد</span>'}`;
-  const a = st.avail ? `<span class="sok">متاح ${st.avail}</span>` : '';
-  const o = st.out ? `<span class="sno">غير متوفر ${st.out}</span>` : '';
-  return `${cnt} · ${[a, o].filter(Boolean).join(' · ')}`;
-}
+// من v273: لوجو القطاع بس (من غير عدد أصناف ولا حالة توفر) — الأعداد اتشالت بطلب المستخدم.
 // أيقونة SVG مرسومة لكل قطاع (أبيض فوق تدرّج لوني) — بتتحدد من اسم القطاع
 const SECTOR_ART_ = [
   { re:/كومبن/, g:['#4F8CFF','#1E4FD8'], svg:'<rect x="13" y="6" width="22" height="36" rx="2.5"/><rect x="17" y="10" width="14" height="12" rx="1.5" class="f"/><rect x="17" y="26" width="14" height="12" rx="1.5" class="f"/><circle cx="31" cy="25" r="1.6" class="s"/>' },
@@ -5815,6 +5785,19 @@ function sectorArt_(g){
   if(g===OTHER_SECTOR) return { g:['#FBBF24','#D97706'], svg:'<rect x="9" y="9" width="30" height="30" rx="5"/><path d="M24 16v16M16 24h16"/>' };
   return SECTOR_ART_.find(x=>x.re.test(g)) || { g:['#94A3B8','#475569'], svg:'<path d="M24 7l15 8v18l-15 8-15-8V15z"/><path d="M24 24l15-9M24 24v17M24 24L9 15"/>' };
 }
+// 🏷️ لوجو القطاع: كومبن ← لوجو كومبن، كرافت ← كرافت لاين، نيو ← نيو لاين (باقي القطاعات بأيقونتها)
+function sectorLogo_(g){
+  const n = String(g||'');
+  if(/كومبن/.test(n)) return 'img/kompen.png';
+  if(/كرافت/.test(n)) return 'img/kraft.png';
+  if(/نيو/.test(n))   return 'img/newline.png';
+  return '';
+}
+function sectorMarkHtml_(g, size, cls){
+  const lg = sectorLogo_(g);
+  if(lg) return `<img class="slogo ${cls||''}" src="${lg}" alt="${esc(g)}" loading="lazy" decoding="async">`;
+  return `<span class="${cls==='big' ? 'sico-tile' : 'sicon'}" style="background:${sectorGrad_(g)}">${sectorIconSvg_(g, size)}</span>`;
+}
 function sectorIconSvg_(g, size){
   const a = sectorArt_(g);
   return `<svg class="sart" viewBox="0 0 48 48" width="${size}" height="${size}" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${a.svg}</svg>`;
@@ -5824,20 +5807,23 @@ function sectorGrad_(g){ const a = sectorArt_(g); return `linear-gradient(145deg
 // الرئيسية: شبكة أيقونات كبيرة (من غير كروت) — شاشة الطلب: كروت صغيرة بنفس الأيقونة
 function sectorIconsGridHtml_(act){
   return orderSectors_().map(g=>{
-    const st = g===OTHER_SECTOR ? null : sectorStats_(g);
-    const badge = st && st.n ? `<i class="sico-badge">${st.n}</i>` : '';
+    const lg = sectorLogo_(g);
     return `
-    <button class="sico" data-act="${act}" data-val="${esc(g)}">
-      <span class="sico-tile" style="background:${sectorGrad_(g)}">${sectorIconSvg_(g, 40)}${badge}</span>
-      <b>${esc(g)}</b><small>${sectorSubHtml_(g)}</small>
+    <button class="sico ${lg?'haslogo':''}" data-act="${act}" data-val="${esc(g)}" aria-label="${esc(g)}">
+      ${lg ? `<span class="sico-logo">${sectorMarkHtml_(g, 0, 'big')}</span>`
+           : `<span class="sico-tile" style="background:${sectorGrad_(g)}">${sectorIconSvg_(g, 40)}</span><b>${esc(g)}</b>`}
     </button>`;
   }).join('');
 }
 function sectorTilesHtml_(activeGroup, act){
-  return orderSectors_().concat([OTHER_SECTOR]).map(g=>`
-    <button class="sectile ${activeGroup===g?'active':''}" data-act="${act}" data-val="${esc(g)}">
-      <span class="sicon" style="background:${sectorGrad_(g)}">${sectorIconSvg_(g, 26)}</span><b>${esc(g)}</b><small>${sectorSubHtml_(g)}</small>
-    </button>`).join('');
+  return orderSectors_().concat([OTHER_SECTOR]).map(g=>{
+    const lg = sectorLogo_(g);
+    return `
+    <button class="sectile ${lg?'haslogo':''} ${activeGroup===g?'active':''}" data-act="${act}" data-val="${esc(g)}" aria-label="${esc(g)}">
+      ${lg ? sectorMarkHtml_(g, 0, 'tile')
+           : `<span class="sicon" style="background:${sectorGrad_(g)}">${sectorIconSvg_(g, 26)}</span><b>${esc(g)}</b>`}
+    </button>`;
+  }).join('');
 }
 
 // ===== الرئيسية (اتجاه أ): بحث + «طلبك الأخير» + كروت القطاعات =====
@@ -5937,7 +5923,7 @@ function renderHomeView(){
   const searchBlock = `
     <div class="searchbox hasic homesearch">
       <span class="sbic">${ico_('search',19)}</span>
-      <input type="text" placeholder="دوّر على صنف… (حلق، باكتة، سيليكون)" value="${esc(state.homeSearch)}" data-act="home-search" enterkeyhint="search">
+      <input type="text" placeholder="" aria-label="بحث" value="${esc(state.homeSearch)}" data-act="home-search" enterkeyhint="search">
     </div>
     ${q ? `
     <div class="card homeres">
@@ -6277,7 +6263,7 @@ function variantInfo_(name, stripColors){
   const words = String(name||'').trim().split(/\s+/).filter(Boolean);
   const parts = { code:[], color:[], rubber:false, len:'' };
   const keep = [];
-  const isLenNum = v => /^\d+(\.\d+)?$/.test(v) && [5,5.8,6,6.5].includes(Number(v));
+  const isLenNum = v => /^\d+(\.\d+)?$/.test(v) && Number(v) >= 4.5 && Number(v) <= 8;   // ٥ / ٥.٨ / ٦ / ٦.١٥ / ٦.٥ / ٧ م
   const isSector = w => VARIANT_SECTOR_WORDS_.includes(w);
   for(let i=0; i<words.length; i++){
     const w = words[i], nw = n_(w), prev = i>0 ? n_(words[i-1]) : '', next = i+1<words.length ? n_(words[i+1]) : '';
@@ -6311,11 +6297,31 @@ function variantLabel_(p, defaultLen){
 function groupVariants_(entries){
   const alpha = new Intl.Collator('ar', { numeric:true, sensitivity:'base' });
   const groups = new Map();
-  entries.forEach(e=>{
+  const n_ = x => String(x||'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
+  // القطاع اللي مفيهوش «2 مجري» (زي نيو): «3 مجري» هي الأساس فمتفرقش
+  const has2 = new Set(entries.filter(e=>/(^|\s)2\s*مجري/.test(n_(e.name))).map(e=>e.main));
+  const baseKey_ = (main, base)=>{
+    let b = base;
+    if(!has2.has(main)) b = b.replace(/(^|\s)3\s*مجري(?=\s|$)/g, '$1').replace(/\s+/g,' ').trim();
+    return b;
+  };
+  const infos = entries.map(e=>{
     const noColor = !uniqueColorRows_(e.main, e.name).some(r=>r.color);
-    const v = variantInfo_(e.name, noColor);
-    const key = e.main + '|' + dupKey_(v.base);
-    (groups.get(key) || groups.set(key, { key, base: v.base, items: [] }).get(key)).items.push({ e, parts: v.parts, tokens: v.tokens });
+    return { e, v: variantInfo_(e.name, noColor) };
+  });
+  // «حلق مفصلي بكاوتش كرافت» (من غير بار) = «حلق مفصلي ببار 5 سم كرافت» لو الأخير موجود
+  const baseSet = new Set(infos.map(x=>x.e.main+'|'+dupKey_(baseKey_(x.e.main, x.v.base))));
+  infos.forEach(x=>{
+    let b = baseKey_(x.e.main, x.v.base);
+    if(/^حلق مفصلي/.test(n_(b)) && !/بار/.test(n_(b))){
+      const cand = b.replace(/^(حلق مفصلي)\s+/, '$1 ببار 5 سم ');
+      if(baseSet.has(x.e.main+'|'+dupKey_(cand))) b = cand;
+    }
+    x.base = b;
+  });
+  infos.forEach(({e, v, base})=>{
+    const key = e.main + '|' + dupKey_(base);
+    (groups.get(key) || groups.set(key, { key, base, items: [] }).get(key)).items.push({ e, parts: v.parts, tokens: v.tokens });
   });
   const out = [...groups.values()].map(g=>{
     if(g.items.length < 2) return { one:true, e:g.items[0].e, base:g.items[0].e.name, off:g.items[0].e.off };
@@ -6663,6 +6669,7 @@ function renderOrderView(){
   const whWarn_ = (!isClientAccount() && state.warehouse && !STOCK_TRACKED_WAREHOUSES_.includes(state.warehouse))
     ? `<div class="warehousewarn">⚠ الأصناف في مخزن "${esc(state.warehouse)}" غير معتمدة إلا وقت التحميل فقط، نظرًا لعدم حجز بضاعة مسبقًا.</div>` : '';
   const topBanners_ = `
+      ${actingForHtml_()}
       ${state.editingOrderId ? `<div class="editbanner">✏️ بتعدّل على طلب سابق #${esc(state.editingOrderId.toUpperCase())}</div>` : ''}
       ${willMergeToday ? `<div class="editbanner" style="background:#FBEBD1;">ℹ️ عندك طلب النهارده لسه "لم يستلم" — وقت الإرسال هنسألك تضيف عليه ولا يتسجّل منفصل</div>` : ''}
       ${whWarn_}`;
@@ -7247,6 +7254,80 @@ function renderAdminView(){
 
 // عمود واحد (طنطا أو اكسا) في صفحة "متابعة الطلبات" — بيبني كروت الطلبات
 // بتاعة المخزن ده لوحدها، الأحدث فوق زي ما هو مرتّب فعلاً في filteredAdminOrders_.
+
+// 🏷️ القطاعات اللي الموزع طلبها في الطلب (لوجو لكل قطاع) — بتظهر تحت اسم الموزع في متابعة الطلبات
+function orderSectorsHtml_(o){
+  const seen = new Set(), out = [];
+  (o.items||[]).forEach(it=>{ const g = groupOfMain_(it.main || ''); if(!g || seen.has(g)) return; seen.add(g); out.push(g); });
+  if(!out.length) return '';
+  return `<div class="ordsectors">${out.map(g=>{
+    const lg = sectorLogo_(g);
+    return lg ? `<img class="slogo" src="${lg}" alt="${esc(g)}" title="${esc(g)}">` : `<span class="stxt">${esc(g)}</span>`;
+  }).join('')}</div>`;
+}
+// ✏️ تعديل كميات طلب موزّع (الأدمن)
+function adminEditItemsHtml_(o){
+  const ed = state.adminEdits[o.id] || [];
+  const busy = !!state.adminEditBusy[o.id];
+  return `
+  <div class="items">
+    ${ed.map((it,i)=>`
+      <div class="item-row"><span>${esc(it.product)}${it.color?' — '+esc(it.color):''}</span>
+        <span class="qtyedit">
+          <button type="button" data-act="adm-qty-minus" data-id="${esc(o.id)}" data-idx="${i}" aria-label="نقص">−</button>
+          <input type="text" inputmode="numeric" value="${esc(it.qty)}" data-act="adm-qty-input" data-id="${esc(o.id)}" data-idx="${i}">
+          <button type="button" data-act="adm-qty-plus" data-id="${esc(o.id)}" data-idx="${i}" aria-label="زود">+</button>
+          <button type="button" class="qrm" data-act="adm-qty-rm" data-id="${esc(o.id)}" data-idx="${i}" aria-label="شيل الصنف">✕</button>
+          <small>${esc(it.unitType||'')}</small>
+        </span>
+      </div>`).join('')}
+  </div>
+  <div class="adminedit">
+    <button class="delbtn pdf" data-act="adm-edit-save" data-id="${esc(o.id)}" ${busy?'disabled':''}>${busy ? '⏳ جارٍ الحفظ...' : 'حفظ الكميات'}</button>
+    <button class="delbtn" data-act="adm-edit-cancel" data-id="${esc(o.id)}" ${busy?'disabled':''}>إلغاء</button>
+  </div>`;
+}
+async function adminSaveEdit_(id){
+  const ord = state.orders.find(o=>o.id===id), ed = state.adminEdits[id];
+  if(!ord || !ed) return;
+  const items = ed.filter(it=>Number(it.qty) > 0);
+  if(!items.length){ showToast('الطلب لازم يفضل فيه صنف — لو عايز تمسحه كله استخدم «حذف الطلب»'); return; }
+  state.adminEditBusy[id] = true; render();
+  let d = null;
+  try{ d = await apiPost({ action:'adminUpdateItems', token:getAdminToken(), id, items }); }catch(e){ d = null; }
+  state.adminEditBusy[id] = false;
+  if(handleAdminUnauthorized_(d)){ render(); return; }
+  if(!d || d.ok !== true){ showToast((d && d.error) ? d.error : 'تعذّر حفظ التعديل — اتأكد من النت وحاول تاني'); render(); return; }
+  ord.items = items;
+  delete state.adminEdits[id];
+  showToast('اتحفظت الكميات ✅');
+  render();
+}
+// 👥 الأدمن يعمل طلب باسم موزّع
+async function loadDistList_(){
+  if(state.distList || !getAdminToken()) return;
+  try{
+    const d = await apiGet('distributors', { token:getAdminToken() });
+    state.distList = Array.isArray(d) ? d : [];
+  }catch(e){ state.distList = []; }
+  render();
+}
+function actingForHtml_(){
+  const isAdminUser = !!(state.currentUser && state.currentUser.username==='admin');
+  if(!isAdminUser || !getAdminToken() || state.editingOrderId) return '';
+  if(state.distList === null){ loadDistList_(); return ''; }
+  if(!state.distList.length) return '';
+  return `
+  <div class="card actingcard">
+    <label style="font-weight:800;font-size:13.5px;">طلب باسم موزّع</label>
+    <select data-act="pick-acting-for" aria-label="طلب باسم موزّع">
+      <option value="" ${!state.actingFor?'selected':''}>— طلبي أنا —</option>
+      ${state.distList.map(d=>`<option value="${esc(d.username)}" ${state.actingFor && state.actingFor.username===d.username?'selected':''}>${esc(d.distName||d.username)}${d.region?' — '+esc(d.region):''}</option>`).join('')}
+    </select>
+    ${state.actingFor ? `<div class="editbanner">الطلب هيتسجّل باسم: ${esc(state.actingFor.distName||state.actingFor.username)}</div>` : ''}
+  </div>`;
+}
+
 function renderAdminOrdersColumn_(title, orders){
   const cards = orders.length===0 ? `
     <div class="emptystate"><div class="ic">${ico_('inbox',44)}</div><div>مفيش طلبات مطابقة حاليًا</div></div>` : orders.map(o=>{
@@ -7261,6 +7342,7 @@ function renderAdminOrdersColumn_(title, orders){
         <div class="ohead">
           <div class="oheadmain" data-act="toggle-order" data-id="${esc(o.id)}" title="دوس عشان تفتح/تقفل الأصناف">
             <div class="dname"><span class="ochev">${isOpen?'▾':'▸'}</span> ${esc(o.distName)}</div>
+            ${orderSectorsHtml_(o)}
             <div class="dmeta">${ico_('store',13)} ${esc(o.warehouse||'—')}</div>
             <div class="dmeta">${ico_('clockIcon',12)} ${dateStr}</div>
             <div class="oid">#${esc(orderNoDisplay_(o))} · ${nItems} صنف${o.editedFrom ? ` · <span class="statusbadge edited" style="padding:1px 6px;font-size:10.5px;" title="اتعدّل من طلب #${esc(o.editedFrom)}">${ico_('editIcon',11)} معدّل</span>` : ''}</div>
@@ -7275,11 +7357,13 @@ function renderAdminOrdersColumn_(title, orders){
         </div>
         ${!isOpen ? '' : `
         <div class="dmeta" style="margin:2px 0 6px;">${esc(o.distRegion||'')} · ${esc(o.distPhone||'بدون رقم')}</div>
+        ${state.adminEdits[o.id] ? adminEditItemsHtml_(o) : `
         <div class="items">
           ${o.items.map(it=>`
             <div class="item-row"><span>${esc(it.product)}${it.color?' — '+esc(it.color):''}</span><b>×${it.qty} ${esc(it.unitType||'')}</b></div>
           `).join('')}
         </div>
+        ${!isDone ? `<div class="adminedit"><button class="delbtn pdf" data-act="adm-edit-start" data-id="${esc(o.id)}">${ico_('editIcon',11)} تعديل الكميات</button></div>` : ''}`}
         ${o.note ? `<div class="note">${esc(o.note)}</div>` : ''}
         <div class="adminbtnrow adminbtnrow-compact">
           ${isDone ? `<button class="delbtn pdf" data-act="notify-dist" data-id="${esc(o.id)}">${ico_('bellIcon',11)} بلّغ الموزع</button>` : ''}
@@ -7971,6 +8055,12 @@ function onSelectChange(act, el, val){
     if(val) moveProductType_(el.getAttribute('data-main'), el.getAttribute('data-prod'), val==='__auto' ? '' : val);
     return;
   }
+  if(act==='pick-acting-for'){
+    const d = (state.distList||[]).find(x=>x.username===val) || null;
+    state.actingFor = d;
+    if(d){ state.distName = d.distName || d.username; state.distRegion = d.region || ''; state.distPhone = d.phone || ''; }
+    render(); return;
+  }
   if(act==='pick-sector-select'){
     if(val){ applySector_(val); render(); window.scrollTo({ top: 0, behavior:'smooth' }); }
   }
@@ -8020,6 +8110,11 @@ function onInputChange(act, el, val){
     }
     case 'pin-input': state.pinInput = val.replace(/[^0-9]/g,''); state.pinError=''; break;
     case 'admin-search': state.adminFilter = val; break;
+    case 'adm-qty-input': {
+      const ed = state.adminEdits[el.getAttribute('data-id')], it = ed && ed[Number(el.getAttribute('data-idx'))];
+      if(it){ const n = parseFloat(String(val).replace(/[^0-9.]/g,'')); it.qty = isFinite(n) ? n : 0; }
+      break;
+    }
     case 'myorders-phone': state.myOrdersPhone = val; break;
     case 'auth-username': state.authUsername = val; state.authError=''; break;
     case 'auth-password': state.authPassword = val; state.authError=''; break;
@@ -8431,6 +8526,21 @@ async function onActionInner(act, el){
     case 'pin-submit':
       await submitAdminPin();
       break;
+    case 'adm-edit-start':{
+      const id = el.getAttribute('data-id'), ord = state.orders.find(o=>o.id===id);
+      if(ord){ state.adminEdits[id] = (ord.items||[]).map(it=>Object.assign({}, it)); render(); }
+      break;
+    }
+    case 'adm-edit-cancel': delete state.adminEdits[el.getAttribute('data-id')]; render(); break;
+    case 'adm-edit-save': await adminSaveEdit_(el.getAttribute('data-id')); break;
+    case 'adm-qty-minus': case 'adm-qty-plus': case 'adm-qty-rm':{
+      const ed = state.adminEdits[el.getAttribute('data-id')], i = Number(el.getAttribute('data-idx'));
+      if(!ed || !ed[i]) break;
+      if(act==='adm-qty-rm') ed.splice(i,1);
+      else ed[i].qty = Math.max(0, (Number(ed[i].qty)||0) + (act==='adm-qty-plus' ? 1 : -1));
+      render();
+      break;
+    }
     case 'toggle-status':{
       const id = el.getAttribute('data-id');
       const ord = state.orders.find(o=>o.id===id);

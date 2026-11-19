@@ -39,7 +39,7 @@ await page.evaluate(()=>{ state.warehouse='طنطا'; render(); }); await page.w
 
 // ── كروت القطاعات: أعداد حقيقية (٢ متاح، ١ غير متوفر)
 const tiles = await page.$$eval('.homesectors .sico', e=>e.map(x=>x.textContent.replace(/\s+/g,' ').trim()));
-ok('كارت كومبن: «5 أصناف · متاح 4 · غير متوفر 1»', tiles.some(t=>/قطاعات PVC كومبن\s*5 أصناف · متاح 4 · غير متوفر 1/.test(t)), tiles.join(' | '));
+ok('كارت القطاع من غير «أصناف · متاح · غير متوفر» (v273)', !tiles.some(t=>/أصناف|متاح|غير متوفر/.test(t)), tiles.join(' | '));
 
 // ── بحث الرئيسية
 await page.fill('[data-act="home-search"]','سقاس'); await page.waitForTimeout(300);

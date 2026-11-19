@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v272';
+const APP_VERSION = 'v273';
 
 const SHEET_NAME = 'Orders';
 const CATALOG_SHEET_NAME = 'الأصناف';
@@ -531,6 +531,20 @@ function doPostInner_(e) {
     return json_(deleteDeliveredOrders_());
   }
 
+  // ---------- الأدمن يعدّل كميات طلب موزّع / يعمل طلب باسم موزّع ----------
+  if (action === 'adminUpdateItems') {
+    if (!isValidAdminToken_(token)) return denyAdmin_();
+    return json_(adminUpdateOrderItems_(data.id, data.items));
+  }
+  if (action === 'adminCreate') {
+    if (!isValidAdminToken_(token)) return denyAdmin_();
+    // الطلب بيتنسب للموزّع المختار (اسم المستخدم بتاعه) كأنه هو اللي باعته
+    const target = userInfo_(String(data.forUsername || ''));
+    if (!target) return json_({ ok: false, error: 'الموزّع ده مش موجود' });
+    const d = Object.assign({}, data, { action: 'create', status: STATUS_PENDING });
+    return saveOrder_(d, target.username);
+  }
+
   // ---------- حفظ / تعديل طلب ----------
   // 🔒 قبل كده كان بيقبل الحفظ من غير توكن خالص، ولو مفيش توكن كان بياخد
   // username من اللي الواجهة بعتته زي ما هو — يعني أي حد يعرف رابط الـ/exec
@@ -549,7 +563,7 @@ function doPostInner_(e) {
 //  حفظ وتعديل الطلبات
 // ═══════════════════════════════════════════════════════════════════
 
-function saveOrder_(data) {
+function saveOrder_(data, asUser) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
   if (!sheet) return json_({ ok: false, error: 'sheet not found' });
 
@@ -562,7 +576,8 @@ function saveOrder_(data) {
   // اسم المستخدم بيتاخد من التوكن بس — مش من اللي الواجهة بعتته، عشان محدش
   // يقدر ينسب طلب لحساب مش بتاعه. doPostInner_ بيتأكد إن التوكن صالح قبل ما
   // يوصل هنا أصلاً، فمفيش داعي لأي fallback على data.username.
-  const username = userFromToken_(data.token) || '';
+  // asUser بيتبعت من السيرفر بس (adminCreate) بعد ما الأدمن يتأكد — مش من الواجهة
+  const username = asUser || userFromToken_(data.token) || '';
 
   const idCol = sheet.getLastRow() > 1
     ? sheet.getRange(2, COL_ID, sheet.getLastRow() - 1, 1).getValues()
@@ -628,6 +643,45 @@ function saveOrder_(data) {
 
   markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
   return json_({ ok: true, orderNo: orderNo });
+}
+
+// ✏️ الأدمن يعدّل أصناف/كميات طلب موجود (نفس الصف ونفس الرقم) — مش بيتعدّل لو اتنفّذ.
+function adminUpdateOrderItems_(id, itemsIn) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  if (!sheet) return { ok: false, error: 'sheet not found' };
+  const items = mergeDuplicateItems_(Array.isArray(itemsIn) ? itemsIn : []).filter(function (it) { return Number(it.qty) > 0; });
+  if (!items.length) return { ok: false, error: 'الطلب لازم يفضل فيه صنف واحد على الأقل' };
+  const n = sheet.getLastRow() - 1;
+  if (n < 1) return { ok: false, error: 'not found' };
+  const ids = sheet.getRange(2, COL_ID, n, 1).getValues();
+  for (let i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]) !== String(id)) continue;
+    const row = i + 2;
+    const st = String(sheet.getRange(row, COL_STATUS).getValue() || '').trim();
+    if (st === STATUS_DONE) return { ok: false, error: 'الطلب ده اتنفّذ — مينفعش يتعدّل' };
+    const summary = cellSafe_(items.map(function (it) {
+      return it.product + (it.color ? ' - ' + it.color : '') + ' × ' + it.qty + ' ' + (it.unitType || '');
+    }).join(' | '));
+    sheet.getRange(row, COL_SUMMARY).setValue(summary);
+    sheet.getRange(row, COL_ITEMS).setValue(JSON.stringify(items));
+    markReservedDirty_();
+    return { ok: true, items: items };
+  }
+  return { ok: false, error: 'الطلب مش موجود' };
+}
+
+// 👥 قايمة الموزعين المعتمدين (للأدمن عشان يعمل طلب باسم موزّع)
+function listDistributors_() {
+  const rows = getUsersSheet_().getDataRange().getValues();
+  const out = [];
+  for (let i = 1; i < rows.length; i++) {
+    const u = String(rows[i][0] || '').trim();
+    if (!u) continue;
+    const st = String(rows[i][5] || '').trim();
+    if (st !== 'مفعل') continue;   // الحسابات المفعّلة بس (زي handleLogin)
+    out.push({ username: u, distName: String(rows[i][2] || ''), region: String(rows[i][3] || ''), phone: normalizePhone(rows[i][4]) });
+  }
+  return out;
 }
 
 // رقم الطلب لكل مخزن بيبدأ من 1 ويزيد لوحده — كل مخزن ليه عدّاد مستقل.
@@ -1658,6 +1712,11 @@ function doGetInner_(e) {
 
     orders.sort(function (a, b) { return b.ts - a.ts; });
     return json_(orders);
+  }
+
+  if (action === 'distributors') {
+    if (!isAdmin) return denyAdmin_();
+    return json_(listDistributors_());
   }
 
   // إشعار الأدمن: عدد الطلبات وآخر طلب بس (خفيف، للـ polling المتكرر)
