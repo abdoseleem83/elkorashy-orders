@@ -2080,6 +2080,10 @@ body.kb-open .bottomnav,body.kb-open .submitbar{display:none !important;}
 .sico.haslogo{justify-content:center;}
 .sico-logo{display:flex;align-items:center;justify-content:center;width:100%;min-height:74px;padding:10px;background:#fff;border:1px solid var(--line,#dbe3f3);border-radius:16px;box-shadow:0 2px 8px rgba(20,40,90,.08);}
 .sico-logo .slogo{width:100%;max-height:60px;}
+/* اللوجو بحجم المستطيل كله وبدون خلفية/إطار (اللوجو نفسه هو الكارت) */
+html .sico.haslogo,html[data-theme] .sico.haslogo{background:none !important;border:0 !important;box-shadow:none !important;padding:0;}
+html .sico.haslogo .sico-logo,html[data-theme] .sico.haslogo .sico-logo{background:none !important;border:0 !important;box-shadow:none !important;padding:0;min-height:0;border-radius:0;}
+html .sico.haslogo .sico-logo .slogo{width:100%;height:auto;max-height:none;background:none !important;border-radius:0;transform:scale(1.12);}
 .sectile.haslogo{display:flex;align-items:center;justify-content:center;background:#fff;padding:8px;min-height:56px;}
 .sectile.haslogo .slogo{width:100%;max-height:44px;}
 .sectile.haslogo.active,.sico.haslogo:active .sico-logo{outline:3px solid var(--navy,#1E48B8);outline-offset:1px;}
@@ -2171,7 +2175,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v283';
+const APP_BUILD = 'v284';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
