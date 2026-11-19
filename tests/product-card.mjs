@@ -198,7 +198,7 @@ ok('«6 * 9» و«6 × 9 سم» صنف واحد (بيتدمجوا)', vi2.dupKeys
 await page.evaluate(([k])=>{
   window.__oldCat = CATALOG.slice();
   const mk=(name,stock)=>({name,main:k,sub:'',unit:4,product:name,color:'ابيض',price:10,available:true,inStock:true,stock});
-  CATALOG.push(mk('حلق جرار ببار 5 سم كومبن',30), mk('حلق جرار ببار 5 سم كومبن طول 6.5 م',20), mk('حلق جرار بكاوتش ببار 5 سم كومبن',0));
+  CATALOG.push(mk('حلق جرار ببار 5 سم كومبن',30), mk('حلق جرار ببار 5 سم كومبن طول 6.5 م',20), mk('حلق جرار بكاوتش ببار 5 سم كومبن',10));
   rebuildCatalogIndex_(); state.family=''; state.staged=[]; state.openGroup=null; render();
 }, [K]); await page.waitForTimeout(300);
 ok('الأنواع التلاتة بقت مربع واحد «حلق جرار ببار 5 سم كومبن» (3 أنواع)', await page.evaluate(()=>{ const g=[...document.querySelectorAll('.pcard.grp')]; return g.length===1 && /حلق جرار ببار 5 سم كومبن/.test(g[0].textContent) && /3 أنواع/.test(g[0].textContent); }));
