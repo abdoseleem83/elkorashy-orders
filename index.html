@@ -2166,7 +2166,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v277';
+const APP_BUILD = 'v278';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -6367,10 +6367,10 @@ function groupVariants_(entries){
     };
     g.items.forEach(it=>{ it.rank = rank(it); });
     g.items.sort((a,b)=> a.rank-b.rank || a.tokens-b.tokens || alpha.compare(a.label, b.label));
-    // 📏 الطول غير ٦ م (أقل أو أكتر) وغير متوفر ← مايظهرش (٦ م والأنواع من غير طول بتفضل ظاهرة حتى لو نفدت)
+    // 📏 البكاوتش (أي نوع) أو الطول غير ٦ م (أقل أو أكتر) وغير متوفر ← مايظهرش (٦ م والأنواع العادية بتفضل ظاهرة حتى لو نفدت)
     const keep = g.items.filter(it=>{
       const n = parseFloat(it.parts.len);
-      return !(it.rank>=4 && isFinite(n) && n!==6);
+      return !(it.rank>=4 && (it.parts.rubber || (isFinite(n) && n!==6)));   // بكاوتش (أي طول) أو طول غير ٦ م — ومش متوفر ← مخفي
     });
     if(keep.length && keep.length < g.items.length){
       g.items = keep;

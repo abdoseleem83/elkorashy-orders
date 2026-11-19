@@ -34,7 +34,7 @@ const labels = await page.evaluate(()=>{
   state.warehouse='طنطا';
   const main='قطاعات كرافت لاين', base='حلق جرار 3 مجري ببار 5 سم كرافت';
   CATALOG.filter(d=>d.main===main && /حلق جرار 3 مجري/.test(d.product) && /5\s*سم/.test(d.product) && !/زجاج|بدون/.test(d.product)).forEach(d=>{
-    d.stock = /(^|\s)6\s*م/.test(d.product) || !/\d\s*م/.test(d.product.replace(/5 سم/,'')) ? 10 : 0;
+    d.stock = /بكاوتش/.test(d.product) ? (/6\.5\s*م/.test(d.product) ? 10 : 0) : /(^|\s)6\s*م/.test(d.product) || !/\d\s*م/.test(d.product.replace(/5 سم/,'')) ? 10 : 0;
   });
   rebuildCatalogIndex_();
   const seen=new Set(), entries=[];
@@ -42,6 +42,6 @@ const labels = await page.evaluate(()=>{
   const g = groupVariants_(entries).find(x=>!x.one && /^حلق جرار 3 مجري ببار 5 سم/.test(x.base));
   return g ? g.items.map(i=>i.label) : null;
 });
-ok('الأطوال غير ٦ م الناقصة اتخفت (٥ / ٦.٥ / ٧)', labels && !labels.some(l=>/^(5|6\.5|7) م$/.test(l)) && labels.length>=1, JSON.stringify(labels));
+ok('الناقص (أطوال غير ٦ م + بكاوتش) اتخفى والمتاح فضل', labels && !labels.some(l=>/^(5|7) م$/.test(l)) && !labels.includes('بكاوتش · 6 م') && labels.includes('بكاوتش · 6.5 م') && labels.includes('6 م'), JSON.stringify(labels));
 await browser.close();
 console.log(fails ? '❌ فشل '+fails : '✅ كله تمام'); process.exit(fails?1:0);
