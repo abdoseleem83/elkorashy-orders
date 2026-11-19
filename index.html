@@ -2177,7 +2177,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v285';
+const APP_BUILD = 'v286';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -6084,11 +6084,6 @@ function renderHomeView(){
       </svg>
       <div class="hh-txt">
         <b>جاهز تطلب؟</b>
-        <small>اختار القطاع وابدأ — الأصناف والألوان قدامك</small>
-      </div>
-      <div class="hh-chips">
-        <button class="hh-chip" data-act="open-cart-review">${ico_('cart',15)} السلة <i>${cartN_}</i></button>
-        <button class="hh-chip" data-act="goto" data-view="myorders">${ico_('track',15)} طلبات جارية <i>${activeN_}</i></button>
       </div>
     </div>`;
   return `
@@ -6096,7 +6091,6 @@ function renderHomeView(){
     ${searchBlock}
     ${q ? '' : `
     ${hero_}
-    ${lastBlock}
     ${needWh_ ? whPick_ : `
     <div class="homesec secsec">اختار القطاع</div>
     <div class="sgridpanel"><div class="sgrid homesectors">${sectorIconsGridHtml_('open-sector')}</div></div>`}`}
