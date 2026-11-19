@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v278';
+const APP_VERSION = 'v279';
 
 const SHEET_NAME = 'Orders';
 const CATALOG_SHEET_NAME = 'الأصناف';
@@ -40,7 +40,7 @@ const EDIT_MARK_SUFFIX_ = '⟧';
 const COL_ID = 1, COL_TS = 2, COL_NAME = 3, COL_REGION = 4, COL_PHONE = 5,
       COL_NOTE = 6, COL_SUMMARY = 7, COL_STATUS = 8, COL_ITEMS = 9,
       COL_WAREHOUSE = 10, COL_ORDERNO = 11, COL_USERNAME = 12,
-      COL_DONE_AT = 13;          // وقت ما اتحوّل «تم تنفيذ الطلب» (للحذف التلقائي بعد ساعة)
+      COL_DONE_AT = 13;          // وقت ما اتحوّل «تم تنفيذ الطلب» (للحذف التلقائي بعد ٥ دقايق)
 const ORDERS_HEADERS = ['رقم الطلب', 'التاريخ', 'الموزع', 'المنطقة', 'الهاتف', 'ملاحظات',
                         'ملخص الأصناف', 'الحالة', 'الأصناف (JSON)', 'المخزن',
                         'رقم الطلب بالمخزن', 'اسم المستخدم', 'وقت التنفيذ'];
@@ -378,14 +378,14 @@ function setup() {
 // مركوبة على trigger الواتساب القديم — عشان سرعة تحديث الرصيد (المحجوز)
 // متتأثرش بإلغاء ميزة واتساب.
 function installTriggers() {
-  const wanted = { 'processWhatsAppQueue': 1, 'minuteSync_': 1, 'reconcileReserved': 10, 'purgeDoneOrdersTrigger_': 10 };
+  const wanted = { 'processWhatsAppQueue': 1, 'minuteSync_': 1, 'reconcileReserved': 10, 'purgeDoneOrdersTrigger_': 1 };
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (wanted.hasOwnProperty(t.getHandlerFunction())) ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger('minuteSync_').timeBased().everyMinutes(1).create();
   ScriptApp.newTrigger('reconcileReserved').timeBased().everyMinutes(10).create();
-  ScriptApp.newTrigger('purgeDoneOrdersTrigger_').timeBased().everyMinutes(10).create();
-  return 'اتركّبت: مزامنة المحجوز (كل دقيقة + كل ١٠ دقايق شبكة أمان) + حذف المنفَّذ بعد ساعة (فحص كل ١٠ دقايق). أي trigger قديم لواتساب اتمسح.';
+  ScriptApp.newTrigger('purgeDoneOrdersTrigger_').timeBased().everyMinutes(1).create();
+  return 'اتركّبت: مزامنة المحجوز (كل دقيقة + كل ١٠ دقايق شبكة أمان) + حذف المنفَّذ بعد ٥ دقايق (فحص كل دقيقة). أي trigger قديم لواتساب اتمسح.';
 }
 
 function getUsersSheet_() {
@@ -740,7 +740,7 @@ function updateOrderStatus_(id, status) {
     if (String(rows[i][COL_ID - 1]) !== String(id)) continue;
     found = true;
     sheet.getRange(i + 1, COL_STATUS).setValue(status);
-    // وقت التنفيذ: بيتسجّل أول ما الحالة تبقى «تم تنفيذ الطلب» (والحذف التلقائي بيعدّ ساعة منه)،
+    // وقت التنفيذ: بيتسجّل أول ما الحالة تبقى «تم تنفيذ الطلب» (والحذف التلقائي بيعدّ ٥ دقايق منه)،
     // وبيتمسح لو الأدمن رجّع الحالة لحاجة تانية.
     sheet.getRange(i + 1, COL_DONE_AT).setValue(String(status).trim() === STATUS_DONE ? new Date() : '');
     break;
@@ -831,15 +831,14 @@ function deleteDeliveredOrders_() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  الحذف التلقائي للطلبات المنفَّذة بعد ساعة
+//  الحذف التلقائي للطلبات المنفَّذة بعد ٥ دقايق
 // ═══════════════════════════════════════════════════════════════════
-// أي طلب حالته «تم تنفيذ الطلب» بيتمسح لوحده بعد ساعة من وقت التنفيذ (عمود «وقت التنفيذ»).
-// الطلبات المنفَّذة القديمة (من قبل الميزة دي، ومالهاش وقت) بتاخد وقت التنفيذ = أول فحص،
-// يعني مهلتها ساعة من وقتها. بيشتغل:
-//   ١) كل ١٠ دقايق بـ trigger (شغّل installTriggers مرة واحدة بعد النشر)،
-//   ٢) وكل ما الأدمن يفتح قايمة الطلبات (على الأكتر مرة كل ٥ دقايق) كشبكة أمان.
-// يعني الطلب المنفَّذ بيتمسح بين ساعة وساعة وعشر دقايق من تنفيذه.
-const DONE_TTL_MS_ = 60 * 60 * 1000;
+// أي طلب حالته «تم تنفيذ الطلب» بيتمسح لوحده بعد ٥ دقايق من وقت التنفيذ (عمود «وقت التنفيذ»).
+// الطلبات المنفَّذة القديمة (من قبل الميزة دي، ومالهاش وقت) بتاخد وقت التنفيذ = أول فحص.
+// بيشتغل: ١) كل دقيقة بـ trigger (شغّل installTriggers مرة واحدة بعد النشر)،
+//         ٢) وكل ما الأدمن يفتح قايمة الطلبات (على الأكتر مرة كل دقيقة) كشبكة أمان.
+// يعني الطلب المنفَّذ بيتمسح بين ٥ و٦ دقايق من تنفيذه.
+const DONE_TTL_MS_ = 5 * 60 * 1000;   // ٥ دقايق
 
 function purgeDoneOrders_() {
   const lock = LockService.getScriptLock();
@@ -873,7 +872,7 @@ function lazyPurgeDone_() {
   try {
     const cache = CacheService.getScriptCache();
     if (cache.get('purgeDoneAt')) return;
-    cache.put('purgeDoneAt', '1', 300);
+    cache.put('purgeDoneAt', '1', 60);
     purgeDoneOrders_();
   } catch (e) {}
 }
