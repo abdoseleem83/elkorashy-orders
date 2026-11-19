@@ -2158,7 +2158,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v274';
+const APP_BUILD = 'v275';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -5059,6 +5059,13 @@ const SHORTAGE_IMG_GROUPS_ = {
 // كرتونة/قطعة فمفيش إجمالي واحد يبقى له معنى ليها).
 const SHORTAGE_TOTAL_MAINS_ = ['قطاعات كرافت لاين', 'نيو لاين', 'قطاعات PVC كومبن'];
 
+// يستنى اللوجوهات تتحمّل قبل ما html2canvas يصوّر (من غيرها بتطلع فاضية في الصورة)
+function preloadLogos_(srcs){
+  return Promise.all([...new Set(srcs.filter(Boolean))].map(src=>new Promise(res=>{
+    const im = new Image(); im.onload = im.onerror = ()=>res(); im.src = src;
+    setTimeout(res, 4000);
+  })));
+}
 async function buildShortageImageGroup(order, groupKey){
   if(!(await ensureLibs_('html2canvas'))) return null;
   const group = SHORTAGE_IMG_GROUPS_[groupKey];
@@ -5096,6 +5103,11 @@ async function buildShortageImageGroup(order, groupKey){
     groupsMap.get(r.main).push(r);
   });
   const orderedMains = group.mains.filter(m=>groupsMap.has(m));
+  // 🏷️ لوجو كل قطاع في الطلب (كرافت/نيو/كومبن/اكسسوارات) — في الهيدر وفي شريط كل قطاع
+  const logoOf_ = m => sectorLogo_(groupOfMain_(m));
+  await preloadLogos_(orderedMains.map(logoOf_));
+  const headLogos_ = orderedMains.map(logoOf_).filter(Boolean)
+    .map(src=>`<img src="${src}" style="height:40px;width:auto;background:#fff;border:1px solid #DCE4EC;border-radius:8px;padding:3px 8px;object-fit:contain;">`).join('');
 
   // صف واحد مسطّح لكل الأصناف، بالقطاع الأول وبعدين باللون جوه القطاع —
   // زي عرض السعر بالظبط: كل مجموعة لون بتاخد هيدر فرعي لوحدها بدل ما اللون
@@ -5172,7 +5184,7 @@ async function buildShortageImageGroup(order, groupKey){
     let html = '';
     list.forEach((it,i)=>{
       if(it.sectionStart && SHORTAGE_IMG_GROUPS_[groupKey].mains.length>1){
-        html += `<div style="padding:${secPad_};background:#4FA8DC;color:#002050;font-weight:800;font-size:15px;border-radius:6px;margin:${i===0?'0':secMargin_} 0 6px 0;">${esc(it.sectionLabel)}</div>`;
+        html += `<div style="padding:${secPad_};background:#4FA8DC;color:#002050;font-weight:800;font-size:15px;border-radius:6px;margin:${i===0?'0':secMargin_} 0 6px 0;display:flex;align-items:center;gap:10px;">${logoOf_(it.sectionLabel) ? `<img src="${logoOf_(it.sectionLabel)}" style="height:30px;width:auto;background:#fff;border-radius:6px;padding:2px 8px;object-fit:contain;">` : ''}<span>${esc(it.sectionLabel)}</span></div>`;
       }
       if(it.colorStart){
         html += `<div style="padding:${colorPad_};background:#D6E7F8;border-right:3px solid #1080C0;color:#002050;font-weight:800;font-size:13px;border-radius:4px;margin:${(i===0||it.sectionStart)?'0':colorMargin_} 0 5px 0;">◂ ${esc(it.colorLabel)}</div>`;
@@ -5225,6 +5237,7 @@ async function buildShortageImageGroup(order, groupKey){
         <div style="flex:1;">
           <div style="font-size:22px;font-weight:800;color:#002050;">اوردر رقم #${esc(orderNoDisplay_(order))} ${esc(group.label)}${order.warehouse ? ` <span style="color:#1080C0;">— مخزن ${esc(asText(order.warehouse))}</span>` : ''}</div>
         </div>
+        <div style="display:flex;gap:8px;align-items:center;">${headLogos_}</div>
         <div style="text-align:left;">
           <div style="font-size:12.3px;color:#6B7A8C;">${esc(dateStr)}</div>
           ${pages.length>1 ? `<div style="font-size:12.3px;color:#6B7A8C;font-weight:800;">صفحة ${p+1} من ${pages.length}</div>` : ''}
