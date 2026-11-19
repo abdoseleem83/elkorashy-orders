@@ -28,5 +28,20 @@ ok('كرافت: «حلق جرار 3 مجري ببار 5 سم» (٧ م) داخل 
 ok('كرافت: «ضلفه جرار كبيره» (٦.١٥ م) مجموعة واحدة', k.filter(x=>/^ضلفه جرار كبيره/.test(x)).length===1, k.filter(x=>/ضلفه جرار كبيره/.test(x)).join(' | '));
 ok('كرافت: «حلق مفصلي بكاوتش ٦.٥ م» اندمج في «ببار 5 سم»', !k.some(x=>/^حلق مفصلي كرافت/.test(x)), k.filter(x=>/حلق مفصلي/.test(x)).join(' | '));
 ok('نيو: «حلق جرار ببار 5 سم» مجموعة واحدة (3 مجري = نفس الصنف)', n.filter(x=>/^حلق جرار.*ببار 5 سم نيو/.test(x)).length===1, n.filter(x=>/حلق جرار/.test(x)).join(' | '));
+
+// 📏 الطول غير ٦ م وغير متوفر ← مخفي (٦ م بيفضل ظاهر)
+const labels = await page.evaluate(()=>{
+  state.warehouse='طنطا';
+  const main='قطاعات كرافت لاين', base='حلق جرار 3 مجري ببار 5 سم كرافت';
+  CATALOG.filter(d=>d.main===main && /حلق جرار 3 مجري/.test(d.product) && /5\s*سم/.test(d.product) && !/زجاج|بدون/.test(d.product)).forEach(d=>{
+    d.stock = /(^|\s)6\s*م/.test(d.product) || !/\d\s*م/.test(d.product.replace(/5 سم/,'')) ? 10 : 0;
+  });
+  rebuildCatalogIndex_();
+  const seen=new Set(), entries=[];
+  CATALOG.filter(d=>d.main===main).forEach(d=>{ if(!seen.has(d.product)){ seen.add(d.product); entries.push({main,name:d.product}); } });
+  const g = groupVariants_(entries).find(x=>!x.one && /^حلق جرار 3 مجري ببار 5 سم/.test(x.base));
+  return g ? g.items.map(i=>i.label) : null;
+});
+ok('الأطوال غير ٦ م الناقصة اتخفت (٥ / ٦.٥ / ٧)', labels && !labels.some(l=>/^(5|6\.5|7) م$/.test(l)) && labels.length>=1, JSON.stringify(labels));
 await browser.close();
 console.log(fails ? '❌ فشل '+fails : '✅ كله تمام'); process.exit(fails?1:0);
