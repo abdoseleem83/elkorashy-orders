@@ -23,14 +23,16 @@ const r = await page.evaluate(async ()=>{
   const sect = orderSectorsHtml_(o);
   state.orders=[o]; state.adminEdits.o1 = o.items.map(i=>Object.assign({},i));
   const html = adminEditItemsHtml_(o);
-  state.adminEdits.o1[0].qty = 9;
+  state.adminEdits.o1[0].qty = 9; onSelectChange('adm-unit', Object.assign(document.createElement('select'),{}), 'لفة');
+  { const el=document.createElement('select'); el.setAttribute('data-id','o1'); el.setAttribute('data-idx','0'); onSelectChange('adm-unit', el, 'لفة'); }
   setAdminToken('ADMINTOKEN'); await adminSaveEdit_('o1');
-  return { logos:(sect.match(/<img/g)||[]).length, inputs:(html.match(/adm-qty-input/g)||[]).length, qty:o.items[0].qty };
+  return { logos:(sect.match(/<img/g)||[]).length, inputs:(html.match(/adm-qty-input/g)||[]).length, qty:o.items[0].qty, unit:o.items[0].unitType };
 });
 ok('القطاعات المطلوبة: لوجو كرافت + كومبن', r.logos===2, JSON.stringify(r));
 ok('خانات تعديل الكمية لكل صنف', r.inputs===2);
 const p = posts.find(x=>x.action==='adminUpdateItems');
 ok('حفظ الكميات بيبعت adminUpdateItems بتوكن الأدمن', p && p.token==='ADMINTOKEN' && p.id==='o1' && p.items[0].qty===9, JSON.stringify(p||{}).slice(0,120));
 ok('الكمية اتحدّثت في الشاشة', r.qty===9);
+ok('الوحدة اتغيّرت (عود ← لفة) وراحت للسيرفر', r.unit==='لفة' && p.items[0].unitType==='لفة', r.unit);
 ok('مفيش أخطاء جافاسكريبت', errs.length===0, errs.join(' | '));
 await browser.close(); console.log(fails?'❌ فشل '+fails:'✅ كله تمام'); process.exit(fails?1:0);
