@@ -2103,14 +2103,8 @@ body.kb-open .bottomnav,body.kb-open .submitbar{display:none !important;}
 .qtyedit .unitsel{min-width:64px;padding:4px 6px;border-radius:8px;font-size:13px;}
 
 .dv{font-weight:900;}
-html[data-theme] .card b.dv-neg,.dv-neg{color:#DC2626 !important;}
-html[data-theme] .card b.dv0,.dv0{color:#1D4ED8 !important;} html[data-theme] .card b.dv1,.dv1{color:#15803D !important;}
-html[data-theme] .card b.dv2,.dv2{color:#7E22CE !important;} html[data-theme] .card b.dv3,.dv3{color:#C2410C !important;}
-html[data-theme] .card b.dv4,.dv4{color:#0F766E !important;} html[data-theme] .card b.dv5,.dv5{color:#BE185D !important;}
-html[data-theme="dark"] .card b.dv-neg,html[data-theme="dark"] .dv-neg{color:#FF6B6B !important;}
-html[data-theme="dark"] .card b.dv0,html[data-theme="dark"] .dv0{color:#7AA7FF !important;} html[data-theme="dark"] .card b.dv1,html[data-theme="dark"] .dv1{color:#4ADE80 !important;}
-html[data-theme="dark"] .card b.dv2,html[data-theme="dark"] .dv2{color:#C084FC !important;} html[data-theme="dark"] .card b.dv3,html[data-theme="dark"] .dv3{color:#FB923C !important;}
-html[data-theme="dark"] .card b.dv4,html[data-theme="dark"] .dv4{color:#2DD4BF !important;} html[data-theme="dark"] .card b.dv5,html[data-theme="dark"] .dv5{color:#F472B6 !important;}
+html[data-theme] .card b.dv,.dv{color:#DC2626 !important;}
+html[data-theme="dark"] .card b.dv,html[data-theme="dark"] .dv{color:#FF6B6B !important;}
 </style>
 </head>
 <body>
@@ -2177,7 +2171,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v282';
+const APP_BUILD = 'v283';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -5828,7 +5822,7 @@ function sectorLogo_(g){
 }
 
 // 🎨 تمييز الفرق بين الأصناف الشبيهة: الأصناف اللي بتبدأ بنفس أول كلمتين في نفس القطاع (حلق جرار…)
-// الكلمة/الرقم اللي بيفرّق بينهم بتتلوّن وتتبولد («بدون بار» أحمر، ٦ و٤ و«باب»/«شباك» كل واحد بلون).
+// الكلمة/الرقم اللي بيفرّق بينهم بتتلوّن وتتبولد (كل كلمة/رقم فرق بتطلع أحمر بولد).
 const DV_STOP_ = new Set(['سم','م','متر','مجري','كومبن','كرافت','نيو','ببار','بار','لاين','pvc','و','مع','من','طول','kom','new']);
 let DV_SIG_ = '', DV_FAM_ = new Map(), DV_MEMO_ = new Map();
 function dvNorm_(w){ return String(w||'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').toLowerCase(); }
@@ -5860,17 +5854,14 @@ function nameHtml_(main, name){
     const df = new Map();
     fam.forEach(t=>new Set(t).forEach(w=>df.set(w, (df.get(w)||0)+1)));
     const diff = w => (df.get(w)||0) < fam.length;
-    // ألوان مختلفة لكل كلمة فرق (بترتيب ظهورها في الأصناف الشبيهة)
-    const order = [];
-    fam.forEach(t=>t.forEach(w=>{ if(diff(w) && !DV_STOP_.has(w) && w!=='بدون' && !order.includes(w)) order.push(w); }));
     const parts = [];
     for(let i=0; i<words.length; i++){
       const w = words[i], n = toks[i];
       if(n === 'بدون' && diff(n)){
-        if(toks[i+1] === 'بار' || toks[i+1] === 'ببار'){ parts.push(`<b class="dv dv-neg">${esc(w)} ${esc(words[i+1])}</b>`); i++; }
-        else parts.push(`<b class="dv dv-neg">${esc(w)}</b>`);
+        if(toks[i+1] === 'بار' || toks[i+1] === 'ببار'){ parts.push(`<b class="dv">${esc(w)} ${esc(words[i+1])}</b>`); i++; }
+        else parts.push(`<b class="dv">${esc(w)}</b>`);
       } else if(!DV_STOP_.has(n) && diff(n)){
-        parts.push(`<b class="dv dv${order.indexOf(n) % 6}">${esc(w)}</b>`);
+        parts.push(`<b class="dv">${esc(w)}</b>`);
       } else parts.push(esc(w));
     }
     out = parts.join(' ');
