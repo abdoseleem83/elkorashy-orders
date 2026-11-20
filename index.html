@@ -2031,8 +2031,10 @@ html[data-theme="dark"] .productgrid > .pcard.pt:nth-child(even){--card:#18284A;
 .pcard.pt{position:relative;min-height:70px;padding:10px 8px;border-radius:14px;align-items:center;justify-content:center;text-align:center;gap:4px;font-family:inherit;color:var(--ink);cursor:pointer;box-shadow:0 2px 6px rgba(11,61,145,.05);}
 .pcard.pt:active{transform:scale(.97);}
 .pcard.pt .pc-name{flex:0 1 auto;width:100%;text-align:center;}
-.pt-cols{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-top:5px;padding:5px 6px;border-radius:12px;background:var(--surface2,#EEF3FB);border:1px solid var(--line,#D5DEEE);width:100%;box-sizing:border-box;}
-.pt-col{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;color:var(--ink);line-height:1.2;background:var(--card,#fff);border:1px solid var(--line,#D5DEEE);border-radius:999px;padding:2px 7px 2px 5px;box-shadow:0 1px 2px rgba(11,61,145,.08);}
+.pt-cols{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-top:6px;padding:6px;border-radius:12px;background:#fff;border:1.5px solid #8FA6D0;box-shadow:0 2px 6px rgba(11,61,145,.14);width:100%;box-sizing:border-box;}
+.pt-col{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;color:#1B2A4A;line-height:1.2;background:#EEF2F9;border:1px solid #C7D3EA;border-radius:999px;padding:2px 7px 2px 5px;}
+html[data-theme="dark"] .pt-cols{background:#16213A;border-color:#4A6396;box-shadow:none;}
+html[data-theme="dark"] .pt-col{background:#22314F;border-color:#4A6396;color:#E8EEFB;}
 .pt-col i{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.28);flex:none;}
 .pt-col.more{font-weight:900;color:var(--navy);padding:2px 8px;}
 .pt-name{font-size:12.5px;font-weight:900;line-height:1.4;word-break:break-word;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;}
@@ -2200,7 +2202,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v294';
+const APP_BUILD = 'v295';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
