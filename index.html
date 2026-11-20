@@ -2066,6 +2066,9 @@ body.kb-open .bottomnav,body.kb-open .submitbar{display:none !important;}
   border-radius:999px;padding:8px 14px;font-family:inherit;font-weight:900;font-size:13px;cursor:pointer;backdrop-filter:blur(4px);}
 .hh-chip i{font-style:normal;background:#fff;color:#0B3D91;border-radius:999px;min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;padding:0 6px;}
 .secsec{display:flex;align-items:center;justify-content:flex-start !important;gap:8px;}
+.homehero2 .hh-wh{background:rgba(255,255,255,.22);border-radius:10px;padding:1px 10px;margin-inline-start:2px;}
+html .homesec.secsec{font-size:22px !important;font-weight:900;color:var(--navy);margin:16px 2px 12px;}
+html .homesec.secsec::before{width:7px !important;height:28px !important;}
 .secsec::before{content:"";width:5px;height:20px;border-radius:4px;background:linear-gradient(180deg,#FBBF24,#F59E0B);}
 .sgridpanel{background:linear-gradient(160deg,var(--card),var(--surface2));border:1px solid var(--line);border-radius:26px;padding:20px 8px 14px;box-shadow:0 10px 26px rgba(11,61,145,.08);}
 .sgridpanel .sgrid{margin-top:0;}
@@ -2193,7 +2196,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v291';
+const APP_BUILD = 'v292';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -6100,7 +6103,7 @@ function renderHomeView(){
         <path d="M100 100h98" stroke-width="3"/><circle cx="40" cy="30" r="22" opacity=".35"/><circle cx="62" cy="84" r="10" opacity=".35"/>
       </svg>
       <div class="hh-txt">
-        <b>جاهز تطلب؟</b>
+        <b>${state.warehouse ? `🏬 إنت اخترت مخزن <span class="hh-wh">${esc(state.warehouse)}</span>` : 'جاهز تطلب؟'}</b>
       </div>
     </div>`;
   return `
