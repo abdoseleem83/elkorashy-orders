@@ -1993,6 +1993,15 @@ html[data-theme="dark"] .pav.ok{color:#4ADE80;} html[data-theme="dark"] .pav.low
 .sgridpanel .homesectors{grid-auto-rows:minmax(112px,1fr);gap:22px 8px;}
 .sgridpanel .homesectors .sico.haslogo{display:flex;align-items:center;justify-content:center;height:100%;min-height:112px;}
 .sgridpanel .homesectors .sico.haslogo .sico-logo{width:100%;display:flex;align-items:center;justify-content:center;}
+/* 🖼️ إطار جميل حوالين كل لوجو: كارت أبيض + إطار متدرّج (أزرق→تركواز) + ظل ناعم */
+html .sgridpanel .homesectors .sico.haslogo .sico-logo{
+  box-sizing:border-box;padding:10px 8px;border-radius:20px;
+  border:2.5px solid transparent !important;
+  background:linear-gradient(#fff,#fff) padding-box,linear-gradient(135deg,#1E5FD0,#29A8C6 55%,#F5B31B) border-box !important;
+  box-shadow:0 8px 20px rgba(11,61,145,.16),0 2px 4px rgba(11,61,145,.08) !important;
+  transition:transform .15s ease,box-shadow .15s ease;}
+html .sgridpanel .homesectors .sico.haslogo:active .sico-logo{transform:scale(.97);box-shadow:0 3px 8px rgba(11,61,145,.18) !important;}
+html .sgridpanel .homesectors .sico.haslogo .sico-logo .slogo{border-radius:12px;}
 .sgridpanel .homesectors .sico{overflow:hidden;}
 .sico{display:flex;flex-direction:column;align-items:center;gap:7px;border:0;background:transparent;padding:0;font-family:inherit;color:var(--ink);cursor:pointer;min-width:0;}
 .sico:active .sico-tile{transform:scale(.94);}
@@ -2184,7 +2193,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v290';
+const APP_BUILD = 'v291';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
