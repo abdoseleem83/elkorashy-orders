@@ -2202,7 +2202,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v295';
+const APP_BUILD = 'v296';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -3512,7 +3512,11 @@ async function apiPost(payload, opts){
 // (قبل كده أي حد كان يقدر يسحب كل الطلبات بأرقام تليفونات العملاء من غير
 // أي تحقق — شوف التعليق على lookup في apps_script.gs.)
 function getUserToken(){
-  try{ return localStorage.getItem(LS_USER_TOKEN_KEY) || ''; }catch(e){ return ''; }
+  let t = '';
+  try{ t = localStorage.getItem(LS_USER_TOKEN_KEY) || ''; }catch(e){}
+  // 🛟 لو التوكن مش في localStorage ناخده من بيانات الحساب
+  if(!t && typeof state !== 'undefined' && state.currentUser && state.currentUser.token) t = state.currentUser.token;
+  return t;
 }
 function setUserToken(t){
   try{ t ? localStorage.setItem(LS_USER_TOKEN_KEY, t) : localStorage.removeItem(LS_USER_TOKEN_KEY); }catch(e){}
@@ -4337,7 +4341,8 @@ async function actuallySubmit(){
     // ولا خطأ سيرفر. الطلب (السلة) لسه محفوظ في state، فبنرجّعه لشاشة
     // الدخول بدل ما نبين له رسالة خطأ خام مش هتتحل غير بـ login تاني.
     if(e && e.message === 'unauthorized'){
-      forceRelogin_('انتهت جلستك — سجّل دخول تاني وطلبك هيفضل محفوظ عندك');
+      // 🔑 مانطلّعش المستخدم من الشاشة: نطلب الباسورد بس في نافذة صغيرة ونكمّل الإرسال تلقائي
+      state.reauth = { pw:'', err:'', busy:false };
       state.submitting = false;
       render();
       return;
@@ -4371,6 +4376,46 @@ async function actuallySubmit(){
   // ⛔ مابقناش نولّد الـ PDF تلقائيًا هنا. html2canvas بيجمّد الشاشة وهو شغال،
   // فكانت شاشة النجاح متظهرش والمستخدم يفتكر إن الحفظ فشل — مع إنه نجح فعلاً.
   // دلوقتي شاشة النجاح بتظهر فورًا، والملفات بتتولّد بضغطة زرار وقت ما تحتاجها.
+}
+
+// 🔑 تجديد الجلسة من غير خروج: باسورد بس ← توكن جديد ← نكمّل إرسال الطلب
+function renderReauthModal(){
+  const r = state.reauth;
+  if(!r) return '';
+  const u = state.currentUser && state.currentUser.username ? state.currentUser.username : '';
+  return `<div style="position:fixed;inset:0;z-index:99999;background:rgba(10,20,45,.6);display:flex;align-items:center;justify-content:center;padding:18px;">
+    <div style="background:var(--card,#fff);color:var(--ink,#111);border-radius:22px;padding:20px 18px;width:100%;max-width:380px;box-shadow:0 20px 50px rgba(0,0,0,.35);text-align:center;">
+      <div style="font-size:34px;">🔑</div>
+      <div style="font-size:18px;font-weight:900;margin:6px 0 4px;">الجلسة خلصت — اكتب الباسورد بس</div>
+      <div style="font-size:13px;opacity:.75;margin-bottom:12px;">طلبك محفوظ زي ما هو، وهيتبعت أول ما تأكد${u?` (الحساب: ${esc(u)})`:''}</div>
+      <input type="password" autocomplete="current-password" placeholder="كلمة المرور" value="${esc(r.pw)}" data-act="reauth-pw" style="width:100%;box-sizing:border-box;padding:12px;font-size:16px;border-radius:12px;border:1.5px solid #8FA6D0;text-align:center;">
+      ${r.err ? `<div style="color:#DC2626;font-weight:800;font-size:13px;margin-top:8px;">${esc(r.err)}</div>` : ''}
+      <button class="btn" data-act="reauth-submit" ${r.busy?'disabled':''} style="width:100%;margin-top:12px;padding:12px;font-size:16px;font-weight:900;">${r.busy ? 'جاري التأكيد…' : 'تأكيد وإرسال الطلب'}</button>
+      <button data-act="reauth-cancel" style="margin-top:8px;background:none;border:0;color:inherit;opacity:.7;font-size:13px;">إلغاء</button>
+    </div></div>`;
+}
+async function reauthSubmit_(){
+  const r = state.reauth; if(!r || r.busy) return;
+  const username = state.currentUser && state.currentUser.username;
+  if(!username){ state.reauth = null; forceRelogin_('سجّل دخول تاني وطلبك هيفضل محفوظ عندك'); return; }
+  if(!r.pw){ r.err = 'اكتب كلمة المرور'; render(); return; }
+  r.busy = true; r.err = ''; render();
+  try{
+    const data = await apiPost({ action:'login', username, password:r.pw });
+    if(!data || !data.ok || !data.token){
+      r.busy = false;
+      r.err = (data && data.reason==='locked') ? 'محاولات كتير غلط — استنى ١٥ دقيقة' : 'كلمة المرور غلط';
+      render(); return;
+    }
+    setUserToken(data.token);
+    state.currentUser = Object.assign({}, state.currentUser, { token:data.token });
+    try{ localStorage.setItem(LS_USER_KEY, JSON.stringify(state.currentUser)); }catch(e){}
+    state.reauth = null;
+    render();
+    await actuallySubmit();
+  }catch(e){
+    r.busy = false; r.err = 'في مشكلة في الاتصال، حاول تاني'; render();
+  }
 }
 
 function resetOrderForm(){
@@ -7864,7 +7909,7 @@ function render(){
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
     document.documentElement.setAttribute('data-view', state.view);   // للـCSS: عرض الشاشة حسب نوعها
-    app.innerHTML = renderHeader() + banner + view + renderBottomNav_() + renderDiagModal() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderCartReviewModal() + renderMergeAskModal() + renderNewOrdersPopup() + renderPreviewModal() + renderGlobalError();
+    app.innerHTML = renderHeader() + banner + view + renderBottomNav_() + renderDiagModal() + renderWarehouseModal() + renderStockModal() + renderPwRequestsModal() + renderCatalogUploadModal() + renderCartReviewModal() + renderMergeAskModal() + renderNewOrdersPopup() + renderPreviewModal() + renderReauthModal() + renderGlobalError();
     bindEvents();
     applyFixedHeaderSpacing_();
     applyFixedFooterSpacing_();
@@ -8140,6 +8185,7 @@ function bindEvents(){
     const act = el.getAttribute('data-act');
     if(act==='pin-input')       onAction('pin-submit', el);
     else if(act==='auth-password')   onAction('login-submit', el);
+    else if(act==='reauth-pw')       onAction('reauth-submit', el);
     else if(act==='forgot-username') onAction('forgot-submit', el);
   });
 
@@ -8252,6 +8298,7 @@ function onInputChange(act, el, val){
     case 'myorders-phone': state.myOrdersPhone = val; break;
     case 'auth-username': state.authUsername = val; state.authError=''; break;
     case 'auth-password': state.authPassword = val; state.authError=''; break;
+    case 'reauth-pw': if(state.reauth){ state.reauth.pw = val; state.reauth.err=''; } break;
     case 'auth-password2': state.authPassword2 = val; state.authError=''; break;
     case 'reg-distname': state.regDistName = val; break;
     case 'reg-distregion': state.regDistRegion = val; break;
@@ -8384,6 +8431,8 @@ async function onActionInner(act, el){
       state.myOrdersAuthMissing = false;
       render();
       break;
+    case 'reauth-submit': await reauthSubmit_(); break;
+    case 'reauth-cancel': state.reauth = null; render(); break;
     case 'logout':
       state.view = 'home'; state.viewHistory = [];
       state.currentUser = null;
