@@ -1989,6 +1989,10 @@ html[data-theme="dark"] .pav.ok{color:#4ADE80;} html[data-theme="dark"] .pav.low
 .sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px 6px;margin-top:6px;}
 .homesectors{margin-top:24px;}
 .sgridpanel .homesectors{grid-template-columns:repeat(2,1fr);gap:14px 12px;padding:0 6px;}
+.sgridpanel{padding:22px 8px 22px;}
+.sgridpanel .homesectors{grid-auto-rows:minmax(112px,1fr);gap:22px 12px;}
+.sgridpanel .homesectors .sico.haslogo{display:flex;align-items:center;justify-content:center;height:100%;min-height:112px;}
+.sgridpanel .homesectors .sico.haslogo .sico-logo{width:100%;display:flex;align-items:center;justify-content:center;}
 .sgridpanel .homesectors .sico{overflow:hidden;}
 .sico{display:flex;flex-direction:column;align-items:center;gap:7px;border:0;background:transparent;padding:0;font-family:inherit;color:var(--ink);cursor:pointer;min-width:0;}
 .sico:active .sico-tile{transform:scale(.94);}
@@ -2044,9 +2048,9 @@ body.kb-open .bottomnav,body.kb-open .submitbar{display:none !important;}
 .homehero2 .hh-art{position:absolute;inset-inline-start:-6px;bottom:-14px;width:210px;height:126px;color:rgba(255,255,255,.22);pointer-events:none;}
 .homehero2 .hh-txt{position:relative;display:flex;flex-direction:column;gap:3px;margin-bottom:12px;}
 .homehero2 .hh-txt b{font-size:20px;font-weight:900;}
-.homehero2:not(.fest){padding:22px 18px;}
+.homehero2:not(.fest){padding:11px 18px;margin-bottom:10px;border-radius:20px;}
 .homehero2:not(.fest) .hh-txt{align-items:center;text-align:center;margin-bottom:0;}
-.homehero2:not(.fest) .hh-txt b{font-size:22px;}
+.homehero2:not(.fest) .hh-txt b{font-size:19px;}
 .homehero2 .hh-txt small{font-size:12.5px;opacity:.9;font-weight:700;}
 .hh-chips{position:relative;display:flex;gap:8px;flex-wrap:wrap;}
 .hh-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.16);color:#fff;
@@ -2180,7 +2184,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v287';
+const APP_BUILD = 'v288';
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
