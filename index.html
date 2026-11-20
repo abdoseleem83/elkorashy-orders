@@ -2031,10 +2031,10 @@ html[data-theme="dark"] .productgrid > .pcard.pt:nth-child(even){--card:#18284A;
 .pcard.pt{position:relative;min-height:70px;padding:10px 8px;border-radius:14px;align-items:center;justify-content:center;text-align:center;gap:4px;font-family:inherit;color:var(--ink);cursor:pointer;box-shadow:0 2px 6px rgba(11,61,145,.05);}
 .pcard.pt:active{transform:scale(.97);}
 .pcard.pt .pc-name{flex:0 1 auto;width:100%;text-align:center;}
-.pt-cols{display:flex;flex-wrap:wrap;justify-content:center;gap:3px 5px;margin-top:2px;}
-.pt-col{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:800;color:var(--muted);line-height:1.2;}
-.pt-col i{width:9px;height:9px;border-radius:50%;border:1px solid rgba(0,0,0,.25);flex:none;}
-.pt-col.more{font-weight:900;color:var(--navy);}
+.pt-cols{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-top:5px;padding:5px 6px;border-radius:12px;background:var(--surface2,#EEF3FB);border:1px solid var(--line,#D5DEEE);width:100%;box-sizing:border-box;}
+.pt-col{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;color:var(--ink);line-height:1.2;background:var(--card,#fff);border:1px solid var(--line,#D5DEEE);border-radius:999px;padding:2px 7px 2px 5px;box-shadow:0 1px 2px rgba(11,61,145,.08);}
+.pt-col i{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.28);flex:none;}
+.pt-col.more{font-weight:900;color:var(--navy);padding:2px 8px;}
 .pt-name{font-size:12.5px;font-weight:900;line-height:1.4;word-break:break-word;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;}
 .pt-dot{position:absolute;top:7px;inset-inline-start:7px;width:9px;height:9px;border-radius:50%;}
 .pt-dot.ok{background:#16A34A;} .pt-dot.mid{background:#F59E0B;} .pt-dot.out{background:#DC2626;}
@@ -2200,7 +2200,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v293';
+const APP_BUILD = 'v294';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -2714,6 +2714,7 @@ function warehouseAffectsStock(main){
 //   'out'  = كل الألوان صفر فعليًا
 // 🎨 الألوان المتاحة بس تحت اسم الصنف (من غير الموقوف أو اللي رصيده صفر)
 function availColorsLine_(main, product){
+  if(!warehouseAffectsStock(main)) return '';   // طنطا بس (باقي المخازن/العميل/الاكسسوارات مفيهمش تتبّع رصيد)
   const cols = colorsForProduct(main, product).filter(c => c.color && c.available!==false && colorStockLevel(c)!=='out').map(c=>c.color);
   if(!cols.length) return '';
   const MAX = 3, shown = cols.slice(0, MAX), more = cols.length - shown.length;
