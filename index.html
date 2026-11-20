@@ -2202,7 +2202,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v296';
+const APP_BUILD = 'v297';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -3522,6 +3522,22 @@ function setUserToken(t){
   try{ t ? localStorage.setItem(LS_USER_TOKEN_KEY, t) : localStorage.removeItem(LS_USER_TOKEN_KEY); }catch(e){}
 }
 
+// Keep password-authenticated sessions consistent with the device's saved
+// biometric session. Never replace another account's biometric credentials.
+function saveUserSession_(user){
+  state.currentUser = user;
+  setUserToken(user.token || '');
+  try{ localStorage.setItem(LS_USER_KEY, JSON.stringify(user)); }catch(e){}
+  try{
+    const raw = localStorage.getItem(LS_BIOMETRIC_VAULT_KEY);
+    const saved = raw ? JSON.parse(raw) : null;
+    if(saved && saved.username === user.username){
+      localStorage.setItem(LS_BIOMETRIC_VAULT_KEY, JSON.stringify(user));
+    }
+  }catch(e){}
+  markSessionAuthed_();
+}
+
 // بيرجّع true لو الرد معناه "التوكن مش صالح" — وساعتها بنرجّع المستخدم
 // لشاشة الدخول بدل ما نسيبه قدام شاشة فاضية من غير أي تفسير.
 function isUnauthorized_(d){
@@ -3804,11 +3820,8 @@ async function submitLogin(){
       render();
       return;
     }
-    setUserToken(data.token || '');
     state.view = 'home'; state.viewHistory = [];
-    state.currentUser = { username: data.username || username, distName: data.distName||'', distRegion: data.distRegion||'', distPhone: data.distPhone||'', distType: data.distType||'موزع', token: data.token||'' };
-    try{ localStorage.setItem(LS_USER_KEY, JSON.stringify(state.currentUser)); }catch(e){}
-    markSessionAuthed_();
+    saveUserSession_({ username: data.username || username, distName: data.distName||'', distRegion: data.distRegion||'', distPhone: data.distPhone||'', distType: data.distType||'موزع', token: data.token||'' });
     rememberLogin_(state.authRemember);
     try{ localStorage.setItem(LS_LASTUSER_KEY, username); }catch(e){}
     // ⚠️ إصلاح جذري لمشكلة "اسم الموزّع غلط في الطلبات": لو الموزّع كتب اسم
@@ -4407,9 +4420,7 @@ async function reauthSubmit_(){
       r.err = (data && data.reason==='locked') ? 'محاولات كتير غلط — استنى ١٥ دقيقة' : 'كلمة المرور غلط';
       render(); return;
     }
-    setUserToken(data.token);
-    state.currentUser = Object.assign({}, state.currentUser, { token:data.token });
-    try{ localStorage.setItem(LS_USER_KEY, JSON.stringify(state.currentUser)); }catch(e){}
+    saveUserSession_(Object.assign({}, state.currentUser, { token:data.token }));
     state.reauth = null;
     render();
     await actuallySubmit();
