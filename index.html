@@ -2184,7 +2184,8 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v289';
+const APP_BUILD = 'v290';
+const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -8813,8 +8814,11 @@ async function checkServerVersion_(){
     // بطلب صريح: بقت toast بتظهر مرة واحدة بس وتختفي، بدل شريط ثابت كان
     // فاضل ظاهر طول الوقت. مدة أطول من المعتاد (الرسالة مهمة ومحتاجة وقت
     // تتقرا) بس مش دايمة.
-    if(sv && sv !== APP_BUILD){
-      showToast('⚠️ السيرفر على نسخة ' + sv + ' والتطبيق على ' + APP_BUILD + ' — الكود اتلصق في Apps Script بس مااتعملوش نشر (Deploy)', 9000);
+    // التحذير بيظهر بس لو السيرفر أقدم من آخر نسخة اتغيّر فيها apps_script.gs (MIN_SERVER_BUILD)
+    // — تعديلات الواجهة لوحدها (index.html) مش بتحتاج Deploy فمفيش داعي للتحذير.
+    const num_ = s => parseInt(String(s).replace(/\D/g,''),10) || 0;
+    if(sv && num_(sv) < num_(MIN_SERVER_BUILD)){
+      showToast('⚠️ السيرفر على نسخة ' + sv + ' والمطلوب ' + MIN_SERVER_BUILD + ' على الأقل — الكود اتلصق في Apps Script بس مااتعملوش نشر (Deploy)', 9000);
     }
   }catch(e){ /* مفيش نت — مش وقتها */ }
 }
