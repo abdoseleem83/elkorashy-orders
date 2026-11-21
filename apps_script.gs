@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v309-custom-groups';
+const APP_VERSION = 'v312-groups-session-zoom';
 
 const SHEET_NAME = 'Orders';
 const CATALOG_SHEET_NAME = 'الأصناف';
@@ -157,12 +157,36 @@ function hmacB64u_(payload) {
 }
 
 /** role: 'admin' | 'manage' | 'user' — subject: اسم المستخدم (أو '' للأدمن) */
-function signToken_(role, subject, ttlMs) {
-  const payload = role + '|' + String(subject || '') + '|' + (Date.now() + ttlMs);
+function userAuthRevisionKey_(username) {
+  // Hash the normalized name to keep Script Property keys short and unambiguous.
+  return 'USER_AUTH_REV_' + hmacB64u_('revision-key:' + String(username || '').trim().toLowerCase());
+}
+function userAuthRevision_(username) {
+  return props_().getProperty(userAuthRevisionKey_(username)) || '';
+}
+function revokeUserTokens_(username) {
+  props_().setProperty(userAuthRevisionKey_(username), Utilities.getUuid());
+}
+function userCredentialStamp_(username, storedPassword) {
+  // Keyed fingerprint only. Never expose the stored password/hash in the token.
+  return hmacB64u_(JSON.stringify(['user-session-v2', String(username || '').trim().toLowerCase(),
+    String(storedPassword || ''), userAuthRevision_(username)]));
+}
+function signToken_(role, subject, ttlMs, storedPassword) {
+  const expiry = Date.now() + ttlMs;
+  let payload;
+  if (role === 'user') {
+    if (!String(storedPassword || '')) throw new Error('Missing session credential');
+    payload = 'user2|' + b64uEncode_(JSON.stringify({
+      u: String(subject || ''), e: expiry, p: userCredentialStamp_(subject, storedPassword)
+    }));
+  } else {
+    payload = role + '|' + String(subject || '') + '|' + expiry;
+  }
   return b64uEncode_(payload) + '.' + hmacB64u_(payload);
 }
 
-/** بيرجّع subject (ممكن يكون '') لو التوكن صالح للدور المطلوب، أو null. */
+/** Return the subject only after signature, expiry and current account checks. */
 function verifyToken_(token, wantRole) {
   try {
     const t = String(token || '');
@@ -170,22 +194,30 @@ function verifyToken_(token, wantRole) {
     if (dot < 1) return null;
     const payload = b64uDecode_(t.slice(0, dot));
     if (hmacB64u_(payload) !== t.slice(dot + 1)) return null;
-    // 🐞 بق حقيقي: كان بيقسّم الـ payload بـ split('|') وبيرفض أي نتيجة
-    // عددها مش 3 بالظبط. لو موزّع اختار اسم مستخدم فيه حرف "|" (مفيش أي
-    // منع من ده وقت التسجيل)، التوكن بتاعه كان هيتقسّم لأكتر من 3 حتة
-    // فتفشل verifyToken_ **للأبد** — يعني يدخل بنجاح بس أي نداء بعد كده
-    // (حفظ طلب، عرض طلباته...) يترفض كـ unauthorized من غير أي طريقة يصلحها
-    // غير تغيير اسم المستخدم بنفسه. الدور (role) والصلاحية (expiry) معروفين
-    // إنهم مش هيحتووا "|" (قيم ثابتة / رقم)، فبنستخرجهم من أول/آخر حرف "|"
-    // في النص ونسيب اللي في النص (اسم المستخدم) زي ما هو مهما كان محتواه.
+    if (wantRole === 'user') {
+      // Old user tokens have no password binding. A one-time password login is
+      // required on migration. Admin/manage tokens retain their existing format.
+      if (payload.indexOf('user2|') !== 0) return null;
+      const session = JSON.parse(b64uDecode_(payload.slice(6)));
+      if (typeof session.u !== 'string' || !session.u ||
+          typeof session.e !== 'number' || !Number.isFinite(session.e) || Date.now() >= session.e ||
+          typeof session.p !== 'string' || !session.p) return null;
+      // Do not cache: password/status changes must apply to the next request.
+      const rows = getUsersSheet_().getDataRange().getValues();
+      for (let i = 1; i < rows.length; i++) {
+        if (String(rows[i][0]).trim().toLowerCase() !== session.u.trim().toLowerCase()) continue;
+        if (String(rows[i][5] || '').trim() !== 'مفعل' || !String(rows[i][1] || '')) return null;
+        return session.p === userCredentialStamp_(session.u, rows[i][1]) ? String(rows[i][0]).trim() : null;
+      }
+      return null;
+    }
     const first = payload.indexOf('|');
     const last = payload.lastIndexOf('|');
     if (first < 0 || last <= first) return null;
     const role = payload.slice(0, first);
     const subject = payload.slice(first + 1, last);
-    const expiry = payload.slice(last + 1);
-    if (role !== wantRole) return null;
-    if (Date.now() > Number(expiry)) return null;
+    const expiry = Number(payload.slice(last + 1));
+    if (role !== wantRole || !Number.isFinite(expiry) || Date.now() >= expiry) return null;
     return subject;
   } catch (e) { return null; }
 }
@@ -912,7 +944,11 @@ function handleLogin(username, password) {
     clearLoginFails_(uname);
     // ترقية صامتة: الباسورد كان نص صريح → نحوّله لـ hash دلوقتي
     if (!isHashedPw_(rows[i][1])) {
-      try { sheet.getRange(i + 1, 2).setValue(makePwHash_(password)); } catch (e) {}
+      try {
+        const upgraded = makePwHash_(password);
+        sheet.getRange(i + 1, 2).setValue(upgraded);
+        rows[i][1] = upgraded; // Bind the token to the credential actually saved.
+      } catch (e) {}
     }
 
     // النوع (موزع/عميل) في العمود الثامن — لو فاضي (حسابات قديمة) يبقى "موزع"
@@ -925,7 +961,7 @@ function handleLogin(username, password) {
       distRegion: rows[i][3] || '',
       distPhone: String(rows[i][4] == null ? '' : rows[i][4]),
       distType: distType,
-      token: signToken_('user', realUsername, TTL_USER_MS)
+      token: signToken_('user', realUsername, TTL_USER_MS, rows[i][1])
     };
   }
   noteLoginFail_(uname);
@@ -1020,6 +1056,7 @@ function decidePwRequest_(id, approve) {
       const urows = users.getDataRange().getValues();
       for (let j = 1; j < urows.length; j++) {
         if (String(urows[j][0]).trim().toLowerCase() === username.trim().toLowerCase()) {
+          revokeUserTokens_(username);
           users.getRange(j + 1, 2).setValue(toStore);
           clearLoginFails_(username);
           break;
@@ -1058,6 +1095,8 @@ function decideRegRequest_(username, approve) {
   const rows = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][0]).trim().toLowerCase() === String(username).trim().toLowerCase()) {
+      // Revoke before changing state, so re-approval cannot revive old sessions.
+      revokeUserTokens_(username);
       sheet.getRange(i + 1, 6).setValue(approve ? 'مفعل' : 'مرفوض');
       return true;
     }
