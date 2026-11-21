@@ -2238,7 +2238,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v303-share-ready';
+const APP_BUILD = 'v304-send-compatibility-check';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -4993,20 +4993,31 @@ function renderGlobalError(){
   </div>`;
 }
 
+async function checkSendCompatibility_(){
+  state.toolsOpen=false;state.showDiag=true;state.diagText='جارٍ فحص التوافق فقط، من غير إرسال طلب أو تعديل بيانات…';render();
+  const standalone=window.matchMedia('(display-mode: standalone)').matches || navigator.standalone===true;
+  const lines=['فحص توافق الإرسال، لا يرسل طلبات ولا يغيّر بياناتك','نسخة التطبيق: '+APP_BUILD,'وضع الفتح: '+(standalone?'أيقونة التطبيق المثبّت':'نافذة المتصفح'),'اتصال آمن: '+(window.isSecureContext?'نعم':'لا')];
+  let supported=false;
+  try{
+    if(!window.isSecureContext || !navigator.locks || typeof navigator.locks.request!=='function')throw Error('API_UNAVAILABLE');
+    const result=await Promise.race([
+      navigator.locks.request('elkorashy-capability-probe-only',{ifAvailable:true},lock=>!!lock),
+      new Promise(resolve=>setTimeout(()=>resolve(false),2000))
+    ]);
+    supported=result===true;
+  }catch(e){}
+  lines.push('قفل الإرسال متاح ويعمل هنا: '+(supported?'نعم':'غير مؤكد أو غير متاح'));
+  lines.push(supported?'الفحص نجح في طريقة الفتح دي. ابعت صورة النتيجة للمسؤول.':'ما ننشرش تغيير يعتمد عليه قبل حل التوافق. الإرسال الحالي ما اتغيّرش.');
+  state.diagText=lines.join('\n');render();
+}
+
 function renderDiagModal(){
   if(!state.showDiag) return '';
-  return `
-  <div class="modalbg" data-act="close-diag">
-    <div class="previewmodal" data-act="noop">
-      <div class="previewhead">
-        <span>تشخيص الاتصال</span>
-        <button class="previewclose" data-act="close-diag">✕</button>
-      </div>
-      <div class="previewbody">
-        <textarea readonly style="width:100%;min-height:280px;font-family:monospace;font-size:12.3px;direction:ltr;text-align:left;padding:8px;border:1px solid #ddd;border-radius:6px;">${esc(state.diagText||'جارٍ الفحص...')}</textarea>
-      </div>
-    </div>
-  </div>`;
+  return `<div data-act="close-diag" style="position:fixed;inset:0;z-index:999999;background:rgba(2,6,20,.82);display:flex;align-items:center;justify-content:center;padding:16px;">
+  <section data-act="noop" style="width:100%;max-width:440px;max-height:85vh;overflow:auto;background:#101E37;color:#F2F6FF;border:1px solid #5188CE;border-radius:20px;padding:18px;text-align:right;box-shadow:0 20px 60px #0008;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><b>فحص توافق الإرسال</b><button data-act="close-diag" aria-label="إغلاق الفحص" style="background:#28436D;color:white;border:0;border-radius:9px;width:38px;height:38px;font-size:20px;">✕</button></div>
+  <div style="white-space:pre-wrap;line-height:2;font-size:14px;user-select:text;">${esc(state.diagText||'جارٍ الفحص…')}</div>
+  </section></div>`;
 }
 
 
@@ -5966,6 +5977,7 @@ function renderToolsPanel_(){
         <button class="tooltile" data-act="goto" data-view="admin" title="محمي بالرقم السري">${ico_('warehouse',20)}<span>الطلبات الواردة${state.adminNewCount>0 ? ` <b class="tilecount">${state.adminNewCount}</b>` : ''}</span></button>
         <button class="tooltile" data-act="open-manage-items" title="محمي بالرقم السري">${ico_('boxesIcon',20)}<span>إدارة الأصناف</span></button>
         <button class="tooltile" data-act="open-manage-approvals" title="محمي بالرقم السري">${ico_('checkSquare',20)}<span>طلبات الموافقة${((state.manageRegRequests||[]).length + (state.managePwRequests||[]).length) ? ` <b class="tilecount">${((state.manageRegRequests||[]).length + (state.managePwRequests||[]).length)}</b>` : ''}</span></button>
+        <button class="tooltile" data-act="check-send-compatibility">${ico_('checkSquare',20)}<span>فحص توافق الإرسال</span></button>
         <button class="tooltile" data-act="force-update" title="تحديث إجباري">${ico_('cloudRefresh',20)}<span>تحديث التطبيق</span></button>
         <button class="tooltile logoutbtn" data-act="logout" title="تسجيل خروج">${ico_('door',20)}<span>تسجيل خروج</span></button>
       </div>
@@ -8804,6 +8816,7 @@ async function onActionInner(act, el){
     case 'force-update': await forceUpdate(); break;
     case 'retry-catalog': await loadCatalog(); break;
     case 'copy-app-link': copyAppLink(); break;
+    case 'check-send-compatibility': await checkSendCompatibility_(); break;
     case 'close-diag': state.showDiag=false; render(); break;
     case 'noop': break;
 
