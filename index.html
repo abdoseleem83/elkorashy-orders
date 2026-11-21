@@ -2327,7 +2327,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v312-groups-session-zoom';
+const APP_BUILD = 'v313-stale-banner-fix';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -4659,6 +4659,33 @@ async function resolveLastOrderForMergeAsk_(lastId){
     // كطلب منفصل عادي بدل ما نوقف الموزّع أو نخمّن حالة مش متأكدين منها.
     return null;
   }
+}
+
+// 🐞 بق حقيقي: تنبيه "عندك طلب النهارده لسه لم يستلم" اللي فوق فورم الطلب
+// بيتحسب من مفتاحين محليين (LS_LAST_DATE_KEY / LS_LAST_ID_KEY) بينكتبوا وقت
+// إرسال الطلب، ومكانش فيه أي تنضيف لهم لو الأدمن نفّذ الطلب أو مسحه من عنده —
+// فالتنبيه كان بيفضل ظاهر طول اليوم لطلب خلاص اتسلّم واتنفّذ واتحذف. هنا
+// بنتحقق من السيرفر مرة واحدة في الخلفية مع كل فتحة للتطبيق: لو الطلب مش
+// موجود أو مش "تم استلام الطلب"، بنمسح المفتاحين ونخفي التنبيه. أي فشل في
+// التحقق (نت، جلسة) — بنسيب التنبيه زي ما هو (الأأمن).
+let lastOrderBannerValidated_ = false;
+async function validateLastOrderBanner_(){
+  if(lastOrderBannerValidated_) return;
+  lastOrderBannerValidated_ = true;
+  try{
+    if(localStorage.getItem(LS_LAST_DATE_KEY) !== todayStr()) return;
+    const lastId = localStorage.getItem(LS_LAST_ID_KEY);
+    if(!lastId || !getUserToken()) return;
+    if(state.myOrdersAuthMissing) return;   // الجلسة معروف إنها باطلة — بلاش تخمين
+    const results = await loadMyOrdersByIds([lastId]);
+    // النداء نفسه كشف إن الجلسة باطلة — مانمسحش حاجة بناءً على رد مش موثوق.
+    if(state.myOrdersAuthMissing) return;
+    const last = (results||[]).find(o=>String(o.id).toUpperCase()===String(lastId).toUpperCase());
+    if(!last || normStatus_(last.status) !== STATUS_RECEIVED){
+      try{ localStorage.removeItem(LS_LAST_DATE_KEY); localStorage.removeItem(LS_LAST_ID_KEY); }catch(e2){}
+      render();
+    }
+  }catch(e){ /* فشل التحقق (نت مثلاً) — التنبيه يفضل زي ما هو */ }
 }
 
 // بيقفل شاشة الطلب ويعرض شاشة النجاح — سواء الطلب اتبعت فعلاً للسيرفر أو
@@ -8405,6 +8432,12 @@ function render(){
     // الرئيسية محتاجة طلباتك القديمة (اللي بتطلبه كتير + آخر طلباتك): نحمّلها مرة واحدة في الخلفية
     if(state.view==='home' && state.currentUser && state.currentUser.username!=='admin' && !state.myOrdersSearched && !state.myOrdersLoading && getUserToken()){
       setTimeout(()=>{ if(!state.myOrdersSearched && !state.myOrdersLoading) refreshMyOrders(); }, 0);
+    }
+    // 🐞 تنبيه "طلب النهارده لسه لم يستلم": تحقق خلفي مرة واحدة كل فتحة —
+    // لو الأدمن نفّذ الطلب أو مسحه، التنبيه يختفي (شوف validateLastOrderBanner_).
+    if(state.currentUser && state.currentUser.username!=='admin' && !lastOrderBannerValidated_
+       && localStorage.getItem(LS_LAST_DATE_KEY) === todayStr() && localStorage.getItem(LS_LAST_ID_KEY)){
+      setTimeout(()=>{ try{ validateLastOrderBanner_(); }catch(e){} }, 0);
     }
     // ترقيم الخطوات الظاهرة بس 1،2،3… (الخطوات المخفية كانت بتسيب فجوات: 1،2،3،7،8)
     if(state.view==='order'){
