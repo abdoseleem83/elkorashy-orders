@@ -2237,7 +2237,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v300-calm-grid-ui-only';
+const APP_BUILD = 'v301-grid-no-color-summary-ui-only';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -6647,7 +6647,7 @@ function renderProductCard_(main, n, inlineKeys){
       ${lvl ? `<i class="pt-dot ${lvl}" aria-label="${lvlTxt}"></i>` : ''}
       ${pcLogo_(main)}
       <span class="pc-name pt-name">${nameHtml_(main, n)}</span>
-      ${availColorsLine_(main, n)}
+      
       ${unavailable ? '<em class="pt-tag off">موقوف</em>' : (inCart ? '<em class="pt-tag">في السلة</em>' : '')}
     </button>`;
   }
