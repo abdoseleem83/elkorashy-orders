@@ -2173,6 +2173,11 @@ html[data-theme="dark"] .pcard.pt .pt-col{background:#25334B;}
 .pcard.pt .pt-col.more{background:transparent;padding:3px 1px;}
 
  .stock-unknown-note{font-size:10px;color:var(--muted);line-height:1.5}.cdot.unknown i{box-shadow:none!important;opacity:.7}
+.bottomnav-in{grid-template-columns:1fr 1fr 52px 1fr 1fr 1fr!important;max-width:600px!important;}
+.pending-list{padding:16px 14px 110px;max-width:620px;margin:auto;}
+.pending-card{padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--card);margin:14px 0;line-height:1.8;overflow-wrap:anywhere;}
+.pending-card h3{margin:0 0 8px}.pending-state{font-weight:900;color:#BF7914}.pending-note{font-size:13px;color:var(--muted)}
+.pending-card button{margin:8px 0;padding:10px 14px;min-height:44px;border:1px solid #5289CF;border-radius:12px;background:#164D99;color:white;font-family:inherit;font-weight:700;cursor:pointer}.pending-card button:disabled{opacity:.55;cursor:wait}.pending-card .ghost{background:transparent;color:var(--ink)}.pending-lines{font-size:13px;padding-right:18px;}
 </style></head>
 <body>
 <div id="app"></div>
@@ -2238,7 +2243,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v304-send-compatibility-check';
+const APP_BUILD = 'v305-pending-review';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -3236,136 +3241,215 @@ function isNetworkError_(e){
   return !!(e && e.name === 'TypeError' && /fetch/i.test(String(e.message || '')));
 }
 
-async function saveOrderRemoteOnce_(order, isUpdate){
-  // الأدمن بيعمل طلب باسم موزّع: توكن الأدمن + اسم الموزّع (السيرفر بيتأكد منهم)
-  const forAdmin = !isUpdate && order.forUsername && getAdminToken();
-  const payload = Object.assign({}, order, forAdmin
-    ? { action:'adminCreate', token:getAdminToken(), forUsername:order.forUsername }
-    : { action: isUpdate ? 'update' : 'create', token: getUserToken() });
-  const controller = new AbortController();
-  // Apps Script بياخد وقت خصوصًا في أول نداء أو لما الطلب فيه أصناف كتير.
-  // 25 ثانية كانت قصيرة وبتقطع على طلبات شغالة — رفعناها لـ 60.
-  const killer = setTimeout(()=>controller.abort(), 60000);
-  let res;
-  try{
-    res = await fetch(APPS_SCRIPT_URL, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
-  }catch(e){
-    clearTimeout(killer);
-    if(e && e.name==='AbortError'){
-      // اتأخر في الرد — بس يمكن يكون اتسجل فعلاً. نتأكد بنفسنا قبل ما نقول "فشل".
-      await new Promise(r=>setTimeout(r, 2500));
-      if(await orderExistsRemote(order.id)) return { ok:true, recovered:true };
-      throw new Error('السيرفر أخد وقت طويل ومردش. الطلب غالبًا ما اتسجلش — جرّب تاني.');
-    }
-    throw e;
-  }finally{
-    clearTimeout(killer);
-  }
-  if(!res.ok) throw new Error('server responded with status ' + res.status);
-  let data;
-  try{ data = await res.json(); }catch(e){ throw new Error('invalid server response'); }
-  if(!data || data.ok !== true) throw new Error(data && data.error ? data.error : 'server did not confirm save');
-  return data;
-}
-
-async function saveOrderRemote(order, isUpdate){
-  // ⚠️ "Failed to fetch" معناها إن الريكوست مارضاش يوصل للسيرفر أصلاً —
-  // مش خطأ راجع من Apps Script. غالبًا بتبقى لقطة نت مؤقتة (خصوصًا على
-  // موبايل)، فبنعيد المحاولة تلقائيًا 3 مرات بفاصل بسيط قبل ما نستسلم،
-  // وبعدها نبين رسالة عربي واضحة بدل الرسالة الإنجليزي الخام.
-  const maxAttempts = 3;
-  for(let attempt=1; attempt<=maxAttempts; attempt++){
-    try{
-      return await saveOrderRemoteOnce_(order, isUpdate);
-    }catch(e){
-      const isLast = attempt === maxAttempts;
-      if(isNetworkError_(e)){
-        if(isLast){
-          // قبل ما نستسلم، نتأكد إحنا فعلاً مقطوعين من النت مش إن جوجل
-          // بترفض الريكوست لسبب تاني (رابط غلط، Deploy لاغي، إلخ).
-          const offline = (typeof navigator !== 'undefined' && navigator.onLine === false);
-          const err = new Error(offline
-            ? 'مفيش اتصال بالإنترنت. اتأكد من الشبكة وحاول تاني.'
-            : 'تعذّر الوصول للسيرفر بعد ' + maxAttempts + ' محاولات. جرّب تاني بعد شوية، أو لو استمرت المشكلة كلّم المسؤول عن التطبيق.');
-          // 🏷️ بنعلّم الخطأ ده عشان اللي بينادي (actuallySubmit) يقدر يحفظ
-          // الطلب في طابور offline بدل ما يبين صندوق خطأ للمستخدم.
-          err.isNetworkFailure = true;
-          throw err;
-        }
-        await new Promise(r=>setTimeout(r, 1500 * attempt));
-        continue;
-      }
-      // أي خطأ تاني (مش شبكة) — مفيش داعي نعيد المحاولة، نطلعه على طول.
-      throw e;
-    }
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════
-//  طابور الطلبات اللي فشلت بسبب النت (offline queue)
-// ═══════════════════════════════════════════════════════════════════
-//
-// لو الإرسال فشل بسبب النت (مش unauthorized ولا خطأ سيرفر)، بدل ما نبين
-// خطأ للموزع ونخلّيه يحاول يدوي، بنخزّن الطلب كامل محليًا ونعتبره "اتبعت"
-// من ناحية الموزع (شاشة نجاح عادية)، وبعدين نحاول نبعته فعليًا للسيرفر
-// تلقائي أول ما النت يرجع أو أول ما التطبيق يتفتح.
+// LOCAL CANDIDATE ONLY. No backend receipt or exactly-once claim.
 const LS_OFFLINE_QUEUE_KEY = 'qurashi_offline_queue';
-
+function pendingActor_(){return String(state.currentUser && state.currentUser.username || '');}
 function getOfflineQueue_(){
-  try{ return JSON.parse(localStorage.getItem(LS_OFFLINE_QUEUE_KEY) || '[]'); }catch(e){ return []; }
+  try{
+    const raw=localStorage.getItem(LS_OFFLINE_QUEUE_KEY);
+    const q=raw?JSON.parse(raw):[];
+    if(!Array.isArray(q) || q.some(r=>!r || typeof r!=='object' || !r.order || typeof r.order!=='object' || typeof r.order.id!=='string' || !r.order.id || !Array.isArray(r.order.items))) throw Error('invalid local queue');
+    state.pendingStorageError=false; return q;
+  }catch(e){state.pendingStorageError=true;return [];}
 }
 function saveOfflineQueue_(q){
-  try{ localStorage.setItem(LS_OFFLINE_QUEUE_KEY, JSON.stringify(q)); }catch(e){}
+  if(state.pendingStorageError) throw Error('تعذّر قراءة الطلبات المحلية. الإرسال متوقف لحمايتها، ما تمسحش بيانات التطبيق.');
+  const text=JSON.stringify(q); localStorage.setItem(LS_OFFLINE_QUEUE_KEY,text);
+  if(localStorage.getItem(LS_OFFLINE_QUEUE_KEY)!==text) throw Error('تعذّر تأكيد حفظ الطلب على الجهاز. لم يبدأ الإرسال.');
 }
-function queueOfflineOrder_(order, isUpdate){
-  const q = getOfflineQueue_();
-  q.push({ order: order, isUpdate: !!isUpdate, queuedAt: Date.now() });
-  saveOfflineQueue_(q);
-  state.offlineQueueCount = q.length;
+function pendingOwned_(r){
+  const actor=pendingActor_();
+  let bound=actor;
+  try{const u=JSON.parse(localStorage.getItem(LS_USER_KEY)||'null');if(u)bound=String(u.username||'');}catch(e){return false;}
+  return !!actor && bound===actor && r && r.order && String(r.actor || r.order.username || '')===actor;
 }
-function offlineQueueCount(){
-  return getOfflineQueue_().length;
+function pendingRecords_(){return getOfflineQueue_().filter(pendingOwned_);}
+function pendingCount_(){return pendingRecords_().filter(r=>!['confirmed','auth-rejected'].includes(r.kind)).length;}
+function offlineQueueCount(){return getOfflineQueue_().length;}
+async function flushOfflineQueue_(){state.offlineQueueCount=offlineQueueCount();}
+function pendingFingerprint_(r){
+  const o=r.order;return JSON.stringify([String(r.actor||o.username||''),!!r.isUpdate,o.oldId||'',o.forUsername||'',o.distName||'',o.distRegion||'',o.distPhone||'',o.warehouse||'',o.note||'',o.items]);
 }
-
-let _flushingOfflineQueue = false;
-// بيحاول يبعت كل الطلبات المتراكمة في الطابور، واحد ورا التاني. أول طلب
-// يفشل بسبب النت بيوقّف المحاولة (نسيب الباقي زي ما هو لحد المرة الجاية).
-// لو فشل بسبب unauthorized، بردو بنوقف — لحد ما الموزع يسجّل دخول تاني.
-async function flushOfflineQueue_(){
-  if(_flushingOfflineQueue) return;
-  let q = getOfflineQueue_();
-  if(!q.length) return;
-  _flushingOfflineQueue = true;
-  let sentCount = 0;
+function pendingError_(message){const e=new Error(message);e.pendingHeld=true;return e;}
+function pendingToken_(r){
+  const actor=pendingActor_();
+  let saved=null;try{saved=JSON.parse(localStorage.getItem(LS_USER_KEY)||'null');}catch(e){throw Error('بيانات الحساب المحلي مش واضحة. الإرسال متوقف.');}
+  if(!pendingOwned_(r) || (saved && String(saved.username)!==actor)) throw Error('الحساب اتغيّر على الجهاز. افتح جلسة الحساب الصحيح قبل المتابعة.');
+  const token=r.order.forUsername?getAdminToken():getUserToken();
+  if(!r.order.forUsername && state.currentUser.token && token!==state.currentUser.token)throw Error('الجلسة اتغيّرت على الجهاز. افتح جلسة الحساب الصحيح قبل المتابعة.');
+  return token;
+}
+async function pendingLocked_(fn){
+  if(!navigator.locks || !navigator.locks.request) throw Error('المتصفح ده مش بيدعم قفل الإرسال الآمن. لم يبدأ الإرسال؛ استخدم متصفح مدعوم من غير مسح بيانات التطبيق.');
+  return navigator.locks.request('elkorashy-local-send-v1',fn);
+}
+function pendingPut_(record){
+  const q=getOfflineQueue_();
+  if(state.pendingStorageError) throw Error('تعذّر قراءة الطلبات المحلية. لم يبدأ الإرسال، ما تمسحش بيانات التطبيق.');
+  const i=q.findIndex(x=>x.schema===2 && x.order && x.order.id===record.order.id);
+  if(i<0)q.push(record);else q[i]=record;
+  saveOfflineQueue_(q);state.offlineQueueCount=q.length;
+}
+async function saveOrderRemoteOnce_(order,isUpdate){return saveOrderRemote(order,isUpdate);}
+async function saveOrderRemote(order,isUpdate){
+  const actor=pendingActor_();
+  if(!actor || !order || String(order.username)!==actor) throw Error('الحساب الحالي مختلف عن صاحب محاولة الإرسال. لم يبدأ الإرسال.');
+  return pendingLocked_(async()=>{
+    const q=getOfflineQueue_();
+    if(state.pendingStorageError) throw Error('تعذّر قراءة الطلبات المحلية. لم يبدأ الإرسال، ما تمسحش بيانات التطبيق.');
+    const old=q.find(r=>r.order && String(r.order.id)===String(order.id));
+    if(old) throw pendingError_('المحاولة محفوظة بالفعل. راجع المعلّق من غير إعادة إرسال.');
+    const signature=pendingFingerprint_({actor,order,isUpdate:!!isUpdate});
+    if(q.some(r=>pendingOwned_(r) && !['confirmed','auth-rejected'].includes(r.kind) && pendingFingerprint_(r)===signature))throw pendingError_('فيه نفس بيانات الطلب في المعلّق. راجع المحاولة الموجودة من غير إنشاء رقم جديد.');
+    const record={schema:2,actor,order:JSON.parse(JSON.stringify(order)),isUpdate:!!isUpdate,kind:'ready',queuedAt:Date.now()};
+    pendingPut_(record);
+    if(navigator.onLine===false)return {localPending:true};
+    return transmitPendingLocked_(record);
+  });
+}
+function minimizeConfirmedPending_(record){
+  record.order={id:record.order.id,username:record.actor,items:[]};delete record.lastCheck;
+}
+async function transmitPendingLocked_(record){
+  const q=getOfflineQueue_(),saved=q.find(x=>x.schema===2 && x.order && x.order.id===record.order.id);
+  if(!saved || !pendingOwned_(saved) || saved.kind!=='ready') throw pendingError_('المحاولة محتاجة مراجعة، ومش هتتبعت تاني.');
+  if(JSON.stringify(saved.order)!==JSON.stringify(record.order) || saved.isUpdate!==record.isUpdate) throw Error('بيانات المحاولة اتغيّرت، الإرسال متوقف.');
+  const token=pendingToken_(record);
+  if(!token) throw Error('سجّل دخول للحساب المطلوب قبل الإرسال.');
+  const actor=pendingActor_();
+  record.kind='attempted';record.attemptedAt=Date.now();pendingPut_(record);
+  const controller=new AbortController(),killer=setTimeout(()=>controller.abort(),60000);
+  const payload=Object.assign({},record.order,record.order.forUsername
+    ?{action:'adminCreate',token,forUsername:record.order.forUsername}
+    :{action:record.isUpdate?'update':'create',token});
   try{
-    while(q.length){
-      const item = q[0];
-      try{
-        await saveOrderRemoteOnce_(item.order, item.isUpdate);
-        q.shift();
-        saveOfflineQueue_(q);
-        state.offlineQueueCount = q.length;
-        sentCount++;
-      }catch(e){
-        // فشل (نت لسه مقطوع، أو unauthorized، أو أي حاجة تانية) — نوقف
-        // ونسيب الطلب ده وكل اللي بعده في الطابور لحد المحاولة الجاية.
-        break;
+    const res=await fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload),signal:controller.signal});
+    if(!res.ok)throw Error('HTTP '+res.status);
+    const data=await res.json();
+    if(!data || data.ok!==true){
+      if(data && data.error==='unauthorized'){
+        record.kind='auth-rejected';pendingPut_(record);
+        throw Object.assign(new Error('unauthorized'),{definiteAuthRejection:true});
       }
+      throw Error('server did not confirm save');
     }
-  }finally{
-    _flushingOfflineQueue = false;
-  }
-  if(sentCount > 0){
-    showToast(sentCount === 1
-      ? '✅ اتبعت طلب كان محفوظ عندك من قبل'
-      : '✅ اتبعت ' + sentCount + ' طلبات كانت محفوظة عندك من قبل');
-    render();
-  }
+    record.kind='confirmed';record.orderNo=data.orderNo?String(data.orderNo):'';record.confirmedAt=Date.now();minimizeConfirmedPending_(record);pendingPut_(record);
+    if(pendingActor_()!==actor)throw pendingError_('الحساب اتغيّر أثناء الإرسال. النتيجة محفوظة للحساب الأصلي.');
+    return data;
+  }catch(e){
+    if(e.definiteAuthRejection)throw e;
+    if(record.kind!=='confirmed'){
+      record.kind='attempted';record.lastCheck='نتيجة الإرسال مش مؤكدة. ممكن يكون وصل للسيرفر. مفيش إعادة إرسال تلقائي أو يدوي من هنا.';
+      try{pendingPut_(record);}catch(storageError){}
+    }
+    throw pendingError_('نتيجة الإرسال مش مؤكدة. راجع المعلّق من غير إعادة إرسال.');
+  }finally{clearTimeout(killer);}
+}
+function leaveFormForPending_(){
+  state.cart=[];state.staged=[];state.editingOrderId=null;state.actingFor=null;state.successOrderId=null;state.lastOrder=null;
+  state.shortageReady=null;state.showCartReview=false;state.showMergeAskModal=false;state.view='pending';state.pendingReviewId=null;
+  clearDraft();showToast('الطلب محفوظ في المعلّق. ده مش تأكيد إن السيرفر استلمه.',5000);
+}
+async function checkPendingOrder_(id){
+  let r=pendingRecords_().find(x=>x.order.id===id);if(!r)return;
+  const actor=pendingActor_();state.pendingBusy=id;render();
+  try{
+    const token=pendingToken_(r);if(!token)throw Error('سجّل دخول للحساب المطلوب.');
+    const data=await apiGet('lookup',{ids:r.order.id,token});
+    if(!Array.isArray(data))throw Error('تعذّر تأكيد الرد من السيرفر.');
+    if(pendingActor_()!==actor)return;
+    await pendingLocked_(async()=>{
+      const fresh=pendingRecords_().find(x=>x.order.id===id);if(!fresh)return;
+      const found=data.find(x=>String(x.id).toLowerCase()===String(id).toLowerCase());
+      if(found){
+        fresh.kind='confirmed';fresh.confirmedAt=Date.now();fresh.orderNo=String(found.orderNo || '');minimizeConfirmedPending_(fresh);
+        fresh.lastCheck='لقينا الطلب بنفس المعرّف في الرد المسموح للحساب. راجعه في طلباتي.';
+      }else fresh.lastCheck='الطلب مش ظاهر في الفحص ده. ده مش دليل إنه ما اتسجلش، ومش إذن لإعادة إرساله. راجع الإدارة بالمعرّف.';
+      pendingPut_(fresh);
+    });
+  }catch(e){if(pendingActor_()===actor)showToast(e.message || 'تعذّر التحقق. مفيش إعادة إرسال.',5000);}
+  finally{state.pendingBusy=null;render();}
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible'){state.pendingReviewId=null;state.pendingReview=null;}});
+async function beginPendingReview_(id){
+  if(state.pendingBusy)return;
+  const record=pendingRecords_().find(r=>r.schema===2 && r.order.id===id && r.kind==='ready');if(!record)return;
+  const actor=pendingActor_();state.pendingBusy=id;state.pendingReviewId=null;state.pendingReview=null;render();
+  try{
+    pendingToken_(record);
+    if(navigator.onLine===false)throw Error('مفيش اتصال. المراجعة محتاجة تحديث الرصيد، ولم يبدأ الإرسال.');
+    await loadCatalog();
+    if(pendingActor_()!==actor || !pendingOwned_(record))throw Error('الحساب اتغيّر. راجع من الحساب الصحيح.');
+    if(state.catalogLoading || state.catalogStale || state.catalogError || state.catalogReviewRequired)throw Error('تعذّر تحديث الرصيد. الطلب محفوظ، ومفيش إرسال ببيانات قديمة.');
+    for(const item of record.order.items){
+      if(item.main===OTHER_SECTOR)continue;
+      const current=findCatalogItem(item.main,item.product || item.name,item.color);
+      if(!current || current.available===false)throw Error('فيه صنف مش موجود أو موقوف في الكتالوج الحالي. راجع الإدارة؛ الطلب محفوظ ولم يبدأ إرساله.');
+    }
+    if(record.isUpdate){
+      const data=await apiGet('lookup',{ids:record.order.oldId,token:pendingToken_(record)});
+      if(!Array.isArray(data))throw Error('تعذّر التأكد من الطلب الأصلي. التعديل محفوظ ولم يبدأ إرساله.');
+      const original=data.find(o=>String(o.id).toLowerCase()===String(record.order.oldId).toLowerCase());
+      if(!original || normStatus_(original.status)!==STATUS_RECEIVED)throw Error('الطلب الأصلي مش ظاهر أو حالته ما تسمحش بالتعديل. راجع الإدارة، من غير إنشاء طلب بديل.');
+    }
+    if(pendingActor_()!==actor || !pendingOwned_(record))throw Error('الحساب اتغيّر. المراجعة اتوقفت.');
+    state.pendingReview={id,actor,reviewedAt:Date.now(),payload:JSON.stringify(record.order),stock:captureStockGeneration_(),catalog:JSON.stringify(CATALOG)};
+    state.pendingReviewId=id;
+  }catch(e){showToast(e.message || 'المراجعة ما اكتملتش، ولم يبدأ الإرسال.',5500);}
+  finally{state.pendingBusy=null;render();}
+}
+function pendingReviewCurrent_(r){
+  const review=state.pendingReview;
+  return !!review && Date.now()-review.reviewedAt<120000 && review.id===r.order.id && review.actor===pendingActor_() && pendingOwned_(r) && review.payload===JSON.stringify(r.order) && stockGenerationCurrent_(review.stock) && !state.catalogLoading && !state.catalogStale && !state.catalogError && review.catalog===JSON.stringify(CATALOG);
+}
+async function sendReviewedPending_(id){
+  if(state.pendingBusy || state.pendingReviewId!==id)return;
+  const r=pendingRecords_().find(x=>x.schema===2 && x.order.id===id && x.kind==='ready');if(!r)return;
+  if(!pendingReviewCurrent_(r)){state.pendingReviewId=null;state.pendingReview=null;showToast('الرصيد أو بيانات المراجعة اتغيّرت. راجع الطلب تاني قبل أول إرسال.',5000);render();return;}
+  state.pendingBusy=id;state.pendingReviewId=null;render();
+  try{
+    if(navigator.onLine===false)throw Error('لسه مفيش اتصال. الطلب محفوظ ولم يبدأ إرساله.');
+    await pendingLocked_(async()=>{
+      if(!pendingReviewCurrent_(r))throw Error('بيانات المراجعة اتغيّرت قبل الإرسال. الطلب محفوظ للمراجعة.');
+      if(r.isUpdate){
+        const data=await apiGet('lookup',{ids:r.order.oldId,token:pendingToken_(r)});
+        const original=Array.isArray(data)?data.find(o=>String(o.id).toLowerCase()===String(r.order.oldId).toLowerCase()):null;
+        if(!original || normStatus_(original.status)!==STATUS_RECEIVED)throw Error('حالة الطلب الأصلي مش مؤكدة أو اتغيّرت. التعديل متوقف، ولم يبدأ إرساله.');
+        if(!pendingReviewCurrent_(r))throw Error('الرصيد أو الحساب اتغيّر أثناء التحقق. راجع الطلب تاني.');
+      }
+      return transmitPendingLocked_(r);
+    });showToast('السيرفر أكد حفظ الطلب. راجعه في طلباتي.',5000);
+  }catch(e){showToast(e.message==='unauthorized'?'الجلسة مرفوضة. الطلب محفوظ للمراجعة، ومش هيتبعت تلقائي.':e.message,5000);}
+  finally{state.pendingBusy=null;render();}
+}
+function pendingStockNote_(record,item){
+  if((state.currentUser && state.currentUser.distType==='عميل') || item.main.includes('اكسسوارات') || !STOCK_TRACKED_WAREHOUSES_.includes(record.order.warehouse))return 'المخزن أو القطاع ده مفيهوش رصيد متتبّع في التطبيق.';
+  const current=findCatalogItem(item.main,item.product || item.name,item.color);
+  if(!current || current.stock===null || current.stock==='' || !Number.isFinite(Number(current.stock)))return 'الرصيد غير محدد للصنف ده. راجع الإدارة، مفيش ضمان للتوفر.';
+  const requested=['لفة','كرتونة'].includes(item.unitType)?Number(item.qty)*(Number(current.unit)||1):Number(item.qty);
+  return 'الرصيد وقت المراجعة: '+current.stock+'، والمطلوب بالوحدة الأساسية: '+requested+'. الكمية مش محجوزة.';
+}
+function renderPendingView_(){
+  const rows=pendingRecords_(),q=getOfflineQueue_();
+  const unknown=q.filter(x=>!x.order || !String(x.actor || x.order.username || '')).length;
+  return `<main class="pending-list"><h2>الطلبات المعلّقة <span>${pendingCount_()}</span></h2>
+  <p class="pending-note">محفوظة على الجهاز ده للحساب الحالي فقط، مش نسخة احتياطية. ما تمسحش بيانات التطبيق. مفيش إرسال تلقائي بعد فتح التطبيق أو رجوع النت.</p>
+  ${state.pendingStorageError?'<div class="pending-card">تعذّر قراءة الطلبات المحلية. الإرسال متوقف لحمايتها. ما تمسحش البيانات.</div>':''}
+  ${unknown?'<div class="pending-card">فيه طلبات قديمة من غير صاحب حساب واضح. الإرسال متوقف، وتحتاج مراجعة الإدارة على الجهاز.</div>':''}
+  ${!rows.length?'<p>مفيش طلبات معلّقة ظاهرة للحساب الحالي.</p>':''}
+  ${rows.map(r=>{
+    const legacy=r.schema!==2,ready=!legacy&&r.kind==='ready',confirmed=r.kind==='confirmed',review=state.pendingReviewId===r.order.id;
+    const title=confirmed?'السيرفر أكد وجود الطلب':ready?'محفوظ على الجهاز، لم يبدأ إرساله':r.kind==='auth-rejected'?'السيرفر رفض الجلسة، محتاج مراجعة':legacy?'طلب قديم، حالة الإرسال غير مؤكدة':'نتيجة الإرسال غير مؤكدة';
+    return `<article class="pending-card"><h3>${esc(r.order.distName || 'طلب محفوظ')}</h3><div class="pending-state">${title}</div>
+    <div class="pending-note">المعرّف: <b dir="ltr">${esc(r.order.id)}</b><br>المخزن: ${esc(r.order.warehouse || '')} · ${r.isUpdate?'تعديل طلب':'طلب جديد'} · ${(r.order.items||[]).length} صنف</div>
+    ${r.order.forUsername?`<p>طلب الإدارة لحساب: ${esc(r.order.forUsername)}</p>`:''}
+    ${!confirmed&&!ready?'<p class="pending-note">ما تعيدش تكوين نفس الطلب برقم جديد. لو النتيجة مش مؤكدة راجع الإدارة بالمعرّف.</p>':''}
+    ${r.lastCheck?`<p>${esc(r.lastCheck)}</p>`:''}
+    <button class="btn ghost" data-act="pending-check" data-id="${esc(r.order.id)}" ${state.pendingBusy?'disabled':''}>${state.pendingBusy===r.order.id?'جارٍ التحقق…':'تحقق من السيرفر فقط'}</button>
+    ${ready&&!review?`<br><button class="btn" data-act="pending-review" data-id="${esc(r.order.id)}">راجع قبل أول إرسال</button>`:''}
+    ${ready&&review?`<div class="pending-note">الرصيد اتحدّث للمراجعة دي، مش حجز للكمية. راجع خلال دقيقتين؛ الرجوع من الخلفية يحتاج مراجعة جديدة. راجع الطلب قبل أول إرسال. دي محاولة واحدة فقط.</div><p>${esc(r.order.distName)} · ${esc(r.order.distRegion)} · ${esc(r.order.distPhone)}</p><ul class="pending-lines">${(r.order.items||[]).map(i=>`<li>${esc(i.product || i.name || '')} ${esc(i.color || '')} · ${esc(i.qty)} ${esc(i.unitType || '')}${i.note?' · '+esc(i.note):''}<br><b>${esc(pendingStockNote_(r,i))}</b></li>`).join('')}</ul><p>${esc(r.order.note || '')}</p><button class="btn" data-act="pending-first-send" data-id="${esc(r.order.id)}" ${state.pendingBusy?'disabled':''}>راجعت الطلب، إرسال مرة واحدة</button><br><button class="btn ghost" data-act="pending-review-cancel">رجوع بدون إرسال</button>`:''}
+    </article>`;
+  }).join('')}</main>`;
 }
 
 async function loadOrders(){
@@ -3847,7 +3931,7 @@ async function unlockWithBiometric(){
       state.showBiometricGate = false;
       checkForResumableDraft(); // 🛒 لو في مسودة محفوظة، نعرض إشعار بعد فتح البصمة
       ensurePushRegistered();
-      flushOfflineQueue_(); // 📶 نحاول نبعت أي طلبات كانت واقفة بسبب unauthorized
+      flushOfflineQueue_(); // Refresh local count only; never send on login.
       applyPostLoginView_();
     }
   }catch(e){
@@ -3902,7 +3986,7 @@ async function submitLogin(){
     state.authPassword='';
     checkForResumableDraft(); // 🛒 لو في مسودة محفوظة، نعرض إشعار بعد الدخول مباشرة
     ensurePushRegistered();
-    flushOfflineQueue_(); // 📶 نحاول نبعت أي طلبات كانت واقفة بسبب unauthorized
+    flushOfflineQueue_(); // Refresh local count only; never send on login.
     applyPostLoginView_();
     render();
   }catch(e){
@@ -4373,6 +4457,7 @@ function finalizeOrderSuccess_(order, isUpdate, oldId, id, orderNo, toastMsg){
 }
 
 async function actuallySubmit(){
+  if(state.submitting) return;
   state.saveError = '';
   state.submitting = true; render();
   // ⚡ نحمّل مكتبة صور النواقص من دلوقتي (بالتوازي مع الحفظ) عشان شاشة المشاركة
@@ -4402,6 +4487,10 @@ async function actuallySubmit(){
   };
   try{
     const resp = await saveOrderRemote(order, isUpdate);
+    if(resp && resp.localPending){
+      leaveFormForPending_();
+      state.submitting=false; render(); return;
+    }
     const orderNo = (resp && resp.orderNo) ? String(resp.orderNo) : id.toUpperCase();
     // 📲 مابقناش نبعت واتساب تلقائيًا ولا إجباري — بطلب صريح من المستخدم.
     // بس بنعرض في شاشة النجاح ملاحظة + سهم بيشاور على زرار واتساب،
@@ -4422,16 +4511,9 @@ async function actuallySubmit(){
       render();
       return;
     }
-    // 📶 فشل بسبب النت بعد كل محاولات الإعادة — بدل ما نوقف الموزع بخطأ،
-    // بنحفظ الطلب في طابور محلي ونعامله كأنه اتبعت. التطبيق هيحاول يبعته
-    // فعليًا للسيرفر أول ما النت يرجع (أو أول ما يتفتح تاني).
-    if(e && e.isNetworkFailure){
-      queueOfflineOrder_(order, isUpdate);
-      finalizeOrderSuccess_(order, isUpdate, oldId, id, id.toUpperCase(),
-        '📶 مفيش نت دلوقتي — الطلب اتحفظ عندك وهيتبعت تلقائيًا أول ما النت يرجع');
-      state.submitting = false;
-      render();
-      return;
+    if(e && e.pendingHeld){
+      if(pendingActor_()===String(order.username)) leaveFormForPending_();
+      state.submitting=false; render(); return;
     }
     // صندوق خطأ ثابت (مش toast بيختفي) فيه السبب الخام — عشان نعرف السبب الحقيقي
     state.saveError = 'نوع العملية: ' + (isUpdate ? 'تعديل' : 'جديد')
@@ -6313,6 +6395,7 @@ function renderBottomNav_(){
       <span class="fab-btn">${ico_('plus',30)}</span>
     </button>
     ${slot4_}
+    ${item_('goto', 'data-view="pending"', 'track', 'المعلّق', state.view==='pending', pendingCount_()?`<i class="bn-badge">${pendingCount_()}</i>`:'')}
     ${item_('toggle-tools', '', 'dots', 'المزيد', !!state.toolsOpen, '')}
   </div></nav>`;
 }
@@ -8020,6 +8103,7 @@ function render(){
     if(state.view==='home') view = renderHomeView();
     else if(state.view==='order') view = renderOrderView();
     else if(state.view==='myorders') view = renderMyOrdersView();
+    else if(state.view==='pending') view = renderPendingView_();
     else if(state.view==='manage') view = renderManageView();
     else view = renderAdminView();
     const banner = state.showInstallBanner ? renderInstallBanner() : '';
@@ -8084,7 +8168,7 @@ function renderAuthView(){
       </div>
       ${state.offlineQueueCount>0 ? `
       <div class="editbanner" style="margin:0 16px 0;background:#FBEBD1;">
-        📶 عندك ${state.offlineQueueCount} طلب اتحفظ عندك وهيتبعت تلقائيًا فور ما تسجّل دخول — مش ضايع
+        فيه طلبات محلية محتاجة مراجعة بعد الدخول. مفيش إرسال تلقائي، وتفاصيل كل حساب بتظهر لصاحبه بس.
       </div>` : ''}
       ${mode==='login' ? `
       <div class="authfeat2027">
@@ -8577,6 +8661,10 @@ async function onActionInner(act, el){
       state.myOrdersFilter = el.getAttribute('data-k') || 'all'; render(); break;
     case 'dist-edit':
       state.distEdit = true; render(); break;
+    case 'pending-check': await checkPendingOrder_(el.getAttribute('data-id')); break;
+    case 'pending-review': await beginPendingReview_(el.getAttribute('data-id')); break;
+    case 'pending-review-cancel': state.pendingReviewId=null; render(); break;
+    case 'pending-first-send': await sendReviewedPending_(el.getAttribute('data-id')); break;
     case 'goto':{
       state.toolsOpen = false;   // قايمة الأدوات تتقفل أول ما نتنقل
       const v = el.getAttribute('data-view');
@@ -9020,8 +9108,7 @@ loadUserSession();
 restoreAdminSession();
 restoreManageSession();
 loadProfile();
-// 📶 لو في طلبات اتحفظت أوفلاين من قبل (النت كان مقطوع وقت الإرسال)، نحاول
-// نبعتها تاني هنا (أول ما التطبيق يتفتح)، وكمان أول ما النت يرجع فعليًا.
+// Local pending records never send on open or connectivity changes.
 state.offlineQueueCount = offlineQueueCount();
 if(state.currentUser) flushOfflineQueue_();
 window.addEventListener('online', function(){ if(state.currentUser) flushOfflineQueue_(); });
