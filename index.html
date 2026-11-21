@@ -2243,7 +2243,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v305-pending-review';
+const APP_BUILD = 'v306-acc-search';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -6900,15 +6900,24 @@ function renderOrderView(){
     {
       // كل أصناف القطاع (القطاع الموحّد «اكسسوارات pvc» بيجمع أكتر من main) — أبجدي، والموقوف في الآخر.
       // حالة التوفر ظاهرة على كل كارت (✓/✗ + الكلمة) فمفيش داعي نغيّر الترتيب بيها.
-      const q = state.productSearch.trim().toLowerCase();
+      // 🔎 بحث الاكسسوارات بس: بنوحّد الحروف (أ/إ/آ→ا، ة→ه، ى→ي) ونشيل التشكيل والتطويل (ـ) من الاسم والمكتوب،
+      // عشان «أي جزء من الاسم» يلاقي الصنف مهما كانت طريقة كتابته — من غير ما نوسّع النتايج لأصناف تانية.
+      // باقي القطاعات ببحثها زي ما هو بالظبط (مطابقة حرفية عادية)، مفيش أي تغيير فيها.
+      const normQ_ = x => String(x||'').toLowerCase().replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[ً-ْٰـ]/g,'');
+      const accSearch_ = state.mainGroup===ACC_GROUP;
+      const q = accSearch_ ? normQ_(state.productSearch.trim()) : state.productSearch.trim().toLowerCase();
       const alpha_ = new Intl.Collator('ar', { numeric:true, sensitivity:'base' });
       const entries = [];
       sectorMains_(state.mainGroup).forEach(m=>{
         productsForGroup(m, null).forEach((_, name)=>{
-          if(!q || name.toLowerCase().includes(q)) entries.push({ main:m, name, off: isProductFullyUnavailable(m, name) ? 1 : 0 });
+          const pos = q ? (accSearch_ ? normQ_(name).indexOf(q) : name.toLowerCase().indexOf(q)) : -1;
+          if(!q || pos >= 0) entries.push({ main:m, name, pos, off: isProductFullyUnavailable(m, name) ? 1 : 0 });
         });
       });
-      entries.sort((x,y)=> (x.off-y.off) || alpha_.compare(x.name, y.name));
+      // الاكسسوارات: الترتيب بالأقرب للي مكتوب — الأسماء اللي التطابق فيها أقرب لبداية الاسم بتظهر الأول، بعدين أبجدي.
+      // (باقي القطاعات زي ما هي: أبجدي، والموقوف في الآخر في الحالتين.)
+      if(accSearch_ && q) entries.sort((x,y)=> (x.off-y.off) || (x.pos-y.pos) || alpha_.compare(x.name, y.name));
+      else entries.sort((x,y)=> (x.off-y.off) || alpha_.compare(x.name, y.name));
       // مربعات الأنواع: قطاعات الشبابيك (كومبن/كرافت/نيو) = مفصلي · جرار · أخرى (دوس نوع تظهرلك أصنافه بس).
       // الاكسسوارات وباقي القطاعات: أصناف مباشرة من غير مجموعات (أبجدي) — بطلب صريح من المستخدم.
       const sysMode = /كومبن|كرافت|نيو/.test(state.mainGroup);
@@ -6944,6 +6953,10 @@ function renderOrderView(){
             const stagedEntries = entries.filter(e => state.staged.some(s=>s.key===stagedKey(e.main,e.name)));
             if(stagedEntries.length) return stagedEntries.map(e=>renderProductCard_(e.main, e.name, inlineStagedKeys_)).join('');
             if(needPick) return `<div class="pickfam">👆 اختار «الكل» أو نوع من فوق عشان تظهر الأصناف</div>`;
+            // 🧩 الاكسسوارات: الأصناف مبتظهرش كلها من الأول. الموزع يكتب أي جزء من اسم الصنف
+            // في البحث فوق، وتظهرله الأسماء الأقرب ليه بس. أول ما يدوس على صنف بيظهر لوحده
+            // (زي باقي القطاعات)، وأول ما يلغيه أو يأكد إضافته الشاشة بترجع للبحث.
+            if(accSearch_ && !q) return `<div class="pickfam">⌨️ اكتب أي جزء من اسم الصنف في البحث فوق، وهتظهرلك الأسماء الأقرب ليه</div>`;
             const visible = famShown;
             const grouped = groupVariants_(visible);
             // لما يفتح مجموعة (يدوس عليها): بتفضل هي بس وباقي الأصناف بتختفي عشان ما يتلخبطش
