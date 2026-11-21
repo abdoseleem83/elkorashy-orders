@@ -2172,6 +2172,7 @@ html[data-theme="dark"] .productgrid .pcard.pt{background:#17243b!important;bord
 html[data-theme="dark"] .pcard.pt .pt-col{background:#25334B;}
 .pcard.pt .pt-col.more{background:transparent;padding:3px 1px;}
 
+ .stock-unknown-note{font-size:10px;color:var(--muted);line-height:1.5}.cdot.unknown i{box-shadow:none!important;opacity:.7}
 </style></head>
 <body>
 <div id="app"></div>
@@ -2237,7 +2238,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v301-grid-no-color-summary-ui-only';
+const APP_BUILD = 'v302-catalog-read-protection';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -2450,6 +2451,7 @@ const state = {
   shortageImgBusy:null,
 
   catalogLoading:true,
+  catalogReviewRequired:false,
   catalogError:false,     // مفيش سيرفر ولا نسخة محفوظة — أسامي بس
   catalogStale:false,     // مفيش سيرفر بس فيه نسخة محفوظة على الجهاز
   catalogAgeMin:0,        // عمر النسخة المحفوظة بالدقايق
@@ -2704,6 +2706,7 @@ function isColorUnavailable(main, product, color){
 //   'low'  = أقل من 5 لفات (بس لفة فأكتر)               -> أصفر "كمية قليلة"
 //   'ok'   = كفاية
 function colorStockLevel(item){
+  if(state.catalogReviewRequired&&item&&item.available!==false&&warehouseAffectsStock(item.main))return 'unknown';
   if(!item || item.available===false) return 'out'; // "موقوف" يفضل زي ما هو
   if(!warehouseAffectsStock(item && item.main)) return 'ok';
   const n = Number(item.stock);
@@ -2751,6 +2754,7 @@ function warehouseAffectsStock(main){
 //   'out'  = كل الألوان صفر فعليًا
 // 🎨 الألوان المتاحة بس تحت اسم الصنف (من غير الموقوف أو اللي رصيده صفر)
 function availColorsLine_(main, product){
+  if(state.catalogReviewRequired&&warehouseAffectsStock(main)&&!isProductFullyUnavailable(main,product))return '<span class="stock-unknown-note">الرصيد تحت المراجعة</span>';
   if(!warehouseAffectsStock(main)) return '';   // طنطا بس (باقي المخازن/العميل/الاكسسوارات مفيهمش تتبّع رصيد)
   const cols = colorsForProduct(main, product).filter(c => c.color && c.available!==false && colorStockLevel(c)!=='out').map(c=>c.color);
   if(!cols.length) return '';
@@ -2758,6 +2762,7 @@ function availColorsLine_(main, product){
   return `<span class="pt-cols" aria-label="الألوان المتاحة">${shown.map(c=>`<span class="pt-col"><i style="background:${colorHex_(c)}"></i>${esc(c)}</span>`).join('')}${more>0 ? `<span class="pt-col more">+${more}</span>` : ''}</span>`;
 }
 function productStockLevel(main, product){
+  if(state.catalogReviewRequired&&warehouseAffectsStock(main))return 'unknown';
   const opts = colorsForProduct(main, product).filter(c=>c.available!==false);
   if(!opts.length) return 'out';
   let sawCrit = false;
@@ -2783,6 +2788,24 @@ function unitOptionsForGroup(main){
   if(main===OTHER_SECTOR) return ['قطعة','كرتونة','لفة','عود'];
   return ['قطعة'];
 }
+// LOCAL PROPOSAL. Browser invalidation token, not a server stock revision.
+const STOCK_REVIEW_TOKEN_KEY_='qurashi_stock_review_generation_v1';
+let stockReviewMemoryToken_='';
+function stockReviewToken_(){
+ try{return localStorage.getItem(STOCK_REVIEW_TOKEN_KEY_)||'';}catch(e){state.catalogReviewRequired=true;return 'STORAGE_UNAVAILABLE';}
+}
+function startStockReview_(){
+ const token=crypto.randomUUID();stockReviewMemoryToken_=token;
+ try{localStorage.setItem(STOCK_REVIEW_TOKEN_KEY_,token);}catch(e){}
+ state.catalogReviewRequired=true;return token;
+}
+function captureStockGeneration_(){return {token:stockReviewToken_(),memory:stockReviewMemoryToken_,known:!state.catalogReviewRequired};}
+function stockGenerationCurrent_(snapshot){return !!snapshot&&snapshot.known&&!state.catalogReviewRequired&&snapshot.token===stockReviewToken_()&&snapshot.memory===stockReviewMemoryToken_;}
+function stockRequestMayApply_(snapshot){return !!snapshot&&snapshot.token!=='STORAGE_UNAVAILABLE'&&snapshot.token===stockReviewToken_()&&snapshot.memory===stockReviewMemoryToken_;}
+window.addEventListener('storage',event=>{
+ if(event.key===STOCK_REVIEW_TOKEN_KEY_){stockReviewMemoryToken_=event.newValue||'INVALIDATED';state.catalogReviewRequired=true;try{render();}catch(e){}}
+});
+
 // ===== تحميل الأصناف =====
 // ترتيب المصادر (من الأحسن للأسوأ):
 //   ١) السيرفر مباشرة — أسعار وأرصدة لحظية ✅
@@ -2837,7 +2860,9 @@ async function loadFallbackFile_(){
 }
 
 async function loadCatalog(){
+  const catalogRequestGeneration=captureStockGeneration_();
   state.catalogLoading = true;
+  try{state.catalogReviewRequired=state.catalogReviewRequired||localStorage.getItem('qurashi_availability_review_v1')==='true';}catch(e){state.catalogReviewRequired=true;}
   state.catalogError = false;
   state.catalogStale = false;
   state.catalogAgeMin = 0;
@@ -2850,8 +2875,11 @@ async function loadCatalog(){
     const controller = new AbortController();
     const timeoutId = setTimeout(()=>controller.abort(), 15000);
     const data = await apiGet('catalog', {}, {signal: controller.signal});
+    if(data&&data.code==='AVAILABILITY_UNCERTAIN'){startStockReview_();try{localStorage.setItem('qurashi_availability_review_v1','true');}catch(e){}throw new Error('AVAILABILITY_UNCERTAIN');}
     clearTimeout(timeoutId);
     if(data && Array.isArray(data.items) && data.items.length){
+      if(!stockRequestMayApply_(catalogRequestGeneration))throw new Error('OLDER_THAN_STOCK_REVIEW');
+      state.catalogReviewRequired=false;try{localStorage.removeItem('qurashi_availability_review_v1');}catch(e){}
       CATALOG = normalizeCatalogItems_(data.items);
       DISCOUNTS = data.discounts || {};
       saveCatalogCache_(data.items, DISCOUNTS);
@@ -4553,7 +4581,8 @@ function canNativeShareFiles_(files){
 }
 // تنزيل عدة ملفات بفاصل صغير — كروم على الكمبيوتر بيرفض التنزيلات المتتالية الفورية
 function downloadFilesStaggered_(files){
-  files.forEach((f, i)=> setTimeout(()=>{ try{ downloadBlob(f, f.name || ('ملف_' + (i+1))); }catch(e){ console.error(e); } }, i * 350));
+ const delayedGeneration=captureStockGeneration_();
+  files.forEach((f, i)=> setTimeout(()=>{ if(!stockGenerationCurrent_(delayedGeneration))return;try{ downloadBlob(f, f.name || ('ملف_' + (i+1))); }catch(e){ console.error(e); } }, i * 350));
 }
 
 function downloadBlob(blob, filename){
@@ -4630,6 +4659,7 @@ function renderWarehouseModal(){
 // بيبني مصفوفة الأرصدة: لكل مجموعة رئيسية → صفوف (الأصناف) وأعمدة (الألوان).
 // الكميات باللفة. الصنف اللي كل ألوانه صفر مش بيتعرض خالص.
 function stockMatrix_(){
+  if(state.catalogReviewRequired)throw new Error("AVAILABILITY_UNCERTAIN");
   const q = asText(state.stockSearch).trim().toLowerCase();
   const groups = new Map();
 
@@ -4667,6 +4697,7 @@ function fmtRolls_(v){
 }
 
 function stockTableHTML_(forPdf){
+ if(state.catalogReviewRequired)return '<p>الرصيد تحت المراجعة، الأرقام مش مؤكدة دلوقتي.</p>';
   const mats = stockMatrix_();
   if(!mats.length) return '';
   const line = forPdf ? '#DCE4EC' : 'var(--line)';
@@ -4878,6 +4909,8 @@ async function decidePwRequest(id, approve){
 }
 
 async function exportStockPDF(){
+  const outputGeneration=captureStockGeneration_();
+  if(state.catalogReviewRequired)throw new Error("AVAILABILITY_UNCERTAIN");
   if(!(await ensureLibs_('html2canvas','jspdf'))){
     showToast('مكتبة التصدير مش جاهزة، حاول تاني'); return;
   }
@@ -4942,7 +4975,8 @@ async function exportStockPDF(){
     }
     const blob = doc.output('blob');
     const imgBlob = await canvasToPngBlob_(canvas);
-    previewPdfBlob({ blob, previewUrl: imgData, imgBlob }, 'الأرصدة_' + dateStr + '.pdf');
+    if(!stockGenerationCurrent_(outputGeneration))throw new Error('STALE_STOCK_GENERATION');
+    previewPdfBlob({ blob, previewUrl: imgData, imgBlob,stockGeneration:outputGeneration }, 'الأرصدة_' + dateStr + '.pdf');
   }catch(e){
     showToast('تعذّر التصدير: ' + (e && e.message ? e.message : e));
   }
@@ -4990,12 +5024,13 @@ function orderGroups_(groupsMap){
 }
 
 function previewPdfBlob(q, filename){
+ if(q&&q.stockGeneration&&(!stockGenerationCurrent_(q.stockGeneration))){showToast("الرصيد تحت المراجعة، المعاينة متوقفة مؤقتًا");return {ok:false,code:"AVAILABILITY_UNCERTAIN"};}
   if(!q || !q.blob) { showToast('الملف لسه بيتجهز، حاول تاني بعد لحظة'); return; }
   state.previewModal = {
     imgUrl: q.previewUrl || null,
     blob: q.blob,
     filename: filename || 'مستند.pdf',
-    kind: 'pdf'
+    kind: 'pdf',stockGeneration:q.stockGeneration||null
   };
   render();
 }
@@ -5008,25 +5043,32 @@ function closePreviewModal(){
 }
 
 function downloadPreviewModal(){
+  const outputGeneration=captureStockGeneration_();
   const p = state.previewModal;
   if(!p || !p.blob) return;
+  if(p.stockGeneration&&!stockGenerationCurrent_(p.stockGeneration))return {ok:false,code:"STALE_STOCK_GENERATION"};
+  if(p.stockGeneration&&!stockGenerationCurrent_(p.stockGeneration))return {ok:false,code:"STALE_STOCK_GENERATION"};
   downloadBlob(p.blob, p.filename);
 }
 
 // مشاركة صورة المعاينة عن طريق شاشة المشاركة بتاعة الموبايل (لو مدعومة)،
 // وإلا بننزّلها عادي عشان يبعتها المستخدم بنفسه من المعرض.
 async function sharePreviewModal(){
+  const outputGeneration=captureStockGeneration_();
   const p = state.previewModal;
   if(!p || !p.blob) return;
+  if(p.stockGeneration&&!stockGenerationCurrent_(p.stockGeneration))return {ok:false,code:"STALE_STOCK_GENERATION"};
   try{
     const file = new File([p.blob], p.filename, {type: p.blob.type || 'image/png'});
     if(canNativeShareFiles_([file])){
+      if(p.stockGeneration&&!stockGenerationCurrent_(outputGeneration))throw new Error("STALE_STOCK_GENERATION");
       await navigator.share({ files:[file], title: p.filename });
       return;
     }
   }catch(e){
     if(e && e.name === 'AbortError') return;
   }
+  if(p.stockGeneration&&!stockGenerationCurrent_(p.stockGeneration))return {ok:false,code:"STALE_STOCK_GENERATION"};
   downloadBlob(p.blob, p.filename);
   showToast('اتحملت الصورة — ابعتها من المعرض');
 }
@@ -5066,6 +5108,8 @@ function renderPreviewModal(){
 // 🔑 ضغطة واحدة بس تفتح شاشة المشاركة. لو المتصفح رفض نادرًا، بنخزّن الملفات
 // الجاهزة (state.shortageReady) ونسيب الزرار يبعتها تاني من غير إعادة بناء.
 async function shareShortage_(order, busyStateKey){
+  const outputGeneration=captureStockGeneration_();
+  if(state.catalogReviewRequired){showToast("الرصيد تحت المراجعة، مشاركة أو تنزيل بيان التوفر متوقفة مؤقتًا");return {ok:false,code:"AVAILABILITY_UNCERTAIN"};}
   if(state.shortageReady && order && state.shortageReady.orderId===order.id){
     return trySendReadyFiles_();
   }
@@ -5085,7 +5129,7 @@ async function shareShortage_(order, busyStateKey){
     }
 
     if(!files.length){ showToast('مفيش نواقص لهذا الطلب'); releaseWaWindow(); return; }
-    state.shortageReady = { files, orderNo, orderId: order.id, distName: asText(order.distName).trim() };
+    state.shortageReady = { files, orderNo, orderId: order.id, distName: asText(order.distName).trim(),stockGeneration:outputGeneration };
     await trySendReadyFiles_();
   }catch(e){
     console.error('shareShortage_ failed:', e);
@@ -5097,7 +5141,10 @@ async function shareShortage_(order, busyStateKey){
 }
 
 async function trySendReadyFiles_(){
+  const outputGeneration=captureStockGeneration_();
+  if(state.catalogReviewRequired){showToast("الرصيد تحت المراجعة، مشاركة أو تنزيل بيان التوفر متوقفة مؤقتًا");return {ok:false,code:"AVAILABILITY_UNCERTAIN"};}
   const ready = state.shortageReady;
+  if(ready&&!stockGenerationCurrent_(ready.stockGeneration))return {ok:false,code:"STALE_STOCK_GENERATION"};
   if(!ready) return;
   const { files, orderNo, distName } = ready;
   // 📝 بطلب صريح: اسم الموزّع مكتوب في الملحوظة، مش رقم الطلب بس — أسهل
@@ -5106,6 +5153,7 @@ async function trySendReadyFiles_(){
   if(canNativeShareFiles_(files)){
     releaseWaWindow();   // مش محتاجينها في المسار ده — لو كانت متحجزة من الضغطة
     try{
+      if(!stockGenerationCurrent_(outputGeneration))throw new Error("STALE_STOCK_GENERATION");
       await navigator.share({ files, title:'طلب #'+orderNo, text: noteText_ });
       state.shortageReady = null; render();
       afterShortageSent_(ready.orderId);
@@ -5127,10 +5175,10 @@ async function trySendReadyFiles_(){
   showToast('اتحمّلت ' + files.length + ' ملفات — هتفتح واتساب، ارفقهم يدويًا');
   const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent(noteText_);
   if(__waWin && !__waWin.closed){
-    try{ __waWin.location.href = waUrl_; }catch(e){ setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900); }
+    try{ __waWin.location.href = waUrl_; }catch(e){ setTimeout(()=>{ if(stockGenerationCurrent_(outputGeneration))window.open(waUrl_, '_blank'); }, 900); }
     __waWin = null;
   } else {
-    setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900);
+    setTimeout(()=>{ if(stockGenerationCurrent_(outputGeneration))window.open(waUrl_, '_blank'); }, 900);
   }
   state.shortageReady = null; render();
   afterShortageSent_(ready.orderId);
@@ -5148,6 +5196,8 @@ function afterShortageSent_(orderId){
 // 📦 بطلب صريح: مجموعة نواقص واحدة بس (كرافت+نيو، أو كومبن+اكسسوارات) —
 // أيقونة منفصلة لكل مجموعة بدل زرار واحد بيبعتهم مع بعض. من غير عرض سعر.
 async function shareShortageGroupOnly_(order, groupKey){
+  const outputGeneration=captureStockGeneration_();
+  if(state.catalogReviewRequired){showToast("الرصيد تحت المراجعة، مشاركة أو تنزيل بيان التوفر متوقفة مؤقتًا");return {ok:false,code:"AVAILABILITY_UNCERTAIN"};}
   const group = SHORTAGE_IMG_GROUPS_[groupKey];
   if(!group || !order) return;
   const busyKey = order.id + '|' + groupKey;
@@ -5162,11 +5212,13 @@ async function shareShortageGroupOnly_(order, groupKey){
     // 📝 بطلب صريح: من غير كلمة "طلب" ورقمه — بس "نواقص كرافت ونيو موزع كذا".
     const noteText_ = 'نواقص ' + group.label + (distName ? ' موزع ' + distName : '');
     const blobs = await buildShortageImageGroup(order, groupKey);
+    if(!stockGenerationCurrent_(outputGeneration))throw new Error("STALE_STOCK_GENERATION");
     if(!blobs || !blobs.length){ showToast('مفيش نواقص في ' + group.label + ' لهذا الطلب'); releaseWaWindow(); return; }
     const base = 'نواقص_' + group.label.replace(/\s+/g,'_') + '_' + orderNo;
     const files = blobs.map((b,i)=> new File([b], base + (blobs.length>1?'_'+(i+1):'') + '.png', {type:'image/png'}));
     if(canNativeShareFiles_(files)){
       releaseWaWindow();
+      if(!stockGenerationCurrent_(outputGeneration))throw new Error("STALE_STOCK_GENERATION");
       await navigator.share({ files, title: group.label + ' — طلب #' + orderNo, text: noteText_ });
       return;
     }
@@ -5174,10 +5226,10 @@ async function shareShortageGroupOnly_(order, groupKey){
     showToast('اتحمّلت الصور — هتفتح واتساب، ارفقها يدويًا');
     const waUrl_ = 'https://wa.me/?text=' + encodeURIComponent(noteText_);
     if(__waWin && !__waWin.closed){
-      try{ __waWin.location.href = waUrl_; }catch(e){ setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900); }
+      try{ __waWin.location.href = waUrl_; }catch(e){ setTimeout(()=>{ if(stockGenerationCurrent_(outputGeneration))window.open(waUrl_, '_blank'); }, 900); }
       __waWin = null;
     } else {
-      setTimeout(()=>{ window.open(waUrl_, '_blank'); }, 900);
+      setTimeout(()=>{ if(stockGenerationCurrent_(outputGeneration))window.open(waUrl_, '_blank'); }, 900);
     }
   }catch(e){
     console.error('shareShortageGroupOnly_ failed:', e);
@@ -5211,6 +5263,7 @@ function preloadLogos_(srcs){
   })));
 }
 async function buildShortageImageGroup(order, groupKey){
+  if(state.catalogReviewRequired)throw new Error("AVAILABILITY_UNCERTAIN");
   if(!(await ensureLibs_('html2canvas'))) return null;
   const group = SHORTAGE_IMG_GROUPS_[groupKey];
   if(!order || !order.items || !order.items.length || !group) return null;
@@ -5445,6 +5498,7 @@ function shortageBtnLabel_(orderId, label){
 // صورة لكل مجموعة رئيسية لوحدها (عشان متبقاش صفحة طويلة)، من غير أي أسعار —
 // فيها: مسلسل / اسم العميل / الصنف / الكمية. توجّهها للمخزن على طول.
 async function buildWarehouseImage(order, mainGroup, rows, pageNo, pageCount){
+  if(state.catalogReviewRequired)throw new Error("AVAILABILITY_UNCERTAIN");
   if(!(await ensureLibs_('html2canvas'))) return null;
 
   const wrap = document.createElement('div');
@@ -6262,6 +6316,7 @@ function renderBottomNav_(){
 // أو '' لو الكمية سليمة. بتشتغل بس في المخازن اللي رصيدها متتبَّع فعليًا
 // (طنطا حاليًا) — المخازن التانية مالهاش رصيد دقيق أصلاً فمفيش داعي نقارن.
 function stockShortageWarning_(main, product, color, unitType, qty){
+  if(state.catalogReviewRequired&&warehouseAffectsStock(main))return 'الرصيد تحت المراجعة، الكمية المتاحة مش مؤكدة';
   if(!warehouseAffectsStock(main)) return '';
   const item = findCatalogItem(main, product, color);
   if(!item) return '';
@@ -6327,6 +6382,7 @@ function renderStagedBlock(s){
         }
         const lvl = colorStockLevel(findCatalogItem(s.main, s.product, c));
         // أحمر: أقل من لفة (أو صفر) · أصفر: أقل من 5 لفات · عادي: كفاية
+        if(lvl === 'unknown'){return `<button class="chip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>الرصيد تحت المراجعة</small></button>`;}
         if(lvl === 'out'){
           return `<button class="chip nostockchip ${sel}" data-act="toggle-color" data-key="${esc(s.key)}" data-val="${esc(c)}">${esc(c)}<small>غير متاح رصيد</small></button>`;
         }
@@ -6420,7 +6476,7 @@ function uniqueColorRows_(main, product){
 const STOCK_WORD_ = { ok:'متاح', low:'قليل', crit:'أعواد بس', out:'غير متوفر' };
 function productAvail_(main, product){
   const rows = uniqueColorRows_(main, product);
-  const a = { tracked: warehouseAffectsStock(main) && !state.catalogError, total: rows.length, groups:{ ok:[], low:[], crit:[], out:[] } };
+  const a = { tracked: warehouseAffectsStock(main) && !state.catalogError && !state.catalogReviewRequired, total: rows.length, groups:{ ok:[], low:[], crit:[], out:[], unknown:[] } };
   rows.forEach(row=>{ a.groups[colorStockLevel(row)].push(row.color || ''); });
   return a;
 }
@@ -6623,7 +6679,7 @@ function renderProductCard_(main, n, inlineKeys){
         const sel = isStaged && stagedEntry.selectedColors.includes(c);
         const off = r.available===false;
         const lvl = colorStockLevel(r);
-        const cls = off ? 'off' : (av.tracked ? (lvl==='out' ? 'out' : lvl==='ok' ? 'ok' : 'low') : 'ok');
+        const cls = off ? 'off' : (state.catalogReviewRequired&&warehouseAffectsStock(main)?'unknown':av.tracked ? (lvl==='out' ? 'out' : lvl==='ok' ? 'ok' : 'low') : 'ok');
         const stTxt = off ? 'موقوف' : (av.tracked ? STOCK_WORD_[lvl] : '');
         const hx = colorHex_(c);
         // علامة التوفر على طرف الدايرة: ✓ متاح · ! قليل/أعواد بس · ✗ غير متوفر، والموقوف مميز بالاسم.
@@ -6685,7 +6741,7 @@ function renderOrderView(){
   // تحذير حالة الأصناف — لازم يبقى واضح جدًا، لأن الموزع بيبني عليه قرار
   // إنه يبعت طلب. حالتين مختلفتين تمامًا في الخطورة، فالرسالة بتفرّق بينهم.
   let catalogErrorBanner = '';
-  if(state.catalogError){
+  if(state.catalogReviewRequired){catalogErrorBanner='<div class="editbanner" role="status">الرصيد تحت المراجعة. الأسماء والأسعار ظاهرة، لكن المتاح والقليل وغير المتوفر مش مؤكدين دلوقتي. الطلبات المحفوظة زي ما هي.</div>';} else if(state.catalogError){
     catalogErrorBanner = `<div class="editbanner" style="background:#F8D7DA;border:1px solid #C24450;color:#7A1F28;">
       ⛔ <b>مفيش اتصال بالسيرفر — الأرصدة مش ظاهرة خالص</b>
       <div style="font-size:12.5px;margin-top:4px;font-weight:400;">الأصناف اللي تحت أساميها بس. <b>ماتعتمدش على "متاح" دلوقتي</b> — ممكن يكون فيه أصناف موقوفة أو خلصت من المخزن.</div>
