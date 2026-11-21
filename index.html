@@ -2238,7 +2238,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v302-catalog-read-protection';
+const APP_BUILD = 'v303-share-ready';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -4406,8 +4406,7 @@ async function actuallySubmit(){
     // 📲 مابقناش نبعت واتساب تلقائيًا ولا إجباري — بطلب صريح من المستخدم.
     // بس بنعرض في شاشة النجاح ملاحظة + سهم بيشاور على زرار واتساب،
     // والموزع هو اللي يدوس بنفسه.
-    // 📲 بعد نجاح الإرسال بتفتح شاشة المشاركة (واتساب أو أي برنامج) تلقائيًا —
-    // شوف آخر الدالة. لو المتصفح رفض، زرار «نواقص» في شاشة النجاح هو البديل.
+    // Native picker is best-effort after save; the ready-share button is the fallback.
     finalizeOrderSuccess_(order, isUpdate, oldId, id, orderNo, isUpdate
       ? '✅ تم استلام تعديلك — جاري المراجعة والتأكيد بالمتاح'
       : '✅ تم استلام طلبك — جاري المراجعة والتأكيد بالمتاح');
@@ -4443,11 +4442,10 @@ async function actuallySubmit(){
   }
   state.submitting = false;
   render();
-  // 📤 فتح مشاركة النواقص فورًا بعد نجاح الإرسال (موبايل بس: المشاركة الأصلية
-  // لازم تكون مدعومة، لأن فتح نافذة واتساب في سطح المكتب بعد انتظار الشبكة
-  // بيتحجب كـ popup). لو فشلت لأي سبب، الملفات بتفضل جاهزة وزرار «نواقص» بيبعتها.
+  // Prepare only after confirmed save. Try native share while activation remains;
+  // otherwise keep ready files for one direct user gesture. Never resubmit the order.
   if(savedOk_ && isMobileDevice_() && navigator.canShare){
-    shareShortage_(order, 'shareShortageBusy');
+    shareShortage_(order, 'shareShortageBusy', 'auto');
   }
   // ⛔ مابقناش نولّد الـ PDF تلقائيًا هنا. html2canvas بيجمّد الشاشة وهو شغال،
   // فكانت شاشة النجاح متظهرش والمستخدم يفتكر إن الحفظ فشل — مع إنه نجح فعلاً.
@@ -5107,10 +5105,11 @@ function renderPreviewModal(){
 // في الـ fallback لو المشاركة الأصلية مش مدعومة (سطح المكتب مثلًا).
 // 🔑 ضغطة واحدة بس تفتح شاشة المشاركة. لو المتصفح رفض نادرًا، بنخزّن الملفات
 // الجاهزة (state.shortageReady) ونسيب الزرار يبعتها تاني من غير إعادة بناء.
-async function shareShortage_(order, busyStateKey){
+async function shareShortage_(order, busyStateKey, prepareOnly){
   const outputGeneration=captureStockGeneration_();
   if(state.catalogReviewRequired){showToast("الرصيد تحت المراجعة، مشاركة أو تنزيل بيان التوفر متوقفة مؤقتًا");return {ok:false,code:"AVAILABILITY_UNCERTAIN"};}
   if(state.shortageReady && order && state.shortageReady.orderId===order.id){
+    if(prepareOnly) return {ok:true,ready:true};
     return trySendReadyFiles_();
   }
   if(!order || !order.items || !order.items.length){ showToast('الطلب مفيهوش أصناف'); releaseWaWindow(); return; }
@@ -5130,6 +5129,7 @@ async function shareShortage_(order, busyStateKey){
 
     if(!files.length){ showToast('مفيش نواقص لهذا الطلب'); releaseWaWindow(); return; }
     state.shortageReady = { files, orderNo, orderId: order.id, distName: asText(order.distName).trim(),stockGeneration:outputGeneration };
+    if(prepareOnly===true || (prepareOnly==='auto' && navigator.userActivation && !navigator.userActivation.isActive)){ render(); return {ok:true,ready:true}; }
     await trySendReadyFiles_();
   }catch(e){
     console.error('shareShortage_ failed:', e);
@@ -5162,7 +5162,7 @@ async function trySendReadyFiles_(){
       // رفض نادر من المتصفح — الملفات لسه محفوظة، نوري الموزّع إنه يجرّب
       // تاني بضغطة واحدة تانية بدل ما نضيّع الشغل. الزرار بقى أول حاجة
       // ظاهرة في شاشة النجاح (شوف renderOrderView) فمحتاجش يدوّر عليه.
-      if(!(e && e.name === 'AbortError')) showToast('دوس "نواقص" عشان تبعت', 5000);
+      if(!(e && e.name === 'AbortError')) showToast('الملفات جاهزة، اضغط "اختار تطبيق المشاركة"', 5000);
       render();
       return;
     }
@@ -5490,7 +5490,7 @@ function findOrderForShortage_(id){
 function shortageBtnLabel_(orderId, label){
   if(label === undefined) label = 'نواقص';
   if(state.shareShortageBusy) return 'جارٍ التجهيز...';
-  if(state.shortageReady && state.shortageReady.orderId===orderId) return 'ابعت واتساب دلوقتي';
+  if(state.shortageReady && state.shortageReady.orderId===orderId) return 'اختار تطبيق المشاركة';
   return label;
 }
 
@@ -6777,10 +6777,10 @@ function renderOrderView(){
              المشاركة، والموزع يختار المخزن/الجروب. مفيش عرض سعر. -->
         <div class="wanote">
           <p class="wanote-t">${isMobileDevice_()
-            ? '📲 لو شاشة المشاركة ماظهرتش، اضغط <b>«نواقص»</b> عشان المخزن يستلم طلبك.'
+            ? (state.shareShortageBusy ? 'جاري تجهيز ملفات المشاركة…' : (state.shortageReady && state.lastOrder && state.shortageReady.orderId===state.lastOrder.id ? 'الطلب اتسجّل والملفات جاهزة. اضغط الزر واختار التطبيق اللي تحب تشارك عليه.' : 'لو قائمة المشاركة ما فتحتش، اضغط الزر لتجهيز الملفات ومشاركتها.'))
             : '💻 اضغط <b>«نواقص»</b> — هتتحمّل صور النواقص ويفتح واتساب، ارفقها وابعتها للمخزن.'}</p>
           <button class="wanote-btn ${state.waSent?'sent':''}" data-act="share-shortage" ${state.shareShortageBusy?'disabled':''}>
-            <span class="wanote-ico">📲</span> <span class="wanote-lbl">${shortageBtnLabel_(state.lastOrder && state.lastOrder.id, state.waSent ? 'تم — ابعت تاني' : undefined)}</span>
+            <span class="wanote-ico">📲</span> <span class="wanote-lbl">${shortageBtnLabel_(state.lastOrder && state.lastOrder.id, state.waSent ? 'مشاركة تاني' : 'تجهيز المشاركة')}</span>
           </button>
           ${(state.waSent || state.shareShortageBusy) ? '' : '<div class="wanote-arrow">⬆️</div>'}
         </div>
