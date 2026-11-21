@@ -2227,12 +2227,17 @@ html[data-theme="dark"] .pcard.pt .pt-col{background:#25334B;}
 .pending-card h3{margin:0 0 8px}.pending-state{font-weight:900;color:#BF7914}.pending-note{font-size:13px;color:var(--muted)}
 .pending-card button{margin:8px 0;padding:10px 14px;min-height:44px;border:1px solid #5289CF;border-radius:12px;background:#164D99;color:white;font-family:inherit;font-weight:700;cursor:pointer}.pending-card button:disabled{opacity:.55;cursor:wait}.pending-card .ghost{background:transparent;color:var(--ink)}.pending-lines{font-size:13px;padding-right:18px;}
 </style><style>
-.acc-order .acc-results .productgrid{grid-template-columns:1fr !important;gap:7px;}
-.acc-order .acc-results .pcard.pt{min-height:48px;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;text-align:right;padding:10px 12px;gap:9px;border-radius:10px;}
-.acc-order .acc-results .pcard.pt .pclogo{width:28px;max-height:25px;flex:none;}
-.acc-order .acc-results .pcard.pt .pt-name{min-height:0;display:block;width:auto;flex:1;font-size:12px;line-height:1.7;-webkit-line-clamp:unset;text-align:right;}
-.acc-order .acc-results .pcard.pt .pc-name{width:auto;text-align:right;}
-.acc-order .acc-results .pcard.pt .pt-cols{width:auto;flex-shrink:0;}
+.acc-order .acc-results .productgrid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:8px;}
+.acc-order .acc-results .pcard.pt{min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;padding:12px 7px;gap:12px;border-radius:14px;}
+.acc-order .acc-results .pcard.pt .pclogo{width:auto;max-width:62px;max-height:29px;flex:none;}
+.acc-order .acc-results .pcard.pt .pt-name{min-height:63px;display:block;width:100%;font-size:13px;line-height:1.6;text-align:center;overflow:visible;-webkit-line-clamp:unset;}
+.acc-order .acc-results .pcard.pt .pc-name{width:100%;text-align:center;}
+.acc-order .acc-results .pcard.exp{grid-column:1/-1;}
+.acc-inline-move-note{font-size:12px;line-height:1.7;color:var(--muted);}
+
+.acc-order .acc-results .pcard.pt.acc-move-card{padding:0 5px 8px;gap:4px;}
+.acc-card-pick{border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;width:100%;flex:1;display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px 2px 4px;min-height:118px;}
+.acc-card-move{align-self:center;min-height:32px;justify-content:center;font-size:11px;padding:4px 11px;margin-top:2px;}
 </style></head>
 <body>
 <div id="app"></div>
@@ -2298,7 +2303,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v309-custom-groups';
+const APP_BUILD = 'v310-acc-grid-inline-move';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -6924,6 +6929,41 @@ function renderGroupCard_(g){
     </div>`;
 }
 
+function renderAccInlineMove_(main,product,compact=false){
+ if(!state.manageUnlocked || !getManageToken() || !isAccMain_(main))return '';
+ const current=ACC_DISPLAY_GROUPS_.get(accDisplayId_(main,product))||'';
+ return `<label class="movechip ${compact?'acc-card-move':''}" title="نقل المجموعة لكل الموزعين" data-act="noop">⇄ نقل
+  <select data-act="move-acc-inline" data-main="${esc(main)}" data-prod="${esc(product)}" aria-label="نقل ${esc(product)} لمجموعة" ${!ACC_DISPLAY_SUPPORTED_||state.accMoveBusy?'disabled':''}>
+   <option value="" selected disabled>${state.accMoveBusy?'جارٍ الحفظ...':'نقل لـ…'}</option>
+   ${ACC_FAMILIES_.map(g=>`<option value="${g.key}" ${g.key===accProductGroup_(main,product)?'disabled':''}>${esc(g.label)}</option>`).join('')}
+   <option value="__auto" ${!current?'disabled':''}>↺ رجوع للتقسيم التلقائي</option>
+  </select></label>
+  ${!ACC_DISPLAY_SUPPORTED_&&!compact?'<div class="acc-inline-move-note">النقل غير متاح على الخادم الحالي.</div>':''}
+  ${!compact&&state.accInlineMoveId===accDisplayId_(main,product)&&state.accInlineMoveMessage?`<div class="acc-inline-move-note" role="status">${esc(state.accInlineMoveMessage)}</div>`:''}`;
+}
+async function moveAccInline_(main,product,group){
+ if(state.accMoveBusy || !state.manageUnlocked || !getManageToken() || !ACC_DISPLAY_SUPPORTED_ || !isAccMain_(main))return;
+ if(group && !ACC_FAMILIES_.some(g=>g.key===group))return;
+ const id=accDisplayId_(main,product),expected=ACC_DISPLAY_GROUPS_.get(id)||'';
+ state.accInlineMoveId=id;
+ if(!navigator.onLine){state.accInlineMoveMessage='لازم اتصال بالإنترنت لحفظ النقل. لم يتغيّر التقسيم.';render();return;}
+ state.accMoveBusy=true;state.accInlineMoveMessage='جارٍ حفظ المجموعة للكل...';render();
+ try{
+  const r=await apiPost({action:'manageSetAccDisplayGroup',token:getManageToken(),main,product,group,expectedGroup:expected});
+  if(!r||r.ok!==true||r.main!==main||r.product!==product||r.group!==group){
+   if(r&&r.code==='GROUP_CONFLICT'){
+    if(r.currentGroup&&ACC_FAMILIES_.some(g=>g.key===r.currentGroup))ACC_DISPLAY_GROUPS_.set(id,r.currentGroup);else ACC_DISPLAY_GROUPS_.delete(id);
+    saveAccMetadataCache_();throw new Error('conflict');
+   }
+   throw new Error('save');
+  }
+  if(group)ACC_DISPLAY_GROUPS_.set(id,group);else ACC_DISPLAY_GROUPS_.delete(id);
+  saveAccMetadataCache_();
+  state.accInlineMoveMessage='اتنقل لكل ألوان الصنف. يظهر للموزعين بعد تحديث الأصناف.';
+ }catch(e){state.accInlineMoveMessage=e.message==='conflict'?'المجموعة اتغيّرت من جلسة إدارة تانية. راجع الاختيار وحاول تاني.':'تعذّر تأكيد الحفظ. حدّث الأصناف قبل المحاولة تاني.';}
+ finally{state.accMoveBusy=false;render();}
+}
+
 function renderProductCard_(main, n, inlineKeys){
   const stagedEntry = state.staged.find(x=>x.key===stagedKey(main, n));
   const isStaged = !!stagedEntry;
@@ -6938,7 +6978,7 @@ function renderProductCard_(main, n, inlineKeys){
       ${unavailable ? '<span class="unavailtag">موقوف</span>' : (isStaged ? '<span class="tick">✓</span>' : (inCart ? '<span class="incarttag">في السلة</span>' : ''))}
     </div>`;
   // ⇄ نقل لنوع تاني (مفصلي / جرار / أخرى) — بيظهر للإدارة بس في قطاعات الشبابيك
-  const moveChip = (/كومبن|كرافت|نيو/.test(main) && getManageToken()) ? `
+  const moveChip = isAccMain_(main) ? renderAccInlineMove_(main,n) : (/كومبن|كرافت|نيو/.test(main) && getManageToken()) ? `
     <label class="movechip" title="نقل لنوع تاني">⇄ نقل
       <select data-act="move-type" data-main="${esc(main)}" data-prod="${esc(n)}" aria-label="نقل ${esc(n)} لنوع تاني">
         <option value="" selected disabled>نقل لـ…</option>
@@ -6974,14 +7014,18 @@ function renderProductCard_(main, n, inlineKeys){
       lvl = !inN ? 'out' : (g.ok.length && !g.low.length && !g.crit.length && !g.out.length) ? 'ok' : 'mid';
     }
     const lvlTxt = { ok:'متاح', mid:'متاح جزئيًا', out:'غير متوفر' }[lvl] || '';
+    const inlineMove=isAccMain_(main)&&state.manageUnlocked&&getManageToken()?renderAccInlineMove_(main,n,true):'';
+    const pickTag=inlineMove?'div':'button';
     return `
-    <button type="button" class="pcard pt ${inCart?'incart':''} ${unavailable?'unavailable':''}" data-act="${unavailable?'noop-unavailable':'toggle-product'}" data-val="${esc(n)}" data-main="${esc(main)}"${lvlTxt ? ` title="${lvlTxt}"` : ''}>
+    <${pickTag} ${inlineMove?'':'type="button"'} class="pcard pt ${inlineMove?'acc-move-card':''} ${inCart?'incart':''} ${unavailable?'unavailable':''}" ${inlineMove?'':`data-act="${unavailable?'noop-unavailable':'toggle-product'}"`} data-val="${esc(n)}" data-main="${esc(main)}"${lvlTxt ? ` title="${lvlTxt}"` : ''}>
+      ${inlineMove?`<button type="button" class="acc-card-pick" data-act="${unavailable?'noop-unavailable':'toggle-product'}" data-val="${esc(n)}" data-main="${esc(main)}">`:''}
       ${lvl ? `<i class="pt-dot ${lvl}" aria-label="${lvlTxt}"></i>` : ''}
       ${pcLogo_(main)}
       <span class="pc-name pt-name">${nameHtml_(main, n)}</span>
       
       ${unavailable ? '<em class="pt-tag off">موقوف</em>' : (inCart ? '<em class="pt-tag">في السلة</em>' : '')}
-    </button>`;
+      ${inlineMove?`</button>${inlineMove}`:''}
+    </${pickTag}>`;
   }
 
   // الكمية قصاد البند: كل لون مختار (أو الصنف نفسه لو من غير ألوان) في سطر واحد: الاسم يمين، الوحدة، و(− رقم +) شمال
@@ -7133,6 +7177,7 @@ function renderOrderView(){
         ${familyRow}
         ${accGroups_}
         ${accSearch_ && (q || accActive_) ? `<div class="acc-results-title">${q?'نتائج البحث':esc(ACC_FAMILIES_.find(f=>f.key===accActive_).label)}</div>`:''}
+        ${accSearch_ && !state.staged.length && state.accInlineMoveMessage?`<div class="acc-inline-move-note" role="status" style="margin:8px 0;">${esc(state.accInlineMoveMessage)}</div>`:''}
         <div class="productgrid listmode">
           ${(()=>{
             // 🔽 لو فيه صنف متحدد دلوقتي في القطاع ده، نعرضه هو بس ونخفي الباقي (عشان ما يتلخبطش).
@@ -8628,6 +8673,7 @@ function bindEvents(){
 }
 
 function onSelectChange(act, el, val){
+  if(act==='move-acc-inline'){if(val)moveAccInline_(el.getAttribute('data-main'),el.getAttribute('data-prod'),val==='__auto'?'':val);return;}
   if(act==='adm-unit'){
     const ed = state.adminEdits[el.getAttribute('data-id')], it = ed && ed[Number(el.getAttribute('data-idx'))];
     if(it && val){ it.unitType = val; render(); }
