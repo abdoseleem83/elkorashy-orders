@@ -407,6 +407,13 @@ textarea{resize:vertical;min-height:60px;}
 
 
 
+.acc-search input{border:2px solid #3678BB !important;background:#fff !important;color:#172F50 !important;}
+.acc-search input::placeholder{color:#506782 !important;opacity:1;}
+.acc-search:focus-within input{outline:3px solid rgba(32,132,219,.22);outline-offset:1px;}
+.acc-search-empty{display:none;}
+.acc-results .acc-otherlink{margin-top:4px;min-height:44px;padding:9px 12px;border:1px solid var(--line);font-size:13px;font-weight:700;color:var(--ink);}
+html[data-theme="dark"] .acc-search input{background:#11223E !important;border-color:#6CBFFF !important;color:#F2F6FF !important;}
+html[data-theme="dark"] .acc-search input::placeholder{color:#BDD3ED !important;}
 .searchbox{position:relative;margin-bottom:10px;}
 .searchbox input{padding-left:14px;}
 
@@ -2151,6 +2158,47 @@ html .sico.haslogo .sico-logo .slogo{width:100%;height:auto;max-height:none;obje
 .dv{font-weight:900;}
 html[data-theme] .card b.dv,.dv{color:#DC2626 !important;}
 html[data-theme="dark"] .card b.dv,html[data-theme="dark"] .dv{color:#FF6B6B !important;}
+
+/* Compact accessories ordering view. Other sectors keep their layout. */
+.acc-head .ministrip2027{padding:5px 12px !important;gap:6px !important;}
+.acc-head .mini2027{min-height:40px !important;height:40px !important;padding:4px 8px !important;flex-direction:row;gap:5px;border-radius:10px !important;}
+.acc-head .mini2027 b{font-size:14px !important;line-height:1.2;}
+.acc-head .mini2027 span{font-size:11px !important;line-height:1.2;}
+.acc-head .mini2027.sectorbtn{box-shadow:none !important;flex-direction:row;}
+.acc-head .sbtnlogo{max-height:26px !important;width:auto !important;}
+.acc-order .topbanners{margin-bottom:10px;}
+.acc-order .acc-pending{background:#FFF2D8 !important;color:#80520B !important;border:1px solid #E8CE94 !important;border-radius:10px !important;padding:8px 10px !important;font-size:11.5px !important;line-height:1.7 !important;font-weight:500 !important;margin:0 !important;}
+.acc-order .acc-pending b{font-weight:800;}
+html[data-theme] .acc-order .acc-results{padding:0 !important;background:transparent !important;box-shadow:none !important;border-radius:0 !important;margin:0 0 14px !important;}
+.acc-order .acc-results .productgrid{margin:0;padding:0;}
+.acc-order .acc-results .productgrid:empty{display:none;}
+.acc-order .acc-results .acc-otherlink{width:auto;margin:8px 0 0 auto;padding:5px 0;min-height:36px;border:0;border-radius:0;color:var(--navy-soft);font-size:12px;text-align:right;background:none;}
+.acc-cart-empty{display:flex;align-items:center;gap:7px;padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--muted);margin-bottom:12px;}
+.acc-cart-empty span{font-weight:800;color:var(--ink);}
+.acc-cart-empty small{margin-inline-start:auto;font-size:11px;}
+.acc-notes{border-bottom:1px solid var(--line);padding:0 0 12px;margin-bottom:12px;}
+.acc-notes summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--ink);padding:8px 0;}
+.acc-notes summary small{font-size:11px;color:var(--muted);font-weight:400;}
+.acc-notes textarea{margin-top:7px;}
+.acc-order .distcard{padding:10px 12px !important;border-radius:12px !important;margin-bottom:12px;}
+
+.acc-families{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.acc-family{font-family:inherit;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:3px;text-align:right;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:12px 13px;min-height:66px;cursor:pointer;}
+.acc-family b{font-size:15px;line-height:1.5;font-weight:800;}
+.acc-family small{font-size:10.5px;color:var(--muted);font-weight:500;line-height:1.5;}
+.acc-family:last-child{grid-column:1/-1;min-height:42px;align-items:center;padding:8px;}
+.acc-family:last-child b{font-size:13px;font-weight:600;}
+.acc-family.on{border:2px solid #2376C4;background:#EAF3FF;color:#123F79;padding:11px 12px;}
+.acc-family.on small{color:#385C89;}
+html[data-theme="dark"] .acc-family.on{background:#173657;color:#F0F7FF;border-color:#71BDFF;}
+html[data-theme="dark"] .acc-family.on small{color:#B8D4F3;}
+.acc-results-title{font-weight:800;font-size:12px;color:var(--ink);margin:14px 0 8px;}
+.acc-families.is-open{display:flex;flex-wrap:wrap;gap:6px;}
+.acc-families.is-open .acc-family{min-height:34px;padding:6px 9px;border-radius:9px;align-items:center;}
+.acc-families.is-open .acc-family b{font-size:11.5px;}
+.acc-families.is-open .acc-family small{display:none;}
+.acc-families.is-open .acc-family.on{padding:5px 8px;}
+.acc-results .productgrid .empty{grid-column:1/-1;}
 </style>
 <style>/* Presentation-only sector frames. No order/auth/storage changes. */
 html .sgridpanel .homesectors{grid-auto-rows:auto!important;align-items:stretch!important;}html .sgridpanel .homesectors .sico.haslogo{height:auto!important;min-height:0!important;align-self:stretch!important;}html .sgridpanel .homesectors .sico.haslogo .sico-logo{width:100%!important;height:auto!important;aspect-ratio:1.7!important;min-height:0!important;padding:6px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;}html .sgridpanel .homesectors .sico.haslogo .sico-logo .slogo{display:block!important;width:100%!important;height:100%!important;max-height:100%!important;object-fit:contain!important;object-position:center!important;border-radius:8px!important;}
@@ -2178,6 +2226,13 @@ html[data-theme="dark"] .pcard.pt .pt-col{background:#25334B;}
 .pending-card{padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--card);margin:14px 0;line-height:1.8;overflow-wrap:anywhere;}
 .pending-card h3{margin:0 0 8px}.pending-state{font-weight:900;color:#BF7914}.pending-note{font-size:13px;color:var(--muted)}
 .pending-card button{margin:8px 0;padding:10px 14px;min-height:44px;border:1px solid #5289CF;border-radius:12px;background:#164D99;color:white;font-family:inherit;font-weight:700;cursor:pointer}.pending-card button:disabled{opacity:.55;cursor:wait}.pending-card .ghost{background:transparent;color:var(--ink)}.pending-lines{font-size:13px;padding-right:18px;}
+</style><style>
+.acc-order .acc-results .productgrid{grid-template-columns:1fr !important;gap:7px;}
+.acc-order .acc-results .pcard.pt{min-height:48px;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;text-align:right;padding:10px 12px;gap:9px;border-radius:10px;}
+.acc-order .acc-results .pcard.pt .pclogo{width:28px;max-height:25px;flex:none;}
+.acc-order .acc-results .pcard.pt .pt-name{min-height:0;display:block;width:auto;flex:1;font-size:12px;line-height:1.7;-webkit-line-clamp:unset;text-align:right;}
+.acc-order .acc-results .pcard.pt .pc-name{width:auto;text-align:right;}
+.acc-order .acc-results .pcard.pt .pt-cols{width:auto;flex-shrink:0;}
 </style></head>
 <body>
 <div id="app"></div>
@@ -2243,7 +2298,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v306-acc-search';
+const APP_BUILD = 'v309-custom-groups';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -2672,6 +2727,126 @@ async function ensureLibs_(){
 // ده تجميع للعرض بس: كل صنف بيفضل بالـ main الأصلي بتاعه (الوحدات والأسعار والرصيد وعرض السعر زي ما هي).
 const ACC_GROUP = 'اكسسوارات pvc';
 function isAccMain_(m){ return !!m && (m.includes('اكسسوارات') || m==='شاتر' || m==='ابواب WPC'); }
+// Display-only groups. Each entry keeps its original main/product identity.
+const ACC_FAMILIES_ = [
+  {key:'esp',label:'السبلونات',sub:'مفصلي · جرار · بكالون'},
+  {key:'hinges',label:'المفصلات',sub:'بلاستيك ومعدن'},
+  {key:'handles',label:'المقابض',sub:'بارز · دفن · أبواب'},
+  {key:'ends',label:'نهاية بوكلير',sub:'كرافت · نيو لاين · كومبن'},
+  {key:'locks',label:'كوالين وتسكيكات',sub:''},
+  {key:'sealants',label:'سيليكون وفوم',sub:''},
+  {key:'mesh',label:'سلك وستاير',sub:''},
+  {key:'plastics',label:'بلاستيكات',sub:''},
+  {key:'rest',label:'باقي الأصناف',sub:''}
+];
+function accFamilyKey_(name){
+  const n=String(name||'').trim().toLowerCase().replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[ً-ْٰـ]/g,'');
+  if(/سيليكون|سيلكون|فوم|فووم/.test(n)) return 'sealants';
+  if(/^(لينه زجاج|طبه مسمار محاره|غطاء فتحه مطر|تجميع سقاس سلك|كاوتش (قطاعات|ابيض قطاعات))/.test(n)) return 'plastics';
+  if(/سلك|بليسي|ستاره|ستائر/.test(n) || (/^(فرش|فورش|مغناطيس|بكره خيط|كبسوله)/.test(n) && !/شاتر/.test(n))) return 'mesh';
+  if(/^(كالون|سلندر كالون|وش تسكيك|سكاك|ترباس|تجميع مليون|عصفوره|دراع قلاب)/.test(n) && !/فولدنج|فولندج|مفصلي قلاب|دبل تلت/.test(n)) return 'locks';
+  if(/^سبلون/.test(n)) return 'esp';
+  if(/^مفصل[ه ]/.test(n)) return 'hinges';
+  if(/^مقبض/.test(n)) return 'handles';
+  if(/^نهايه بوكلير/.test(n)) return 'ends';
+  return 'rest';
+}
+let ACC_DISPLAY_GROUPS_ = new Map();
+let ACC_DISPLAY_SUPPORTED_ = false;
+function accDisplayId_(main,product){return JSON.stringify([String(main||'').trim(),String(product||'').trim()]);}
+function applyAccDisplayGroups_(rows,supported){
+  ACC_DISPLAY_SUPPORTED_=supported===true;
+  ACC_DISPLAY_GROUPS_=new Map();
+  if(!Array.isArray(rows)) return;
+  rows.forEach(r=>{if(r && typeof r.main==='string' && typeof r.product==='string' && ACC_FAMILIES_.some(f=>f.key===r.group)) ACC_DISPLAY_GROUPS_.set(accDisplayId_(r.main,r.product),r.group);});
+}
+function accDisplayRows_(){return Array.from(ACC_DISPLAY_GROUPS_,([key,group])=>{const [main,product]=JSON.parse(key);return {main,product,group};});}
+function accProductGroup_(main,product){return ACC_DISPLAY_GROUPS_.get(accDisplayId_(main,product)) || accFamilyKey_(product);}
+function renderAccGroupEditor_(d){
+  if(!isAccMain_(d.main) || !getManageToken()) return '';
+  const current=ACC_DISPLAY_GROUPS_.get(accDisplayId_(d.main,d.product||d.name))||'';
+  const chosen=state.accMoveDraft==null?current:state.accMoveDraft;
+  return `<div class="acc-group-editor" style="margin:14px 0;padding:12px;border:1px solid var(--line);border-radius:12px;">
+    <label for="acc-group-draft">مجموعة العرض</label>
+    <small style="display:block;color:var(--muted);line-height:1.7;margin:5px 0;">لكل ألوان الصنف وعند كل الموزعين، من غير تغيير اسمه أو سعره.</small>
+    <select id="acc-group-draft" data-act="acc-group-draft" style="width:100%;min-height:42px;padding:8px;margin-bottom:8px;" ${!ACC_DISPLAY_SUPPORTED_ || state.accMoveBusy?'disabled':''}>
+      <option value="" ${chosen===''?'selected':''}>التقسيم التلقائي</option>
+      ${ACC_FAMILIES_.map(f=>`<option value="${f.key}" ${chosen===f.key?'selected':''}>${esc(f.label)}</option>`).join('')}
+    </select>
+    <button class="confirmbtn" data-act="save-acc-group" style="width:100%;" ${!ACC_DISPLAY_SUPPORTED_ || state.accMoveBusy?'disabled':''}>${state.accMoveBusy?'جارٍ حفظ المجموعة...':'حفظ المجموعة للكل'}</button>
+    ${!ACC_DISPLAY_SUPPORTED_?'<small style="display:block;margin-top:7px;">نقل المجموعات لم يتفعّل على الخادم بعد.</small>':''}
+    ${state.accMoveMessage?`<div role="status" style="font-size:12px;margin-top:8px;line-height:1.7;">${esc(state.accMoveMessage)}</div>`:''}
+  </div>`;
+}
+async function saveAccGroup_(){
+  if(state.accMoveBusy) return;
+  const d=state.manageEditDraft||{},main=d.main,product=d.product||d.name;
+  if(!state.manageUnlocked || !getManageToken() || !ACC_DISPLAY_SUPPORTED_ || !isAccMain_(main)) return;
+  if(!navigator.onLine){state.accMoveMessage='لازم اتصال بالإنترنت لحفظ النقل. لم يتغيّر التقسيم.';render();return;}
+  const id=accDisplayId_(main,product), expected=ACC_DISPLAY_GROUPS_.get(id)||'', group=state.accMoveDraft==null?expected:state.accMoveDraft;
+  if(group && !ACC_FAMILIES_.some(f=>f.key===group)) return;
+  state.accMoveBusy=true;state.accMoveMessage='';render();
+  try{
+    const r=await apiPost({action:'manageSetAccDisplayGroup',token:getManageToken(),main,product,group,expectedGroup:expected});
+    if(!r || r.ok!==true || r.main!==main || r.product!==product || r.group!==group){
+      if(r && r.code==='GROUP_CONFLICT'){
+        if(r.currentGroup && ACC_FAMILIES_.some(f=>f.key===r.currentGroup))ACC_DISPLAY_GROUPS_.set(id,r.currentGroup);else ACC_DISPLAY_GROUPS_.delete(id);
+        state.accMoveDraft=null;throw new Error('conflict');
+      }
+      throw new Error('save');
+    }
+    if(group)ACC_DISPLAY_GROUPS_.set(id,group);else ACC_DISPLAY_GROUPS_.delete(id);
+    // Update metadata only. Never refresh prices/stock or rewrite order drafts here.
+    saveAccMetadataCache_();
+    state.accMoveMessage='اتحفظت المجموعة لكل ألوان الصنف. تظهر للموزعين بعد تحديث الأصناف.';
+  }catch(e){state.accMoveMessage=e.message==='conflict'?'المجموعة اتغيّرت من جلسة إدارة تانية. راجع الاختيار واحفظ تاني.':'تعذّر تأكيد الحفظ. التقسيم المعروض لم يتغيّر، حدّث الأصناف قبل المحاولة تاني.';}
+  finally{state.accMoveBusy=false;render();}
+}
+
+
+const ACC_DEFAULT_FAMILIES_ = ACC_FAMILIES_.map(f=>({...f}));
+let ACC_CUSTOM_SUPPORTED_ = false;
+function applyAccCustomGroups_(rows,supported){
+  ACC_CUSTOM_SUPPORTED_=supported===true;
+  const seen=new Set(ACC_DEFAULT_FAMILIES_.map(f=>f.key));
+  const custom=Array.isArray(rows)?rows.filter(g=>g && /^custom_[a-f0-9-]{36}$/.test(g.key) && typeof g.label==='string' && g.label.trim() && g.label.length<=60 && !seen.has(g.key) && seen.add(g.key)).map(g=>({key:g.key,label:g.label,sub:''})):[];
+  ACC_FAMILIES_.splice(0,ACC_FAMILIES_.length,...ACC_DEFAULT_FAMILIES_.filter(f=>f.key!=='rest'),...custom,ACC_DEFAULT_FAMILIES_.find(f=>f.key==='rest'));
+}
+function accCustomRows_(){return ACC_FAMILIES_.filter(f=>!ACC_DEFAULT_FAMILIES_.some(b=>b.key===f.key)).map(f=>({...f}));}
+function saveAccMetadataCache_(){const c=readCatalogCache_();if(!c)return;c.customGroups=accCustomRows_();c.displayGroups=accDisplayRows_();c.displayGroupsVersion=ACC_CUSTOM_SUPPORTED_?2:(ACC_DISPLAY_SUPPORTED_?1:0);try{localStorage.setItem(LS_CATALOG_CACHE_KEY,JSON.stringify(c));}catch(e){}}
+function renderAccCreateGroup_(){
+ if(!state.manageUnlocked || !getManageToken())return '';
+ return `<section class="card" style="margin-top:12px;">
+  <details ${state.accCreateOpen?'open':''} data-act="acc-create-open">
+   <summary style="cursor:pointer;font-weight:800;min-height:36px;">إضافة مجموعة إكسسوارات</summary>
+   <p style="font-size:13px;color:var(--muted);line-height:1.7;">المجموعة الجديدة تظهر عند كل الموزعين. بعدها انقل لها الأصناف من شاشة تعديل الصنف.</p>
+   <label for="acc-new-group">اسم المجموعة</label>
+   <input id="acc-new-group" style="display:block;width:100%;min-height:44px;padding:10px 12px;margin-top:6px;border:1px solid var(--line);border-radius:12px;background:var(--input-bg,var(--card));color:var(--ink);font:inherit;" data-act="acc-new-group-name" maxlength="60" placeholder="مثال: مسامير وأدوات" value="${esc(state.accNewGroupName||'')}" ${!ACC_CUSTOM_SUPPORTED_||state.accCreateBusy?'disabled':''}>
+   <button class="confirmbtn" data-act="acc-create-group" style="width:100%;margin-top:10px;" ${!ACC_CUSTOM_SUPPORTED_||state.accCreateBusy?'disabled':''}>${state.accCreateBusy?'جارٍ الحفظ...':'إضافة المجموعة للكل'}</button>
+   ${!ACC_CUSTOM_SUPPORTED_?'<p style="font-size:12px;">إضافة المجموعات لم تتفعّل على الخادم بعد.</p>':''}
+   ${state.accCreateMessage?`<p role="status" class="acc-create-status" style="font-size:13px;line-height:1.7;">${esc(state.accCreateMessage)}</p>`:''}
+  </details>
+ </section>`;
+}
+async function createAccGroup_(){
+ if(state.accCreateBusy || !state.manageUnlocked || !getManageToken() || !ACC_CUSTOM_SUPPORTED_)return;
+ const label=String(state.accNewGroupName||'').trim().replace(/\s+/g,' ');state.accCreateOpen=true;
+ if(!label || label.length>60 || /[\u0000-\u001f\u007f<>]/.test(label)){state.accCreateMessage='اكتب اسم واضح للمجموعة، لحد ٦٠ حرف.';render();return;}
+ if(!navigator.onLine){state.accCreateMessage='لازم اتصال بالإنترنت. لم تتم إضافة مجموعة.';render();return;}
+ state.accCreateBusy=true;state.accCreateMessage='';render();
+ try{
+  const r=await apiPost({action:'manageCreateAccGroup',token:getManageToken(),label});
+  if(!r || r.ok!==true || !r.group || !/^custom_[a-f0-9-]{36}$/.test(r.group.key) || typeof r.group.label!=='string' || !Array.isArray(r.customGroups)){
+   if(r&&r.code==='DUPLICATE_GROUP')throw new Error('duplicate');
+   if(r&&r.code==='GROUP_LIMIT')throw new Error('limit');
+   throw new Error('save');
+  }
+  applyAccCustomGroups_(r.customGroups,true);saveAccMetadataCache_();
+  state.accNewGroupName='';state.accCreateMessage=r.existing?'المجموعة موجودة بالفعل. تقدر تنقل لها الأصناف.':'اتضافت المجموعة للكل. افتح تعديل الصنف واختارها من مجموعة العرض.';
+ }catch(e){state.accCreateMessage=e.message==='duplicate'?'الاسم ده موجود ضمن المجموعات الأساسية. اختار اسم مختلف.':e.message==='limit'?'وصلت للحد الأقصى: ٤٠ مجموعة إضافية.':'تعذّر تأكيد الإضافة. حدّث الأصناف وراجع المجموعات قبل المحاولة تاني.';}
+ finally{state.accCreateBusy=false;render();}
+}
+
 function groupOfMain_(m){ return isAccMain_(m) ? ACC_GROUP : m; }
 function sectorMains_(g){ return g===ACC_GROUP ? MAIN_GROUPS.filter(isAccMain_) : [g]; }
 // القطاعات اللي بتظهر في الرئيسية وشاشة الطلب (أصناف أخرى بتتفتح من جوه اكسسوارات pvc ومن القايمة المنسدلة)
@@ -2837,7 +3012,7 @@ function normalizeCatalogItems_(items){
 function saveCatalogCache_(items, discounts){
   try{
     localStorage.setItem(LS_CATALOG_CACHE_KEY, JSON.stringify({
-      ts: Date.now(), items: items, discounts: discounts || {}
+      ts: Date.now(), items: items, discounts: discounts || {}, displayGroups:accDisplayRows_(), customGroups:accCustomRows_(), displayGroupsVersion:ACC_CUSTOM_SUPPORTED_?2:(ACC_DISPLAY_SUPPORTED_?1:0)
     }));
   }catch(e){ /* الذاكرة اتملت — مش مشكلة، بنكمل عادي */ }
 }
@@ -2886,6 +3061,8 @@ async function loadCatalog(){
       if(!stockRequestMayApply_(catalogRequestGeneration))throw new Error('OLDER_THAN_STOCK_REVIEW');
       state.catalogReviewRequired=false;try{localStorage.removeItem('qurashi_availability_review_v1');}catch(e){}
       CATALOG = normalizeCatalogItems_(data.items);
+      applyAccCustomGroups_(data.customGroups,data.displayGroupsVersion===2);
+      applyAccDisplayGroups_(data.displayGroups,data.displayGroupsVersion>=1);
       DISCOUNTS = data.discounts || {};
       saveCatalogCache_(data.items, DISCOUNTS);
     } else {
@@ -2896,6 +3073,8 @@ async function loadCatalog(){
     const cached = readCatalogCache_();
     if(cached){
       CATALOG = normalizeCatalogItems_(cached.items);
+      applyAccCustomGroups_(cached.customGroups,cached.displayGroupsVersion===2);
+      applyAccDisplayGroups_(cached.displayGroups,cached.displayGroupsVersion>=1);
       DISCOUNTS = cached.discounts || {};
       state.catalogStale = true;
       state.catalogAgeMin = Math.max(1, Math.round((Date.now() - (cached.ts||0)) / 60000));
@@ -2903,6 +3082,8 @@ async function loadCatalog(){
       // ٣) الملف الثابت — أسامي بس، مفيش أسعار ولا أرصدة
       const fb = await loadFallbackFile_();
       CATALOG = fb.map(d=>Object.assign({price:null, available:true, inStock:true}, d));
+      applyAccCustomGroups_([],false);
+      applyAccDisplayGroups_([],false);
       DISCOUNTS = {};
       state.catalogError = true;
     }
@@ -6003,9 +6184,9 @@ function renderHeader(){
     </div>
   </div>
   ${(state.mainGroup && state.mainGroup!==OTHER_SECTOR && (state.warehouse || isClientAccount())) ? `
-  <div class="searchbox hasic fixedsearch">
+  <div class="searchbox hasic fixedsearch ${state.mainGroup===ACC_GROUP?'acc-search':''}">
     <span class="sbic">${ico_('search',19)}</span>
-    <input type="text" placeholder="" aria-label="بحث" value="${esc(state.productSearch)}" data-act="search-product" enterkeyhint="search">
+    <input type="text" placeholder="${state.mainGroup===ACC_GROUP?'ابحث عن صنف…':''}" aria-label="${state.mainGroup===ACC_GROUP?'ابحث عن صنف':'بحث'}" value="${esc(state.productSearch)}" data-act="search-product" enterkeyhint="search">
   </div>` : ''}` : '';
   const hasBack_ = !!(state.viewHistory && state.viewHistory.length);
   // 🏠 في الرئيسية الهيدر بيبقى بتاع الترحيب (اتجاه أ): لوجو EK + «أهلاً، الاسم» + المخزن
@@ -6027,7 +6208,7 @@ function renderHeader(){
       </div>
     </div>`;
   return `
-  <div class="fixedhead-outer"><div class="fixedhead-inner">
+  <div class="fixedhead-outer ${showStrip_ && state.mainGroup===ACC_GROUP?'acc-head':''}"><div class="fixedhead-inner">
   <header class="top">
     ${hasBack_ ? `<button class="iconbtn backnav" data-act="go-back" title="رجوع للصفحة السابقة" aria-label="رجوع">${ico_('backArrow',20)}</button>` : ''}
     ${brandHtml_}
@@ -6943,9 +7124,15 @@ function renderOrderView(){
           <button class="fam ${famChosen && !famActive?'on':''}" data-act="set-family" data-val=""><b>الكل</b><small>${entries.length}</small></button>
           ${families.map(f=>`<button class="fam ${famActive===f.key?'on':''}" data-act="set-family" data-val="${esc(f.key)}"><b>${esc(f.label)}</b><small>${f.n}</small></button>`).join('')}
         </div>` : '';
+      const accActive_ = accSearch_ && !q && ACC_FAMILIES_.some(f=>f.key===state.accFamily) ? state.accFamily : '';
+      const accGroups_ = accSearch_ && !q ? `<div class="acc-families ${accActive_?'is-open':''}" role="group" aria-label="مجموعات الإكسسوارات">
+        ${ACC_FAMILIES_.map(f=>`<button class="acc-family ${accActive_===f.key?'on':''}" data-act="acc-family" data-val="${f.key}" aria-pressed="${accActive_===f.key}"><b>${esc(f.label)}</b>${f.sub?`<small>${f.sub}</small>`:''}</button>`).join('')}
+      </div>` : '';
       productSection = `
-      <div class="card">
+      <div class="card ${accSearch_?'acc-results':''}">
         ${familyRow}
+        ${accGroups_}
+        ${accSearch_ && (q || accActive_) ? `<div class="acc-results-title">${q?'نتائج البحث':esc(ACC_FAMILIES_.find(f=>f.key===accActive_).label)}</div>`:''}
         <div class="productgrid listmode">
           ${(()=>{
             // 🔽 لو فيه صنف متحدد دلوقتي في القطاع ده، نعرضه هو بس ونخفي الباقي (عشان ما يتلخبطش).
@@ -6956,16 +7143,16 @@ function renderOrderView(){
             // 🧩 الاكسسوارات: الأصناف مبتظهرش كلها من الأول. الموزع يكتب أي جزء من اسم الصنف
             // في البحث فوق، وتظهرله الأسماء الأقرب ليه بس. أول ما يدوس على صنف بيظهر لوحده
             // (زي باقي القطاعات)، وأول ما يلغيه أو يأكد إضافته الشاشة بترجع للبحث.
-            if(accSearch_ && !q) return `<div class="pickfam">⌨️ اكتب أي جزء من اسم الصنف في البحث فوق، وهتظهرلك الأسماء الأقرب ليه</div>`;
-            const visible = famShown;
-            const grouped = groupVariants_(visible);
+            if(accSearch_ && !q && !accActive_) return '';
+            const visible = accSearch_ && !q ? famShown.filter(e=>accProductGroup_(e.main,e.name)===accActive_) : famShown;
+            const grouped = accSearch_ ? visible.map(e=>({one:true,e})) : groupVariants_(visible);
             // لما يفتح مجموعة (يدوس عليها): بتفضل هي بس وباقي الأصناف بتختفي عشان ما يتلخبطش
             const openG = grouped.find(g=>!g.one && g.key===state.openGroup);
             if(openG) return renderGroupCard_(openG);
             return grouped.length ? grouped.map(g=> g.one ? renderProductCard_(g.e.main, g.e.name, inlineStagedKeys_) : renderGroupCard_(g)).join('') : '<div class="empty">مفيش نتائج بالاسم ده</div>';
           })()}
         </div>
-        ${state.mainGroup===ACC_GROUP ? `<button class="otherlink" data-act="set-group" data-val="${esc(OTHER_SECTOR)}">+ مش لاقي صنفك؟ اكتب اللي محتاجه (أصناف أخرى)</button>` : ''}
+        ${state.mainGroup===ACC_GROUP ? `<button class="otherlink acc-otherlink" data-act="set-group" data-val="${esc(OTHER_SECTOR)}">+ إضافة صنف غير موجود</button>` : ''}
       </div>`;
     }
   }
@@ -7008,7 +7195,7 @@ function renderOrderView(){
       ${remainingStaged.map(renderStagedBlock).join('')}
     </div>` : '';
 
-  const cartSection = `
+  const cartSection = state.mainGroup===ACC_GROUP && !state.cart.length ? `<div class="acc-cart-empty">${ico_('cart',18)}<span>السلة فارغة</span><small>اختار صنف عشان تضيفه</small></div>` : `
     <div class="card">
       <h2><span class="num">7</span>الأصناف المطلوبة (${state.cart.length})</h2>
       ${renderCartItemsHtml(state.cart)}
@@ -7055,7 +7242,7 @@ function renderOrderView(){
   const topBanners_ = `
       ${actingForHtml_()}
       ${state.editingOrderId ? `<div class="editbanner">✏️ بتعدّل على طلب سابق #${esc(state.editingOrderId.toUpperCase())}</div>` : ''}
-      ${willMergeToday ? `<div class="editbanner" style="background:#FBEBD1;">ℹ️ عندك طلب النهارده لسه "لم يستلم" — وقت الإرسال هنسألك تضيف عليه ولا يتسجّل منفصل</div>` : ''}
+      ${willMergeToday ? (state.mainGroup===ACC_GROUP ? `<div class="editbanner acc-pending"><b>طلب النهارده لسه "لم يستلم".</b> عند الإرسال: تضيف عليه ولا طلب منفصل؟</div>` : `<div class="editbanner" style="background:#FBEBD1;">ℹ️ عندك طلب النهارده لسه "لم يستلم" — وقت الإرسال هنسألك تضيف عليه ولا يتسجّل منفصل</div>`) : ''}
       ${whWarn_}`;
   const distForm_ = `
       <h2><span class="num">2</span>بيانات الموزع</h2>
@@ -7094,7 +7281,7 @@ function renderOrderView(){
       <div class="sectiles">${sectorChips}</div>
     </div>`;
 
-  const noteSection = `
+  const noteSection = state.mainGroup===ACC_GROUP ? `<details class="acc-notes" ${(state.accNotesOpen || state.note)?'open':''}><summary>إضافة ملاحظات <small>(اختياري)</small></summary><textarea placeholder="أي تفاصيل إضافية عن الطلب..." data-act="set-note">${esc(state.note)}</textarea></details>` : `
     <div class="card">
       <h2><span class="num">8</span>ملاحظات عامة (اختياري)</h2>
       <textarea placeholder="أي تفاصيل إضافية عن الطلب..." data-act="set-note">${esc(state.note)}</textarea>
@@ -7113,7 +7300,7 @@ function renderOrderView(){
   `;
 
   return `
-  <main>
+  <main class="${state.mainGroup===ACC_GROUP?'acc-order':''}">
     ${saveErrorBanner}
     ${catalogErrorBanner}
     ${distSection}
@@ -7284,7 +7471,7 @@ function renderManageView(){
       <button class="managesubtab ${state.manageTab==='approvals'?'active':''}" data-act="manage-set-tab" data-val="approvals">${ico_('checkSquare',15)} طلبات الموافقة${totalApprovals ? ` <span class="navbadge" style="position:static;margin-right:4px;">${totalApprovals}</span>` : ''}</button>
     </div>
   </div>
-  ${state.manageTab==='items' ? renderManageItemsTab() : renderManageApprovalsTab()}
+  ${state.manageTab==='items' ? renderAccCreateGroup_()+renderManageItemsTab() : renderManageApprovalsTab()}
   `;
 }
 
@@ -7363,6 +7550,7 @@ function renderManageEditForm_(){
     ` : `
     <div class="managereadonly">${esc(d.product||d.name)}${d.color?' — '+esc(d.color):''} <span style="color:var(--muted);">(${esc(d.main)}${d.sub?' — '+esc(d.sub):''})</span></div>
     `}
+    ${!isNew ? renderAccGroupEditor_(d) : ''}
     <div class="row3" style="margin-top:10px;">
       <div class="field">
         <label>الرصيد</label>
@@ -7496,6 +7684,7 @@ function manageOpenEdit_(name){
   const items = manageCatalogSource_();
   const item = items.find(it=>(it.name||it.product)===name);
   if(!item){ showToast('الصنف ده مش موجود'); return; }
+  state.accMoveDraft=null;state.accMoveMessage='';
   state.manageEditingName = name;
   state.manageEditDraft = {
     name: item.name||item.product, main: item.main, sub: item.sub||'', product: item.product,
@@ -8353,6 +8542,7 @@ function bindEvents(){
   const actOf = e => e.target.closest && e.target.closest('[data-act]');
   const isField = el => el.tagName==='INPUT' || el.tagName==='TEXTAREA' || el.tagName==='SELECT';
 
+  app.addEventListener('toggle', e=>{if(e.target.isConnected && e.target.matches('details[data-act=acc-create-open]'))state.accCreateOpen=e.target.open;  if(e.target.isConnected && e.target.matches('details.acc-notes')) state.accNotesOpen=e.target.open; }, true);
   // ---------- الضغط ----------
   app.addEventListener('click', e=>{
     const el = actOf(e);
@@ -8459,12 +8649,15 @@ function onSelectChange(act, el, val){
   if(act==='set-color-unit'){
     setStagedColorUnit(el.getAttribute('data-key'), el.getAttribute('data-val'), val);
   }
+  if(act==='acc-new-group-name'){state.accNewGroupName=val;return;}
+  if(act==='acc-group-draft'){state.accMoveDraft=val;return;}
   if(act==='manage-draft-main'){
     state.manageEditDraft.main = val;
   }
 }
 
 function onInputChange(act, el, val){
+  if(act==='acc-new-group-name'){state.accNewGroupName=val;return;}
   const activeAct = el.getAttribute('data-act');
   const activeKey = el.getAttribute('data-key');
   const activeVal = el.getAttribute('data-val');
@@ -8748,6 +8941,7 @@ async function onActionInner(act, el){
       state.view = 'order'; render(); window.scrollTo(0, 0);
       break;
     case 'open-group': state.openGroup = (state.openGroup===el.getAttribute('data-val')) ? null : el.getAttribute('data-val'); render(); break;
+    case 'acc-family': { const key=el.getAttribute('data-val'); state.accFamily=state.accFamily===key?'':key; render(); break; }
     case 'set-family': { const v = el.getAttribute('data-val') || ''; state.family = (state.family!==null && v===state.family) ? null : v; render(); } window.scrollTo({ top: 0, behavior:'smooth' }); break;
     case 'set-group': applySector_(el.getAttribute('data-val')); render(); break;
     case 'toggle-product':{
@@ -8829,6 +9023,8 @@ async function onActionInner(act, el){
       state.manageEditDraft = {};
       render();
       break;
+    case 'acc-create-group': await createAccGroup_(); break;
+    case 'save-acc-group': await saveAccGroup_(); break;
     case 'manage-save-item': manageSaveItem(); break;
     case 'manage-approve-reg': manageDecideReg(el.getAttribute('data-val'), true); break;
     case 'manage-reject-reg':

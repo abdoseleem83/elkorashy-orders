@@ -1,7 +1,7 @@
 // ⚠️ مهم: غيّر رقم النسخة دي في كل مرة ترفع تحديث جديد.
 // ده اللي بيخلي المتصفح يرمي الكاش القديم ويجيب الملفات الجديدة.
 // 🔑 الرقم ده لازم يطابق APP_BUILD في index.html و APP_VERSION في apps_script.gs.
-const CACHE_VERSION = 'v306-acc-search';
+const CACHE_VERSION = 'v309-custom-groups';
 const CACHE_NAME = 'elkorashy-' + CACHE_VERSION;
 
 // الملفات اللي بتتحمّل إجباري وقت تثبيت النسخة — خليها **أقل حاجة ممكنة**.

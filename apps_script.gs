@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v281';
+const APP_VERSION = 'v309-custom-groups';
 
 const SHEET_NAME = 'Orders';
 const CATALOG_SHEET_NAME = 'الأصناف';
@@ -467,6 +467,14 @@ function doPostInner_(e) {
   if (action === 'manageUpdateCatalogItem') {
     if (!isValidManageToken_(token)) return denyManage_();
     return json_({ ok: updateCatalogItem_(data.item || {}) });
+  }
+  if (action === 'manageCreateAccGroup') {
+    if (!isValidManageToken_(token)) return denyManage_();
+    return json_(createAccCustomGroup_(data));
+  }
+  if (action === 'manageSetAccDisplayGroup') {
+    if (!isValidManageToken_(token)) return denyManage_();
+    return json_(setAccDisplayGroup_(data));
   }
   if (action === 'manageSetProductType') {
     if (!isValidManageToken_(token)) return denyManage_();
@@ -1555,7 +1563,7 @@ function buildCatalogPayload_() {
       discounts[r[0]] = v;
     });
   }
-  return { items: items, discounts: discounts, version: APP_VERSION };
+  return { items: items, discounts: discounts, version: APP_VERSION, displayGroupsVersion:2, displayGroups:readAccDisplayGroups_(), customGroups:readAccCustomGroups_() };
 }
 
 
@@ -1781,4 +1789,81 @@ function doGetInner_(e) {
       .map(rowToOrder)
       .reverse()
   );
+}
+// Display grouping only. No catalog/order/stock cells are written.
+const ACC_DISPLAY_SHEET_ = 'مجموعات عرض الإكسسوارات';
+const ACC_DISPLAY_KEYS_ = ['esp','hinges','handles','ends','locks','sealants','mesh','plastics','rest'];
+function accDisplayReadText_(value){try{const x=JSON.parse(String(value));return typeof x==='string'?x:'';}catch(e){return '';}}
+function readAccDisplayGroups_(){
+  const sheet=SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ACC_DISPLAY_SHEET_);
+  if(!sheet || sheet.getLastRow()<2) return [];
+  const byKey={},allowed=ACC_DISPLAY_KEYS_.concat(readAccCustomGroups_().map(g=>g.key));
+  sheet.getRange(2,1,sheet.getLastRow()-1,4).getValues().forEach(r=>{
+    const main=accDisplayReadText_(r[0]), product=accDisplayReadText_(r[1]), group=String(r[2]||'').trim();
+    if(main && product && allowed.indexOf(group)>=0) byKey[JSON.stringify([main,product])]={main,product,group};
+  });
+  return Object.keys(byKey).map(k=>byKey[k]);
+}
+function setAccDisplayGroup_(data){
+  const main=typeof data.main==='string'?data.main.trim():'';
+  const product=typeof data.product==='string'?data.product.trim():'';
+  const group=typeof data.group==='string'?data.group:'';
+  const expected=typeof data.expectedGroup==='string'?data.expectedGroup:null;
+  if(!main || !product || product.length>500 || (group && !validAccDisplayKey_(group)) || expected===null) return {ok:false,code:'BAD_GROUP'};
+  if(!(main.indexOf('اكسسوارات')>=0 || main==='شاتر' || main==='ابواب WPC')) return {ok:false,code:'BAD_SECTOR'};
+  const lock=LockService.getScriptLock();
+  if(!lock.tryLock(5000)) return {ok:false,code:'GROUP_BUSY'};
+  try{
+    const ss=SpreadsheetApp.getActiveSpreadsheet(), cat=ss.getSheetByName(CATALOG_SHEET_NAME);
+    if(!cat || cat.getLastRow()<2) return {ok:false,code:'PRODUCT_NOT_FOUND'};
+    const found=cat.getRange(2,1,cat.getLastRow()-1,5).getValues().some(r=>String(r[1]||'').trim()===main && String(r[4]||r[0]||'').trim()===product);
+    if(!found) return {ok:false,code:'PRODUCT_NOT_FOUND'};
+    let sheet=ss.getSheetByName(ACC_DISPLAY_SHEET_), row=0, current='';
+    if(sheet && sheet.getLastRow()>1){
+      sheet.getRange(2,1,sheet.getLastRow()-1,4).getValues().forEach((r,i)=>{
+        if(accDisplayReadText_(r[0])===main && accDisplayReadText_(r[1])===product){row=i+2;current=String(r[2]||'').trim();}
+      });
+    }
+    if(current!==expected && current!==group) return {ok:false,code:'GROUP_CONFLICT',currentGroup:current};
+    if(!sheet){sheet=ss.insertSheet(ACC_DISPLAY_SHEET_);sheet.getRange(1,1,1,4).setValues([['main_json','product_json','display_group','updated_at']]);}
+    // JSON string cells start with a quote, not a spreadsheet formula prefix.
+    const cells=sheet.getRange(row || sheet.getLastRow()+1,1,1,4);
+    cells.setNumberFormat('@');
+    cells.setValues([[JSON.stringify(main),JSON.stringify(product),group,new Date().toISOString()]]);
+    SpreadsheetApp.flush();
+    return {ok:true,main,product,group};
+  }finally{lock.releaseLock();}
+}
+
+
+// Custom display-group definitions are separate from product assignments.
+const ACC_CUSTOM_SHEET_ = 'تعريف مجموعات الإكسسوارات';
+const ACC_BUILTIN_LABELS_ = ['السبلونات','المفصلات','المقابض','نهاية بوكلير','كوالين وتسكيكات','سيليكون وفوم','سلك وستاير','بلاستيكات','باقي الأصناف'];
+function accLabelKey_(s){return String(s||'').trim().replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[ً-ْٰـ]/g,'').replace(/\s+/g,' ').toLowerCase();}
+function readAccCustomGroups_(){
+  const sheet=SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ACC_CUSTOM_SHEET_);
+  if(!sheet || sheet.getLastRow()<2)return [];
+  const seen={};const out=[];
+  sheet.getRange(2,1,sheet.getLastRow()-1,3).getValues().forEach(r=>{
+    const key=String(r[0]||''),label=accDisplayReadText_(r[1]);
+    if(/^custom_[a-f0-9-]{36}$/.test(key) && label && label.length<=60 && !seen[key]){seen[key]=true;out.push({key,label,sub:''});}
+  });return out;
+}
+function validAccDisplayKey_(key){return ACC_DISPLAY_KEYS_.indexOf(key)>=0 || readAccCustomGroups_().some(g=>g.key===key);}
+function createAccCustomGroup_(data){
+  const label=typeof data.label==='string'?data.label.trim().replace(/\s+/g,' '):'';
+  if(!label || label.length>60 || /[\u0000-\u001f\u007f<>]/.test(label))return {ok:false,code:'BAD_LABEL'};
+  const lock=LockService.getScriptLock();if(!lock.tryLock(5000))return {ok:false,code:'GROUP_BUSY'};
+  try{
+    const list=readAccCustomGroups_(),norm=accLabelKey_(label);
+    if(ACC_BUILTIN_LABELS_.some(s=>accLabelKey_(s)===norm))return {ok:false,code:'DUPLICATE_GROUP'};
+    const existing=list.find(g=>accLabelKey_(g.label)===norm);
+    if(existing)return {ok:true,group:existing,customGroups:list,existing:true};
+    if(list.length>=40)return {ok:false,code:'GROUP_LIMIT'};
+    const ss=SpreadsheetApp.getActiveSpreadsheet();let sheet=ss.getSheetByName(ACC_CUSTOM_SHEET_);
+    if(!sheet){sheet=ss.insertSheet(ACC_CUSTOM_SHEET_);sheet.getRange(1,1,1,3).setValues([['key','label_json','created_at']]);}
+    const group={key:'custom_'+Utilities.getUuid().toLowerCase(),label,sub:''};
+    sheet.getRange(sheet.getLastRow()+1,1,1,3).setNumberFormat('@').setValues([[group.key,JSON.stringify(label),new Date().toISOString()]]);
+    SpreadsheetApp.flush();return {ok:true,group,customGroups:list.concat([group]),existing:false};
+  }finally{lock.releaseLock();}
 }
