@@ -2327,7 +2327,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v315-alternating-cards';
+const APP_BUILD = 'v316-pending-timeout-notes';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -3583,7 +3583,11 @@ async function checkPendingOrder_(id){
   const actor=pendingActor_();state.pendingBusy=id;render();
   try{
     const token=pendingToken_(r);if(!token)throw Error('سجّل دخول للحساب المطلوب.');
-    const data=await apiGet('lookup',{ids:r.order.id,token});
+    const ctl=new AbortController();const killer=setTimeout(()=>ctl.abort(),15000);
+    let data;
+    try{data=await apiGet('lookup',{ids:r.order.id,token},{signal:ctl.signal});}
+    catch(e){clearTimeout(killer);if(e&&e.name==='AbortError')throw Error('السيرفر ماردّش في ١٥ ثانية. النتيجة غير مؤكدة والطلب محفوظ، مفيش إعادة إرسال.');throw e;}
+    clearTimeout(killer);
     if(!Array.isArray(data))throw Error('تعذّر تأكيد الرد من السيرفر.');
     if(pendingActor_()!==actor)return;
     await pendingLocked_(async()=>{
@@ -3615,7 +3619,11 @@ async function beginPendingReview_(id){
       if(!current || current.available===false)throw Error('فيه صنف مش موجود أو موقوف في الكتالوج الحالي. راجع الإدارة؛ الطلب محفوظ ولم يبدأ إرساله.');
     }
     if(record.isUpdate){
-      const data=await apiGet('lookup',{ids:record.order.oldId,token:pendingToken_(record)});
+      const ctl2=new AbortController();const killer2=setTimeout(()=>ctl2.abort(),15000);
+      let data;
+      try{data=await apiGet('lookup',{ids:record.order.oldId,token:pendingToken_(record)},{signal:ctl2.signal});}
+      catch(e){clearTimeout(killer2);if(e&&e.name==='AbortError')throw Error('السيرفر ماردّش في ١٥ ثانية. التعديل محفوظ ولم يبدأ إرساله.');throw e;}
+      clearTimeout(killer2);
       if(!Array.isArray(data))throw Error('تعذّر التأكد من الطلب الأصلي. التعديل محفوظ ولم يبدأ إرساله.');
       const original=data.find(o=>String(o.id).toLowerCase()===String(record.order.oldId).toLowerCase());
       if(!original || normStatus_(original.status)!==STATUS_RECEIVED)throw Error('الطلب الأصلي مش ظاهر أو حالته ما تسمحش بالتعديل. راجع الإدارة، من غير إنشاء طلب بديل.');
@@ -3651,7 +3659,9 @@ async function sendReviewedPending_(id){
   finally{state.pendingBusy=null;render();}
 }
 function pendingStockNote_(record,item){
-  if((state.currentUser && state.currentUser.distType==='عميل') || item.main.includes('اكسسوارات') || !STOCK_TRACKED_WAREHOUSES_.includes(record.order.warehouse))return 'المخزن أو القطاع ده مفيهوش رصيد متتبّع في التطبيق.';
+  if(state.currentUser && state.currentUser.distType==='عميل')return 'الحساب ده مبيعرضش أرقام رصيد.';
+  if(item.main.includes('اكسسوارات'))return 'صنف إكسسوارات: التطبيق مش بيتتبّع رصيده، فمش هيظهر رقم هنا. ده مش معناه إنه ناقص، والإرسال شغال عادي.';
+  if(!STOCK_TRACKED_WAREHOUSES_.includes(record.order.warehouse))return 'المخزن ده مش من المخازن اللي التطبيق بيتتبّع رصيدها. ده مش معناه إن الصنف ناقص.';
   const current=findCatalogItem(item.main,item.product || item.name,item.color);
   if(!current || current.stock===null || current.stock==='' || !Number.isFinite(Number(current.stock)))return 'الرصيد غير محدد للصنف ده. راجع الإدارة، مفيش ضمان للتوفر.';
   const requested=['لفة','كرتونة'].includes(item.unitType)?Number(item.qty)*(Number(current.unit)||1):Number(item.qty);
