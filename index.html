@@ -2182,12 +2182,12 @@ html[data-theme] .acc-order .acc-results{padding:0 !important;background:transpa
 .acc-notes textarea{margin-top:7px;}
 .acc-order .distcard{padding:10px 12px !important;border-radius:12px !important;margin-bottom:12px;}
 
-.acc-families{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.acc-families{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
 .acc-family{font-family:inherit;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:3px;text-align:right;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:12px 13px;min-height:66px;cursor:pointer;}
 .acc-family b{font-size:15px;line-height:1.5;font-weight:800;}
 .acc-family small{font-size:10.5px;color:var(--muted);font-weight:500;line-height:1.5;}
-.acc-family:last-child{grid-column:1/-1;min-height:42px;align-items:center;padding:8px;}
-.acc-family:last-child b{font-size:13px;font-weight:600;}
+.acc-family:last-child{grid-column:auto;}
+.acc-family:last-child b{font-weight:800;}
 .acc-family.on{border:2px solid #2376C4;background:#EAF3FF;color:#123F79;padding:11px 12px;}
 .acc-family.on small{color:#385C89;}
 html[data-theme="dark"] .acc-family.on{background:#173657;color:#F0F7FF;border-color:#71BDFF;}
@@ -2202,17 +2202,17 @@ html[data-theme="dark"] .acc-family.on small{color:#B8D4F3;}
 
 /* Group landing: each family has a distinct background and illustrative art. */
 .acc-art-caption{font-size:10px;color:var(--muted);text-align:center;padding:7px 0 0;}
-.acc-families:not(.is-open){gap:10px;}
-.acc-family{position:relative;overflow:hidden;background:linear-gradient(145deg,hsl(var(--acc-hue) 85% 97%),hsl(var(--acc-hue) 75% 90%));border-color:hsl(var(--acc-hue) 45% 80%);min-height:144px;padding:12px;align-items:stretch;justify-content:flex-start;gap:7px;box-shadow:0 3px 10px #15324f08;}
-.acc-family-art{display:flex;align-items:center;justify-content:center;width:100%;height:70px;}
-.acc-family-art img{width:80px;height:70px;object-fit:contain;mix-blend-mode:multiply;border-radius:12px;}
+.acc-families:not(.is-open){gap:8px;}
+.acc-family{position:relative;overflow:hidden;background:linear-gradient(145deg,hsl(var(--acc-hue) 85% 97%),hsl(var(--acc-hue) 75% 90%));border-color:hsl(var(--acc-hue) 45% 80%);min-height:104px;padding:9px;align-items:stretch;justify-content:flex-start;gap:5px;box-shadow:0 3px 10px #15324f08;}
+.acc-family-art{display:flex;align-items:center;justify-content:center;width:100%;height:48px;}
+.acc-family-art img{width:58px;height:48px;object-fit:contain;mix-blend-mode:multiply;border-radius:10px;}
 .acc-family-copy{display:flex;flex-direction:column;gap:2px;position:relative;}
-.acc-family b{font-size:14px;line-height:1.5;color:#152b43;}
-.acc-family small{font-size:10.5px;color:#4d6075;}
-.acc-family:last-child{grid-column:1/-1;min-height:64px;padding:9px 15px;flex-direction:row;align-items:center;justify-content:center;gap:12px;}
-.acc-family:last-child .acc-family-art{width:52px;height:44px;}
-.acc-family:last-child .acc-family-art img{width:50px;height:44px;}
-.acc-family:last-child b{font-size:14px;}
+.acc-family b{font-size:12px;line-height:1.45;color:#152b43;}
+.acc-family small{font-size:9.5px;color:#4d6075;}
+.acc-family:last-child{grid-column:auto;}
+.acc-family:last-child .acc-family-art{width:100%;height:48px;}
+.acc-family:last-child .acc-family-art img{width:58px;height:48px;}
+.acc-family:last-child b{font-size:12px;}
 .acc-family.on{border-color:#2376C4;box-shadow:0 0 0 2px #2376c430;}
 .acc-families.is-open .acc-family{background:hsl(var(--acc-hue) 65% 94%);}
 .acc-families.is-open .acc-family-art{display:none;}
@@ -2222,7 +2222,7 @@ html[data-theme="dark"] .acc-family{background:linear-gradient(145deg,hsl(var(--
 html[data-theme="dark"] .acc-family b{color:#f1f6ff;}
 html[data-theme="dark"] .acc-family small{color:#c3cfdf;}
 html[data-theme="dark"] .acc-family-art img{mix-blend-mode:normal;box-shadow:0 2px 10px #0002;}
-@media(max-width:350px){.acc-family{padding:10px;min-height:140px;}.acc-family b{font-size:12.5px;}.acc-family small{font-size:9.5px;}}
+@media(max-width:350px){.acc-family{padding:8px;min-height:100px;}.acc-family b{font-size:11.5px;}.acc-family small{font-size:9px;}}
 </style>
 <style>/* Presentation-only sector frames. No order/auth/storage changes. */
 html .sgridpanel .homesectors{grid-auto-rows:auto!important;align-items:stretch!important;}html .sgridpanel .homesectors .sico.haslogo{height:auto!important;min-height:0!important;align-self:stretch!important;}html .sgridpanel .homesectors .sico.haslogo .sico-logo{width:100%!important;height:auto!important;aspect-ratio:1.7!important;min-height:0!important;padding:6px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;}html .sgridpanel .homesectors .sico.haslogo .sico-logo .slogo{display:block!important;width:100%!important;height:100%!important;max-height:100%!important;object-fit:contain!important;object-position:center!important;border-radius:8px!important;}
@@ -2327,7 +2327,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v316-pending-timeout-notes';
+const APP_BUILD = 'v317-acc-uniform-grid';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
