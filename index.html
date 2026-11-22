@@ -2327,7 +2327,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v313-stale-banner-fix';
+const APP_BUILD = 'v314-relogin-banner-fix';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -4197,6 +4197,12 @@ async function submitLogin(){
     }
     state.view = 'home'; state.viewHistory = [];
     saveUserSession_({ username: data.username || username, distName: data.distName||'', distRegion: data.distRegion||'', distPhone: data.distPhone||'', distType: data.distType||'موزع', token: data.token||'' });
+    // 🐞 لو تحقق تنبيه «طلب النهارده» اتخطى قبل الدخول بسبب الجلسة الميتة،
+    // نرجّعه يشتغل بالتوكن الجديد من غير ما المستخدم يقفل ويفتح التطبيق.
+    // وعلامة «الجلسة باطلة» كمان بتتصفّر — كانت بتفضل محفوظة من قبل الدخول
+    // فتمنع التحقق حتى بعد ما التوكن اتجدّد.
+    lastOrderBannerValidated_ = false;
+    state.myOrdersAuthMissing = false;
     rememberLogin_(state.authRemember);
     try{ localStorage.setItem(LS_LASTUSER_KEY, username); }catch(e){}
     // ⚠️ إصلاح جذري لمشكلة "اسم الموزّع غلط في الطلبات": لو الموزّع كتب اسم
@@ -4819,6 +4825,8 @@ async function reauthSubmit_(){
       render(); return;
     }
     saveUserSession_(Object.assign({}, state.currentUser, { token:data.token }));
+    lastOrderBannerValidated_ = false;   // توكن جديد — نعيد تشغيل تحقق تنبيه «طلب النهارده»
+    state.myOrdersAuthMissing = false;
     state.reauth = null;
     render();
     await actuallySubmit();
@@ -8876,7 +8884,22 @@ window.addEventListener('unhandledrejection', e=>{
 
 async function onActionInner(act, el){
   switch(act){
-    case 'goto-login': state.authView='login'; state.authError=''; render(); break;
+    case 'goto-login':
+      // 🐞 بق حقيقي: الزرار ده بيتستخدم كمان من شاشة «انتهت جلستك» في «طلباتي»،
+      // وحالته إن currentUser لسه موجود بجلسة ميتة. ضبط authView لوحده مكانش
+      // بيغيّر حاجة على الشاشة (render بيعرض التطبيق العادي طول ما currentUser
+      // موجود)، فالزرار كان «ميت». لو فيه جلسة، نمسحها الأول — من غير ما نلمس
+      // الطلبات المعلّقة ولا المسودات ولا البصمة — عشان فورم الدخول يظهر فعلاً.
+      // لينكات شاشات الدخول نفسها (currentUser=null أصلاً) بتشتغل زي ما هي.
+      if(state.currentUser){
+        setUserToken('');
+        state.currentUser = null;
+        try{ localStorage.removeItem(LS_USER_KEY); }catch(e2){}
+        try{ sessionStorage.removeItem(SS_AUTHED_KEY); }catch(e3){}
+        state.showBiometricGate = isBiometricEnabledForThisDevice();
+        state.myOrdersAuthMissing = false;
+      }
+      state.authView='login'; state.authError=''; render(); break;
     case 'goto-register': state.authView='register'; state.authError=''; render(); break;
     case 'goto-forgot': state.authView='forgot'; state.authError=''; state.forgotSent=false; render(); break;
     case 'login-submit': await submitLogin(); break;
@@ -8945,18 +8968,6 @@ async function onActionInner(act, el){
     case 'reg-type-dist': state.regDistType='موزع'; render(); break;
     case 'reg-type-client': state.regDistType='عميل'; render(); break;
     case 'forgot-submit': await submitForgot(); break;
-    case 'goto-login':
-      // تجديد الجلسة من شاشة "تابع طلبيتك" — بنمسح التوكن المنتهي بس، من غير
-      // ما نلمس أي بيانات تانية، ونوري فورم الدخول عشان يجدّد التوكن.
-      setUserToken('');
-      state.currentUser = null;
-      try{ localStorage.removeItem(LS_USER_KEY); }catch(e){}
-      try{ sessionStorage.removeItem(SS_AUTHED_KEY); }catch(e){}
-      state.authView='login';
-      state.showBiometricGate = isBiometricEnabledForThisDevice();
-      state.myOrdersAuthMissing = false;
-      render();
-      break;
     case 'reauth-submit': await reauthSubmit_(); break;
     case 'reauth-cancel': state.reauth = null; render(); break;
     case 'logout':
