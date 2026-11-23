@@ -48,7 +48,7 @@ for(const theme of ['light','dark']){
   ok(`[${theme}] أيقونة «الرئيسية» النشطة بيضا`, rgb(r.icon)==='255,255,255', r.icon);
   ok(`[${theme}] الشاشة الرئيسية في عمود ≤ 980px على الكمبيوتر`, r.appW<=980, r.appW+'px');
   ok(`[${theme}] مفيش «اللي بتطلبه كتير» ولا كارت أزرق ولا شريط سريع`, r.quick===0, String(r.quick));
-  ok(`[${theme}] «طلبك الأخير» وكروت القطاعات والبحث ظهروا`, r.last===1 && r.sectors>=1 && r.search===1, JSON.stringify(r));
+  ok(`[${theme}] كروت القطاعات والبحث ظهروا وبلوك «طلبك الأخير» متشال (v286)`, r.last===0 && r.sectors>=1 && r.search===1, JSON.stringify(r));
   await ctx.close();
 }
 
