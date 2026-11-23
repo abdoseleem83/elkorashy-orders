@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v312-groups-session-zoom';
+const APP_VERSION = 'v319-pin-post';
 
 const SHEET_NAME = 'Orders';
 const CATALOG_SHEET_NAME = 'الأصناف';
@@ -344,12 +344,18 @@ function isLoginLocked_(username) {
   } catch (e) { return false; }
 }
 function noteLoginFail_(username) {
+  // 🔒 قفل حوالين القراية+الكتابة عشان المحاولات المتوازية كلها تتعدّ (من غير القفل كانت ممكن تعدّي حد الـ٥)
+  let lock = null;
+  try { lock = LockService.getScriptLock(); lock.tryLock(3000); } catch (e) { lock = null; }
   try {
     const cache = CacheService.getScriptCache();
     const key = loginFailKey_(username);
     const n = Number(cache.get(key) || 0) + 1;
     cache.put(key, String(n), LOGIN_LOCK_SECONDS);
-  } catch (e) {}
+  } catch (e) {
+  } finally {
+    try { if (lock) lock.releaseLock(); } catch (e) {}
+  }
 }
 function clearLoginFails_(username) {
   try { CacheService.getScriptCache().remove(loginFailKey_(username)); } catch (e) {}
@@ -484,6 +490,9 @@ function doPostInner_(e) {
   if (action === 'login')                 return json_(handleLogin(data.username || '', data.password || ''));
   if (action === 'register')              return handleRegister(data);
   if (action === 'requestPasswordReset')  return handleRequestPasswordReset(data);
+  // 🔒 دخول الأدمن/الإدارة بالـPIN بقى POST بس — الـPIN ما يتحطش في الـURL (بيظهر في السجلات والتاريخ)
+  if (action === 'adminLogin')            return json_(adminLogin_(data.pin));
+  if (action === 'manageLogin')           return json_(manageLogin_(data.pin));
 
   // ---------- عمليات الموزّع (بتوكن المستخدم) ----------
   if (action === 'savePushSub') {
@@ -1697,9 +1706,6 @@ function doGetInner_(e) {
       time: new Date()
     });
   }
-
-  if (action === 'adminLogin')  return json_(adminLogin_(e.parameter.pin));
-  if (action === 'manageLogin') return json_(manageLogin_(e.parameter.pin));
 
   // الكتالوج مفتوح للكل (أسعار عامة، مفيش بيانات شخصية فيه)
   if (action === 'catalog') return json_(buildCatalogPayload_());
