@@ -2314,7 +2314,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v320-order-validation';
+const APP_BUILD = 'v321-storage-qty-safe';
 const MIN_SERVER_BUILD = 'v320';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -3180,7 +3180,7 @@ function renderCartItemsHtml(cart){
               <div class="pname">${esc(it.product)}</div>
               <div class="pmeta">${it.color ? esc(it.color) : ''}${it.note ? (it.color?' · ':'') + esc(it.note) : ''}${it.autoBundled ? ' <span class="autotag">🔗 مضاف تلقائيًا مع الباب</span>' : ''}</div>
             </div>
-            <div class="qty">×${it.qty} ${esc(it.unitType||'')}</div>
+            <div class="qty">×${esc(it.qty)} ${esc(it.unitType||'')}</div>
             ${it.autoBundled ? '' : `<button class="del edit" data-act="edit-cart-item" data-main="${esc(it.main)}" data-product="${esc(it.product)}">${ico_('editIcon',16)}</button>`}
             <button class="del" data-act="del-cart" data-idx="${it._idx}">✕</button>
           </div>
@@ -4291,7 +4291,7 @@ function loadProfile(){
 function saveOrderRef(id, distName){
   const list = getSavedOrderRefs();
   list.unshift({id, distName, ts:Date.now()});
-  try{ localStorage.setItem(LS_ORDERS_KEY, JSON.stringify(list.slice(0,30))); }catch(e){}
+  try{ const rtxt_ = JSON.stringify(list.slice(0,30)); localStorage.setItem(LS_ORDERS_KEY, rtxt_); return localStorage.getItem(LS_ORDERS_KEY)===rtxt_; }catch(e){ return false; }
 }
 // بيشيل مرجع طلب من "طلباتي" (بنستخدمه لما نعدّل طلب — القديم يتشال ويحل محله الجديد)
 function removeOrderRef(id){
@@ -4302,7 +4302,8 @@ function removeOrderRef(id){
 // ===== draft (save for later / auto-save) =====
 function saveDraft(){
   if(state.cart.length===0 && !asText(state.distName).trim()){ showToast('السلة فاضية، مفيش حاجة تتحفظ'); return; }
-  autoSaveDraft();
+  const draftOk_ = autoSaveDraft();
+  if(draftOk_===false){ showToast('⚠️ مساحة الجهاز ممتلئة والمسودة ما اتحفظتش. فضّي مساحة على الجهاز من غير ما تمسح بيانات التطبيق قبل ما تقفله', 7000); return; }
   state.draftJustSaved = true;
   render();
   showToast('✓ اتحفظ في السلة — ترجعله في أي وقت من غير ما يتبعت');
@@ -4310,13 +4311,20 @@ function saveDraft(){
 }
 
 function autoSaveDraft(){
-  if(state.editingOrderId) return; // مش هنحفظ مسودة وإحنا بنعدّل طلب موجود
-  if(state.cart.length===0 && !asText(state.distName).trim() && !asText(state.distRegion).trim()) { clearDraft(); return; }
+  if(state.editingOrderId) return true; // مش هنحفظ مسودة وإحنا بنعدّل طلب موجود
+  if(state.cart.length===0 && !asText(state.distName).trim() && !asText(state.distRegion).trim()) { clearDraft(); return true; }
   const draft = {
     distName: state.distName, distRegion: state.distRegion, distPhone: state.distPhone,
     note: state.note, cart: state.cart, savedAt: Date.now()
   };
-  try{ localStorage.setItem(LS_DRAFT_KEY, JSON.stringify(draft)); }catch(e){}
+  let okDraft_ = false;
+  try{ const dtxt_ = JSON.stringify(draft); localStorage.setItem(LS_DRAFT_KEY, dtxt_); okDraft_ = localStorage.getItem(LS_DRAFT_KEY)===dtxt_; }catch(e){ okDraft_ = false; }
+  state.draftSaveFailed = !okDraft_;
+  if(!okDraft_ && Date.now() - (state.draftFailNoticeAt||0) > 60000){
+    state.draftFailNoticeAt = Date.now();
+    showToast('⚠️ مساحة الجهاز ممتلئة، آخر تعديلاتك في السلة مش متحفظة وممكن تضيع لو قفلت التطبيق. المسودة اللي اتحفظت قبلها (لو فيه) أقدم', 7000);
+  }
+  return okDraft_;
 }
 
 function getStoredDraft(){
@@ -4674,13 +4682,13 @@ function finalizeOrderSuccess_(order, isUpdate, oldId, id, orderNo, toastMsg){
   // الطلب الجديد (سواء جديد أو ناتج عن تعديل) بيتسجّل في "طلباتي" برقمه الجديد،
   // والمرجع القديم بيتشال عشان مايفضلش الطلب القديم ظاهر عند الموزع.
   if(oldId) removeOrderRef(oldId);
-  saveOrderRef(id, order.distName);
-  localStorage.setItem(LS_LAST_DATE_KEY, todayStr());
-  localStorage.setItem(LS_LAST_ID_KEY, id.toUpperCase());
+  let histOk_ = saveOrderRef(id, order.distName);
+  try{ localStorage.setItem(LS_LAST_DATE_KEY, todayStr()); localStorage.setItem(LS_LAST_ID_KEY, id.toUpperCase()); }catch(e){ histOk_ = false; }
+  state.localHistoryFailed = !histOk_;
   state.cart=[]; state.staged=[]; state.distName=''; state.distRegion=''; state.distPhone=''; state.note=''; state.warehouse=''; state.editingOrderId=null; state.actingFor=null;
   loadProfile();
   clearDraft();
-  showToast(toastMsg, 5000);
+  showToast(histOk_ ? toastMsg : (toastMsg + ' — رقم الطلب #' + orderNo + '. مساحة الجهاز ممتلئة فممكن ما يظهرش في «طلباتي» هنا'), histOk_ ? 5000 : 9000);
   state.waSent = false;
   state.waImgPreparing = false;
   state.orderImages = null;
@@ -5884,7 +5892,7 @@ async function buildWarehouseImage(order, mainGroup, rows, pageNo, pageCount){
                 ${esc(it.name || it.product)}${it.color?` <span style="color:#6B7A8C;">- ${esc(it.color)}</span>`:''}
               </td>
               <td style="padding:10px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;">
-                ${n.qty} ${esc(n.unitLabel||'')}
+                ${esc(n.qty)} ${esc(n.unitLabel||'')}
               </td>
             </tr>`;
           }).join('')}
@@ -7465,7 +7473,7 @@ function renderMyOrdersView(){
         ${steps}
         <details class="odet"><summary>تفاصيل الأصناف</summary>
           <div class="items">
-            ${(o.items||[]).map(it=>`<div class="item-row"><span>${esc(it.product)}${it.color?' — '+esc(it.color):''}</span><b>×${it.qty} ${esc(it.unitType||'')}</b></div>`).join('')}
+            ${(o.items||[]).map(it=>`<div class="item-row"><span>${esc(it.product)}${it.color?' — '+esc(it.color):''}</span><b>×${esc(it.qty)} ${esc(it.unitType||'')}</b></div>`).join('')}
           </div>
         </details>
         <div class="adminbtnrow adminbtnrow-compact">
@@ -8022,7 +8030,7 @@ function renderAdminOrdersColumn_(title, orders){
         ${state.adminEdits[o.id] ? adminEditItemsHtml_(o) : `
         <div class="items">
           ${o.items.map(it=>`
-            <div class="item-row"><span>${esc(it.product)}${it.color?' — '+esc(it.color):''}</span><b>×${it.qty} ${esc(it.unitType||'')}</b></div>
+            <div class="item-row"><span>${esc(it.product)}${it.color?' — '+esc(it.color):''}</span><b>×${esc(it.qty)} ${esc(it.unitType||'')}</b></div>
           `).join('')}
         </div>
         ${!isDone ? `<div class="adminedit"><button class="delbtn pdf" data-act="adm-edit-start" data-id="${esc(o.id)}">${ico_('editIcon',11)} تعديل الكمية والوحدة</button></div>` : ''}`}
