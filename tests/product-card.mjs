@@ -114,8 +114,14 @@ ok('الاختيار من القايمة غيّر القطاع وفتح أصنا
 // ── «اكسسوارات pvc» أيقونة واحدة بتجمع (اكسا + خارجيه + شاتر + WPC)
 ok('القطاعات: «اكسسوارات pvc» أيقونة واحدة بدل (اكسا/خارجيه/شاتر/WPC)', await page.evaluate(()=>{ const o=orderSectors_(); return o.includes('اكسسوارات pvc') && !o.includes('شاتر') && !o.includes('ابواب WPC') && !o.includes('اكسسوارات pvc اكسا') && !o.includes('اكسسوارات خارجيه'); }));
 await page.selectOption('.ministrip2027 select', 'اكسسوارات pvc'); await page.waitForTimeout(300);
-const accNames = await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim()));
-ok('القطاع الموحّد فيه أصناف الأربع قطاعات مترتبة أبجدي', accNames.join('|')==='باب WPC|باكتة صغيرة|سيليكون شفاف|شاتر ابيض|مفصلة ثقيلة|مقبض خارجي', accNames.join('|'));
+// الاكسسوارات بتتقسّم لمجموعات عرض (ACC_FAMILIES_ / state.accFamily): الصنف بيظهر جوه مجموعته. بنمر على كل المجموعات ونجمع الأصناف.
+const accAll=[];
+for(const f of ['esp','hinges','handles','ends','locks','sealants','mesh','plastics','rest']){
+  await page.evaluate(f=>{ state.accFamily=f; render(); }, f); await page.waitForTimeout(150);
+  accAll.push(...await page.$$eval('.pcard .pc-name', e=>e.map(x=>x.textContent.trim())));
+}
+ok('القطاع الموحّد: أصناف الأربع قطاعات كلها ظاهرة جوه مجموعات العرض (من غير تكرار ولا ضياع)', accAll.slice().sort().join('|')==='باب WPC|باكتة صغيرة|سيليكون شفاف|شاتر ابيض|مفصلة ثقيلة|مقبض خارجي', accAll.join('|'));
+await page.evaluate(()=>{ state.accFamily='hinges'; render(); }); await page.waitForTimeout(200);
 ok('من غير تصنيفات فرعية + رابط «أصناف أخرى» جوه', (await page.$('.chipgrid3'))===null && (await page.$('.otherlink'))!==null);
 // الكمية فاضية للصنف من غير ألوان (الموزع يكتبها) + الوحدة صح حسب القطاع الأصلي
 await page.click('.pcard.pt[data-val="مفصلة ثقيلة"]'); await page.waitForTimeout(300);
@@ -229,8 +235,10 @@ await page.selectOption('.pcard:has(.pc-name:text-is("حلق كومبن")) .move
 ok('«رجوع للتصنيف التلقائي» بيرجّعه لـ «أخرى»', (globalThis.__typePost.type===''), JSON.stringify(globalThis.__typePost)) ;
 await page.evaluate(()=>{ setManageToken(''); state.family=''; state.staged=[]; render(); }); await page.waitForTimeout(200);
 // الاكسسوارات: أصناف مباشرة من غير مجموعات (أبجدي) ومربعات مضغوطة
-await page.evaluate(()=>{ applySector_(ACC_GROUP); render(); }); await page.waitForTimeout(300);
-ok('الاكسسوارات: مفيش مجموعات ولا رسالة اختيار — الأصناف ظاهرة على طول', (await page.$('.famrow'))===null && (await page.$('.pickfam'))===null && (await page.$$('.pcard.pt')).length>=6);
+await page.evaluate(()=>{ applySector_(ACC_GROUP); state.accFamily=''; render(); }); await page.waitForTimeout(300);
+ok('الاكسسوارات: مجموعات العرض (acc-family) ظاهرة الأول، والأصناف بتفتح بعد اختيار مجموعة', (await page.$$('[data-act="acc-family"]')).length>=6 && (await page.$$('.pcard.pt')).length===0);
+await page.evaluate(()=>{ state.accFamily='rest'; render(); }); await page.waitForTimeout(200);
+ok('اختيار مجموعة بيعرض أصنافها (باقي الأصناف: ٣ في بيانات الاختبار)', (await page.$$('.pcard.pt')).length===3);
 await page.evaluate(([k])=>{ applySector_(k); render(); }, [K]); await page.waitForTimeout(300);
 // ── دوسة على لون موجود في السلة: بيتفتح للتعديل (مش بيتشال ويتمسح البند من السلة)
 await page.evaluate(()=>{ state.staged=[]; state.cart=[]; render(); }); await page.waitForTimeout(200);
