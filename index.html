@@ -411,7 +411,6 @@ textarea{resize:vertical;min-height:60px;}
 .acc-search input{border:2px solid #3678BB !important;background:#fff !important;color:#172F50 !important;}
 .acc-search input::placeholder{color:#506782 !important;opacity:1;}
 .acc-search:focus-within input{outline:3px solid rgba(32,132,219,.22);outline-offset:1px;}
-.acc-search-empty{display:none;}
 .acc-results .acc-otherlink{margin-top:4px;min-height:44px;padding:9px 12px;border:1px solid var(--line);font-size:13px;font-weight:700;color:var(--ink);}
 html[data-theme="dark"] .acc-search input{background:#11223E !important;border-color:#6CBFFF !important;color:#F2F6FF !important;}
 html[data-theme="dark"] .acc-search input::placeholder{color:#BDD3ED !important;}
@@ -2054,12 +2053,6 @@ html[data-theme="dark"] .productgrid > .pcard.pt:nth-child(even){--card:#18284A;
 .pcard.pt{position:relative;min-height:70px;padding:10px 8px;border-radius:14px;align-items:center;justify-content:center;text-align:center;gap:4px;font-family:inherit;color:var(--ink);cursor:pointer;box-shadow:0 2px 6px rgba(11,61,145,.05);}
 .pcard.pt:active{transform:scale(.97);}
 .pcard.pt .pc-name{flex:0 1 auto;width:100%;text-align:center;}
-.pt-cols{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-top:6px;padding:6px;border-radius:12px;background:#fff;border:1.5px solid #8FA6D0;box-shadow:0 2px 6px rgba(11,61,145,.14);width:100%;box-sizing:border-box;}
-.pt-col{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;color:#1B2A4A;line-height:1.2;background:#EEF2F9;border:1px solid #C7D3EA;border-radius:999px;padding:2px 7px 2px 5px;}
-html[data-theme="dark"] .pt-cols{background:#16213A;border-color:#4A6396;box-shadow:none;}
-html[data-theme="dark"] .pt-col{background:#22314F;border-color:#4A6396;color:#E8EEFB;}
-.pt-col i{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.28);flex:none;}
-.pt-col.more{font-weight:900;color:var(--navy);padding:2px 8px;}
 .pt-name{font-size:12.5px;font-weight:900;line-height:1.4;word-break:break-word;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;}
 .pt-dot{position:absolute;top:7px;inset-inline-start:7px;width:9px;height:9px;border-radius:50%;}
 .pt-dot.ok{background:#16A34A;} .pt-dot.mid{background:#F59E0B;} .pt-dot.out{background:#DC2626;}
@@ -2230,10 +2223,6 @@ html .sgridpanel .homesectors{grid-auto-rows:auto!important;align-items:stretch!
 /* Calm compact cards. Presentation only. */
 .pcard.pt{box-shadow:none;border-width:1px;padding:12px 7px;gap:8px;justify-content:flex-start;}
 .pcard.pt .pt-name{font-size:12.5px;line-height:1.5;min-height:56px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;}
-.pcard.pt .pt-cols{background:transparent;border:0;box-shadow:none;padding:0;gap:5px 8px;margin-top:0;}
-.pcard.pt .pt-col{background:transparent;border:0;padding:0;gap:3px;font-size:9px;font-weight:600;color:var(--muted);}
-.pcard.pt .pt-col i{width:9px;height:9px;border:1px solid rgba(90,105,125,.35);}
-.pcard.pt .pt-col.more{font-size:9px;font-weight:600;color:var(--muted);padding:0;}
 .pcard.pt .pt-dot{width:5px;height:5px;opacity:.55;top:9px;right:9px;}
 html .productgrid .pcard.pt{background:#fff!important;border-color:#D4DDEB!important;}
 html .productgrid > .pcard.pt:nth-child(even){background:#E4EEFF!important;border-color:#BCD0F2!important;}
@@ -2241,9 +2230,6 @@ html[data-theme="dark"] .productgrid .pcard.pt{background:#17243b!important;bord
 html[data-theme="dark"] .productgrid > .pcard.pt:nth-child(even){background:#18284A!important;border-color:#2B4170!important;}
 
 /* Revision: quiet background behind each available color name and circle. */
-.pcard.pt .pt-col{background:#EEF2F8;border:0;border-radius:6px;padding:3px 4px;}
-html[data-theme="dark"] .pcard.pt .pt-col{background:#25334B;}
-.pcard.pt .pt-col.more{background:transparent;padding:3px 1px;}
 
  .stock-unknown-note{font-size:10px;color:var(--muted);line-height:1.5}.cdot.unknown i{box-shadow:none!important;opacity:.7}
 .bottomnav-in{grid-template-columns:1fr 1fr 52px 1fr 1fr 1fr!important;max-width:600px!important;}
@@ -2328,7 +2314,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v317-acc-uniform-grid';
+const APP_BUILD = 'v318-dead-code-cleanup';
 const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -2475,13 +2461,10 @@ const state = {
   successOrderId:null,
   successMode:'new',           // new | updated
   lastOrder:null,
-  shortagePdf:null,
   previewModal:null,
   pinChecking:false,
-  orderSentToWa:false,
   orderImages:null,
   orderImgPreparing:false,
-  warehouseImages:[],
   whImgPreparing:false,
   showStock:false,
   stockSearch:'',
@@ -2980,15 +2963,6 @@ function warehouseAffectsStock(main){
 //   'ok'   = فيه لون واحد على الأقل بلفة كاملة فأكتر
 //   'crit' = مفيش لفة كاملة في أي لون، بس فيه عيدان في لون واحد على الأقل
 //   'out'  = كل الألوان صفر فعليًا
-// 🎨 الألوان المتاحة بس تحت اسم الصنف (من غير الموقوف أو اللي رصيده صفر)
-function availColorsLine_(main, product){
-  if(state.catalogReviewRequired&&warehouseAffectsStock(main)&&!isProductFullyUnavailable(main,product))return '<span class="stock-unknown-note">الرصيد تحت المراجعة</span>';
-  if(!warehouseAffectsStock(main)) return '';   // طنطا بس (باقي المخازن/العميل/الاكسسوارات مفيهمش تتبّع رصيد)
-  const cols = colorsForProduct(main, product).filter(c => c.color && c.available!==false && colorStockLevel(c)!=='out').map(c=>c.color);
-  if(!cols.length) return '';
-  const MAX = 3, shown = cols.slice(0, MAX), more = cols.length - shown.length;
-  return `<span class="pt-cols" aria-label="الألوان المتاحة">${shown.map(c=>`<span class="pt-col"><i style="background:${colorHex_(c)}"></i>${esc(c)}</span>`).join('')}${more>0 ? `<span class="pt-col more">+${more}</span>` : ''}</span>`;
-}
 function productStockLevel(main, product){
   if(state.catalogReviewRequired&&warehouseAffectsStock(main))return 'unknown';
   const opts = colorsForProduct(main, product).filter(c=>c.available!==false);
@@ -3453,22 +3427,7 @@ function pdfScale_(itemCount){
 }
 
 // ===== storage (Google Sheet via Apps Script) =====
-// بيتأكد إن الطلب موجود فعلاً في الشيت (بنستخدمها بعد الـ timeout).
-// مهم: الـ timeout مش معناه إن الحفظ فشل — ساعات السيرفر بيسجّل الطلب بس بياخد
-// وقت طويل في الرد، والتطبيق يقطع الاتصال. لو قلنا للموزع "فشل" وهو اتسجل،
-// هيبعته تاني ويتكرر الطلب مرتين.
-async function orderExistsRemote(id){
-  try{
-    const d = await apiGet('lookup', { ids: id, token: getUserToken() });
-    return Array.isArray(d) && d.some(o => String(o.id) === String(id));
-  }catch(e){ return false; }
-}
 
-// بيتحقق إن كان الخطأ ده خطأ "شبكة/اتصال" (يعني الريكوست مارضاش يوصل للسيرفر
-// أصلاً) — الحالات دي بس اللي منطقي نعيد المحاولة فيها تلقائيًا.
-function isNetworkError_(e){
-  return !!(e && e.name === 'TypeError' && /fetch/i.test(String(e.message || '')));
-}
 
 // LOCAL CANDIDATE ONLY. No backend receipt or exactly-once claim.
 const LS_OFFLINE_QUEUE_KEY = 'qurashi_offline_queue';
@@ -3519,7 +3478,6 @@ function pendingPut_(record){
   if(i<0)q.push(record);else q[i]=record;
   saveOfflineQueue_(q);state.offlineQueueCount=q.length;
 }
-async function saveOrderRemoteOnce_(order,isUpdate){return saveOrderRemote(order,isUpdate);}
 async function saveOrderRemote(order,isUpdate){
   const actor=pendingActor_();
   if(!actor || !order || String(order.username)!==actor) throw Error('الحساب الحالي مختلف عن صاحب محاولة الإرسال. لم يبدأ الإرسال.');
@@ -4849,12 +4807,9 @@ async function reauthSubmit_(){
 function resetOrderForm(){
   state.waSent = false;
   state.waImgPreparing = false;
-  state.orderSentToWa = false;
   state.orderImages = null;
-  state.warehouseImages = [];
   state.successOrderId = null;
   state.lastOrder = null;
-  state.shortagePdf = null;
   state.shortageReady = null;
   render();
 }
