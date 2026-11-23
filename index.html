@@ -2314,8 +2314,8 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v318-dead-code-cleanup';
-const MIN_SERVER_BUILD = 'v281';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
+const APP_BUILD = 'v319-pin-post';
+const MIN_SERVER_BUILD = 'v319';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRMd_ZIrXC_UQL1zc_YM8gV3zCfB9nWx8kehDN6QzYBW1OnrhDLdoWx42WWiNWVnEX/exec';
@@ -3922,7 +3922,7 @@ async function submitAdminPin(){
   if(!pin){ state.pinError = 'من فضلك اكتب الرقم'; render(); return; }
   state.pinChecking = true; state.pinError = ''; render();
   try{
-    const d = await apiGet('adminLogin', {pin});
+    const d = await apiPost({ action:'adminLogin', pin });   // POST عشان الـPIN ما يظهرش في الـURL
     if(d && d.ok && d.token){
       setAdminToken(d.token);
       state.adminUnlocked = true;
@@ -3962,7 +3962,7 @@ async function submitManagePin(){
   if(!pin){ state.managePinError = 'من فضلك اكتب الرقم'; render(); return; }
   state.managePinChecking = true; state.managePinError = ''; render();
   try{
-    const d = await apiGet('manageLogin', {pin});
+    const d = await apiPost({ action:'manageLogin', pin });   // POST عشان الـPIN ما يظهرش في الـURL
     if(d && d.ok && d.token){
       setManageToken(d.token);
       state.manageUnlocked = true;
