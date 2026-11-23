@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v319-pin-post';
+const APP_VERSION = 'v320-order-validation';
 
 const SHEET_NAME = 'Orders';
 const CATALOG_SHEET_NAME = 'الأصناف';
@@ -614,7 +614,13 @@ function saveOrder_(data, asUser) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
   if (!sheet) return json_({ ok: false, error: 'sheet not found' });
 
-  const items = mergeDuplicateItems_(Array.isArray(data.items) ? data.items : []);
+  const wh = String(data.warehouse || '').trim();
+  if (wh && ALLOWED_WAREHOUSES_.indexOf(wh) < 0) return json_({ ok: false, error: 'المخزن غير صالح' });
+  const san = sanitizeItems_(data.items);
+  if (!san.ok) return json_({ ok: false, error: san.error });
+  if (!san.items.length) return json_({ ok: false, error: 'الطلب لازم يفضل فيه صنف واحد على الأقل' });
+  const items = san.items;
+  if (JSON.stringify(items).length > 45000) return json_({ ok: false, error: 'الطلب كبير أكتر من اللازم — قسّمه على طلبين' });
   const itemsSummary = cellSafe_(items.map(function (it) {
     return it.product + (it.color ? ' - ' + it.color : '') + ' × ' + it.qty + ' ' + (it.unitType || '');
   }).join(' | '));
@@ -682,9 +688,9 @@ function saveOrder_(data, asUser) {
     ? (EDIT_MARK_PREFIX_ + editedFromOrderNo + EDIT_MARK_SUFFIX_ + cellSafe_(data.note))
     : cellSafe_(data.note);
   sheet.appendRow([
-    cellSafe_(data.id), new Date(data.ts), cellSafe_(data.distName), cellSafe_(data.distRegion),
+    cellSafe_(data.id), orderDate_(data.ts), cellSafe_(data.distName), cellSafe_(data.distRegion),
     String(data.distPhone || ''), noteToSave, itemsSummary,
-    isUpdate ? STATUS_PENDING : (data.status || STATUS_PENDING),
+    STATUS_PENDING,   // 🔒 الحالة دايمًا «تم استلام الطلب» — الأدمن بس هو اللي بيغيّرها (updateStatus)
     JSON.stringify(items), cellSafe_(data.warehouse), orderNo, username
   ]);
 
@@ -696,7 +702,9 @@ function saveOrder_(data, asUser) {
 function adminUpdateOrderItems_(id, itemsIn) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
   if (!sheet) return { ok: false, error: 'sheet not found' };
-  const items = mergeDuplicateItems_(Array.isArray(itemsIn) ? itemsIn : []).filter(function (it) { return Number(it.qty) > 0; });
+  const san = sanitizeItems_(itemsIn);
+  if (!san.ok) return { ok: false, error: san.error };
+  const items = san.items;
   if (!items.length) return { ok: false, error: 'الطلب لازم يفضل فيه صنف واحد على الأقل' };
   const n = sheet.getLastRow() - 1;
   if (n < 1) return { ok: false, error: 'not found' };
@@ -773,6 +781,43 @@ function mergeDuplicateItems_(items) {
     } else { idx[key] = out.length; out.push(Object.assign({}, it)); }
   });
   return out;
+}
+
+// 🔒 تنقية أصناف الطلب على السيرفر — الواجهة مش مصدر موثوق (أي حد عارف رابط الـ/exec يقدر يبعت أي حاجة).
+//  - بنحتفظ بالقيم البسيطة بس (نص/رقم/true-false) وبنقص النصوص الطويلة
+//  - الكمية لازم رقم موجب، ولو أكبر من الحد المعقول الطلب كله بيترفض (بدل ما صنف يتحجز كله)
+//  - الأصناف من غير اسم أو بكمية صفر/سالبة بتتشال
+const MAX_ORDER_ITEMS_ = 200;
+const MAX_ITEM_QTY_ = 100000;
+const ALLOWED_WAREHOUSES_ = ['طنطا', 'اكسا', 'عام'];   // '' = عميل مالوش مخزن → 'عام'
+// تاريخ الطلب من الواجهة — لو مش تاريخ صالح أو في المستقبل البعيد بنستخدم دلوقتي
+function orderDate_(ts) {
+  const d = new Date(ts);
+  return (isNaN(d.getTime()) || d.getTime() > Date.now() + 86400000) ? new Date() : d;
+}
+function sanitizeItems_(itemsIn) {
+  const src = Array.isArray(itemsIn) ? itemsIn : [];
+  if (src.length > MAX_ORDER_ITEMS_) return { ok: false, error: 'عدد الأصناف أكبر من المسموح' };
+  const clean = [];
+  for (let i = 0; i < src.length; i++) {
+    const it = src[i];
+    if (!it || typeof it !== 'object' || Array.isArray(it)) continue;
+    const c = {};
+    Object.keys(it).slice(0, 40).forEach(function (k) {
+      if (k.length > 40) return;
+      const v = it[k];
+      if (typeof v === 'string') c[k] = v.trim().slice(0, k === 'note' ? 500 : 200);
+      else if (typeof v === 'number' && isFinite(v)) c[k] = v;
+      else if (typeof v === 'boolean') c[k] = v;
+    });
+    if (!String(c.name || c.product || '').trim()) continue;
+    const qty = Number(c.qty);
+    if (!isFinite(qty) || qty <= 0) continue;
+    if (qty > MAX_ITEM_QTY_) return { ok: false, error: 'كمية غير منطقية في صنف: ' + String(c.name || c.product) };
+    c.qty = Math.round(qty * 1000) / 1000;
+    clean.push(c);
+  }
+  return { ok: true, items: mergeDuplicateItems_(clean) };
 }
 
 function updateOrderStatus_(id, status) {
