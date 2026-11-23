@@ -2314,7 +2314,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v321-storage-qty-safe';
+const APP_BUILD = 'v322-reject-reason';
 const MIN_SERVER_BUILD = 'v320';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -3458,6 +3458,13 @@ async function flushOfflineQueue_(){state.offlineQueueCount=offlineQueueCount();
 function pendingFingerprint_(r){
   const o=r.order;return JSON.stringify([String(r.actor||o.username||''),!!r.isUpdate,o.oldId||'',o.forUsername||'',o.distName||'',o.distRegion||'',o.distPhone||'',o.warehouse||'',o.note||'',o.items]);
 }
+// سبب رفض صريح من السيرفر يتعرض للموزّع بس لو نص عربي قصير مفهوم؛ أي نص تقني
+// (استثناء/مسار كود) أو فاضي بيتحوّل لنص عام عشان ما نكشفش تفاصيل داخلية.
+function safeServerReason_(raw){
+  const t=String(raw==null?'':raw).replace(/\s+/g,' ').trim();
+  if(!t || t.length>160 || !/[\u0600-\u06FF]/.test(t) || /exception|error|stack|\bat\s+\S+:\d+|https?:/i.test(t)) return '';
+  return t;
+}
 function pendingError_(message){const e=new Error(message);e.pendingHeld=true;return e;}
 function pendingToken_(r){
   const actor=pendingActor_();
@@ -3518,7 +3525,9 @@ async function transmitPendingLocked_(record){
         record.kind='auth-rejected';pendingPut_(record);
         throw Object.assign(new Error('unauthorized'),{definiteAuthRejection:true});
       }
-      throw Error('server did not confirm save');
+      const rejected=Error('server did not confirm save');
+      if(data && data.ok===false){ rejected.serverRejected=true; rejected.serverReason=safeServerReason_(data.error); }
+      throw rejected;
     }
     record.kind='confirmed';record.orderNo=data.orderNo?String(data.orderNo):'';record.confirmedAt=Date.now();minimizeConfirmedPending_(record);pendingPut_(record);
     if(pendingActor_()!==actor)throw pendingError_('الحساب اتغيّر أثناء الإرسال. النتيجة محفوظة للحساب الأصلي.');
@@ -3526,10 +3535,17 @@ async function transmitPendingLocked_(record){
   }catch(e){
     if(e.definiteAuthRejection)throw e;
     if(record.kind!=='confirmed'){
-      record.kind='attempted';record.lastCheck='نتيجة الإرسال مش مؤكدة. ممكن يكون وصل للسيرفر. مفيش إعادة إرسال تلقائي أو يدوي من هنا.';
+      record.kind='attempted';
+      // رد صريح من السيرفر بسبب مفهوم: نعرضه، لكن الحالة تفضل «محاولة» والطلب محفوظ
+      // ومفيش إعادة إرسال (مش دليل قاطع إنه ما اتسجلش). غير كده: نفس الرسالة القديمة.
+      record.lastCheck=e.serverRejected
+        ? (e.serverReason?'السيرفر ردّ بالسبب ده: «'+e.serverReason+'». ':'السيرفر رفض الطلب من غير سبب واضح. ')+'الطلب لسه محفوظ عندك في المعلّق ومش هيتبعت تاني تلقائيًا، وراجع الإدارة بالمعرّف قبل أي إجراء.'
+        : 'نتيجة الإرسال مش مؤكدة. ممكن يكون وصل للسيرفر. مفيش إعادة إرسال تلقائي أو يدوي من هنا.';
       try{pendingPut_(record);}catch(storageError){}
     }
-    throw pendingError_('نتيجة الإرسال مش مؤكدة. راجع المعلّق من غير إعادة إرسال.');
+    throw pendingError_(e.serverRejected
+      ? 'السيرفر رفض الطلب'+(e.serverReason?': '+e.serverReason:'')+'. الطلب محفوظ في المعلّق من غير إعادة إرسال.'
+      : 'نتيجة الإرسال مش مؤكدة. راجع المعلّق من غير إعادة إرسال.');
   }finally{clearTimeout(killer);}
 }
 function leaveFormForPending_(){
