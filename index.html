@@ -866,11 +866,12 @@ button.mini2027{cursor:pointer;}
 
 
 /* ورقة الصنف السفلية — فاتحة وكبيرة (نفس شكل تصميم «زجاج») بغض النظر عن الثيم */
-.sh-wrap{position:fixed;inset:0;z-index:97;display:flex;align-items:flex-end;justify-content:center}
+.sh-wrap{position:fixed;inset:0;z-index:120;display:flex;align-items:flex-end;justify-content:center}
 .sh-back{position:absolute;inset:0;border:0;background:rgba(2,6,20,.55);animation:modalbgin .15s ease both;cursor:default}
 .sh-panel{--shi:#0B1B3A;--shm:#6B7A99;--shl:#DCE3F0;--shs:#F3F6FC;--shb:#1E5BD8;
-  position:relative;width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;background:#fff;color:var(--shi);border-radius:28px 28px 0 0;box-shadow:0 -14px 44px rgba(0,16,72,.4);animation:shup .24s cubic-bezier(.22,.9,.4,1) both;padding:10px 18px calc(16px + env(safe-area-inset-bottom,0px))}
+  position:relative;width:100%;max-width:560px;max-height:86vh;max-height:86dvh;display:flex;flex-direction:column;background:#fff;color:var(--shi);border-radius:28px 28px 0 0;box-shadow:0 -14px 44px rgba(0,16,72,.4);animation:shup .24s cubic-bezier(.22,.9,.4,1) both;padding:10px 18px calc(16px + env(safe-area-inset-bottom,0px))}
 @keyframes shup{0%{transform:translateY(60px);opacity:0}100%{transform:none;opacity:1}}
+.sh-wrap.nan .sh-panel,.sh-wrap.nan .sh-back{animation:none}
 .sh-grab{width:46px;height:5px;border-radius:5px;background:#C9D2E3;margin:0 auto 12px}
 .sh-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
 .sh-thumb{flex:0 0 auto;width:64px;height:56px;border-radius:14px;background:var(--shs);display:flex;align-items:center;justify-content:center;overflow:hidden}
@@ -884,6 +885,7 @@ button.mini2027{cursor:pointer;}
 .sh-dots{padding:6px 4px 2px;display:flex;flex-wrap:nowrap;gap:6px;justify-content:flex-start}
 .sh-dot{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:transparent;font-family:inherit;cursor:pointer;flex:1 1 0;min-width:0;padding:0;color:var(--shi)}
 .sh-dot i{width:50px;height:50px;border-radius:50%;background:var(--dc);border:2px solid rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:900;font-size:24px;color:var(--ck,#fff);box-shadow:inset 0 3px 6px rgba(255,255,255,.4)}
+.sh-dot.on:not(.cur) i{box-shadow:0 0 0 2px #fff,0 0 0 4px #9DB6E8}
 .sh-dot.on i{box-shadow:0 0 0 3px #fff,0 0 0 6px var(--shb);transform:scale(1.04)}
 .sh-dot b{font-size:13.5px;font-weight:900}
 .sh-dot small{font-size:11.5px;color:var(--shm);font-weight:700;min-height:14px}
@@ -891,15 +893,15 @@ button.mini2027{cursor:pointer;}
 .sh-q{margin-bottom:12px}
 .sh-qname{font-size:14px;font-weight:900;margin-bottom:6px}
 .sh-qline{display:flex;align-items:center;gap:10px}
-.sh-pm{flex:0 0 auto;width:58px;height:58px;border:0;border-radius:16px;background:var(--shs);color:var(--shi);font-size:30px;font-weight:900;font-family:inherit;cursor:pointer;line-height:1}
+.sh-pm{flex:0 0 auto;width:54px;height:54px;border:0;border-radius:16px;background:var(--shs);color:var(--shi);font-size:30px;font-weight:900;font-family:inherit;cursor:pointer;line-height:1}
 .sh-pm.plus{background:linear-gradient(135deg,#2A7BE8,#0B3D91);color:#fff;box-shadow:0 6px 14px rgba(30,91,216,.35)}
-.sh-qin{flex:1;min-width:0;height:58px;border:1.5px solid var(--shl)!important;border-radius:16px;background:#fff!important;color:var(--shi)!important;-webkit-text-fill-color:var(--shi);text-align:center;font-size:26px;font-weight:900;font-family:inherit}
+.sh-qin{flex:1;min-width:0;height:54px;border:1.5px solid var(--shl)!important;border-radius:16px;background:#fff!important;color:var(--shi)!important;-webkit-text-fill-color:var(--shi);text-align:center;font-size:26px;font-weight:900;font-family:inherit}
 .sh-qin:focus{outline:2px solid var(--shb);border-color:var(--shb)}
 .sh-chips{display:flex;gap:10px;margin-top:10px}
 .sh-chip{flex:1;height:48px;border:1.5px solid var(--shl);border-radius:14px;background:#fff;color:var(--shi);font-size:17px;font-weight:900;font-family:inherit;cursor:pointer}
 .sh-chip:active,.sh-pm:active{transform:scale(.96)}
 .sh-units{display:flex;gap:10px;margin-top:10px}
-.sh-unit{flex:1;height:48px;border:1.5px solid var(--shl);border-radius:14px;background:#fff;color:var(--shi);font-size:16px;font-weight:900;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sh-unit{flex:1;height:44px;border:1.5px solid var(--shl);border-radius:14px;background:#fff;color:var(--shi);font-size:16px;font-weight:900;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .sh-unit.on{border-color:var(--shi);box-shadow:inset 0 0 0 1px var(--shi)}
 .sh-eq{margin-top:10px;text-align:center;font-size:15px;font-weight:900;color:var(--shb)}
 .sh-warn{margin-top:10px;padding:9px 12px;border-radius:12px;background:#FDECEC;border:1px solid #E3A0A0;color:#8A1F1F;font-size:13px;font-weight:700;line-height:1.6}
@@ -2357,7 +2359,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v323-bottom-sheet';
+const APP_BUILD = 'v324-sheet-fix';
 const MIN_SERVER_BUILD = 'v320';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -3531,9 +3533,20 @@ function pendingPut_(record){
 async function saveOrderRemote(order,isUpdate){
   const actor=pendingActor_();
   if(!actor || !order || String(order.username)!==actor) throw Error('الحساب الحالي مختلف عن صاحب محاولة الإرسال. لم يبدأ الإرسال.');
+  // 🔑 من غير توكن (جلسة بصمة قديمة/التوكن اتمسح): نطلب الباسورد فورًا من غير ما نخزّن الطلب في المعلّق —
+  // قبل كده كان بيتخزّن «جاهز» ويفشل، وبعدين أي محاولة تانية بنفس المحتوى كانت بتتمنع وتتحوّل للمعلّق من غير إرسال.
+  if(!(order.forUsername?getAdminToken():getUserToken())) throw Object.assign(new Error('unauthorized'),{definiteAuthRejection:true});
+  pendingToken_({actor,order,isUpdate:!!isUpdate});   // أي مشكلة في الجلسة/الحساب تظهر هنا قبل ما الطلب يتخزّن في المعلّق
   return pendingLocked_(async()=>{
-    const q=getOfflineQueue_();
+    let q=getOfflineQueue_();
     if(state.pendingStorageError) throw Error('تعذّر قراءة الطلبات المحلية. لم يبدأ الإرسال، ما تمسحش بيانات التطبيق.');
+    // نسخة «جاهز» لنفس الطلب لسه ما بدأش إرسالها خالص (kind=ready بس، مفيش محاولة): بنشيلها عشان متمنعش الإرسال
+    // ومتتبعتش مرتين. أي محاولة بدأت (attempted) أو اتأكدت بتفضل زي ما هي ومحدش بيلمسها.
+    {
+      const fpNew=pendingFingerprint_({actor,order,isUpdate:!!isUpdate});
+      const keep=q.filter(r=>!(pendingOwned_(r) && r.kind==='ready' && !r.attemptedAt && pendingFingerprint_(r)===fpNew));
+      if(keep.length!==q.length){ saveOfflineQueue_(keep); state.offlineQueueCount=keep.length; q=getOfflineQueue_(); }
+    }
     const old=q.find(r=>r.order && String(r.order.id)===String(order.id));
     if(old) throw pendingError_('المحاولة محفوظة بالفعل. راجع المعلّق من غير إعادة إرسال.');
     const signature=pendingFingerprint_({actor,order,isUpdate:!!isUpdate});
@@ -7077,6 +7090,8 @@ async function moveAccInline_(main,product,group){
 
 // ===== الورقة السفلية: بتفتح لما الموزع يدوس على صنف (نفس منطق التحديد والتأكيد القديم) =====
 let sheetBuf_ = [];
+let sheetPrevKeys_ = new Set(), sheetCurKeys_ = new Set();   // الورقة بتتحرك مرة واحدة بس عند الفتح (مش مع كل تحديث)
+let sheetActive_ = {};   // الورقة: اللون اللي بيتعدّل كميته دلوقتي (لكل صنف)
 function sheetStockTxt_(r, av){
   if(r.available===false) return 'موقوف';
   if(!av.tracked) return '';
@@ -7087,13 +7102,14 @@ function renderProductSheet_(s, moveChip=''){
   const main = s.main, n = s.product, k = esc(s.key), sc = s.selectedColors;
   const av = productAvail_(main, n);
   const rows = uniqueColorRows_(main, n).filter(r=>r.color);
+  const act_ = sc.includes(sheetActive_[s.key]) ? sheetActive_[s.key] : sc[sc.length-1];
   const dots = rows.length ? `<div class="sh-lbl">اللون</div><div class="sh-dots" role="group" aria-label="الألوان">${rows.map(r=>{
     const c = r.color, on = sc.includes(c), off = r.available===false, lvl = colorStockLevel(r);
     const cls = off ? 'off' : (av.tracked ? (lvl==='out'?'out':lvl==='ok'?'ok':'low') : 'ok');
     const hx = colorHex_(c);
-    return `<button type="button" class="sh-dot ${cls} ${on?'on':''}" style="--dc:${hx};--ck:${inkOn_(hx)}" data-act="${off?'noop-unavailable':'tile-color'}" data-prod="${esc(n)}" data-main="${esc(main)}" data-val="${esc(c)}"><i>${on?'✓':''}</i><b>${esc(c)}</b><small>${esc(sheetStockTxt_(r,av))}</small></button>`;
+    return `<button type="button" class="sh-dot ${cls} ${on?'on':''} ${on&&c===act_?'cur':''}" style="--dc:${hx};--ck:${inkOn_(hx)}" data-act="${off?'noop-unavailable':'tile-color'}" data-prod="${esc(n)}" data-main="${esc(main)}" data-val="${esc(c)}"><i>${on?(Number(s.qtys[c])>0 && c!==act_ ? Number(s.qtys[c]) : '✓'):''}</i><b>${esc(c)}</b><small>${esc(sheetStockTxt_(r,av))}</small></button>`;
   }).join('')}</div>${pavailHtml_(av)?`<div class="pavail">${pavailHtml_(av)}</div>`:''}` : '';
-  const qtys = sc.length ? sc.map(c=>{
+  const qtys = sc.length ? [act_].map(c=>{
     const unitType = s.units[c] || s.unitOptions[0];
     const q = Number(s.qtys[c]) || 0;
     const item = findCatalogItem(main, n, c);
@@ -7102,13 +7118,12 @@ function renderProductSheet_(s, moveChip=''){
     const warn = q>0 ? stockShortageWarning_(main, n, c, unitType, q) : '';
     const kv = `data-key="${k}" data-val="${esc(c)}"`;
     return `<div class="sh-q">
-      ${(sc.length>1 || c) ? `<div class="sh-qname">${esc(c||'الكمية')}</div>`:''}
+      ${(c) ? `<div class="sh-qname">${esc(c||'الكمية')}</div>`:''}
       <div class="sh-qline">
         <button type="button" class="sh-pm" data-act="staged-qty-dec" ${kv} aria-label="نقّص">−</button>
         <input class="sh-qin" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" value="${q>0?q:''}" data-act="staged-qty-input" ${kv} aria-label="الكمية">
         <button type="button" class="sh-pm plus" data-act="staged-qty-inc" ${kv} aria-label="زوّد">+</button>
       </div>
-      <div class="sh-chips">${[1,5,10].map(x=>`<button type="button" class="sh-chip" data-act="staged-qty-add" ${kv} data-n="${x}">+${x}</button>`).join('')}</div>
       ${s.unitOptions.length>1 ? `<div class="sh-units" role="group" aria-label="الوحدة">${s.unitOptions.map(u=>`<button type="button" class="sh-unit ${unitType===u?'on':''}" data-act="set-color-unit-btn" ${kv} data-unit="${esc(u)}">${esc(u)}</button>`).join('')}</div>` : `<div class="sh-units"><span class="sh-unit on">${esc(s.unitOptions[0])}</span></div>`}
       ${eq}${warn?`<div class="sh-warn">${esc(warn)}</div>`:''}
     </div>`;
@@ -7117,7 +7132,8 @@ function renderProductSheet_(s, moveChip=''){
   const total = sc.reduce((t,c)=>t+(Number(s.qtys[c])||0),0);
   const ready = sc.length && sc.every(c=>Number(s.qtys[c])>0);
   const label = (s.isEditingExisting?'حفظ التعديل':'ضيف للسلة') + (ready && sc.length===1 ? ' · ' + total + ' ' + (s.units[sc[0]]||s.unitOptions[0]) : '');
-  return `<div class="sh-wrap" data-stagedkey="${k}">
+  const nan_ = sheetPrevKeys_.has(s.key); sheetCurKeys_.add(s.key);
+  return `<div class="sh-wrap ${nan_?'nan':''}" data-stagedkey="${k}">
     <button type="button" class="sh-back" data-act="cancel-staged" data-key="${k}" aria-label="إغلاق"></button>
     <div class="sh-panel" role="dialog" aria-label="${esc(n)}">
       <div class="sh-grab"></div>
@@ -7289,7 +7305,7 @@ function renderOrderView(){
   // داعي نودّي الموزع لقسم "حدد التفاصيل" البعيد. أي صنف تاني (لسه محتاج
   // يختار لون بنفسه) بيفضل يظهر في قسم "حدد التفاصيل" العادي تحت.
   const inlineStagedKeys_ = [];
-  sheetBuf_ = [];
+  sheetBuf_ = []; sheetPrevKeys_ = sheetCurKeys_; sheetCurKeys_ = new Set();
   if(state.mainGroup && state.mainGroup!==OTHER_SECTOR){
     {
       // كل أصناف القطاع (القطاع الموحّد «اكسسوارات pvc» بيجمع أكتر من main) — أبجدي، والموقوف في الآخر.
@@ -7920,12 +7936,17 @@ async function manageSaveItem(){
   try{
     const action = isNew ? 'manageAddCatalogItem' : 'manageUpdateCatalogItem';
     const r = await apiPost({ action, token:getManageToken(), item:d });
+    if(handleAdminUnauthorized_(r)){ state.manageSaving = false; render(); return; }
     if(r && r.ok){
       showToast(isNew ? 'اتضاف الصنف ✓' : 'اتحفظ التعديل ✓');
+      if(!isNew){   // نحدّث النسخة المحلية فورًا (زي المسح السريع) عشان الأرقام الجديدة تبان من غير ما نستنى كتالوج جديد
+        const it = CATALOG.find(c=>(c.name||c.product)===d.name);
+        if(it){ if(d.stock!==undefined) it.stock = (d.stock===''||d.stock==null)?null:Number(d.stock); if(d.unit!==undefined&&d.unit!=='') it.unit = Number(d.unit)||1; it.available = d.available!==false; }
+      }
       state.manageEditingName = null;
       state.manageEditDraft = {};
     } else {
-      showToast(isNew ? 'الاسم ده موجود بالفعل — جرّب اسم مختلف' : 'تعذّر الحفظ، حاول تاني');
+      showToast(isNew ? 'الاسم ده موجود بالفعل — جرّب اسم مختلف' : 'السيرفر مقبلش التعديل (الصنف مش لاقيه بنفس الاسم) — حدّث الكتالوج وجرّب تاني');
     }
   }catch(e){
     showToast('حصل خطأ، حاول تاني');
@@ -9190,8 +9211,15 @@ async function onActionInner(act, el){
         if(!wasStaged) toggleStagedProduct(pm, name);   // لو الصنف في السلة بيتفتح بألوانه وكمياته اللي فيها
         const st = state.staged.find(x=>x.key===key);
         // أول دوسة على لون موجود في السلة = نفتحه للتعديل (مش نشيله — كان بيمسح البند من السلة بصمت)
-        if(st && (wasStaged || !st.selectedColors.includes(color))) toggleStagedColor(key, color);
-        else render();
+        const sel0 = st ? st.selectedColors : [];
+        const cur0 = st ? (sel0.includes(sheetActive_[key]) ? sheetActive_[key] : sel0[sel0.length-1]) : null;
+        if(st && wasStaged && el.classList.contains('sh-dot') && sel0.includes(color) && color!==cur0){
+          sheetActive_[key] = color; render();     // لون مختار وغير نشط: يبقى هو اللي بتتعدّل كميته (مش بنشيله)
+        } else if(st && (wasStaged || !sel0.includes(color))){
+          const had = sel0.includes(color);
+          if(!had) sheetActive_[key] = color;     // قبل الرسم عشان اللون الجديد هو اللي يظهر له حقل الكمية
+          toggleStagedColor(key, color);
+        } else render();
       });
       break;
     }
