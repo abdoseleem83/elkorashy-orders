@@ -2189,6 +2189,11 @@ html .sico.haslogo .sico-logo .slogo{width:100%;height:auto;max-height:none;obje
 .sbtnlogo{height:30px;width:auto;max-width:92%;padding:2px 8px;margin:0 auto;}
 
 .pclogo{display:block;height:15px;width:auto;max-width:80%;object-fit:contain;background:#fff;border-radius:4px;padding:1px 4px;margin:0 auto 4px;border:1px solid rgba(120,140,180,.35);}
+.pcshape{display:block;height:46px;width:88%;max-width:none;object-fit:contain;background:#fff;border-radius:8px;padding:2px 4px;margin:0 auto 4px;border:1px solid rgba(120,140,180,.28);}
+.pcshape.mini{display:inline-block;height:30px;max-width:60px;margin:0 0 0 8px;vertical-align:middle;}
+.pc-head .pcshape{display:inline-block;margin:0 0 0 8px;vertical-align:middle;}
+.sh-thumb.shp{width:76px;height:56px;background:#fff;border:1px solid rgba(120,140,180,.3);}
+.sh-thumb.shp .pcshape{height:100%;width:100%;max-width:none;border:0;padding:3px;margin:0;border-radius:0;background:transparent;}
 .pc-head .pclogo,.cartgrouptitle .pclogo,.hres .pclogo{margin:0 0 0 8px;display:inline-block;vertical-align:middle;}
 .cartgrouptitle{display:flex;align-items:center;gap:8px;}
 /* عدسة البحث أصغر (v276) */
@@ -2362,7 +2367,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v325-hide-stock';
+const APP_BUILD = 'v326-shapes';
 const MIN_SERVER_BUILD = 'v320';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -6467,6 +6472,20 @@ function pcLogo_(main){
   const lg = sectorLogo_(groupOfMain_(main||''));
   return lg ? `<img class="pclogo" src="${lg}" alt="" loading="lazy" decoding="async">` : '';
 }
+// 🖼️ رسمة القطاع الفعلية (من قوايم الأسعار). الصنف اللي ملوش رسمة بيعرض لوجو القطاع زي الأول.
+const SECTOR_SHAPES_={"قطاعات كرافت لاين":{"باكته دبل جرار كرافت":"kl-p2-b7","باكته دبل مفصلي كرافت":"kl-p1-b11","باكته سنجل جرار كرافت":"kl-p2-b6","باكته سنجل مفصلي كرافت":"kl-p1-b10","بانل 15 سم كرافت":"kl-p1-b12","بانل 15 سم كرافت 6.5":"kl-p1-b12","برور 6*9 كرافت":"kl-p7-b5","برور كلبس 5 سم كرافت":"kl-p7-b4","بوكلير مفصلي كرافت":"kl-p1-b9","بوكلير مفصلي كرافت 6.5":"kl-p1-b9","تجميع ثابت مع جرار كرافت":"kl-p7-b7","تراك سلك لطش كرافت":"kl-p7-b9","حلق جرار 2 مجري ببار 5 سم كرافت":"kl-p2-b2","حلق جرار 2 مجري ببار5 سم كرافت":"kl-p2-b2","حلق جرار 3 مجري ببار 5 سم كرافت":"kl-p2-b4","حلق جرار 3 مجري ببار 5 سم كرافت 5م":"kl-p2-b4","حلق جرار 3 مجري ببار 5 سم كرافت 6.5م":"kl-p2-b4","حلق جرار 3 مجري ببار 5 سم كرافت 7 م":"kl-p2-b4","حلق جرار 3 مجري ببار 5سم كرافت":"kl-p2-b4","حلق جرار 3 مجري بدون بار كرافت":"kl-p2-b3","حلق جرار 3 مجري بكاوتش ببار 5 سم كرافت 6 م":"kl-p2-b4","حلق جرار 3 مجري بكاوتش ببار 5 سم كرافت 6.5م":"kl-p2-b4","حلق جرار 3 مجري زجاج كرافت":"kl-p2-b11","حلق مفصلي ببار 5 سم كرافت":"kl-p1-b3","حلق مفصلي ببار 5 سم كرافت طول 6.5م":"kl-p1-b3","حلق مفصلي بدون بار كرافت":"kl-p1-b2","حلق مفصلي بكاوتش ببار 5 سم كرافت 5م":"kl-p1-b3","حلق مفصلي بكاوتش ببار 5 سم كرافت 6م":"kl-p1-b3","حلق مقلوب بار 5 سم كرافت":"kl-p1-b4","حلق مقلوب بار 5 سم كرافت بكاوتش طول 6.5 م":"kl-p1-b4","حلق مقلوب بار 5 سم كرافت طول 5.8 سم":"kl-p1-b4","حلق مقلوب بار 5 سم كرافت طول 6.5 م":"kl-p1-b4","زاوية CRP كرافت":"kl-p7-b3","زايه crp كرافت":"kl-p7-b3","سقاس جرار كرافت":"kl-p2-b10","سقاس ضلفه سلك كرافت":"kl-p2-b12","سقاس مفصلي كرافت":"kl-p1-b8","سقاس مفصلي كرافت 6.5":"kl-p1-b8","ضلفه باب مفصلي كرافت فتح للخارج":"kl-p1-b7","ضلفه جرار كبيره كرافت":"kl-p2-b5","ضلفه جرار كبيره كرافت 6.15م":"kl-p2-b5","ضلفه جرار كبيره كرافت 6.5 م":"kl-p2-b5","ضلفه سلك كبيره كرافت":"kl-p2-b9","ضلفه شباك مفصلي كرافت":"kl-p1-b5","ضلفه شباك مفصلي كرافت طول 6.5 م":"kl-p1-b5","طبه وسكينه كرافت":"kl-p2-b8","علبه 7.5*7.5 كرافت":"kl-p7-b8","كوبلن (تجميع مفصلي مع جرار) كرافت":"kl-p7-b6","كوبلن (تجميع مفصلي مع جرار)كرافت":"kl-p7-b6","ماسوره crp كرافت":"kl-p7-b2","ضلفه باب مفصلي كرافت":"kl-p1-b6","ضلفه باب مفصلي كرافت طول 6.5 م":"kl-p1-b6","حلق مفصلي بكاوتش كرافت طول 6.5 م":"kl-p1-b2"},"نيو لاين":{"بوكلير مفصلي نيو":"nl-p1-b8","بوكلير مفصلي نيو 6.5":"nl-p1-b8","حلق جرار 3 مجري ببار 5 سم نيو":"nl-p2-b3","حلق جرار 3 مجري ببار 5 سم نيو طول 6.5 م":"nl-p2-b3","حلق جرار بكاوتش ببار 5 سم نيو 6 م":"nl-p2-b3","حلق جرار بكاوتش ببار 5 سم نيو 6.5 م":"nl-p2-b3","حلق مفصلي بار 5 سم نيو":"nl-p1-b3","حلق مفصلي بكاوتش بار 5 سم نيو 6 م":"nl-p1-b3","حلق مفصلي مشاريع بكاوتش نيو 6.5سم":"nl-p1-b9","حلق مفصلي مشاريع بكاوتش نيو 6سم":"nl-p1-b9","حلق مفصلي مشاريع نيو 6 سم":"nl-p1-b9","حلق مفصلي مشاريع نيو 6.5 م":"nl-p1-b9","حلق مفصلي مشاريع نيو 6سم":"nl-p1-b9","حلق مقلوب بار 5 سم نيو":"nl-p1-b4","حلق مقلوب بار 5 سم نيو طول 5.80":"nl-p1-b4","حلق مقلوب بار 5 سم نيو طول 6.5 متر":"nl-p1-b4","ضلفه باب مفصلي نيو":"nl-p1-b6","ضلفه جرار نيو":"nl-p2-b4","ضلفه سلك نيو":"nl-p2-b6","ضلفه شباك مفصلي مشاريع نيو":"nl-p1-b10","ضلفه شباك مفصلي نيو":"nl-p1-b5","طبه وسكينه نيو":"nl-p2-b5","طبه وسكينه نيو 6.5":"nl-p2-b5","سقاس جرار نيو":"nl-p1-b7","سقاس جرار نيو 6.5":"nl-p1-b7","بانل 15 سم  نيو":"kl-p1-b12","ضلفه باب مفصلي مشاريع نيو":"nl-p1-b6","حلق مفصلي بار 5 سم نيو  5.8 سم":"nl-p1-b3"},"قطاعات PVC كومبن":{"باكته دبل جرار كومبن":"kp-p2-b13","باكته دبل مفصلي كومبن":"kp-p1-b9","باكته سنجل جرار كومبن":"kp-p2-b12","باكته سنجل مفصلي كومبن":"kp-p1-b8","برور عريض 6 * 9 كومبن":"kp-p9-b6","برور عريض 6 × 9 سم كومبن":"kp-p9-b6","برور كلبس 5 سم كومبن":"kp-p9-b5","بوكلير مفصلي كومبن":"kp-p1-b11","تجميع ثابت مع جرار كومبن":"kp-p9-b10","حلق جرار 2 مجري ببار كومبن":"kp-p2-b2","حلق جرار 2 مجري بدون بار كومبن":"kp-p2-b1","حلق جرار 3 مجري ببار 4 سم كومبن":"kp-p2-b6","حلق جرار 3 مجري ببار 6 سم كومبن":"kp-p2-b5","حلق جرار 3 مجري بدون بار كومبن":"kp-p2-b3","حلق جرار 3 مجري زجاج كومبن":"kp-p2-b4","حلق مفصلي ببار 3.8 سم كومبن":"kp-p1-b2","حلق مفصلي ببار 3.8سم كومبن":"kp-p1-b2","حلق مفصلي ببار 6 سم كومبن":"kp-p1-b3","حلق مفصلي ببار 6سم كومبن":"kp-p1-b3","حلق مفصلي بدون بار كومبن":"kp-p1-b1","حلق مقلوب ببار 6 سم كومبن":"kl-p1-b4","حلق مونوريل كومبن":"kp-p2-b9","زاوية CRP كومبن":"kl-p7-b3","زاويه CRB كومبن":"kp-p9-b4","سقاس جرار كومبن":"kp-p2-b11","سقاس ضلفه سلك كومبن":"kp-p2-b18","سقاس مفصلي كومبن":"kp-p1-b10","سقاس مونوريل كومبن":"kp-p2-b10","ضلفه باب مفصلي فتح للخارج كومبن":"kp-p1-b7","ضلفه جرار شباك كومبن":"kp-p2-b7","ضلفه سلك صغيره كومبن":"kp-p2-b16","ضلفه سلك كبيره كومبن":"kp-p2-b17","ضلفه شباك مفصلي كومبن":"kp-p1-b5","طبه وسكينه صغيره كومبن":"kp-p2-b14","طبه وسكينه كبيره كومبن":"kp-p2-b15","علبه 7.5*7.5 كومبن":"kp-p9-b8","كلبس مفصلي كومبن":"kp-p9-b7","كوبلن (تجميع مفصلي مع جرار) كومبن":"kp-p9-b9","ماسورة CRP كومبن":"kl-p7-b2","ماسوره CRB كومبن":"kp-p9-b3","بانل 10 سم كومبن":"kp-p1-b12","ضلفه جرار باب كومبن":"kl-p2-b5","ضلفه باب مفصلي كومبن":"kp-p1-b6"}};
+function shapeId_(main, n){ const m = SECTOR_SHAPES_[main]; return (m && Object.prototype.hasOwnProperty.call(m, n)) ? m[n] : ''; }
+function pcShape_(main, n, cls){
+  const id = shapeId_(main, n);
+  const lg = sectorLogo_(groupOfMain_(main||''));
+  if(!id) return pcLogo_(main);
+  const fb = lg ? ` onerror="this.onerror=null;this.className='pclogo';this.removeAttribute('width');this.removeAttribute('height');this.src='${lg}'"` : ` onerror="this.style.display='none'"`;
+  return `<img class="pcshape ${cls||''}" src="data/shapes/${id}.webp" width="140" height="98" alt="" loading="lazy" decoding="async"${fb}>`+((cls==='mini'||cls==='nolbl')?'':pcLogo_(main));
+}
+function groupShape_(g){
+  const ids = g.items.map(it=>shapeId_(it.e.main, it.e.name));
+  return (ids.length && ids[0] && ids.every(x=>x===ids[0])) ? pcShape_(g.items[0].e.main, g.items[0].e.name) : pcLogo_(g.items[0].e.main);
+}
 function sectorMarkHtml_(g, size, cls){
   const lg = sectorLogo_(g);
   if(lg) return `<img class="slogo ${cls||''}" src="${lg}" alt="${esc(g)}" loading="lazy" decoding="async">`;
@@ -6602,7 +6621,7 @@ function renderHomeView(){
     ${q ? `
     <div class="card homeres">
       ${res.length ? res.map(r=>`
-      <button class="hres" data-act="home-pick" data-main="${esc(r.main)}" data-val="${esc(r.product)}">${pcLogo_(r.main)}<b>${esc(r.product)}</b><small>${esc(r.main)}</small></button>`).join('')
+      <button class="hres" data-act="home-pick" data-main="${esc(r.main)}" data-val="${esc(r.product)}">${pcShape_(r.main, r.product, 'mini')}<b>${esc(r.product)}</b><small>${esc(r.main)}</small></button>`).join('')
       : `<div class="homehint"><small>مفيش صنف بالاسم ده</small></div>`}
     </div>` : ''}`;
 
@@ -7038,14 +7057,14 @@ function renderGroupCard_(g){
     return `
     <button type="button" class="pcard pt grp ${inCart?'incart':''}" data-act="open-group" data-val="${esc(g.key)}">
       ${lvl ? `<i class="pt-dot ${lvl}"></i>` : ''}
-      ${pcLogo_(g.items[0].e.main)}
+      ${groupShape_(g)}
       <span class="pc-name pt-name">${nameHtml_(g.items[0].e.main, g.base)}</span>
       <em class="pt-tag grpn">${g.items.length} أنواع ▾</em>
     </button>`;
   }
   return `
     <div class="pcard exp grpcard">
-      <div class="pc-head" data-act="open-group" data-val="${esc(g.key)}">${pcLogo_(g.items[0].e.main)}<span class="pc-name">${nameHtml_(g.items[0].e.main, g.base)}</span><span class="incarttag">${g.items.length} أنواع ▴</span></div>
+      <div class="pc-head" data-act="open-group" data-val="${esc(g.key)}">${groupShape_(g)}<span class="pc-name">${nameHtml_(g.items[0].e.main, g.base)}</span><span class="incarttag">${g.items.length} أنواع ▴</span></div>
       <div class="vchips" role="group" aria-label="نوع الصنف">
         ${g.items.map(it=>{ const a = productAvail_(it.e.main, it.e.name); const gr = a.groups, inN = gr.ok.length+gr.low.length+gr.crit.length;
           const l = (a.tracked && a.total) ? (!inN ? 'out' : (gr.ok.length && !gr.low.length && !gr.crit.length && !gr.out.length) ? 'ok' : 'mid') : '';
@@ -7147,8 +7166,8 @@ function renderProductSheet_(s, moveChip=''){
     <div class="sh-panel" role="dialog" aria-label="${esc(n)}">
       <div class="sh-grab"></div>
       <div class="sh-head">
-        <span class="sh-thumb" data-shape-main="${esc(main)}" data-shape-name="${esc(n)}">${pcLogo_(main)}</span>
-        <div class="sh-ttl"><div class="sh-title">${esc(n)}${s.isEditingExisting?' <span class="edittag">تعديل</span>':''}</div><div class="sh-sub">${esc(main)}</div></div>
+        <span class="sh-thumb ${shapeId_(main,n)?'shp':''}" data-shape-main="${esc(main)}" data-shape-name="${esc(n)}">${pcShape_(main,n,'nolbl')}</span>
+        <div class="sh-ttl"><div class="sh-title">${esc(n)}${s.isEditingExisting?' <span class="edittag">تعديل</span>':''}</div><div class="sh-sub">${pcLogo_(main)}${esc(main)}</div></div>
         <button type="button" class="sh-x" data-act="cancel-staged" data-key="${k}" aria-label="إغلاق">✕</button>
       </div>
       <div class="sh-scroll">${moveChip}${dots}<div class="sh-lbl">الكمية</div>${qtys}${lowNote}</div>
@@ -7213,7 +7232,7 @@ function renderProductCard_(main, n, inlineKeys){
     <${pickTag} ${inlineMove?'':'type="button"'} class="pcard pt ${isStaged?'selected':''} ${inlineMove?'acc-move-card':''} ${inCart?'incart':''} ${unavailable?'unavailable':''}" ${inlineMove?'':`data-act="${unavailable?'noop-unavailable':'toggle-product'}"`} data-val="${esc(n)}" data-main="${esc(main)}"${lvlTxt ? ` title="${lvlTxt}"` : ''}>
       ${inlineMove?`<button type="button" class="acc-card-pick" data-act="${unavailable?'noop-unavailable':'toggle-product'}" data-val="${esc(n)}" data-main="${esc(main)}">`:''}
       ${lvl ? `<i class="pt-dot ${lvl}" aria-label="${lvlTxt}"></i>` : ''}
-      ${pcLogo_(main)}
+      ${pcShape_(main, n)}
       <span class="pc-name pt-name">${nameHtml_(main, n)}</span>
       
       ${unavailable ? '<em class="pt-tag off">موقوف</em>' : (inCart ? '<em class="pt-tag">في السلة</em>' : '')}
