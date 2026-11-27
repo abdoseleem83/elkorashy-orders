@@ -864,6 +864,49 @@ button.mini2027{cursor:pointer;}
 .emptystate{text-align:center;padding:50px 20px;color:var(--muted);}
 .emptystate .ic{font-size:33.6px;margin-bottom:10px;}
 
+
+/* ورقة الصنف السفلية — فاتحة وكبيرة (نفس شكل تصميم «زجاج») بغض النظر عن الثيم */
+.sh-wrap{position:fixed;inset:0;z-index:97;display:flex;align-items:flex-end;justify-content:center}
+.sh-back{position:absolute;inset:0;border:0;background:rgba(2,6,20,.55);animation:modalbgin .15s ease both;cursor:default}
+.sh-panel{--shi:#0B1B3A;--shm:#6B7A99;--shl:#DCE3F0;--shs:#F3F6FC;--shb:#1E5BD8;
+  position:relative;width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;background:#fff;color:var(--shi);border-radius:28px 28px 0 0;box-shadow:0 -14px 44px rgba(0,16,72,.4);animation:shup .24s cubic-bezier(.22,.9,.4,1) both;padding:10px 18px calc(16px + env(safe-area-inset-bottom,0px))}
+@keyframes shup{0%{transform:translateY(60px);opacity:0}100%{transform:none;opacity:1}}
+.sh-grab{width:46px;height:5px;border-radius:5px;background:#C9D2E3;margin:0 auto 12px}
+.sh-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.sh-thumb{flex:0 0 auto;width:64px;height:56px;border-radius:14px;background:var(--shs);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.sh-thumb img{max-width:100%;max-height:100%;object-fit:contain}
+.sh-ttl{flex:1;min-width:0}
+.sh-title{font-size:19px;font-weight:900;line-height:1.45}
+.sh-sub{font-size:13px;color:var(--shm);font-weight:700}
+.sh-x{flex:0 0 auto;border:0;background:var(--shs);color:var(--shi);width:40px;height:40px;border-radius:50%;font-size:17px;cursor:pointer}
+.sh-scroll{overflow-y:auto;padding-bottom:8px;flex:1 1 auto;min-height:0}
+.sh-lbl{font-size:13.5px;font-weight:800;color:var(--shm);margin:14px 0 8px}
+.sh-dots{padding:6px 4px 2px;display:flex;flex-wrap:nowrap;gap:6px;justify-content:flex-start}
+.sh-dot{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:transparent;font-family:inherit;cursor:pointer;flex:1 1 0;min-width:0;padding:0;color:var(--shi)}
+.sh-dot i{width:50px;height:50px;border-radius:50%;background:var(--dc);border:2px solid rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:900;font-size:24px;color:var(--ck,#fff);box-shadow:inset 0 3px 6px rgba(255,255,255,.4)}
+.sh-dot.on i{box-shadow:0 0 0 3px #fff,0 0 0 6px var(--shb);transform:scale(1.04)}
+.sh-dot b{font-size:13.5px;font-weight:900}
+.sh-dot small{font-size:11.5px;color:var(--shm);font-weight:700;min-height:14px}
+.sh-dot.out i{border:2px dashed #DC2626}.sh-dot.low small{color:#B45309}.sh-dot.out small{color:#B91C1C}.sh-dot.off{opacity:.35}
+.sh-q{margin-bottom:12px}
+.sh-qname{font-size:14px;font-weight:900;margin-bottom:6px}
+.sh-qline{display:flex;align-items:center;gap:10px}
+.sh-pm{flex:0 0 auto;width:58px;height:58px;border:0;border-radius:16px;background:var(--shs);color:var(--shi);font-size:30px;font-weight:900;font-family:inherit;cursor:pointer;line-height:1}
+.sh-pm.plus{background:linear-gradient(135deg,#2A7BE8,#0B3D91);color:#fff;box-shadow:0 6px 14px rgba(30,91,216,.35)}
+.sh-qin{flex:1;min-width:0;height:58px;border:1.5px solid var(--shl)!important;border-radius:16px;background:#fff!important;color:var(--shi)!important;-webkit-text-fill-color:var(--shi);text-align:center;font-size:26px;font-weight:900;font-family:inherit}
+.sh-qin:focus{outline:2px solid var(--shb);border-color:var(--shb)}
+.sh-chips{display:flex;gap:10px;margin-top:10px}
+.sh-chip{flex:1;height:48px;border:1.5px solid var(--shl);border-radius:14px;background:#fff;color:var(--shi);font-size:17px;font-weight:900;font-family:inherit;cursor:pointer}
+.sh-chip:active,.sh-pm:active{transform:scale(.96)}
+.sh-units{display:flex;gap:10px;margin-top:10px}
+.sh-unit{flex:1;height:48px;border:1.5px solid var(--shl);border-radius:14px;background:#fff;color:var(--shi);font-size:16px;font-weight:900;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sh-unit.on{border-color:var(--shi);box-shadow:inset 0 0 0 1px var(--shi)}
+.sh-eq{margin-top:10px;text-align:center;font-size:15px;font-weight:900;color:var(--shb)}
+.sh-warn{margin-top:10px;padding:9px 12px;border-radius:12px;background:#FDECEC;border:1px solid #E3A0A0;color:#8A1F1F;font-size:13px;font-weight:700;line-height:1.6}
+.sh-hint{padding:18px 0;text-align:center;color:var(--shm);font-weight:700}
+.sh-go{margin-top:8px;height:62px;border:0;border-radius:18px;background:linear-gradient(135deg,#2A7BE8,#0B3D91);color:#fff;font-size:19px;font-weight:900;font-family:inherit;cursor:pointer;box-shadow:0 10px 22px rgba(30,91,216,.35)}
+.sh-go.dim{opacity:.5;box-shadow:none}
+.pcard.pt.selected{border-color:var(--navy,#1e4fd8);box-shadow:0 0 0 2px rgba(30,79,216,.25)}
 .toast{
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
   background:var(--navy-deep);color:#fff;padding:11px 20px;border-radius:12px;
@@ -2314,7 +2357,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v322-reject-reason';
+const APP_BUILD = 'v323-bottom-sheet';
 const MIN_SERVER_BUILD = 'v320';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -7031,6 +7074,63 @@ async function moveAccInline_(main,product,group){
  finally{state.accMoveBusy=false;render();}
 }
 
+
+// ===== الورقة السفلية: بتفتح لما الموزع يدوس على صنف (نفس منطق التحديد والتأكيد القديم) =====
+let sheetBuf_ = [];
+function sheetStockTxt_(r, av){
+  if(r.available===false) return 'موقوف';
+  if(!av.tracked) return '';
+  const n = Number(r.stock);
+  return isFinite(n) && n>0 ? n + ' عود' : 'غير متوفر';
+}
+function renderProductSheet_(s, moveChip=''){
+  const main = s.main, n = s.product, k = esc(s.key), sc = s.selectedColors;
+  const av = productAvail_(main, n);
+  const rows = uniqueColorRows_(main, n).filter(r=>r.color);
+  const dots = rows.length ? `<div class="sh-lbl">اللون</div><div class="sh-dots" role="group" aria-label="الألوان">${rows.map(r=>{
+    const c = r.color, on = sc.includes(c), off = r.available===false, lvl = colorStockLevel(r);
+    const cls = off ? 'off' : (av.tracked ? (lvl==='out'?'out':lvl==='ok'?'ok':'low') : 'ok');
+    const hx = colorHex_(c);
+    return `<button type="button" class="sh-dot ${cls} ${on?'on':''}" style="--dc:${hx};--ck:${inkOn_(hx)}" data-act="${off?'noop-unavailable':'tile-color'}" data-prod="${esc(n)}" data-main="${esc(main)}" data-val="${esc(c)}"><i>${on?'✓':''}</i><b>${esc(c)}</b><small>${esc(sheetStockTxt_(r,av))}</small></button>`;
+  }).join('')}</div>${pavailHtml_(av)?`<div class="pavail">${pavailHtml_(av)}</div>`:''}` : '';
+  const qtys = sc.length ? sc.map(c=>{
+    const unitType = s.units[c] || s.unitOptions[0];
+    const q = Number(s.qtys[c]) || 0;
+    const item = findCatalogItem(main, n, c);
+    const content = item ? (Number(item.unit)||1) : 1;
+    const eq = (q>0 && ['لفة','كرتونة'].includes(unitType) && content>1) ? `<div class="sh-eq">${q} ${esc(unitType)} = ${q*content} عود</div>` : '';
+    const warn = q>0 ? stockShortageWarning_(main, n, c, unitType, q) : '';
+    const kv = `data-key="${k}" data-val="${esc(c)}"`;
+    return `<div class="sh-q">
+      ${(sc.length>1 || c) ? `<div class="sh-qname">${esc(c||'الكمية')}</div>`:''}
+      <div class="sh-qline">
+        <button type="button" class="sh-pm" data-act="staged-qty-dec" ${kv} aria-label="نقّص">−</button>
+        <input class="sh-qin" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" value="${q>0?q:''}" data-act="staged-qty-input" ${kv} aria-label="الكمية">
+        <button type="button" class="sh-pm plus" data-act="staged-qty-inc" ${kv} aria-label="زوّد">+</button>
+      </div>
+      <div class="sh-chips">${[1,5,10].map(x=>`<button type="button" class="sh-chip" data-act="staged-qty-add" ${kv} data-n="${x}">+${x}</button>`).join('')}</div>
+      ${s.unitOptions.length>1 ? `<div class="sh-units" role="group" aria-label="الوحدة">${s.unitOptions.map(u=>`<button type="button" class="sh-unit ${unitType===u?'on':''}" data-act="set-color-unit-btn" ${kv} data-unit="${esc(u)}">${esc(u)}</button>`).join('')}</div>` : `<div class="sh-units"><span class="sh-unit on">${esc(s.unitOptions[0])}</span></div>`}
+      ${eq}${warn?`<div class="sh-warn">${esc(warn)}</div>`:''}
+    </div>`;
+  }).join('') : '<div class="sh-hint">اختار لون أو أكتر</div>';
+  const lowNote = (()=>{ const outs = sc.filter(c=>c && colorStockLevel(findCatalogItem(main,n,c))==='out'); return outs.length ? `<div class="sh-warn">🚫 مفيش رصيد في: ${outs.map(esc).join(' · ')} — لسه ينفع تطلبه</div>` : ''; })();
+  const total = sc.reduce((t,c)=>t+(Number(s.qtys[c])||0),0);
+  const ready = sc.length && sc.every(c=>Number(s.qtys[c])>0);
+  const label = (s.isEditingExisting?'حفظ التعديل':'ضيف للسلة') + (ready && sc.length===1 ? ' · ' + total + ' ' + (s.units[sc[0]]||s.unitOptions[0]) : '');
+  return `<div class="sh-wrap" data-stagedkey="${k}">
+    <button type="button" class="sh-back" data-act="cancel-staged" data-key="${k}" aria-label="إغلاق"></button>
+    <div class="sh-panel" role="dialog" aria-label="${esc(n)}">
+      <div class="sh-grab"></div>
+      <div class="sh-head">
+        <span class="sh-thumb" data-shape-main="${esc(main)}" data-shape-name="${esc(n)}">${pcLogo_(main)}</span>
+        <div class="sh-ttl"><div class="sh-title">${esc(n)}${s.isEditingExisting?' <span class="edittag">تعديل</span>':''}</div><div class="sh-sub">${esc(main)}</div></div>
+        <button type="button" class="sh-x" data-act="cancel-staged" data-key="${k}" aria-label="إغلاق">✕</button>
+      </div>
+      <div class="sh-scroll">${moveChip}${dots}<div class="sh-lbl">الكمية</div>${qtys}${lowNote}</div>
+      ${sc.length?`<button type="button" class="sh-go ${ready?'':'dim'}" data-act="confirm-staged" data-key="${k}">${label}</button>`:''}
+    </div></div>`;
+}
+
 function renderProductCard_(main, n, inlineKeys){
   const stagedEntry = state.staged.find(x=>x.key===stagedKey(main, n));
   const isStaged = !!stagedEntry;
@@ -7072,9 +7172,10 @@ function renderProductCard_(main, n, inlineKeys){
     </div>` : '';
 
   const pav = pavailHtml_(av);
+  if(isStaged){ sheetBuf_.push(renderProductSheet_(stagedEntry, moveChip)); inlineKeys.push(stagedEntry.key); }
 
   // 🔲 الشكل المضغوط (٣ في الصف): اسم الصنف بس + نقطة توفر صغيرة. الألوان والكمية بتظهر بعد ما تدوس على الصنف.
-  if(!isStaged){
+  if(true){
     let lvl = '';
     if(av.tracked && av.total){
       const g = av.groups, inN = g.ok.length + g.low.length + g.crit.length;
@@ -7084,7 +7185,7 @@ function renderProductCard_(main, n, inlineKeys){
     const inlineMove=isAccMain_(main)&&state.manageUnlocked&&getManageToken()?renderAccInlineMove_(main,n,true):'';
     const pickTag=inlineMove?'div':'button';
     return `
-    <${pickTag} ${inlineMove?'':'type="button"'} class="pcard pt ${inlineMove?'acc-move-card':''} ${inCart?'incart':''} ${unavailable?'unavailable':''}" ${inlineMove?'':`data-act="${unavailable?'noop-unavailable':'toggle-product'}"`} data-val="${esc(n)}" data-main="${esc(main)}"${lvlTxt ? ` title="${lvlTxt}"` : ''}>
+    <${pickTag} ${inlineMove?'':'type="button"'} class="pcard pt ${isStaged?'selected':''} ${inlineMove?'acc-move-card':''} ${inCart?'incart':''} ${unavailable?'unavailable':''}" ${inlineMove?'':`data-act="${unavailable?'noop-unavailable':'toggle-product'}"`} data-val="${esc(n)}" data-main="${esc(main)}"${lvlTxt ? ` title="${lvlTxt}"` : ''}>
       ${inlineMove?`<button type="button" class="acc-card-pick" data-act="${unavailable?'noop-unavailable':'toggle-product'}" data-val="${esc(n)}" data-main="${esc(main)}">`:''}
       ${lvl ? `<i class="pt-dot ${lvl}" aria-label="${lvlTxt}"></i>` : ''}
       ${pcLogo_(main)}
@@ -7188,6 +7289,7 @@ function renderOrderView(){
   // داعي نودّي الموزع لقسم "حدد التفاصيل" البعيد. أي صنف تاني (لسه محتاج
   // يختار لون بنفسه) بيفضل يظهر في قسم "حدد التفاصيل" العادي تحت.
   const inlineStagedKeys_ = [];
+  sheetBuf_ = [];
   if(state.mainGroup && state.mainGroup!==OTHER_SECTOR){
     {
       // كل أصناف القطاع (القطاع الموحّد «اكسسوارات pvc» بيجمع أكتر من main) — أبجدي، والموقوف في الآخر.
@@ -7250,7 +7352,7 @@ function renderOrderView(){
             // 🔽 لو فيه صنف متحدد دلوقتي في القطاع ده، نعرضه هو بس ونخفي الباقي (عشان ما يتلخبطش).
             // أول ما يلغي اختياره (إلغاء / تأكيد الإضافة) كل الأصناف بترجع تظهر.
             const stagedEntries = entries.filter(e => state.staged.some(s=>s.key===stagedKey(e.main,e.name)));
-            if(stagedEntries.length) return stagedEntries.map(e=>renderProductCard_(e.main, e.name, inlineStagedKeys_)).join('');
+            
             if(needPick) return `<div class="pickfam">👆 اختار «الكل» أو نوع من فوق عشان تظهر الأصناف</div>`;
             // 🧩 الاكسسوارات: الأصناف مبتظهرش كلها من الأول. الموزع يكتب أي جزء من اسم الصنف
             // في البحث فوق، وتظهرله الأسماء الأقرب ليه بس. أول ما يدوس على صنف بيظهر لوحده
@@ -7301,11 +7403,9 @@ function renderOrderView(){
   // الأصناف اللي عرضنالها صف مختصر تحت الصنف نفسه (لون متحدد من فوق) مش
   // بتتكرر هنا — القسم ده بقى بس للأصناف اللي لسه محتاجة تختار لون بنفسها.
   const remainingStaged = state.staged.filter(s => !inlineStagedKeys_.includes(s.key));
-  const stagedSection = remainingStaged.length ? `
-    <div class="card">
-      <h2><span class="num">6</span>حدد التفاصيل</h2>
-      ${remainingStaged.map(renderStagedBlock).join('')}
-    </div>` : '';
+  // v323: أي صنف متحدد ملوش كارت ظاهر (مثلاً اختيار نوع من مجموعة) بيفتح برضه في الورقة السفلية
+  remainingStaged.forEach(st=>sheetBuf_.push(renderProductSheet_(st)));
+  const stagedSection = '';
 
   const cartSection = state.mainGroup===ACC_GROUP && !state.cart.length ? `<div class="acc-cart-empty">${ico_('cart',18)}<span>السلة فارغة</span><small>اختار صنف عشان تضيفه</small></div>` : `
     <div class="card">
@@ -7408,7 +7508,7 @@ function renderOrderView(){
     ${subSection}
     ${productSection}
     ${otherSection}
-    ${stagedSection}
+    ${stagedSection}${sheetBuf_.join('')}
   `;
 
   return `
@@ -9168,6 +9268,13 @@ async function onActionInner(act, el){
       if(s) setStagedQty(s.key, c, (s.qtys[c]||0)+1);
       break;
     }
+    case 'staged-qty-add':{
+      const s = state.staged.find(x=>x.key===el.getAttribute('data-key'));
+      const c = el.getAttribute('data-val');
+      if(s) setStagedQty(s.key, c, (Number(s.qtys[c])||0)+(parseInt(el.getAttribute('data-n'))||1));
+      break;
+    }
+    case 'set-color-unit-btn': setStagedColorUnit(el.getAttribute('data-key'), el.getAttribute('data-val'), el.getAttribute('data-unit')); break;
     case 'confirm-staged': confirmStaged(el.getAttribute('data-key')); break;
     case 'cancel-staged': cancelStaged(el.getAttribute('data-key')); break;
     case 'del-cart': removeFromCart(parseInt(el.getAttribute('data-idx'))); break;
