@@ -869,44 +869,47 @@ button.mini2027{cursor:pointer;}
 .sh-wrap{position:fixed;inset:0;z-index:120;display:flex;align-items:flex-end;justify-content:center}
 .sh-back{position:absolute;inset:0;border:0;background:rgba(2,6,20,.55);animation:modalbgin .15s ease both;cursor:default}
 .sh-panel{--shi:#0B1B3A;--shm:#6B7A99;--shl:#DCE3F0;--shs:#F3F6FC;--shb:#1E5BD8;
-  position:relative;width:100%;max-width:560px;max-height:86vh;max-height:86dvh;display:flex;flex-direction:column;background:#fff;color:var(--shi);border-radius:28px 28px 0 0;box-shadow:0 -14px 44px rgba(0,16,72,.4);animation:shup .24s cubic-bezier(.22,.9,.4,1) both;padding:10px 18px calc(16px + env(safe-area-inset-bottom,0px))}
+  position:relative;width:100%;max-width:560px;max-height:86vh;max-height:86dvh;display:flex;flex-direction:column;background:#fff;color:var(--shi);border-radius:28px 28px 0 0;box-shadow:0 -14px 44px rgba(0,16,72,.4);animation:shup .24s cubic-bezier(.22,.9,.4,1) both;padding:6px 14px calc(10px + env(safe-area-inset-bottom,0px))}
 @keyframes shup{0%{transform:translateY(60px);opacity:0}100%{transform:none;opacity:1}}
 .sh-wrap.nan .sh-panel,.sh-wrap.nan .sh-back{animation:none}
-.sh-grab{width:46px;height:5px;border-radius:5px;background:#C9D2E3;margin:0 auto 12px}
-.sh-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
-.sh-thumb{flex:0 0 auto;width:64px;height:56px;border-radius:14px;background:var(--shs);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.sh-grab{width:46px;height:4px;border-radius:5px;background:#C9D2E3;margin:0 auto 6px}
+.sh-head{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.sh-thumb{flex:0 0 auto;width:52px;height:44px;border-radius:14px;background:var(--shs);display:flex;align-items:center;justify-content:center;overflow:hidden}
 .sh-thumb img{max-width:100%;max-height:100%;object-fit:contain}
 .sh-ttl{flex:1;min-width:0}
-.sh-title{font-size:19px;font-weight:900;line-height:1.45}
+.sh-title{font-size:17px;font-weight:900;line-height:1.35}
 .sh-sub{font-size:13px;color:var(--shm);font-weight:700}
-.sh-x{flex:0 0 auto;border:0;background:var(--shs);color:var(--shi);width:40px;height:40px;border-radius:50%;font-size:17px;cursor:pointer}
-.sh-scroll{overflow-y:auto;padding-bottom:8px;flex:1 1 auto;min-height:0}
-.sh-lbl{font-size:13.5px;font-weight:800;color:var(--shm);margin:14px 0 8px}
-.sh-dots{padding:6px 4px 2px;display:flex;flex-wrap:nowrap;gap:6px;justify-content:flex-start}
+.sh-x{flex:0 0 auto;border:0;background:var(--shs);color:var(--shi);width:38px;height:38px;border-radius:50%;font-size:16px;cursor:pointer}
+.sh-scroll{overflow-y:auto;padding-bottom:4px;flex:1 1 auto;min-height:0}
+.sh-lbl{font-size:12.5px;font-weight:800;color:var(--shm);margin:6px 0 2px}
+.sh-dots{padding:2px 2px 0;display:flex;flex-wrap:nowrap;gap:6px;justify-content:flex-start}
 .sh-dot{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:transparent;font-family:inherit;cursor:pointer;flex:1 1 0;min-width:0;padding:0;color:var(--shi)}
-.sh-dot i{width:50px;height:50px;border-radius:50%;background:var(--dc);border:2px solid rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:900;font-size:24px;color:var(--ck,#fff);box-shadow:inset 0 3px 6px rgba(255,255,255,.4)}
+.sh-dot i{width:44px;height:44px;border-radius:50%;background:var(--dc);border:2px solid rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:900;font-size:21px;color:var(--ck,#fff);box-shadow:inset 0 3px 6px rgba(255,255,255,.4)}
 .sh-dot.on:not(.cur) i{box-shadow:0 0 0 2px #fff,0 0 0 4px #9DB6E8}
 .sh-dot.on i{box-shadow:0 0 0 3px #fff,0 0 0 6px var(--shb);transform:scale(1.04)}
 .sh-dot b{font-size:13.5px;font-weight:900}
 .sh-dot small{font-size:11.5px;color:var(--shm);font-weight:700;min-height:14px}
 .sh-dot.out i{border:2px dashed #DC2626}.sh-dot.low small{color:#B45309}.sh-dot.out small{color:#B91C1C}.sh-dot.off{opacity:.35}
-.sh-q{margin-bottom:12px}
-.sh-qname{font-size:14px;font-weight:900;margin-bottom:6px}
-.sh-qline{display:flex;align-items:center;gap:10px}
-.sh-pm{flex:0 0 auto;width:54px;height:54px;border:0;border-radius:16px;background:var(--shs);color:var(--shi);font-size:30px;font-weight:900;font-family:inherit;cursor:pointer;line-height:1}
+.sh-rows{display:flex;flex-direction:column;gap:6px}
+.sh-qtop{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 2px 2px;min-height:18px}
+.sh-q{margin-bottom:0}
+.sh-qdot{display:inline-block;width:14px;height:14px;border-radius:50%;margin-inline-end:6px;vertical-align:-2px;border:1.5px solid rgba(0,0,0,.18)}
+.sh-qname{font-size:13.5px;font-weight:900;line-height:1.3}
+.sh-qline{display:flex;align-items:center;gap:6px}
+.sh-pm{flex:0 0 auto;width:42px;height:46px;border:0;border-radius:14px;background:var(--shs);color:var(--shi);font-size:26px;font-weight:900;font-family:inherit;cursor:pointer;line-height:1}
 .sh-pm.plus{background:linear-gradient(135deg,#2A7BE8,#0B3D91);color:#fff;box-shadow:0 6px 14px rgba(30,91,216,.35)}
-.sh-qin{flex:1;min-width:0;height:54px;border:1.5px solid var(--shl)!important;border-radius:16px;background:#fff!important;color:var(--shi)!important;-webkit-text-fill-color:var(--shi);text-align:center;font-size:26px;font-weight:900;font-family:inherit}
+.sh-qin{flex:1;min-width:0;height:46px;border:1.5px solid var(--shl)!important;border-radius:16px;background:#fff!important;color:var(--shi)!important;-webkit-text-fill-color:var(--shi);text-align:center;font-size:22px;font-weight:900;font-family:inherit}
 .sh-qin:focus{outline:2px solid var(--shb);border-color:var(--shb)}
 .sh-chips{display:flex;gap:10px;margin-top:10px}
 .sh-chip{flex:1;height:48px;border:1.5px solid var(--shl);border-radius:14px;background:#fff;color:var(--shi);font-size:17px;font-weight:900;font-family:inherit;cursor:pointer}
 .sh-chip:active,.sh-pm:active{transform:scale(.96)}
-.sh-units{display:flex;gap:10px;margin-top:10px}
-.sh-unit{flex:1;height:44px;border:1.5px solid var(--shl);border-radius:14px;background:#fff;color:var(--shi);font-size:16px;font-weight:900;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sh-units{flex:0 0 auto;display:flex;gap:4px}
+.sh-unit{flex:0 0 auto;min-width:44px;padding:0 8px;height:46px;border:1.5px solid var(--shl);border-radius:12px;background:#fff;color:var(--shi);font-size:14px;font-weight:900;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .sh-unit.on{border-color:var(--shi);box-shadow:inset 0 0 0 1px var(--shi)}
-.sh-eq{margin-top:10px;text-align:center;font-size:15px;font-weight:900;color:var(--shb)}
-.sh-warn{margin-top:10px;padding:9px 12px;border-radius:12px;background:#FDECEC;border:1px solid #E3A0A0;color:#8A1F1F;font-size:13px;font-weight:700;line-height:1.6}
+.sh-eq{font-size:12.5px;font-weight:900;color:var(--shb)}
+.sh-warn{margin-top:4px;padding:6px 10px;border-radius:12px;background:#FDECEC;border:1px solid #E3A0A0;color:#8A1F1F;font-size:13px;font-weight:700;line-height:1.6}
 .sh-hint{padding:18px 0;text-align:center;color:var(--shm);font-weight:700}
-.sh-go{margin-top:8px;height:62px;border:0;border-radius:18px;background:linear-gradient(135deg,#2A7BE8,#0B3D91);color:#fff;font-size:19px;font-weight:900;font-family:inherit;cursor:pointer;box-shadow:0 10px 22px rgba(30,91,216,.35)}
+.sh-go{margin-top:6px;height:54px;border:0;border-radius:16px;background:linear-gradient(135deg,#2A7BE8,#0B3D91);color:#fff;font-size:19px;font-weight:900;font-family:inherit;cursor:pointer;box-shadow:0 10px 22px rgba(30,91,216,.35)}
 .sh-go.dim{opacity:.5;box-shadow:none}
 .pcard.pt.selected{border-color:var(--navy,#1e4fd8);box-shadow:0 0 0 2px rgba(30,79,216,.25)}
 .toast{
@@ -2359,7 +2362,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v324-sheet-fix';
+const APP_BUILD = 'v325-hide-stock';
 const MIN_SERVER_BUILD = 'v320';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -3696,7 +3699,7 @@ function pendingStockNote_(record,item){
   const current=findCatalogItem(item.main,item.product || item.name,item.color);
   if(!current || current.stock===null || current.stock==='' || !Number.isFinite(Number(current.stock)))return 'الرصيد غير محدد للصنف ده. راجع الإدارة، مفيش ضمان للتوفر.';
   const requested=['لفة','كرتونة'].includes(item.unitType)?Number(item.qty)*(Number(current.unit)||1):Number(item.qty);
-  return 'الرصيد وقت المراجعة: '+current.stock+'، والمطلوب بالوحدة الأساسية: '+requested+'. الكمية مش محجوزة.';
+  return canSeeStockNums_() ? 'الرصيد وقت المراجعة: '+current.stock+'، والمطلوب بالوحدة الأساسية: '+requested+'. الكمية مش محجوزة.' : 'الرصيد اتراجع وقت المراجعة. الكمية مش محجوزة، ولازم تتأكد مع الإدارة.';
 }
 function renderPendingView_(){
   const rows=pendingRecords_(),q=getOfflineQueue_();
@@ -6732,7 +6735,7 @@ function stockShortageWarning_(main, product, color, unitType, qty){
   if(requestedBase > stock){
     // بنوري المتاح دايمًا بالوحدة الأساسية (عود/قطعة) عشان الرقم يبقى دقيق
     // ومالوش لبس، بدل ما نحاول نحوّله للفة/كرتونة وممكن يبقى كسر مربك.
-    return `⚠ الكمية أكبر من المتاح في المخزن — المتاح فعليًا: ${stock} (المطلوب: ${requestedBase})`;
+    return canSeeStockNums_() ? `⚠ الكمية أكبر من المتاح في المخزن — المتاح فعليًا: ${stock} (المطلوب: ${requestedBase})` : '⚠ الكمية أكبر من المتاح في المخزن — قلّل الكمية أو كلّم الإدارة';
   }
   return '';
 }
@@ -7092,42 +7095,48 @@ async function moveAccInline_(main,product,group){
 let sheetBuf_ = [];
 let sheetPrevKeys_ = new Set(), sheetCurKeys_ = new Set();   // الورقة بتتحرك مرة واحدة بس عند الفتح (مش مع كل تحديث)
 let sheetActive_ = {};   // الورقة: اللون اللي بيتعدّل كميته دلوقتي (لكل صنف)
+// 🙈 v325: أرقام الرصيد للإدارة بس. الموزّع يشوف الحالة بالكلام (متاح / قليل / أعواد بس / غير متوفر) من غير أي رقم،
+// عشان محدش يحتكر الكمية. المنطق نفسه (المستويات والتحذير والمنع) ما اتغيّرش، بس النص اللي بيظهر.
+function canSeeStockNums_(){ try{ return !!(getManageToken() || getAdminToken()); }catch(e){ return false; } }
 function sheetStockTxt_(r, av){
   if(r.available===false) return 'موقوف';
   if(!av.tracked) return '';
   const n = Number(r.stock);
+  if(!canSeeStockNums_()) return STOCK_WORD_[colorStockLevel(r)] || '';
   return isFinite(n) && n>0 ? n + ' عود' : 'غير متوفر';
 }
 function renderProductSheet_(s, moveChip=''){
   const main = s.main, n = s.product, k = esc(s.key), sc = s.selectedColors;
   const av = productAvail_(main, n);
   const rows = uniqueColorRows_(main, n).filter(r=>r.color);
-  const act_ = sc.includes(sheetActive_[s.key]) ? sheetActive_[s.key] : sc[sc.length-1];
   const dots = rows.length ? `<div class="sh-lbl">اللون</div><div class="sh-dots" role="group" aria-label="الألوان">${rows.map(r=>{
     const c = r.color, on = sc.includes(c), off = r.available===false, lvl = colorStockLevel(r);
     const cls = off ? 'off' : (av.tracked ? (lvl==='out'?'out':lvl==='ok'?'ok':'low') : 'ok');
     const hx = colorHex_(c);
-    return `<button type="button" class="sh-dot ${cls} ${on?'on':''} ${on&&c===act_?'cur':''}" style="--dc:${hx};--ck:${inkOn_(hx)}" data-act="${off?'noop-unavailable':'tile-color'}" data-prod="${esc(n)}" data-main="${esc(main)}" data-val="${esc(c)}"><i>${on?(Number(s.qtys[c])>0 && c!==act_ ? Number(s.qtys[c]) : '✓'):''}</i><b>${esc(c)}</b><small>${esc(sheetStockTxt_(r,av))}</small></button>`;
+    return `<button type="button" class="sh-dot ${cls} ${on?'on':''}" style="--dc:${hx};--ck:${inkOn_(hx)}" data-act="${off?'noop-unavailable':'tile-color'}" data-prod="${esc(n)}" data-main="${esc(main)}" data-val="${esc(c)}"><i>${on?'✓':''}</i><b>${esc(c)}</b><small>${esc(sheetStockTxt_(r,av))}</small></button>`;
   }).join('')}</div>${pavailHtml_(av)?`<div class="pavail">${pavailHtml_(av)}</div>`:''}` : '';
-  const qtys = sc.length ? [act_].map(c=>{
+  const rowsHtml = sc.map(c=>{
     const unitType = s.units[c] || s.unitOptions[0];
     const q = Number(s.qtys[c]) || 0;
     const item = findCatalogItem(main, n, c);
     const content = item ? (Number(item.unit)||1) : 1;
-    const eq = (q>0 && ['لفة','كرتونة'].includes(unitType) && content>1) ? `<div class="sh-eq">${q} ${esc(unitType)} = ${q*content} عود</div>` : '';
+    const eq = (q>0 && ['لفة','كرتونة'].includes(unitType) && content>1) ? `<span class="sh-eq">${q} ${esc(unitType)} = ${q*content} عود</span>` : '';
     const warn = q>0 ? stockShortageWarning_(main, n, c, unitType, q) : '';
     const kv = `data-key="${k}" data-val="${esc(c)}"`;
+    const hx = colorHex_(c);
+    const units = s.unitOptions.length>1 ? `<span class="sh-units" role="group" aria-label="الوحدة">${s.unitOptions.map(u=>`<button type="button" class="sh-unit ${unitType===u?'on':''}" data-act="set-color-unit-btn" ${kv} data-unit="${esc(u)}">${esc(u)}</button>`).join('')}</span>` : '';
     return `<div class="sh-q">
-      ${(c) ? `<div class="sh-qname">${esc(c||'الكمية')}</div>`:''}
+      <div class="sh-qtop"><span class="sh-qname"><i class="sh-qdot" style="background:${hx}"></i>${esc(c||'الكمية')}</span>${eq}</div>
       <div class="sh-qline">
         <button type="button" class="sh-pm" data-act="staged-qty-dec" ${kv} aria-label="نقّص">−</button>
-        <input class="sh-qin" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" value="${q>0?q:''}" data-act="staged-qty-input" ${kv} aria-label="الكمية">
+        <input class="sh-qin" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" value="${q>0?q:''}" data-act="staged-qty-input" ${kv} aria-label="الكمية ${esc(c)}">
         <button type="button" class="sh-pm plus" data-act="staged-qty-inc" ${kv} aria-label="زوّد">+</button>
+        ${units}
       </div>
-      ${s.unitOptions.length>1 ? `<div class="sh-units" role="group" aria-label="الوحدة">${s.unitOptions.map(u=>`<button type="button" class="sh-unit ${unitType===u?'on':''}" data-act="set-color-unit-btn" ${kv} data-unit="${esc(u)}">${esc(u)}</button>`).join('')}</div>` : `<div class="sh-units"><span class="sh-unit on">${esc(s.unitOptions[0])}</span></div>`}
-      ${eq}${warn?`<div class="sh-warn">${esc(warn)}</div>`:''}
+      ${warn?`<div class="sh-warn">${esc(warn)}</div>`:''}
     </div>`;
-  }).join('') : '<div class="sh-hint">اختار لون أو أكتر</div>';
+  }).join('');
+  const qtys = sc.length ? `<div class="sh-rows">${rowsHtml}</div>` : '<div class="sh-hint">اختار لون أو أكتر</div>';
   const lowNote = (()=>{ const outs = sc.filter(c=>c && colorStockLevel(findCatalogItem(main,n,c))==='out'); return outs.length ? `<div class="sh-warn">🚫 مفيش رصيد في: ${outs.map(esc).join(' · ')} — لسه ينفع تطلبه</div>` : ''; })();
   const total = sc.reduce((t,c)=>t+(Number(s.qtys[c])||0),0);
   const ready = sc.length && sc.every(c=>Number(s.qtys[c])>0);
@@ -7764,10 +7773,12 @@ function renderManageEditForm_(){
   <div class="card">
     <h2>${isNew ? '➕ إضافة صنف جديد' : '✏️ تعديل: ' + esc(d.name||'')}</h2>
     <label>القطاع *</label>
-    <select class="cqselect" style="width:100%;margin-bottom:10px;" data-act="manage-draft-main" ${!isNew?'disabled':''}>
+    <select class="cqselect" style="width:100%;margin-bottom:10px;" data-act="manage-draft-main">
       <option value="">اختار القطاع</option>
-      ${SECTOR_CHIPS.map(m=>`<option value="${esc(m)}" ${d.main===m?'selected':''}>${esc(m)}</option>`).join('')}
+      ${(()=>{ const cur = isNew ? d.main : (d.newMain || d.main); const list = SECTOR_CHIPS.includes(d.main) || isNew || !d.main ? SECTOR_CHIPS : [d.main, ...SECTOR_CHIPS];
+        return list.map(m=>`<option value="${esc(m)}" ${cur===m?'selected':''}>${esc(m)}</option>`).join(''); })()}
     </select>
+    ${!isNew && d.newMain && d.newMain!==d.main ? `<div class="managehint" style="margin:-4px 0 10px;">هينتقل الصنف من «${esc(d.main)}» إلى «${esc(d.newMain)}» عند الحفظ</div>` : ''}
     ${isNew ? `
     <label>التصنيف الفرعي (لو موجود)</label>
     <input type="text" value="${esc(d.sub||'')}" data-act="manage-draft-sub" placeholder="مثلاً: اكسسوارات فورناكس">
@@ -7935,12 +7946,20 @@ async function manageSaveItem(){
   state.manageSaving = true; render();
   try{
     const action = isNew ? 'manageAddCatalogItem' : 'manageUpdateCatalogItem';
-    const r = await apiPost({ action, token:getManageToken(), item:d });
+    const wantMain = (!isNew && d.newMain && d.newMain!==d.main) ? d.newMain : '';
+    const r = await apiPost({ action, token:getManageToken(), item:wantMain ? Object.assign({}, d, { newMain:wantMain }) : d });
     if(handleAdminUnauthorized_(r)){ state.manageSaving = false; render(); return; }
+    if(r && r.ok && wantMain && r.main!==wantMain){
+      // السيرفر القديم بيحفظ الرصيد/المحتوى بس ويتجاهل نقل القطاع — منبيّنش «اتحفظ» على حاجة ما حصلتش
+      showToast('اتحفظ الرصيد والمحتوى، لكن نقل القطاع محتاج تحديث السيرفر (Apps Script) — القطاع لسه زي ما هو',6000);
+      if(d.stock!==undefined){ const it0 = CATALOG.find(c=>(c.name||c.product)===d.name); if(it0){ it0.stock=(d.stock===''||d.stock==null)?null:Number(d.stock); if(d.unit!==undefined&&d.unit!=='') it0.unit=Number(d.unit)||1; it0.available=d.available!==false; } }
+      d.newMain=''; state.manageSaving = false; render(); return;
+    }
     if(r && r.ok){
-      showToast(isNew ? 'اتضاف الصنف ✓' : 'اتحفظ التعديل ✓');
+      showToast(isNew ? 'اتضاف الصنف ✓' : (wantMain ? 'اتحفظ التعديل واتنقل الصنف ✓' : 'اتحفظ التعديل ✓'));
       if(!isNew){   // نحدّث النسخة المحلية فورًا (زي المسح السريع) عشان الأرقام الجديدة تبان من غير ما نستنى كتالوج جديد
         const it = CATALOG.find(c=>(c.name||c.product)===d.name);
+        if(it && wantMain) it.main = wantMain;
         if(it){ if(d.stock!==undefined) it.stock = (d.stock===''||d.stock==null)?null:Number(d.stock); if(d.unit!==undefined&&d.unit!=='') it.unit = Number(d.unit)||1; it.available = d.available!==false; }
       }
       state.manageEditingName = null;
@@ -8892,7 +8911,8 @@ function onSelectChange(act, el, val){
   if(act==='acc-new-group-name'){state.accNewGroupName=val;return;}
   if(act==='acc-group-draft'){state.accMoveDraft=val;return;}
   if(act==='manage-draft-main'){
-    state.manageEditDraft.main = val;
+    if(state.manageEditingName==='NEW') state.manageEditDraft.main = val;
+    else state.manageEditDraft.newMain = (val && val!==state.manageEditDraft.main) ? val : '';   // نقل صنف موجود لقطاع تاني (v325)
   }
 }
 
@@ -9211,15 +9231,8 @@ async function onActionInner(act, el){
         if(!wasStaged) toggleStagedProduct(pm, name);   // لو الصنف في السلة بيتفتح بألوانه وكمياته اللي فيها
         const st = state.staged.find(x=>x.key===key);
         // أول دوسة على لون موجود في السلة = نفتحه للتعديل (مش نشيله — كان بيمسح البند من السلة بصمت)
-        const sel0 = st ? st.selectedColors : [];
-        const cur0 = st ? (sel0.includes(sheetActive_[key]) ? sheetActive_[key] : sel0[sel0.length-1]) : null;
-        if(st && wasStaged && el.classList.contains('sh-dot') && sel0.includes(color) && color!==cur0){
-          sheetActive_[key] = color; render();     // لون مختار وغير نشط: يبقى هو اللي بتتعدّل كميته (مش بنشيله)
-        } else if(st && (wasStaged || !sel0.includes(color))){
-          const had = sel0.includes(color);
-          if(!had) sheetActive_[key] = color;     // قبل الرسم عشان اللون الجديد هو اللي يظهر له حقل الكمية
-          toggleStagedColor(key, color);
-        } else render();
+        if(st && (wasStaged || !st.selectedColors.includes(color))) toggleStagedColor(key, color);
+        else render();
       });
       break;
     }
