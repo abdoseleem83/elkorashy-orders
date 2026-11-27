@@ -11,7 +11,7 @@
 //
 // أول مرة بس: شغّل setupWizard() ثم installTriggers() من محرر Apps Script.
 
-const APP_VERSION = 'v320-order-validation';
+const APP_VERSION = 'v325b-sector-delete';
 
 const SHEET_NAME = 'Orders';
 const CATALOG_SHEET_NAME = 'الأصناف';
@@ -505,7 +505,8 @@ function doPostInner_(e) {
   // ---------- إدارة الأصناف ----------
   if (action === 'manageUpdateCatalogItem') {
     if (!isValidManageToken_(token)) return denyManage_();
-    return json_({ ok: updateCatalogItem_(data.item || {}) });
+    const upd = updateCatalogItem_(data.item || {});
+    return json_(upd && upd.ok ? upd : { ok: !!upd });
   }
   if (action === 'manageCreateAccGroup') {
     if (!isValidManageToken_(token)) return denyManage_();
@@ -848,7 +849,7 @@ function deleteOrderById_(id) {
   const ids = sheet.getRange(2, COL_ID, n, 1).getValues();
   for (let i = 0; i < ids.length; i++) {
     if (String(ids[i][0]) === String(id)) {
-      sheet.deleteRow(i + 2);
+      deleteRowsBatch_(sheet, [i + 2]);
       markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
       return { ok: true, deleted: 1 };
     }
@@ -897,6 +898,13 @@ function deleteMyOrder_(id, token) {
  * ⚠️ rowNums لازم تكون أرقام صفوف فعلية (1-indexed).
  */
 function deleteRowsBatch_(sheet, rowNums) {
+  // v325b: جوجل شيتس بيرفض حذف كل الصفوف غير المثبتة. لو الحذف هيخلّص كل الصفوف، نضيف صف فاضي الأول.
+  try {
+    const frozen = sheet.getFrozenRows ? sheet.getFrozenRows() : 1;
+    if (sheet.getMaxRows && sheet.getMaxRows() - rowNums.length <= frozen) {
+      sheet.insertRowsAfter(sheet.getMaxRows(), rowNums.length + 1);
+    }
+  } catch (e) { /* لو فشلت الحماية نكمل ونسيب الحذف يتصرف زي الأول */ }
   const sorted = rowNums.slice().sort(function (a, b) { return b - a; });   // من تحت لفوق
   let i = 0;
   while (i < sorted.length) {
@@ -1406,8 +1414,14 @@ function updateCatalogItem_(data) {
     if (data.price !== undefined) sheet.getRange(r, 7).setValue(data.price === '' ? '' : Number(data.price));
     if (data.stock !== undefined) sheet.getRange(r, 8).setValue(data.stock === '' ? '' : Number(data.stock));
     if (data.available !== undefined) sheet.getRange(r, 9).setValue(data.available ? '' : 'لا');
+    let movedMain = '';
+    // v325: نقل الصنف لقطاع تاني (عمود B) — اختياري، بيتبعت كـ newMain من شاشة تعديل الصنف للأدمن بس
+    if (data.newMain !== undefined && String(data.newMain).trim() !== '') {
+      const nm = String(data.newMain).trim();
+      if (nm.length <= 80) { sheet.getRange(r, 2).setValue(nm); movedMain = nm; }
+    }
     markReservedDirty_();   // بيتزامن في الخلفية خلال دقيقة
-    return true;
+    return movedMain ? { ok: true, main: movedMain } : true;
   }
   return false;
 }
