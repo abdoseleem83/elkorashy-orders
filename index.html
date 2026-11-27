@@ -476,6 +476,9 @@ html[data-theme="dark"] .acc-search input::placeholder{color:#BDD3ED !important;
 }
 .cartrow:last-child{border-bottom:none;}
 .cartrow .info{flex:1;min-width:0;}
+.rowshape{width:44px;height:31px;object-fit:contain;background:#fff;border:1px solid rgba(120,140,180,.3);border-radius:6px;flex:none;vertical-align:middle;margin-left:8px;}
+.cartrow>.rowshape{margin:0 0 0 10px;}
+.ordercard .item-row>span>.rowshape,.managerow-name>.rowshape{display:inline-block;margin:0 0 0 8px;}
 .cartrow .pname{font-size:15.1px;font-weight:700;color:var(--ink);}
 .cartrow .pmeta{font-size:13.4px;color:var(--muted);margin-top:2px;}
 .cartrow .qty{font-size:15.1px;font-weight:800;color:var(--navy);white-space:nowrap;}
@@ -2367,7 +2370,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v326-shapes';
+const APP_BUILD = 'v327-shapes';
 const MIN_SERVER_BUILD = 'v320';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -3229,7 +3232,7 @@ function renderCartItemsHtml(cart){
         <div class="cartgrouptitle">${pcLogo_(main) || ''}<span>${esc(main)}</span></div>
         ${cartGroups.get(main).map(it=>`
           <div class="cartrow">
-            <div class="info">
+            ${rowShape_(it)}<div class="info">
               <div class="pname">${esc(it.product)}</div>
               <div class="pmeta">${it.color ? esc(it.color) : ''}${it.note ? (it.color?' · ':'') + esc(it.note) : ''}${it.autoBundled ? ' <span class="autotag">🔗 مضاف تلقائيًا مع الباب</span>' : ''}</div>
             </div>
@@ -5680,6 +5683,7 @@ async function buildShortageImageGroup(order, groupKey){
 
   const relevant = order.items.filter(it => group.mains.includes(it.main));
   if(!relevant.length) return null;
+  await preloadShapeData_(relevant);
 
   const date = new Date(order.ts);
   const dateStr = date.toLocaleDateString('ar-EG',{day:'2-digit',month:'2-digit',year:'numeric'});
@@ -5804,6 +5808,7 @@ async function buildShortageImageGroup(order, groupKey){
       html += `
       <div style="display:flex;align-items:baseline;gap:8px;background:${bg};padding:${rowPad_};border-bottom:1px solid ${it._un ? '#F6C9C9' : '#DCE4EC'};border-radius:4px;${it._un ? 'border-right:4px solid #DC2626;' : ''}">
         <span style="color:#8A8470;font-weight:800;font-size:${idxFont_};min-width:20px;">${startIndex+i+1}.</span>
+        ${rowShapePdf_(it)}
         <span style="flex:1;font-weight:800;font-size:${rowFont_};color:${nameClr_};line-height:1.25;">
           ${esc(it.name || it.product)}${(it.color && !it.colorLabel)?` <span style="color:#6B7A8C;font-size:${colorFont_};font-weight:700;">- ${esc(it.color)}</span>`:''}
         </span>
@@ -5910,6 +5915,7 @@ function shortageBtnLabel_(orderId, label){
 async function buildWarehouseImage(order, mainGroup, rows, pageNo, pageCount){
   if(state.catalogReviewRequired)throw new Error("AVAILABILITY_UNCERTAIN");
   if(!(await ensureLibs_('html2canvas'))) return null;
+  await preloadShapeData_(rows);
 
   const wrap = document.createElement('div');
   wrap.style.position='fixed'; wrap.style.top='-9999px'; wrap.style.left='-9999px';
@@ -5969,7 +5975,7 @@ async function buildWarehouseImage(order, mainGroup, rows, pageNo, pageCount){
             <tr style="background:${bg};">
               <td style="padding:10px 6px;border-bottom:1px solid #DCE4EC;text-align:center;color:#8A8470;">${i+1}</td>
               <td style="padding:10px 6px;border-bottom:1px solid #DCE4EC;">
-                ${esc(it.name || it.product)}${it.color?` <span style="color:#6B7A8C;">- ${esc(it.color)}</span>`:''}
+                ${rowShapePdf_(it)}${esc(it.name || it.product)}${it.color?` <span style="color:#6B7A8C;">- ${esc(it.color)}</span>`:''}
               </td>
               <td style="padding:10px 6px;border-bottom:1px solid #DCE4EC;text-align:center;font-weight:800;color:#002050;">
                 ${esc(n.qty)} ${esc(n.unitLabel||'')}
@@ -6485,6 +6491,33 @@ function pcShape_(main, n, cls){
 function groupShape_(g){
   const ids = g.items.map(it=>shapeId_(it.e.main, it.e.name));
   return (ids.length && ids[0] && ids.every(x=>x===ids[0])) ? pcShape_(g.items[0].e.main, g.items[0].e.name) : pcLogo_(g.items[0].e.main);
+}
+// 🖼️ v327: رسمة صغيرة جنب الصنف في السلة وتفاصيل الطلبات والإدارة وصور/PDF الطلب
+const SHAPE_DATA_ = {};
+function shapeIdOfItem_(it){
+  if(!it) return '';
+  let m = it.main, p = it.product;
+  if(!m || !p){ const c = findCatalogItemAnyMain(p || it.name, it.color); if(c){ m = m || c.main; p = p || c.product; } }
+  return shapeId_(m, p);
+}
+function rowShape_(it){
+  const id = shapeIdOfItem_(it);
+  return id ? `<img class="rowshape" src="data/shapes/${id}.webp" width="44" height="31" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'">` : '';
+}
+async function preloadShapeData_(items){
+  const ids = [...new Set((items||[]).map(shapeIdOfItem_).filter(Boolean))].filter(id=>!SHAPE_DATA_[id]);
+  await Promise.all(ids.map(async id=>{
+    try{
+      const r = await fetch('data/shapes/'+id+'.webp', {cache:'force-cache'});
+      if(!r.ok) return;
+      const b = await r.blob();
+      SHAPE_DATA_[id] = await new Promise((res,rej)=>{ const f=new FileReader(); f.onload=()=>res(f.result); f.onerror=rej; f.readAsDataURL(b); });
+    }catch(e){}
+  }));
+}
+function rowShapePdf_(it){
+  const id = shapeIdOfItem_(it), d = id && SHAPE_DATA_[id];
+  return d ? `<img src="${d}" style="width:52px;height:36px;object-fit:contain;background:#fff;border:1px solid #DCE4EC;border-radius:4px;flex:none;margin-left:6px;vertical-align:middle;">` : '';
 }
 function sectorMarkHtml_(g, size, cls){
   const lg = sectorLogo_(g);
@@ -7633,7 +7666,7 @@ function renderMyOrdersView(){
         ${steps}
         <details class="odet"><summary>تفاصيل الأصناف</summary>
           <div class="items">
-            ${(o.items||[]).map(it=>`<div class="item-row"><span>${esc(it.product)}${it.color?' — '+esc(it.color):''}</span><b>×${esc(it.qty)} ${esc(it.unitType||'')}</b></div>`).join('')}
+            ${(o.items||[]).map(it=>`<div class="item-row"><span>${rowShape_(it)}${esc(it.product)}${it.color?' — '+esc(it.color):''}</span><b>×${esc(it.qty)} ${esc(it.unitType||'')}</b></div>`).join('')}
           </div>
         </details>
         <div class="adminbtnrow adminbtnrow-compact">
@@ -7768,7 +7801,7 @@ function renderManageItemsTab(){
       ${items.length ? items.map(it=>`
         <div class="managerow">
           <div class="managerow-info">
-            <div class="managerow-name">${esc(it.product||it.name)}${it.color?` — ${esc(it.color)}`:''} ${it.available===false?'<span class="stocktag out" style="margin-right:4px;">موقوف</span>':''}</div>
+            <div class="managerow-name">${rowShape_(it)}${esc(it.product||it.name)}${it.color?` — ${esc(it.color)}`:''} ${it.available===false?'<span class="stocktag out" style="margin-right:4px;">موقوف</span>':''}</div>
             <div class="managerow-sub">${esc(it.main)}${it.sub?' — '+esc(it.sub):''}</div>
           </div>
           <div class="managerow-vals">
@@ -8116,7 +8149,7 @@ function adminEditItemsHtml_(o){
   return `
   <div class="items">
     ${ed.map((it,i)=>`
-      <div class="item-row"><span>${esc(it.product)}${it.color?' — '+esc(it.color):''}</span>
+      <div class="item-row"><span>${rowShape_(it)}${esc(it.product)}${it.color?' — '+esc(it.color):''}</span>
         <span class="qtyedit">
           <button type="button" data-act="adm-qty-minus" data-id="${esc(o.id)}" data-idx="${i}" aria-label="نقص">−</button>
           <input type="text" inputmode="numeric" value="${esc(it.qty)}" data-act="adm-qty-input" data-id="${esc(o.id)}" data-idx="${i}">
@@ -8205,7 +8238,7 @@ function renderAdminOrdersColumn_(title, orders){
         ${state.adminEdits[o.id] ? adminEditItemsHtml_(o) : `
         <div class="items">
           ${o.items.map(it=>`
-            <div class="item-row"><span>${esc(it.product)}${it.color?' — '+esc(it.color):''}</span><b>×${esc(it.qty)} ${esc(it.unitType||'')}</b></div>
+            <div class="item-row"><span>${rowShape_(it)}${esc(it.product)}${it.color?' — '+esc(it.color):''}</span><b>×${esc(it.qty)} ${esc(it.unitType||'')}</b></div>
           `).join('')}
         </div>
         ${!isDone ? `<div class="adminedit"><button class="delbtn pdf" data-act="adm-edit-start" data-id="${esc(o.id)}">${ico_('editIcon',11)} تعديل الكمية والوحدة</button></div>` : ''}`}
