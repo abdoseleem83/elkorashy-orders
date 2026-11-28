@@ -2370,7 +2370,7 @@ function stampPdfFooter_(doc, pageNum, totalPages){
 function pdfPageCount_(imgHeight, pageHeight){
   return Math.max(1, Math.ceil(imgHeight / pageHeight));
 }
-const APP_BUILD = 'v328-shapes';
+const APP_BUILD = 'v329-lengths';
 const MIN_SERVER_BUILD = 'v320';   // ارفعه بس لما تغيّر apps_script.gs (وساعتها APP_VERSION هناك كمان)
 const VAPID_PUBLIC_KEY = 'BE8Immwt7xgsP6f4Ka1KUPA5u7qCXgqohZQqksL0B2UfGWb8t_p9XyVc6AMG84zgVt9GP1l3CLCMKX5OARxeYQ0';
 const APP_URL = 'https://abdoseleem83.github.io/elkorashy-orders/';
@@ -7068,6 +7068,20 @@ function groupVariants_(entries){
       const n = parseFloat(it.parts.len);
       return !(it.rank>=4 && (it.parts.rubber || (isFinite(n) && n!==6)));   // بكاوتش (أي طول) أو طول غير ٦ م — ومش متوفر ← مخفي
     });
+    // 📏 نفس الصنف بأطوال مختلفة (6 / 6.5 / 5.8): لو طول واحد متاح يظهر هو بس، لو أكتر من واحد يظهروا المتاحين بس، ولو ولا واحد متاح يظهر طول 6 بس
+    {
+      const sub = new Map();
+      keep.forEach(it=>{ const k=[...it.parts.code,...it.parts.color,it.parts.rubber?'R':''].join('|'); (sub.get(k)||sub.set(k,[]).get(k)).push(it); });
+      const drop = new Set();
+      sub.forEach(arr=>{
+        const lenOf = it=>{ const n=parseFloat(it.parts.len); return isFinite(n)?n:6; };
+        if(new Set(arr.map(lenOf)).size < 2) return;
+        const av = arr.filter(it=>it.rank<4);
+        if(av.length){ arr.forEach(it=>{ if(it.rank>=4) drop.add(it); }); }
+        else { const six = arr.filter(it=>lenOf(it)===6); if(six.length) arr.forEach(it=>{ if(lenOf(it)!==6) drop.add(it); }); }
+      });
+      if(drop.size){ const k2 = keep.filter(it=>!drop.has(it)); if(k2.length){ keep.length=0; k2.forEach(x=>keep.push(x)); } }
+    }
     if(keep.length && keep.length < g.items.length){
       g.items = keep;
       if(keep.length < 2) return { one:true, e:keep[0].e, base:keep[0].e.name, off:keep[0].e.off };
